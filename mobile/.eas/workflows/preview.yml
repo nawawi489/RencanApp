@@ -5,9 +5,11 @@ on:
   pull_request:
     branches: [main]
 
+# EAS Workflows belum mendukung custom concurrency group — wajib placeholder ini
+# (docs.expo.dev/eas/workflows/syntax). Field-nya cancel_in_progress (underscore), nilai true.
 concurrency:
-  group: preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
 
 jobs:
   checks:
