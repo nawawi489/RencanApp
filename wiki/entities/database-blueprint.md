@@ -9,7 +9,7 @@ sources: 1
 
 53 core tables Postgres ([[tech-stack|Supabase]]) untuk [[overview|EMS V1.8.1]]. Diawali `auth.users` — konvensi schema Supabase. Otorisasi ditegakkan via [[permission-model|RLS]], audit via tabel append-only.
 
-> **Status implementasi (2026-06-23):** 17 tabel live. Fase 0 — `organizations`, `role_templates`, `profiles`, `permissions`, `user_permissions`, `settings`, `login_logs`. Fase 1 — `initiatives` (datar, induk strategis menyusul Fase 4), `action_plans`, `action_plan_submissions`, `action_plan_result_values`, `evidence_files`, `reviews`, `card_completion_rules`, `card_guidance_contents`, `activity_logs`, `governance_violations`. Sisa tabel menyusul per [[overview|build plan]] Fase 2–8.
+> **Status implementasi (2026-06-24):** 19 tabel live. Fase 0 — `organizations`, `role_templates`, `profiles`, `permissions`, `user_permissions`, `settings`, `login_logs`. Fase 1 — `initiatives` (datar, induk strategis menyusul Fase 4), `action_plans`, `action_plan_submissions`, `action_plan_result_values`, `evidence_files`, `reviews`, `card_completion_rules`, `card_guidance_contents`, `activity_logs`, `governance_violations`. Fase 2 — `action_plan_repeat_rules`, `action_plan_instances` (migrasi `0007`; + kolom `organizations.timezone`, `governance_violations.severity`, `action_plan_submissions.action_plan_instance_id`; job pg_cron mark-overdue & backfill). Sisa tabel menyusul per [[overview|build plan]] Fase 3–8.
 
 ## Kelompok tabel
 

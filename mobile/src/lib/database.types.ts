@@ -1,6 +1,3 @@
-// Tipe ini di-generate dari skema Supabase.
-// Regenerate: `npx supabase gen types typescript --project-id fhnqwytqprsptjshoxfn > src/lib/database.types.ts`
-// (atau via MCP supabase generate_typescript_types).
 export type Json =
   | string
   | number
@@ -17,6 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_plan_instances: {
+        Row: {
+          action_plan_id: string
+          created_at: string
+          current_submission_id: string | null
+          deadline_at: string
+          id: string
+          instance_date: string
+          instance_time: string
+          late_minutes: number | null
+          missed_reason: string | null
+          organization_id: string
+          pic_id: string | null
+          repeat_rule_id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          submitted_at: string | null
+          submitted_late: boolean
+          updated_at: string
+        }
+        Insert: {
+          action_plan_id: string
+          created_at?: string
+          current_submission_id?: string | null
+          deadline_at: string
+          id?: string
+          instance_date: string
+          instance_time: string
+          late_minutes?: number | null
+          missed_reason?: string | null
+          organization_id: string
+          pic_id?: string | null
+          repeat_rule_id: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_late?: boolean
+          updated_at?: string
+        }
+        Update: {
+          action_plan_id?: string
+          created_at?: string
+          current_submission_id?: string | null
+          deadline_at?: string
+          id?: string
+          instance_date?: string
+          instance_time?: string
+          late_minutes?: number | null
+          missed_reason?: string | null
+          organization_id?: string
+          pic_id?: string | null
+          repeat_rule_id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_late?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_instances_action_plan_id_fkey"
+            columns: ["action_plan_id"]
+            isOneToOne: false
+            referencedRelation: "action_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_current_submission_fk"
+            columns: ["current_submission_id"]
+            isOneToOne: false
+            referencedRelation: "action_plan_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_repeat_rule_id_fkey"
+            columns: ["repeat_rule_id"]
+            isOneToOne: false
+            referencedRelation: "action_plan_repeat_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      action_plan_repeat_rules: {
+        Row: {
+          action_plan_id: string
+          created_at: string
+          created_by: string | null
+          custom_dates: string[] | null
+          frequency: string
+          grace_period_minutes: number | null
+          id: string
+          missed_rule: string
+          month_days: number[] | null
+          organization_id: string
+          repeat_end_date: string
+          repeat_start_date: string
+          time_of_day: string
+          updated_at: string
+          weekdays: number[] | null
+        }
+        Insert: {
+          action_plan_id: string
+          created_at?: string
+          created_by?: string | null
+          custom_dates?: string[] | null
+          frequency: string
+          grace_period_minutes?: number | null
+          id?: string
+          missed_rule?: string
+          month_days?: number[] | null
+          organization_id: string
+          repeat_end_date: string
+          repeat_start_date: string
+          time_of_day: string
+          updated_at?: string
+          weekdays?: number[] | null
+        }
+        Update: {
+          action_plan_id?: string
+          created_at?: string
+          created_by?: string | null
+          custom_dates?: string[] | null
+          frequency?: string
+          grace_period_minutes?: number | null
+          id?: string
+          missed_rule?: string
+          month_days?: number[] | null
+          organization_id?: string
+          repeat_end_date?: string
+          repeat_start_date?: string
+          time_of_day?: string
+          updated_at?: string
+          weekdays?: number[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_repeat_rules_action_plan_id_fkey"
+            columns: ["action_plan_id"]
+            isOneToOne: true
+            referencedRelation: "action_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_repeat_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_repeat_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       action_plan_result_values: {
         Row: {
           created_at: string
@@ -55,6 +234,7 @@ export type Database = {
       action_plan_submissions: {
         Row: {
           action_plan_id: string
+          action_plan_instance_id: string | null
           created_at: string
           id: string
           note: string | null
@@ -68,6 +248,7 @@ export type Database = {
         }
         Insert: {
           action_plan_id: string
+          action_plan_instance_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -81,6 +262,7 @@ export type Database = {
         }
         Update: {
           action_plan_id?: string
+          action_plan_instance_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -98,6 +280,13 @@ export type Database = {
             columns: ["action_plan_id"]
             isOneToOne: false
             referencedRelation: "action_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_submissions_action_plan_instance_id_fkey"
+            columns: ["action_plan_instance_id"]
+            isOneToOne: false
+            referencedRelation: "action_plan_instances"
             referencedColumns: ["id"]
           },
           {
@@ -408,6 +597,7 @@ export type Database = {
           entity_type: string | null
           id: string
           organization_id: string | null
+          severity: string | null
           user_id: string | null
           violation_type: string
         }
@@ -418,6 +608,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           organization_id?: string | null
+          severity?: string | null
           user_id?: string | null
           violation_type: string
         }
@@ -428,6 +619,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           organization_id?: string | null
+          severity?: string | null
           user_id?: string | null
           violation_type?: string
         }
@@ -555,16 +747,19 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          timezone: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          timezone?: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          timezone?: string
         }
         Relationships: []
       }
@@ -817,15 +1012,49 @@ export type Database = {
       }
       can_view_workspace: { Args: never; Returns: boolean }
       current_user_org: { Args: never; Returns: string }
+      generate_action_plan_instances: {
+        Args: { p_action_plan_id: string; p_through_date: string }
+        Returns: number
+      }
+      get_repeat_compliance: {
+        Args: { p_action_plan_id: string }
+        Returns: {
+          compliance: number
+          done_count: number
+          expected_count: number
+          missed_count: number
+          on_time_count: number
+        }[]
+      }
       has_permission: { Args: { p_key: string }; Returns: boolean }
       i_am_initiative_pic: { Args: { p_initiative: string }; Returns: boolean }
       initiative_has_my_action_plan: {
         Args: { p_initiative: string }
         Returns: boolean
       }
+      mark_overdue_instances: { Args: { p_now?: string }; Returns: number }
+      review_action_plan_instance_submission: {
+        Args: { p_decision: string; p_reason: string; p_submission_id: string }
+        Returns: undefined
+      }
       review_action_plan_submission: {
         Args: { p_decision: string; p_reason: string; p_submission_id: string }
         Returns: undefined
+      }
+      set_action_plan_repeat_rule: {
+        Args: {
+          p_action_plan_id: string
+          p_custom_dates: string[]
+          p_frequency: string
+          p_grace_period_minutes: number
+          p_missed_rule: string
+          p_month_days: number[]
+          p_repeat_end_date: string
+          p_repeat_start_date: string
+          p_time_of_day: string
+          p_weekdays: number[]
+        }
+        Returns: string
       }
       start_action_plan: {
         Args: { p_action_plan_id: string }
@@ -840,6 +1069,15 @@ export type Database = {
         }
         Returns: string
       }
+      submit_action_plan_instance: {
+        Args: {
+          p_evidence: Json
+          p_instance_id: string
+          p_note: string
+          p_result_values: Json
+        }
+        Returns: string
+      }
       user_role_level: { Args: never; Returns: string }
       write_activity: {
         Args: {
@@ -847,6 +1085,17 @@ export type Database = {
           p_detail: Json
           p_entity_id: string
           p_entity_type: string
+        }
+        Returns: undefined
+      }
+      write_activity_system: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_detail: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_org: string
         }
         Returns: undefined
       }

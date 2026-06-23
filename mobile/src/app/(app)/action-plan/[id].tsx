@@ -7,6 +7,7 @@ import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-nati
 import { Badge, Button, Field, SectionCard } from '@/components/ui';
 import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
+import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
 import {
   ACTION_PLAN_STATUS_LABEL,
   EVIDENCE_KIND_LABEL,
@@ -22,6 +23,11 @@ import {
   type ResultValue,
   type SubmissionDetail,
 } from '@/lib/cards';
+import {
+  INSTANCE_STATUS_LABEL,
+  INSTANCE_STATUS_TONE,
+  type InstanceWithSubmissions,
+} from '@/lib/repeat';
 
 function formatDateTime(iso: string): string {
   return iso.replace('T', ' ').slice(0, 16);
@@ -99,6 +105,81 @@ function SubmissionCard({ s }: { s: SubmissionDetail }) {
         </Text>
       ) : null}
     </SectionCard>
+  );
+}
+
+function InstanceRow({
+  inst,
+  profileId,
+  onSubmit,
+}: {
+  inst: InstanceWithSubmissions;
+  profileId: string | null;
+  onSubmit: (id: string) => void;
+}) {
+  const actions = useInstanceActions(inst, profileId);
+  const time = (inst.instance_time ?? '').slice(0, 5);
+  return (
+    <SectionCard>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-sm font-bold text-black dark:text-white">{inst.instance_date}</Text>
+        <Badge label={INSTANCE_STATUS_LABEL[inst.status] ?? inst.status} tone={INSTANCE_STATUS_TONE[inst.status]} />
+      </View>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">Deadline {time}</Text>
+      {inst.status === 'missed' ? (
+        <Text className="text-xs font-semibold text-red-600 dark:text-red-400">
+          Terlewat — deadline terlewati tanpa submit.
+        </Text>
+      ) : null}
+      {actions.canSubmit ? (
+        <Button label="Submit Bukti & Nilai Hasil" onPress={() => onSubmit(inst.id)} />
+      ) : null}
+    </SectionCard>
+  );
+}
+
+function RepeatSection({
+  actionPlanId,
+  profileId,
+  onSubmitInstance,
+}: {
+  actionPlanId: string;
+  profileId: string | null;
+  onSubmitInstance: (id: string) => void;
+}) {
+  const { instances, isLoading, compliance, compliancePercent } = useRepeatInstances(actionPlanId, {
+    enabled: true,
+  });
+  const complianceText =
+    compliancePercent === null || !compliance
+      ? 'On-time: —'
+      : `On-time: ${compliance.on_time_count}/${compliance.expected_count} (${compliancePercent}%)`;
+
+  return (
+    <View className="gap-3">
+      <SectionCard>
+        <Text className="text-xs font-semibold uppercase text-neutral-400">Repeat Compliance</Text>
+        <Text testID="compliance-metric" className="text-lg font-bold text-black dark:text-white">
+          {complianceText}
+        </Text>
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+          Compliance = instance selesai tepat waktu ÷ total seharusnya. Berbeda dari Progress & Capaian.
+        </Text>
+      </SectionCard>
+
+      <Text className="text-lg font-bold text-black dark:text-white">Instance Terjadwal</Text>
+      {isLoading ? (
+        <ActivityIndicator />
+      ) : instances.length > 0 ? (
+        instances.map((inst) => (
+          <InstanceRow key={inst.id} inst={inst} profileId={profileId} onSubmit={onSubmitInstance} />
+        ))
+      ) : (
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+          Belum ada instance. Aktifkan Action Plan untuk membuat jadwal.
+        </Text>
+      )}
+    </View>
   );
 }
 
@@ -185,7 +266,18 @@ export default function ActionPlanDetailScreen() {
               <Button label="Aktifkan Action Plan" onPress={() => activateM.mutate()} loading={activateM.isPending} />
             ) : null}
 
-            {isPic && ap.status === 'assigned' ? (
+            {/* ---- Repeat (Fase 2): compliance + daftar instance ---- */}
+            {ap.repeat_setting === 'repeat' && ap.status !== 'draft' ? (
+              <RepeatSection
+                actionPlanId={id}
+                profileId={profile?.id ?? null}
+                onSubmitInstance={(instanceId) =>
+                  router.push(`/action-plan/submit?instanceId=${instanceId}` as Href)
+                }
+              />
+            ) : null}
+
+            {ap.repeat_setting !== 'repeat' && isPic && ap.status === 'assigned' ? (
               <View className="gap-2">
                 <Button label="Mulai Kerjakan" onPress={() => startM.mutate()} loading={startM.isPending} />
                 <Button
@@ -196,7 +288,7 @@ export default function ActionPlanDetailScreen() {
               </View>
             ) : null}
 
-            {isPic && (ap.status === 'in_progress' || ap.status === 'revision') ? (
+            {ap.repeat_setting !== 'repeat' && isPic && (ap.status === 'in_progress' || ap.status === 'revision') ? (
               <Button
                 label={ap.status === 'revision' ? 'Submit Ulang (Revisi)' : 'Submit Bukti & Nilai Hasil'}
                 onPress={() => router.push(`/action-plan/submit?id=${id}` as Href)}
@@ -263,7 +355,8 @@ export default function ActionPlanDetailScreen() {
               </View>
             ) : null}
 
-            {/* ---- Riwayat submission ---- */}
+            {/* ---- Riwayat submission (one-time saja) ---- */}
+            {ap.repeat_setting !== 'repeat' ? (
             <View className="gap-3">
               <Text className="text-lg font-bold text-black dark:text-white">Riwayat Submission</Text>
               {subsQ.isLoading ? (
@@ -276,6 +369,7 @@ export default function ActionPlanDetailScreen() {
                 </Text>
               )}
             </View>
+            ) : null}
           </>
         )}
       </View>
