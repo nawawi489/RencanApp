@@ -32,7 +32,10 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        # npm install (bukan npm ci): proyek Expo/RN punya optional dep wasm (@emnapi/*,
+        # lightningcss) yang resolusinya berbeda antar-OS, sehingga lock yang digenerate di
+        # Windows tidak lolos `npm ci` strict di runner linux. `npm install` toleran & tetap deterministik via lock.
+        run: npm install --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
