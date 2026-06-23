@@ -9,6 +9,8 @@ sources: 1
 
 53 core tables Postgres ([[tech-stack|Supabase]]) untuk [[overview|EMS V1.8.1]]. Diawali `auth.users` — konvensi schema Supabase. Otorisasi ditegakkan via [[permission-model|RLS]], audit via tabel append-only.
 
+> **Status implementasi (2026-06-23):** 17 tabel live. Fase 0 — `organizations`, `role_templates`, `profiles`, `permissions`, `user_permissions`, `settings`, `login_logs`. Fase 1 — `initiatives` (datar, induk strategis menyusul Fase 4), `action_plans`, `action_plan_submissions`, `action_plan_result_values`, `evidence_files`, `reviews`, `card_completion_rules`, `card_guidance_contents`, `activity_logs`, `governance_violations`. Sisa tabel menyusul per [[overview|build plan]] Fase 2–8.
+
 ## Kelompok tabel
 
 - **Identitas & org:** `auth.users`, `profiles`, `organizations`, `departments`, `positions`, `teams`, `team_members`.

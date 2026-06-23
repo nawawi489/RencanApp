@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-06-22
+updated: 2026-06-23
 ---
 
 # RencanApp Wiki — Index
@@ -24,6 +24,7 @@ Master index of all wiki pages. Updated on every ingest.
 
 ## Concepts
 
+- [[architecture]] — Pola "thick database, thin client": DB-centric serverless, business logic di Postgres (RLS/trigger/RPC)
 - [[audit-governance]] — Activity Log & Governance Violation append-only; severity & integritas audit
 - [[execution-loop]] — Bukti → Nilai Hasil → Review; submission versioning & evidence locking
 - [[minimum-breakdown-rule]] — Jumlah minimal card turunan; tiga mode penerapan & default

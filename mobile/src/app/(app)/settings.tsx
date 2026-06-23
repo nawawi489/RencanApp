@@ -12,9 +12,12 @@ type ProfileRow = {
 };
 
 async function fetchProfile(): Promise<ProfileRow | null> {
+  // RLS profiles mengizinkan lihat seluruh anggota org → filter ke diri sendiri sebelum .single().
+  const { data: auth } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from('profiles')
     .select('full_name, email, role_templates(name, level), organizations(name)')
+    .eq('id', auth.user!.id)
     .single();
   if (error) throw error;
   return data as unknown as ProfileRow;
