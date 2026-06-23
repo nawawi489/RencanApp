@@ -1,0 +1,103 @@
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Modal } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native-css/components';
+
+import { listOrgProfiles, type PersonRef } from '@/lib/cards';
+
+type Person = NonNullable<PersonRef>;
+
+function personLabel(p: Person): string {
+  return p.full_name?.trim() || p.email || 'Tanpa nama';
+}
+
+/** Form field pemilih satu anggota org (untuk PIC / Reviewer). */
+export function UserPicker({
+  label,
+  required,
+  value,
+  onChange,
+  excludeId,
+}: {
+  label: string;
+  required?: boolean;
+  value: Person | null;
+  onChange: (p: Person | null) => void;
+  excludeId?: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data, isLoading } = useQuery({ queryKey: ['org-profiles'], queryFn: listOrgProfiles });
+  const options = (data ?? []).filter((p) => p.id !== excludeId);
+
+  return (
+    <View className="gap-1.5">
+      <Text className="text-sm font-medium text-black dark:text-white">
+        {label}
+        {required ? <Text className="text-red-500"> *</Text> : null}
+      </Text>
+      <Pressable
+        className="flex-row items-center justify-between rounded-xl border border-neutral-300 px-4 py-3 active:opacity-70 dark:border-neutral-700"
+        onPress={() => setOpen(true)}>
+        <Text className={value ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
+          {value ? personLabel(value) : 'Pilih orang…'}
+        </Text>
+        <Text className="text-neutral-400">▾</Text>
+      </Pressable>
+
+      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
+        <View className="flex-1 justify-end bg-black/40">
+          <View className="max-h-[70%] gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-black dark:text-white">{label}</Text>
+              <Pressable className="active:opacity-60" onPress={() => setOpen(false)}>
+                <Text className="text-base text-brand">Tutup</Text>
+              </Pressable>
+            </View>
+
+            {isLoading ? (
+              <ActivityIndicator />
+            ) : (
+              <ScrollView className="grow-0">
+                {value ? (
+                  <Pressable
+                    className="border-b border-neutral-100 py-3 active:opacity-60 dark:border-neutral-800"
+                    onPress={() => {
+                      onChange(null);
+                      setOpen(false);
+                    }}>
+                    <Text className="text-base text-red-500">Kosongkan pilihan</Text>
+                  </Pressable>
+                ) : null}
+                {options.map((p) => {
+                  const selected = p.id === value?.id;
+                  return (
+                    <Pressable
+                      key={p.id}
+                      className="border-b border-neutral-100 py-3 active:opacity-60 dark:border-neutral-800"
+                      onPress={() => {
+                        onChange(p);
+                        setOpen(false);
+                      }}>
+                      <Text
+                        className={`text-base ${selected ? 'font-semibold text-brand' : 'text-black dark:text-white'}`}>
+                        {personLabel(p)}
+                      </Text>
+                      {p.email ? <Text className="text-xs text-neutral-400">{p.email}</Text> : null}
+                    </Pressable>
+                  );
+                })}
+                {options.length === 0 ? (
+                  <Text className="py-4 text-center text-sm text-neutral-400">
+                    Belum ada anggota lain di organisasi.
+                  </Text>
+                ) : null}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+export { personLabel };

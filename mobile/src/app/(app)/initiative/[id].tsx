@@ -1,0 +1,147 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useCallback } from 'react';
+import { Alert } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/components';
+
+import { Badge, Button, EmptyState, Field, SectionCard } from '@/components/ui';
+import { useProfile } from '@/hooks/use-profile';
+import {
+  ACTION_PLAN_STATUS_LABEL,
+  INITIATIVE_STATUS_LABEL,
+  PRIORITY_LABEL,
+  STATUS_TONE,
+  activateInitiative,
+  getInitiative,
+  listActionPlans,
+  type ActionPlanWithPeople,
+} from '@/lib/cards';
+import { personLabel } from '@/components/user-picker';
+
+function ActionPlanRow({ item, onPress }: { item: ActionPlanWithPeople; onPress: () => void }) {
+  return (
+    <SectionCard onPress={onPress}>
+      <View className="flex-row items-start justify-between gap-3">
+        <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
+        <Badge
+          label={ACTION_PLAN_STATUS_LABEL[item.status] ?? item.status}
+          tone={STATUS_TONE[item.status]}
+        />
+      </View>
+      <View className="flex-row flex-wrap gap-x-4 gap-y-1">
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+          PIC: {item.pic ? personLabel(item.pic) : '—'}
+        </Text>
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+          Reviewer: {item.reviewer ? personLabel(item.reviewer) : '—'}
+        </Text>
+        {item.deadline ? (
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">⏰ {item.deadline}</Text>
+        ) : null}
+        {item.priority ? (
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+            {PRIORITY_LABEL[item.priority] ?? item.priority}
+          </Text>
+        ) : null}
+      </View>
+    </SectionCard>
+  );
+}
+
+export default function InitiativeDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { can } = useProfile();
+
+  const initiativeQ = useQuery({ queryKey: ['initiative', id], queryFn: () => getInitiative(id) });
+  const plansQ = useQuery({ queryKey: ['action-plans', id], queryFn: () => listActionPlans(id) });
+
+  useFocusEffect(
+    useCallback(() => {
+      initiativeQ.refetch();
+      plansQ.refetch();
+    }, [initiativeQ, plansQ]),
+  );
+
+  const activateM = useMutation({
+    mutationFn: () => activateInitiative(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['initiative', id] });
+      qc.invalidateQueries({ queryKey: ['initiatives'] });
+    },
+    onError: (e) => Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+  });
+
+  const initiative = initiativeQ.data;
+
+  return (
+    <ScrollView className="flex-1 bg-white dark:bg-black">
+      <Stack.Screen options={{ title: initiative?.name ?? 'Initiative' }} />
+      <View className="gap-5 p-5">
+        {initiativeQ.isLoading || !initiative ? (
+          <ActivityIndicator />
+        ) : (
+          <>
+            <View className="gap-2">
+              <Badge
+                label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
+                tone={STATUS_TONE[initiative.status]}
+              />
+              <Text className="text-2xl font-bold text-black dark:text-white">{initiative.name}</Text>
+            </View>
+
+            <SectionCard>
+              {initiative.target_result ? <Field label="Target Hasil" value={initiative.target_result} /> : null}
+              {initiative.period_start || initiative.period_end ? (
+                <Field
+                  label="Periode"
+                  value={`${initiative.period_start ?? '—'} → ${initiative.period_end ?? '—'}`}
+                />
+              ) : null}
+              {initiative.description ? <Field label="Deskripsi" value={initiative.description} /> : null}
+            </SectionCard>
+
+            {initiative.status === 'draft' ? (
+              <Button
+                label="Aktifkan Initiative"
+                onPress={() => activateM.mutate()}
+                loading={activateM.isPending}
+              />
+            ) : null}
+
+            <View className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
+                {can('create_action_plan') ? (
+                  <Button
+                    label="+ Tambah"
+                    variant="secondary"
+                    onPress={() => router.push(`/action-plan/new?initiativeId=${id}` as Href)}
+                  />
+                ) : null}
+              </View>
+
+              {plansQ.isLoading ? (
+                <ActivityIndicator />
+              ) : plansQ.data && plansQ.data.length > 0 ? (
+                plansQ.data.map((item) => (
+                  <ActionPlanRow
+                    key={item.id}
+                    item={item}
+                    onPress={() => router.push(`/action-plan/${item.id}` as Href)}
+                  />
+                ))
+              ) : (
+                <EmptyState
+                  title="Belum ada Action Plan"
+                  description="Pecah Initiative ini menjadi pekerjaan konkret dengan PIC, Reviewer, dan deadline."
+                />
+              )}
+            </View>
+          </>
+        )}
+      </View>
+    </ScrollView>
+  );
+}
