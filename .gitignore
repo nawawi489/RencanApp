@@ -1,0 +1,19 @@
+# Local Claude / MCP config
+.claude/settings.local.json
+# Berisi SUPABASE_ACCESS_TOKEN — jangan di-commit
+.mcp.json
+
+# Secrets / env
+.env
+.env.*
+*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Obsidian — local/per-machine vault state (keep shared config: app/core-plugins/appearance/graph)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/plugins/*/data.json
