@@ -29,5 +29,7 @@ jobs:
     needs: [checks]
     type: build
     params:
-      platform: all
+      # Android dulu: keystore di-generate otomatis EAS, tanpa Apple Developer account.
+      # Tambah iOS (platform: all) setelah kredensial Apple di-setup via `eas credentials`.
+      platform: android
       profile: preview
