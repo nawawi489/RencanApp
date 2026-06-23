@@ -1,0 +1,31 @@
+name: PR Preview
+
+# Setiap PR ke main: jalankan cek mutu, lalu build internal untuk diuji di device.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types & tests
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - name: Lint
+        run: npm run lint
+      - name: Type-check
+        run: npm run type-check
+      - name: Test
+        run: npm run test:ci
+
+  build:
+    name: Build preview (internal)
+    needs: [checks]
+    type: build
+    params:
+      platform: all
+      profile: preview

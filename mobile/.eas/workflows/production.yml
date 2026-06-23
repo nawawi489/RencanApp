@@ -1,0 +1,54 @@
+name: Production Release
+
+# Dipicu oleh tag rilis (mis. v1.0.0): cek mutu -> build production -> submit ke store.
+# Memberi tag secara eksplisit lebih hemat build minutes daripada build tiap push ke main.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  checks:
+    name: Lint, types & tests
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - name: Lint
+        run: npm run lint
+      - name: Type-check
+        run: npm run type-check
+      - name: Test
+        run: npm run test:ci
+
+  build_android:
+    name: Build Android (production)
+    needs: [checks]
+    type: build
+    params:
+      platform: android
+      profile: production
+
+  build_ios:
+    name: Build iOS (production)
+    needs: [checks]
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  # Submit butuh kredensial store (Google Play service account / App Store Connect).
+  # Hapus komentar setelah kredensial di-setup via `eas credentials` / dashboard Expo.
+  # submit_android:
+  #   name: Submit ke Google Play
+  #   needs: [build_android]
+  #   type: submit
+  #   params:
+  #     platform: android
+  #     profile: production
+  #
+  # submit_ios:
+  #   name: Submit ke App Store
+  #   needs: [build_ios]
+  #   type: submit
+  #   params:
+  #     platform: ios
+  #     profile: production
