@@ -7,7 +7,8 @@ node_modules/
 .expo/
 dist/
 web-build/
-expo-env.d.ts
+# expo-env.d.ts sengaja DI-TRACK (mirip nativewind-env.d.ts): menyediakan deklarasi
+# modul *.css/*.module.css via expo/types yang dibutuhkan `tsc` di CI (runner tak men-generate-nya).
 
 # Native
 .kotlin/

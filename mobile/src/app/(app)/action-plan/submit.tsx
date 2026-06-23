@@ -13,6 +13,7 @@ import {
   type EvidenceInput,
   type ResultValueInput,
 } from '@/lib/cards';
+import { getInstance, submitInstance } from '@/lib/repeat';
 
 // Jenis bukti yang didukung form Fase 1 (catatan & link). Upload file menyusul (skema & bucket sudah siap).
 const EVIDENCE_KINDS = ['text_note', 'report', 'link_doc', 'link_gdrive'] as const;
@@ -56,11 +57,22 @@ function Chips({
 }
 
 export default function SubmitScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, instanceId } = useLocalSearchParams<{ id?: string; instanceId?: string }>();
   const router = useRouter();
   const qc = useQueryClient();
 
-  const apQ = useQuery({ queryKey: ['action-plan', id], queryFn: () => getActionPlan(id) });
+  // Mode instance (repeat): ambil instance untuk tahu action_plan_id parent (sumber flag wajib).
+  const instanceQ = useQuery({
+    queryKey: ['instance', instanceId],
+    queryFn: () => getInstance(instanceId!),
+    enabled: !!instanceId,
+  });
+  const apId = instanceId ? instanceQ.data?.action_plan_id : id;
+  const apQ = useQuery({
+    queryKey: ['action-plan', apId],
+    queryFn: () => getActionPlan(apId!),
+    enabled: !!apId,
+  });
   const ap = apQ.data;
 
   const [note, setNote] = useState('');
@@ -83,12 +95,20 @@ export default function SubmitScreen() {
           value_type: r.value_type,
           value_text: r.value_text.trim() || null,
         }));
-      return submitActionPlan({ actionPlanId: id, note: note.trim() || null, evidence: ev, resultValues: rv });
+      const noteVal = note.trim() || null;
+      return instanceId
+        ? submitInstance({ instanceId, note: noteVal, evidence: ev, resultValues: rv })
+        : submitActionPlan({ actionPlanId: id!, note: noteVal, evidence: ev, resultValues: rv });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['action-plan', id] });
-      qc.invalidateQueries({ queryKey: ['submissions', id] });
+      qc.invalidateQueries({ queryKey: ['action-plan', apId] });
+      qc.invalidateQueries({ queryKey: ['submissions', apId] });
       qc.invalidateQueries({ queryKey: ['action-plans'] });
+      if (instanceId) {
+        qc.invalidateQueries({ queryKey: ['repeat-instances', apId] });
+        qc.invalidateQueries({ queryKey: ['repeat-compliance', apId] });
+        qc.invalidateQueries({ queryKey: ['instance', instanceId] });
+      }
       router.back();
     },
     onError: (e) => Alert.alert('Gagal submit', e instanceof Error ? e.message : 'Terjadi kesalahan.'),

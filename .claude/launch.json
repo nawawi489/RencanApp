@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ems-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "mobile", "run", "web", "--", "--port", "19010"],
+      "port": 19010
+    }
+  ]
+}

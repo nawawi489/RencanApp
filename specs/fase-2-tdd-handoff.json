@@ -1,0 +1,14 @@
+{
+  "feature": "Fase 2 — Action Plan Repeat. Tambah tabel action_plan_repeat_rules (1/Action Plan, frequency daily/weekly/monthly/custom, repeat_start/end_date, time_of_day, missed_rule strict/grace_period/overdue_allowed, grace_period_minutes, weekdays[]/month_days[]/custom_dates[]) dan action_plan_instances (instance_date, instance_time snapshot, deadline_at timestamptz tz-aware, pic_id/reviewer_id snapshot immutable + CHECK pic<>reviewer, status assigned/in_progress/submitted/done/revision/missed/archived, submitted_late/late_minutes, current_submission_id, unique(action_plan_id,instance_date)). Migrasi 0007: create extension pg_cron + cron.schedule; ALTER organizations add timezone default 'Asia/Jakarta'; ALTER governance_violations add severity; ALTER action_plan_submissions add action_plan_instance_id + 2 partial unique index pengganti unique(action_plan_id,version_number); UBAH submit_action_plan Fase 1 agar where-clause version filter action_plan_instance_id is null. RPC baru SECURITY DEFINER: set_action_plan_repeat_rule (upsert+immutability guard), generate_action_plan_instances (eager+idempoten on conflict), mark_overdue_instances (job, race-safe via submitted_at/current_submission_id), submit_action_plan_instance (isi action_plan_id parent+instance_id, version per-instance, late flags, review_required=false auto-done), review_action_plan_instance_submission (anti-self-approval via kolom instance), get_repeat_compliance (read-only metrik on-time/expected, overdue submit>deadline TIDAK on-time, exclude archived, NULL utk one_time). RLS hanya SELECT via can_access_action_plan; revoke cron-wide RPC dari authenticated; write_activity dengan actor sistem (actor_id NULL+source=system_cron) untuk job. KEPUTUSAN TERKUNCI: generasi EAGER saat aktivasi; PIC/Reviewer SNAPSHOT kolom; overdue>deadline tidak on-time; Search instance NON-GOAL; timezone+severity+pg_cron ditambah di 0007. Mobile: mobile/src/lib/repeat.ts (tipe+pemanggil tipis), label 'missed', form repeat di new.tsx, daftar instance+compliance di detail [id].tsx, supabase Edge Function untuk memicu job. Deliverable verifikasi: Daily Finance Closing 1-30 Juni 2026 -> 30 instance, 2 missed, compliance 28/30.",
+  "paths": [
+    "supabase/migrations/0007_fase2_repeat.sql",
+    "supabase/migrations/0005_fase1_card_engine.sql",
+    "supabase/functions/cron-repeat/index.ts",
+    "mobile/src/lib/repeat.ts",
+    "mobile/src/lib/cards.ts",
+    "mobile/src/lib/database.types.ts",
+    "mobile/src/app/(app)/action-plan/new.tsx",
+    "mobile/src/app/(app)/action-plan/[id].tsx",
+    "mobile/src/lib/__tests__/"
+  ]
+}

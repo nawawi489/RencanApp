@@ -1,0 +1,35 @@
+name: PR Preview
+
+# Setiap PR ke main: jalankan cek mutu, lalu build internal untuk diuji di device.
+on:
+  pull_request:
+    branches: [main]
+
+# EAS Workflows belum mendukung custom concurrency group — wajib placeholder ini
+# (docs.expo.dev/eas/workflows/syntax). Field-nya cancel_in_progress (underscore), nilai true.
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+jobs:
+  checks:
+    name: Lint, types & tests
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - name: Lint
+        run: npm run lint
+      - name: Type-check
+        run: npm run type-check
+      - name: Test
+        run: npm run test:ci
+
+  build:
+    name: Build preview (internal)
+    needs: [checks]
+    type: build
+    params:
+      # Android dulu: keystore di-generate otomatis EAS, tanpa Apple Developer account.
+      # Tambah iOS (platform: all) setelah kredensial Apple di-setup via `eas credentials`.
+      platform: android
+      profile: preview
