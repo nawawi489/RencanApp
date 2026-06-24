@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RencanApp — Improved Patterns (10/10)</title>
+<style>
+  :root{
+    --bg:#f3f5f8; --surface:#ffffff; --surface-soft:#f8fafc; --text:#172033;
+    --muted:#667085; --line:#dde3eb; --blue:#1877f2; --blue-soft:#e8f2ff;
+    --green:#14845c; --green-soft:#e7f7ef; --amber:#b76b00; --amber-soft:#fff3d7;
+    --red:#c93434; --red-soft:#ffe8e8; --violet:#6941c6; --violet-soft:#f1ebff;
+    --shadow:0 12px 30px rgba(31,43,68,.08);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text)}
+  .frame{width:430px;min-height:932px;margin:0 auto;background:var(--bg);position:relative;display:none;flex-direction:column}
+  .frame.active{display:flex}
+  /* topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#092753,#1877f2);display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px}
+  .brand h1{font-size:17px;margin:0;font-weight:800}
+  .brand .grn{color:var(--green)}
+  .brand .kick{font-size:11px;color:var(--muted);margin-top:1px}
+  .top-actions{display:flex;align-items:center;gap:10px}
+  .pill-search{display:flex;align-items:center;gap:6px;background:var(--surface-soft);border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--muted);font-size:13px}
+  .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;background:#e07a5f}
+  /* back header */
+  .subhead{display:flex;align-items:center;gap:10px;padding:14px 18px}
+  .back{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;color:var(--text)}
+  .subhead .t{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  /* body */
+  .body{flex:1;padding:0 18px 18px;overflow:auto}
+  .h2{font-size:20px;font-weight:800;margin:6px 0 2px}
+  .legend-note{font-size:12px;color:var(--muted)}
+  /* bottom nav */
+  .nav{display:flex;justify-content:space-around;align-items:center;background:var(--surface);border-top:1px solid var(--line);padding:10px 8px 14px;margin-top:auto;position:sticky;bottom:0}
+  .nav .item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);position:relative}
+  .nav .item.active{color:var(--blue);font-weight:700}
+  .nav .ic{width:24px;height:24px;border:2px solid currentColor;border-radius:7px}
+  .nav .item.active .bar{position:absolute;top:-12px;width:26px;height:3px;border-radius:3px;background:var(--blue)}
+  .badge{position:absolute;top:-6px;right:-8px;background:var(--red);color:#fff;border-radius:999px;font-size:9px;font-weight:700;padding:1px 5px}
+
+  /* ===== EMPTY STATE (governance) ===== */
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 28px;gap:6px}
+  .empty .ill{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 50% 40%,var(--green-soft),#f4faf6);display:grid;place-items:center;margin-bottom:10px;box-shadow:var(--shadow)}
+  .empty .ill svg{width:54px;height:54px;stroke:var(--green);stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .empty h3{font-size:21px;font-weight:800;margin:8px 0 0}
+  .empty p{font-size:14px;color:var(--muted);line-height:1.55;max-width:280px;margin:4px 0 0}
+  .empty .meta{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;font-size:12px;font-weight:700;padding:6px 12px}
+  .chip.green{background:var(--green-soft);color:var(--green)}
+  .chip.grey{background:var(--surface-soft);color:var(--muted);border:1px solid var(--line)}
+  .ghost-btn{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 20px;font-weight:700;font-size:14px;color:var(--blue);box-shadow:var(--shadow)}
+
+  /* ===== SEARCH ZERO/INITIAL ===== */
+  .searchbar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin:4px 0 16px}
+  .searchbar svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2}
+  .searchbar input{border:0;outline:0;font-size:15px;flex:1;background:transparent;color:var(--text)}
+  .sec-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 10px}
+  .scope-row{display:flex;gap:8px;flex-wrap:wrap}
+  .scope{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .scope .dot{width:9px;height:9px;border-radius:50%}
+  .recent{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+  .recent .r{display:flex;align-items:center;gap:11px;padding:12px 4px;border-bottom:1px solid var(--line);font-size:14px}
+  .recent .r svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2}
+  .recent .r .x{margin-left:auto;color:var(--muted);font-size:18px}
+  .zero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:34px 24px;margin-top:8px}
+  .zero .ill{width:88px;height:88px;border-radius:50%;background:var(--blue-soft);display:grid;place-items:center}
+  .zero .ill svg{width:38px;height:38px;stroke:var(--blue);fill:none;stroke-width:2.4}
+  .zero h4{margin:6px 0 0;font-size:17px;font-weight:800}
+  .zero p{margin:2px 0 0;font-size:13px;color:var(--muted);max-width:260px}
+
+  /* ===== SKELETON ===== */
+  .sk-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .sk{background:linear-gradient(90deg,#eef1f5 25%,#e2e7ee 37%,#eef1f5 63%);background-size:400% 100%;border-radius:8px;animation:sh 1.3s ease infinite}
+  @keyframes sh{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  .sk-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .sk-line{height:12px}
+  .info-banner{display:flex;align-items:center;gap:8px;background:var(--blue-soft);color:#0f4ea8;border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600;margin:6px 0 16px}
+
+  /* ===== PEOPLE + LEGEND ===== */
+  .legend{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:6px 0 16px;box-shadow:var(--shadow)}
+  .legend h5{margin:0 0 11px;font-size:13px;font-weight:800}
+  .legend .scale{display:flex;height:10px;border-radius:6px;overflow:hidden;margin-bottom:11px}
+  .legend .seg{flex:1}
+  .legend-keys{display:flex;flex-direction:column;gap:8px}
+  .lk{display:flex;align-items:center;gap:10px;font-size:13px}
+  .lk .sw{width:14px;height:14px;border-radius:4px;flex:none}
+  .lk b{font-weight:700}
+  .lk span{color:var(--muted)}
+  .lk .rng{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
+  .prow{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+  .rank{width:26px;height:26px;border-radius:8px;background:var(--blue-soft);color:var(--blue);font-weight:800;font-size:13px;display:grid;place-items:center;flex:none}
+  .pav{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;flex:none}
+  .pinfo{flex:1;min-width:0}
+  .pinfo .nm{font-weight:800;font-size:15px}
+  .pinfo .role{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pinfo .score{margin-top:6px;display:inline-flex;align-items:center;gap:6px;border-radius:999px;font-size:12px;font-weight:700;padding:4px 10px}
+  .score.s-green{background:var(--green-soft);color:var(--green)}
+  .score.s-neutral{background:var(--surface-soft);color:#475467;border:1px solid var(--line)}
+  .score.s-amber{background:var(--amber-soft);color:var(--amber)}
+  .score .pdot{width:7px;height:7px;border-radius:50%}
+  .view{background:var(--blue);color:#fff;border-radius:12px;padding:10px 16px;font-weight:700;font-size:13px;flex:none}
+</style>
+</head>
+<body>
+
+<!-- ============ FRAME 1: EMPTY STATE (Governance, "semua bersih") ============ -->
+<section class="frame active" id="empty-governance">
+  <div class="subhead"><span class="back">‹ Kembali</span><span class="t">Governance · Status</span></div>
+  <div class="empty">
+    <div class="ill"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <h3>Tidak ada pelanggaran</h3>
+    <p>Semua card mengikuti aturan governance. Reviewer berbeda dari PIC, deadline punya jalur resmi, dan struktur minimum terpenuhi.</p>
+    <div class="meta">
+      <span class="chip green">✓ 0 pelanggaran aktif</span>
+      <span class="chip grey">Terakhir dicek 2 menit lalu</span>
+    </div>
+    <button class="ghost-btn">Lihat log governance</button>
+  </div>
+  <nav class="nav">
+    <div class="item"><span class="ic"></span>Home</div>
+    <div class="item"><span class="ic"></span><span class="badge">10</span>Notif</div>
+    <div class="item"><span class="ic"></span>Workspace</div>
+    <div class="item"><span class="ic"></span><span class="badge">3</span>Inbox</div>
+    <div class="item active"><span class="bar"></span><span class="ic"></span>Menu</div>
+  </nav>
+</section>
+
+<!-- ============ FRAME 2: SEARCH — INITIAL STATE ============ -->
+<section class="frame" id="search-initial">
+  <div class="subhead"><span class="back">‹ Kembali</span><span class="t">Global Search · Scope kamu</span></div>
+  <div class="body">
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24"><path d="m21 21-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>
+      <input placeholder="Cari Goal, KPI, Action Plan, atau orang…" />
+    </div>
+    <div class="sec-label">Cari di</div>
+    <div class="scope-row">
+      <span class="scope"><span class="dot" style="background:var(--blue)"></span>Performance</span>
+      <span class="scope"><span class="dot" style="background:var(--violet)"></span>Development</span>
+      <span class="scope"><span class="dot" style="background:var(--green)"></span>People</span>
+      <span class="scope"><span class="dot" style="background:var(--amber)"></span>Arsip</span>
+    </div>
+    <div class="sec-label">Pencarian terakhir</div>
+    <div class="recent">
+      <div class="r"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>campaign hemat<span class="x">×</span></div>
+      <div class="r"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>jumlah customer<span class="x">×</span></div>
+      <div class="r"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Rina Jaya<span class="x">×</span></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="item"><span class="ic"></span>Home</div>
+    <div class="item"><span class="ic"></span><span class="badge">10</span>Notif</div>
+    <div class="item active"><span class="bar"></span><span class="ic"></span>Workspace</div>
+    <div class="item"><span class="ic"></span><span class="badge">3</span>Inbox</div>
+    <div class="item"><span class="ic"></span>Menu</div>
+  </nav>
+</section>
+
+<!-- ============ FRAME 3: SEARCH — ZERO RESULTS ============ -->
+<section class="frame" id="search-zero">
+  <div class="subhead"><span class="back">‹ Kembali</span><span class="t">Global Search · Scope kamu</span></div>
+  <div class="body">
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24"><path d="m21 21-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>
+      <input value="promo bundling xyz" />
+    </div>
+    <div class="zero">
+      <div class="ill"><svg viewBox="0 0 24 24"><path d="m21 21-4.3-4.3"/><circle cx="11" cy="11" r="7"/><path d="M8 11h6"/></svg></div>
+      <h4>Tidak ada hasil untuk “promo bundling xyz”</h4>
+      <p>Mungkin di luar scope akses kamu, atau sudah diarsipkan. Coba kata kunci lain.</p>
+      <div class="meta" style="margin-top:14px">
+        <span class="chip grey">Cari di Arsip</span>
+        <span class="chip grey">Minta akses Confidential</span>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="item"><span class="ic"></span>Home</div>
+    <div class="item"><span class="ic"></span><span class="badge">10</span>Notif</div>
+    <div class="item active"><span class="bar"></span><span class="ic"></span>Workspace</div>
+    <div class="item"><span class="ic"></span><span class="badge">3</span>Inbox</div>
+    <div class="item"><span class="ic"></span>Menu</div>
+  </nav>
+</section>
+
+<!-- ============ FRAME 4: LOADING SKELETON ============ -->
+<section class="frame" id="loading-skeleton">
+  <div class="subhead"><span class="back">‹ Kembali</span><span class="t">Notifications · Memuat</span></div>
+  <div class="body">
+    <div class="info-banner">⟳ Menyinkronkan notifikasi terbaru…</div>
+    <div class="sk-card">
+      <div class="sk-row"><div class="sk" style="width:40px;height:40px;border-radius:50%"></div>
+        <div style="flex:1"><div class="sk sk-line" style="width:70%;margin-bottom:8px"></div><div class="sk sk-line" style="width:45%"></div></div></div>
+      <div class="sk sk-line" style="width:30%;height:30px;border-radius:10px"></div>
+    </div>
+    <div class="sk-card">
+      <div class="sk-row"><div class="sk" style="width:40px;height:40px;border-radius:50%"></div>
+        <div style="flex:1"><div class="sk sk-line" style="width:80%;margin-bottom:8px"></div><div class="sk sk-line" style="width:55%"></div></div></div>
+      <div class="sk sk-line" style="width:40%;height:30px;border-radius:10px"></div>
+    </div>
+    <div class="sk-card">
+      <div class="sk-row"><div class="sk" style="width:40px;height:40px;border-radius:50%"></div>
+        <div style="flex:1"><div class="sk sk-line" style="width:60%;margin-bottom:8px"></div><div class="sk sk-line" style="width:50%"></div></div></div>
+    </div>
+    <div class="sk-card">
+      <div class="sk-row"><div class="sk" style="width:40px;height:40px;border-radius:50%"></div>
+        <div style="flex:1"><div class="sk sk-line" style="width:75%;margin-bottom:8px"></div><div class="sk sk-line" style="width:40%"></div></div></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="item"><span class="ic"></span>Home</div>
+    <div class="item active"><span class="bar"></span><span class="ic"></span><span class="badge">10</span>Notif</div>
+    <div class="item"><span class="ic"></span>Workspace</div>
+    <div class="item"><span class="ic"></span><span class="badge">3</span>Inbox</div>
+    <div class="item"><span class="ic"></span>Menu</div>
+  </nav>
+</section>
+
+<!-- ============ FRAME 5: PEOPLE + SCORE LEGEND + DISTINCT AVATARS ============ -->
+<section class="frame" id="people-legend">
+  <div class="topbar">
+    <div class="brand"><div class="logo">R</div><div><h1>Rencana<span class="grn">app</span></h1><div class="kick">Ranking dan profil pencapaian</div></div></div>
+    <div class="top-actions"><div class="pill-search">⌕ Cari</div><div class="avatar">RJ</div></div>
+  </div>
+  <div class="body">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px">
+      <span class="h2">People</span>
+      <span class="view" style="background:var(--blue)">+ User</span>
+    </div>
+
+    <div class="legend">
+      <h5>Skala Score</h5>
+      <div class="scale">
+        <span class="seg" style="background:var(--amber)"></span>
+        <span class="seg" style="background:#cdd5df"></span>
+        <span class="seg" style="background:var(--green)"></span>
+      </div>
+      <div class="legend-keys">
+        <div class="lk"><span class="sw" style="background:var(--green)"></span><b>On track</b><span>&nbsp;· konsisten di atas target</span><span class="rng">≥ 85</span></div>
+        <div class="lk"><span class="sw" style="background:#cdd5df"></span><b>Stabil</b><span>&nbsp;· sesuai ekspektasi</span><span class="rng">70 – 84</span></div>
+        <div class="lk"><span class="sw" style="background:var(--amber)"></span><b>Perlu perhatian</b><span>&nbsp;· di bawah target</span><span class="rng">&lt; 70</span></div>
+      </div>
+    </div>
+
+    <div class="sec-label" style="display:flex;justify-content:space-between"><span>Ranking People</span><span style="text-transform:none;letter-spacing:0">42 user</span></div>
+
+    <div class="prow">
+      <span class="rank">1</span>
+      <span class="pav" style="background:linear-gradient(135deg,#1877f2,#0f52a8)">RJ</span>
+      <div class="pinfo"><div class="nm">Rina Jaya</div><div class="role">Staf Marketing · Achiever</div>
+        <span class="score s-green"><span class="pdot" style="background:var(--green)"></span>Score 86 · On track</span></div>
+      <span class="view">Profil</span>
+    </div>
+    <div class="prow">
+      <span class="rank">2</span>
+      <span class="pav" style="background:linear-gradient(135deg,#6941c6,#8b5cf6)">AM</span>
+      <div class="pinfo"><div class="nm">Arman Malik</div><div class="role">Head Marketing · Kualitas</div>
+        <span class="score s-neutral"><span class="pdot" style="background:#98a2b3"></span>Score 82 · Stabil</span></div>
+      <span class="view">Profil</span>
+    </div>
+    <div class="prow">
+      <span class="rank">3</span>
+      <span class="pav" style="background:linear-gradient(135deg,#0e9384,#15b8a6)">MS</span>
+      <div class="pinfo"><div class="nm">Maya Sari</div><div class="role">Staf Ops · Konsistensi</div>
+        <span class="score s-neutral"><span class="pdot" style="background:#98a2b3"></span>Score 78 · Stabil</span></div>
+      <span class="view">Profil</span>
+    </div>
+    <div class="prow">
+      <span class="rank">4</span>
+      <span class="pav" style="background:linear-gradient(135deg,#dd6b20,#f59e0b)">DS</span>
+      <div class="pinfo"><div class="nm">Dika Saputra</div><div class="role">Staf Ops · Deadline aktif</div>
+        <span class="score s-amber"><span class="pdot" style="background:var(--amber)"></span>Score 68 · Perlu perhatian</span></div>
+      <span class="view">Profil</span>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="item"><span class="ic"></span>Home</div>
+    <div class="item"><span class="ic"></span><span class="badge">10</span>Notif</div>
+    <div class="item"><span class="ic"></span>Workspace</div>
+    <div class="item"><span class="ic"></span><span class="badge">3</span>Inbox</div>
+    <div class="item active"><span class="bar"></span><span class="ic"></span>Menu</div>
+  </nav>
+</section>
+
+<script>
+  function showFrame(id){
+    document.querySelectorAll('.frame').forEach(f=>f.classList.remove('active'));
+    var el=document.getElementById(id); if(el) el.classList.add('active');
+  }
+</script>
+</body>
+</html>

@@ -102,6 +102,17 @@ Today's date: use the date provided in system context, not a hardcoded value.
 
 ---
 
+## Design tokens (`mobile/`)
+
+`DESIGN.md` di root adalah **sumber kebenaran token desain** (warna, tipografi, spacing, radius, elevation, motion, a11y). Aturan:
+
+1. Sebelum menyentuh UI di `mobile/src/` (komponen, layar, styling), baca `DESIGN.md` lebih dulu.
+2. Token baru (warna/spasi/komponen) **didaftarkan di `DESIGN.md` dulu**, lalu diimplementasi di `mobile/src/global.css` (`@theme` untuk brand) + class NativeWind.
+3. Patuhi aturan aksesibilitas yang mengikat di `DESIGN.md §4` (touch target ≥44px, warna ≠ satu-satunya sinyal, solid+teks putih pakai `brand-dark` `#1564b3`).
+4. Saat sebuah keputusan token diambil/berubah, perbarui `DESIGN.md` + `global.css` agar tetap sinkron.
+
+---
+
 ## gstack
 
 Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
