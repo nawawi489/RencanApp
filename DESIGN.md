@@ -1,0 +1,172 @@
+# RencanApp — Design System & Tokens
+
+Sumber kebenaran token desain. Diekstrak dari prototype tim desain [`design.html`](design.html) dan diselaraskan dengan implementasi di [`mobile/`](mobile/) (NativeWind v5 / `react-native-css`, [`global.css`](mobile/src/global.css)).
+
+**Cara pakai:** semua keputusan visual dikalibrasi ke dokumen ini. Token diekspresikan sebagai (1) nilai hex, (2) custom property `@theme` di `global.css`, dan (3) class NativeWind yang dipakai komponen. Saat menambah warna/spasi/komponen, daftarkan di sini dulu.
+
+Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improved/`](ui/ux/improved/).
+
+---
+
+## 1. Brand
+
+- **Nama:** Rencanaapp · **Tagline:** "Rencanakan. Jalankan. Tuntaskan."
+- **Logo:** mark centang gradient biru→hijau. Gradien resmi:
+  - Biru: `#092753` → `#1877f2` (`loginMarkBlue`)
+  - Hijau: `#009f72` → `#6ccf43` (`loginMarkGreen`)
+- **Karakter:** padat-tapi-tenang (app utilitas eksekusi), bukan marketing. Kartu rounded, shadow lembut, aksen biru, status berkode warna+teks.
+
+---
+
+## 2. Color tokens
+
+### Neutrals (teks & permukaan)
+| Token | Hex | NativeWind | Pakai |
+|---|---|---|---|
+| `text` | `#172033` | `text-black` / `dark:text-white` | Teks utama |
+| `muted` | `#667085` | `text-neutral-500` | Teks sekunder, kicker |
+| `line` | `#dde3eb` | `border-neutral-200` | Garis & border kartu |
+| `surface` | `#ffffff` | `bg-white` / `dark:bg-black` | Permukaan kartu |
+| `surface-soft` | `#f8fafc` | `bg-neutral-50` | Field/inset |
+| `bg` | `#f3f5f8` | (latar layar) | Latar app |
+
+### Brand
+| Token | Hex | `@theme` | Pakai |
+|---|---|---|---|
+| `brand` | `#208aef` | `--color-brand` | Aksen, ikon aktif, link, fill non-teks |
+| `brand-dark` | `#1564b3` | `--color-brand-dark` | **Fill tombol solid + teks putih** (lihat §4 a11y) |
+| `brand-soft` | `#e8f2ff` | — | Latar chip/badge info |
+
+> Catatan rekonsiliasi: prototype memakai biru `#1877f2`; kode `mobile/` memakai `#208aef`. **Kanonik = `#208aef`** (sudah shipping di `global.css`) agar tanpa churn. Konfirmasi bila tim desain mau persis `#1877f2`.
+
+### Status (semantik — selalu warna + label teks)
+| Tone | Teks (AA) | Latar | NativeWind | Makna |
+|---|---|---|---|---|
+| `success` | `#15803d` | `#dcfce7` | `text-green-700` / `bg-green-100` | Disetujui, selesai, aman |
+| `info` | `#1d4ed8` | `#e8f2ff` | `text-blue-700` / `bg-blue-100` | Netral/aktif |
+| `warn` | `#b45309` | `#fef3c7` | `text-amber-700` / `bg-amber-100` | Menunggu, perlu perhatian |
+| `danger` | `#b91c1c` | `#fef2f2` | `text-red-700` / `bg-red-50` | Kritis, revisi, gagal |
+| `neutral` | `#667085` | `#f1f5f9` | `text-neutral-600` / `bg-neutral-100` | Default |
+
+> Pasangan chip kanonik memakai shade **`-700` di atas `-100`** (semua lulus AA, lihat §4). Pasangan lembut prototype (mis. hijau `#14845c` di `#e7f7ef` = 4.23) **gagal AA** — jangan dipakai untuk teks.
+
+Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), `ui.tsx`.
+
+---
+
+## 3. Typography
+
+- **Typeface:** Inter (fallback `system-ui, -apple-system, "Segoe UI", sans-serif`).
+  > `mobile/` saat ini **belum memuat Inter** (`global.css` fallback ke `system-ui`). Memuat Inter via `expo-font` adalah langkah opsional untuk match prototype 1:1.
+- **Weights:** 400 reguler · 600 semibold · 700/800 bold (judul).
+
+| Peran | Size | Weight | NativeWind |
+|---|---|---|---|
+| Display (login) | 30 | 800 | `text-3xl font-extrabold` |
+| Judul layar (H1) | 24 | 700 | `text-2xl font-bold` |
+| Section (H2) | 20 | 700 | `text-xl font-bold` |
+| Body | 15 | 400 | `text-base` |
+| Body kecil | 13 | 400 | `text-sm` |
+| Caption/kicker | 11–12 | 600 uppercase | `text-xs font-semibold uppercase` |
+
+---
+
+## 4. Aksesibilitas (mengikat)
+
+**Kontras terverifikasi (WCAG, dihitung):**
+| Pasangan | Rasio | AA |
+|---|---|---|
+| `text` `#172033` / putih | 16.27 | ✓ AAA |
+| `muted` `#667085` / putih | 4.97 | ✓ |
+| `muted` `#667085` / `bg` `#f3f5f8` | 4.55 | ✓ (tipis) |
+| putih / `brand` `#208aef` | **3.53** | ✗ |
+| putih / `brand-dark` `#1564b3` | 5.99 | ✓ |
+| green-700 / green-100 | 4.57 | ✓ |
+| amber-700 / amber-100 | 4.51 | ✓ |
+| red-700 / red-50 | 5.91 | ✓ |
+
+**Aturan:**
+1. **Touch target ≥ 44×44px.** `Button` memakai `min-h-[44px]`. Chip/ikon-only beri padding atau `hitSlop`.
+2. **Warna ≠ satu-satunya sinyal.** Status & skor selalu warna **+** label teks (lihat `ScoreBadge`).
+3. **Solid + teks putih → pakai `brand-dark` `#1564b3`**, bukan `brand` `#208aef` (gagal AA pada teks normal). ✅ `Button` primary sudah `bg-brand-dark`.
+4. **Label screen reader.** `accessibilityRole` + `accessibilityLabel` + `accessibilityState` (`busy`/`disabled`) di tiap kontrol. Sudah di `Button`, `Skeleton`, `ErrorState`, `Avatar`.
+5. **Dynamic Type.** Layout harus selamat saat font sistem diperbesar (hindari tinggi fixed pada kontainer teks).
+
+---
+
+## 5. Spacing & radius
+
+**Spacing** (skala 4px, Tailwind): `1=4 · 2=8 · 3=12 · 4=16 · 5=20 · 6=24`. Padding layar `p-5` (20). Gap antar-section `gap-5`. Gap dalam kartu `gap-2`.
+
+**Radius:**
+| Token | px | NativeWind | Pakai |
+|---|---|---|---|
+| sm | 8 | `rounded` | Skeleton, dot |
+| md | 12 | `rounded-xl` | Tombol, input, field |
+| lg | 16 | `rounded-2xl` | Kartu, sheet |
+| full | 999 | `rounded-full` | Chip, avatar, badge |
+
+---
+
+## 6. Elevation
+
+- **Shadow kartu:** `0 12px 30px rgba(31,43,68,.08)` (prototype `--shadow`). Di RN halus dan opsional; default andalkan **border** (`border-neutral-200`) untuk pemisahan, shadow untuk elemen terangkat (FAB, sheet).
+- Dark mode: ganti shadow dengan `dark:border-neutral-800`.
+
+---
+
+## 7. Component tokens
+
+| Komponen | Token kunci | Lokasi |
+|---|---|---|
+| `Button` | `min-h-[44px] rounded-xl px-4 py-3`; variant primary/secondary/danger/success | [`ui.tsx`](mobile/src/components/ui.tsx) |
+| `SectionCard` | `rounded-2xl border p-4 gap-2` | `ui.tsx` |
+| `Badge`/chip | `rounded-full px-2.5 py-1 text-xs font-semibold`; tone §2 | `ui.tsx` |
+| `LabeledInput` | `rounded-xl border px-4 py-3`; `*` wajib merah | `ui.tsx` |
+| `EmptyState` v2 | ikon (ring 64px), tone neutral/success, meta chip, action | `ui.tsx` |
+| `Skeleton` | shimmer opacity 0.5↔1; radius prop | `ui.tsx` |
+| `ErrorState` | latar `red-50`, role `alert`, retry | `ui.tsx` |
+| `ScoreBadge`/`ScoreLegend` | band §8 + label teks | `ui.tsx` + [`score.ts`](mobile/src/lib/score.ts) |
+| `Avatar` | warna deterministik §8 + inisial | `ui.tsx` + [`avatar-color.ts`](mobile/src/lib/avatar-color.ts) |
+
+---
+
+## 8. Token semantik turunan
+
+**Score band** ([`score.ts`](mobile/src/lib/score.ts)):
+| Band | Rentang | Label | Warna |
+|---|---|---|---|
+| on-track | ≥ 85 | On track | green-700/100 |
+| stable | 70–84 | Stabil | neutral-600/100 |
+| attention | < 70 | Perlu perhatian | amber-700/100 |
+
+**Avatar palette** ([`avatar-color.ts`](mobile/src/lib/avatar-color.ts)) — deterministik per orang, semua lulus kontras AA dengan teks putih:
+`#1d4ed8 #6d28d9 #0f766e #b45309 #be123c #15803d #0369a1 #9333ea`
+
+---
+
+## 9. Motion
+
+- **Durasi:** mikro 150ms · standar 250ms · skeleton pulse 650ms.
+- **Easing:** ease-in-out untuk pulse; `active:opacity-70/80` untuk feedback tekan (sudah dipakai di `Button`/`SectionCard`).
+- Hemat animasi: app utilitas — gerakan untuk feedback & hierarki, bukan dekorasi.
+
+---
+
+## 10. Iconography
+
+- Garis (stroke) 2px, ujung membulat (`stroke-linecap="round"`), 24×24 viewBox — konsisten dengan nav bawah & ikon prototype.
+- Search = kaca pembesar, back = chevron kiri, lebih (`⋯`) = aksi sekunder.
+
+---
+
+## 11. Peta implementasi & keputusan terbuka
+
+**Implementasi tokens** → `mobile/src/global.css` `@theme` (brand) + class NativeWind (neutrals/status pakai palet Tailwind bawaan).
+
+**Keputusan terbuka (perlu konfirmasi):**
+1. **Brand hue** — `#208aef` (kode) vs `#1877f2` (prototype). Default: pertahankan `#208aef`.
+2. **Inter** — muat font asli vs tetap `system-ui`. Default: system (lebih ringan).
+3. ~~**Button contrast** — ganti fill primary ke `brand-dark` `#1564b3` agar teks putih lulus AA.~~ ✅ **Selesai** — `Button` primary kini `bg-brand-dark` (5.99:1).
+
+Saat sebuah keputusan diambil, perbarui token terkait di sini + `global.css`.

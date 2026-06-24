@@ -44,7 +44,7 @@ function Chips({
         return (
           <Pressable
             key={opt}
-            className={`rounded-full border px-3 py-1.5 active:opacity-70 ${active ? 'border-brand bg-brand' : 'border-neutral-300 dark:border-neutral-700'}`}
+            className={`rounded-full border px-3 py-1.5 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
             onPress={() => onChange(opt)}>
             <Text className={active ? 'text-xs font-semibold text-white' : 'text-xs text-black dark:text-white'}>
               {labels[opt] ?? opt}
@@ -128,14 +128,14 @@ export default function SubmitScreen() {
 
   if (apQ.isLoading || !ap) {
     return (
-      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
+      <View className="flex-1 items-center justify-center bg-neutral-50 dark:bg-black">
         <ActivityIndicator />
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black" keyboardShouldPersistTaps="handled">
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-5 p-5">
         <GuidanceNote
           title="Submit = Bukti + Nilai Hasil"
@@ -150,7 +150,7 @@ export default function SubmitScreen() {
             Bukti{ap.evidence_required ? <Text className="text-red-500"> *</Text> : null}
           </Text>
           {evidence.map((row, i) => (
-            <View key={i} className="gap-2 rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
+            <View key={i} className="gap-2 rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
               <Chips
                 options={EVIDENCE_KINDS}
                 value={row.kind}
@@ -181,7 +181,7 @@ export default function SubmitScreen() {
           <Pressable
             className="active:opacity-60"
             onPress={() => setEvidence((prev) => [...prev, { kind: 'text_note', content: '' }])}>
-            <Text className="text-sm font-semibold text-brand">+ Tambah bukti</Text>
+            <Text className="text-sm font-semibold text-brand-dark">+ Tambah bukti</Text>
           </Pressable>
         </View>
 
@@ -191,7 +191,7 @@ export default function SubmitScreen() {
             Nilai Hasil{ap.result_value_required ? <Text className="text-red-500"> *</Text> : null}
           </Text>
           {results.map((row, i) => (
-            <View key={i} className="gap-2 rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
+            <View key={i} className="gap-2 rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
               <TextInput
                 className="rounded-xl border border-neutral-300 px-4 py-2.5 text-base text-black dark:border-neutral-700 dark:text-white"
                 placeholder="Label (mis. Jumlah konten)"
@@ -228,7 +228,7 @@ export default function SubmitScreen() {
           <Pressable
             className="active:opacity-60"
             onPress={() => setResults((prev) => [...prev, { label: '', value_type: 'number', value_text: '' }])}>
-            <Text className="text-sm font-semibold text-brand">+ Tambah Nilai Hasil</Text>
+            <Text className="text-sm font-semibold text-brand-dark">+ Tambah Nilai Hasil</Text>
           </Pressable>
         </View>
 

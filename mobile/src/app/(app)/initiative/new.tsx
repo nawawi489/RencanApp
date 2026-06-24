@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, View } from 'react-native-css/components';
 
-import { Button, GuidanceNote, LabeledInput } from '@/components/ui';
+import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { createInitiative, type PersonRef } from '@/lib/cards';
 
@@ -52,25 +52,27 @@ export default function NewInitiativeScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black" keyboardShouldPersistTaps="handled">
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Initiative — Program eksekusi"
           body="Initiative adalah program konkret untuk menjalankan strategi. Isi Target Hasil, lalu pecah jadi Action Plan. Card disimpan sebagai Draft dulu; aktifkan setelah kelengkapan terpenuhi."
         />
 
-        <LabeledInput label="Nama Initiative" value={name} onChangeText={setName} required placeholder="mis. Kampanye Konten Q3" />
-        <LabeledInput
-          label="Target Hasil"
-          value={target}
-          onChangeText={setTarget}
-          placeholder="mis. 20 konten tayang & 500 leads"
-          multiline
-        />
-        <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
-        <LabeledInput label="Tanggal Mulai" value={periodStart} onChangeText={setPeriodStart} placeholder={DATE_HINT} keyboardType="numeric" />
-        <LabeledInput label="Tanggal Selesai" value={periodEnd} onChangeText={setPeriodEnd} placeholder={DATE_HINT} keyboardType="numeric" />
-        <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
+        <SectionCard>
+          <LabeledInput label="Nama Initiative" value={name} onChangeText={setName} required placeholder="mis. Kampanye Konten Q3" />
+          <LabeledInput
+            label="Target Hasil"
+            value={target}
+            onChangeText={setTarget}
+            placeholder="mis. 20 konten tayang & 500 leads"
+            multiline
+          />
+          <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
+          <LabeledInput label="Tanggal Mulai" value={periodStart} onChangeText={setPeriodStart} placeholder={DATE_HINT} keyboardType="numeric" />
+          <LabeledInput label="Tanggal Selesai" value={periodEnd} onChangeText={setPeriodEnd} placeholder={DATE_HINT} keyboardType="numeric" />
+          <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
+        </SectionCard>
 
         <Button label="Simpan sebagai Draft" onPress={submit} loading={mutation.isPending} />
       </View>

@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
-import { Badge, Button, Field, SectionCard } from '@/components/ui';
+import { Badge, Button, Field, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
 import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
@@ -233,24 +233,33 @@ export default function ActionPlanDetailScreen() {
   const isReviewer = !!profile && profile.id === ap?.reviewer_id;
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black">
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: ap?.name ?? 'Action Plan' }} />
       <View className="gap-5 p-5">
         {apQ.isLoading || !ap ? (
-          <ActivityIndicator />
+          <SkeletonList count={3} />
         ) : (
           <>
-            <View className="gap-2">
-              <Badge
-                label={ACTION_PLAN_STATUS_LABEL[ap.status] ?? ap.status}
-                tone={STATUS_TONE[ap.status]}
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <View className="gap-1">
+                <Badge
+                  label={ACTION_PLAN_STATUS_LABEL[ap.status] ?? ap.status}
+                  tone={STATUS_TONE[ap.status]}
+                />
+                <Text className="text-2xl font-bold text-black dark:text-white">{ap.name}</Text>
+              </View>
+              <MetaGrid
+                items={[
+                  { label: 'PIC', value: ap.pic ? personLabel(ap.pic) : '—' },
+                  { label: 'Reviewer', value: ap.reviewer ? personLabel(ap.reviewer) : '—' },
+                  { label: 'Deadline', value: ap.deadline ?? '—' },
+                  { label: 'Mode', value: ap.repeat_setting === 'repeat' ? 'Repeat' : 'One Time' },
+                ]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">{ap.name}</Text>
             </View>
 
             <SectionCard>
-              <Field label="PIC (eksekutor)" value={ap.pic ? personLabel(ap.pic) : '—'} />
-              <Field label="Reviewer" value={ap.reviewer ? personLabel(ap.reviewer) : '—'} />
+              <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
               <Field label="Periode" value={`${ap.start_date ?? '—'} → ${ap.deadline ?? '—'}`} />
               {ap.priority ? <Field label="Prioritas" value={PRIORITY_LABEL[ap.priority] ?? ap.priority} /> : null}
               {ap.expected_output ? <Field label="Output yang Diharapkan" value={ap.expected_output} /> : null}

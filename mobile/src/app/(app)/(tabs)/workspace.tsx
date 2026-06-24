@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
-import { Badge, Button, EmptyState, SectionCard } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, SectionCard, SkeletonList } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import {
   INITIATIVE_STATUS_LABEL,
@@ -29,7 +29,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
 export default function WorkspaceScreen() {
   const router = useRouter();
   const { can } = useProfile();
-  const { data, isLoading, refetch } = useQuery({ queryKey: ['initiatives'], queryFn: listInitiatives });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['initiatives'], queryFn: listInitiatives });
 
   useFocusEffect(
     useCallback(() => {
@@ -38,7 +38,7 @@ export default function WorkspaceScreen() {
   );
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black">
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <View className="gap-5 p-5">
         <View className="gap-1">
           <Text className="text-2xl font-bold text-black dark:text-white">Workspace</Text>
@@ -52,7 +52,9 @@ export default function WorkspaceScreen() {
         ) : null}
 
         {isLoading ? (
-          <ActivityIndicator />
+          <SkeletonList count={3} />
+        ) : isError ? (
+          <ErrorState onRetry={() => refetch()} />
         ) : data && data.length > 0 ? (
           <View className="gap-3">
             {data.map((item) => (
