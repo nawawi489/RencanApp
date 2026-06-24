@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
-import { Badge, Button, EmptyState, Field, SectionCard } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -76,31 +76,38 @@ export default function InitiativeDetailScreen() {
   const initiative = initiativeQ.data;
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black">
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: initiative?.name ?? 'Initiative' }} />
       <View className="gap-5 p-5">
         {initiativeQ.isLoading || !initiative ? (
-          <ActivityIndicator />
+          <SkeletonList count={3} />
         ) : (
           <>
-            <View className="gap-2">
-              <Badge
-                label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
-                tone={STATUS_TONE[initiative.status]}
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <View className="gap-1">
+                <Badge
+                  label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
+                  tone={STATUS_TONE[initiative.status]}
+                />
+                <Text className="text-2xl font-bold text-black dark:text-white">{initiative.name}</Text>
+              </View>
+              <MetaGrid
+                items={[
+                  { label: 'Target Hasil', value: initiative.target_result || '—' },
+                  {
+                    label: 'Periode',
+                    value: `${initiative.period_start ?? '—'} → ${initiative.period_end ?? '—'}`,
+                  },
+                ]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">{initiative.name}</Text>
             </View>
 
-            <SectionCard>
-              {initiative.target_result ? <Field label="Target Hasil" value={initiative.target_result} /> : null}
-              {initiative.period_start || initiative.period_end ? (
-                <Field
-                  label="Periode"
-                  value={`${initiative.period_start ?? '—'} → ${initiative.period_end ?? '—'}`}
-                />
-              ) : null}
-              {initiative.description ? <Field label="Deskripsi" value={initiative.description} /> : null}
-            </SectionCard>
+            {initiative.description ? (
+              <SectionCard>
+                <Text className="text-sm font-bold text-black dark:text-white">Deskripsi</Text>
+                <Text className="text-base text-black dark:text-white">{initiative.description}</Text>
+              </SectionCard>
+            ) : null}
 
             {initiative.status === 'draft' ? (
               <Button
@@ -123,7 +130,9 @@ export default function InitiativeDetailScreen() {
               </View>
 
               {plansQ.isLoading ? (
-                <ActivityIndicator />
+                <SkeletonList count={2} />
+              ) : plansQ.isError ? (
+                <ErrorState onRetry={() => plansQ.refetch()} />
               ) : plansQ.data && plansQ.data.length > 0 ? (
                 plansQ.data.map((item) => (
                   <ActionPlanRow

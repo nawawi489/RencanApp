@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, Switch } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, GuidanceNote, LabeledInput } from '@/components/ui';
+import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createActionPlan, type PersonRef } from '@/lib/cards';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
@@ -31,7 +31,7 @@ function PrioritySelector({ value, onChange }: { value: string | null; onChange:
           return (
             <Pressable
               key={p}
-              className={`rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand bg-brand' : 'border-neutral-300 dark:border-neutral-700'}`}
+              className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
               onPress={() => onChange(p)}>
               <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
                 {PRIORITY_LABEL[p]}
@@ -67,7 +67,7 @@ function ChipSelector({
             <Pressable
               key={o.key}
               testID={testIDPrefix ? `${testIDPrefix}-${o.key}` : undefined}
-              className={`rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand bg-brand' : 'border-neutral-300 dark:border-neutral-700'}`}
+              className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
               onPress={() => onChange(o.key)}>
               <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
                 {o.label}
@@ -218,23 +218,26 @@ export default function NewActionPlanScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black" keyboardShouldPersistTaps="handled">
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Action Plan — Siapa melakukan apa & kapan"
           body="Unit eksekusi paling konkret. PIC (eksekutor) & Reviewer wajib dan harus berbeda. Card disimpan Draft; aktifkan setelah semua field wajib terisi."
         />
 
-        <LabeledInput label="Nama Action Plan" value={name} onChangeText={setName} required placeholder="mis. Buat 20 Konten Iklan" />
-        <UserPicker label="PIC (eksekutor)" required value={pic} onChange={setPic} excludeId={reviewer?.id} />
-        <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />
-        <LabeledInput label="Tanggal Mulai" value={startDate} onChangeText={setStartDate} placeholder={DATE_HINT} keyboardType="numeric" />
-        <LabeledInput label="Deadline" value={deadline} onChangeText={setDeadline} placeholder={DATE_HINT} keyboardType="numeric" />
-        <LabeledInput label="Output yang Diharapkan" value={output} onChangeText={setOutput} multiline placeholder="Hasil konkret yang diharapkan" />
-        <LabeledInput label="Definition of Done" value={dod} onChangeText={setDod} multiline placeholder="Kriteria pekerjaan dianggap selesai" />
-        <PrioritySelector value={priority} onChange={setPriority} />
+        <SectionCard>
+          <Text className="text-sm font-bold text-black dark:text-white">Detail Action Plan</Text>
+          <LabeledInput label="Nama Action Plan" value={name} onChangeText={setName} required placeholder="mis. Buat 20 Konten Iklan" />
+          <UserPicker label="PIC (eksekutor)" required value={pic} onChange={setPic} excludeId={reviewer?.id} />
+          <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />
+          <LabeledInput label="Tanggal Mulai" value={startDate} onChangeText={setStartDate} placeholder={DATE_HINT} keyboardType="numeric" />
+          <LabeledInput label="Deadline" value={deadline} onChangeText={setDeadline} placeholder={DATE_HINT} keyboardType="numeric" />
+          <LabeledInput label="Output yang Diharapkan" value={output} onChangeText={setOutput} multiline placeholder="Hasil konkret yang diharapkan" />
+          <LabeledInput label="Definition of Done" value={dod} onChangeText={setDod} multiline placeholder="Kriteria pekerjaan dianggap selesai" />
+          <PrioritySelector value={priority} onChange={setPriority} />
+        </SectionCard>
 
-        <View className="gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+        <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
           <ToggleRow
             label="Wajib lampirkan Bukti"
             description="PIC tidak bisa submit tanpa bukti."
@@ -250,7 +253,7 @@ export default function NewActionPlanScreen() {
         </View>
 
         {/* ---- Repeat (Action Plan berulang) ---- */}
-        <View className="gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+        <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
           <View className="flex-row items-center justify-between gap-3">
             <View className="flex-1 gap-0.5">
               <Text className="text-sm font-medium text-black dark:text-white">Jadikan Repeat (berulang)</Text>
@@ -281,7 +284,7 @@ export default function NewActionPlanScreen() {
                         <Pressable
                           key={d}
                           testID={`weekday-${d}`}
-                          className={`rounded-full border px-3 py-2 active:opacity-70 ${active ? 'border-brand bg-brand' : 'border-neutral-300 dark:border-neutral-700'}`}
+                          className={`min-h-[44px] justify-center rounded-full border px-3 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
                           onPress={() => toggleWeekday(d)}>
                           <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
                             {lbl}
