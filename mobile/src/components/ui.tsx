@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Animated, useColorScheme } from 'react-native';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native-css/components';
@@ -264,7 +264,7 @@ export function Skeleton({
 }) {
   const scheme = useColorScheme();
   const base = scheme === 'dark' ? '#27272a' : '#e2e8f0';
-  const opacity = useRef(new Animated.Value(0.5)).current;
+  const [opacity] = useState(() => new Animated.Value(0.5));
   useEffect(() => {
     // Loop tak terbatas membanjiri timer di jest → lewati di test (animasi murni dekoratif).
     if (process.env.NODE_ENV === 'test') return;

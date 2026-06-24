@@ -20,8 +20,10 @@ import PeopleScreen from '../people';
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return ({ children }: PropsWithChildren) =>
+  const Wrapper = ({ children }: PropsWithChildren) =>
     createElement(QueryClientProvider, { client }, children);
+  Wrapper.displayName = 'TestWrapper';
+  return Wrapper;
 }
 
 afterEach(() => mockListOrgProfiles.mockReset());

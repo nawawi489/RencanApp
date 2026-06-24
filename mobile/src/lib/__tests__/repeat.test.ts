@@ -11,6 +11,7 @@ jest.mock('../supabase', () => ({
   },
 }));
 
+// eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,

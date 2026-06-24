@@ -12,6 +12,7 @@ jest.mock('@/lib/repeat', () => ({
   getRepeatCompliance: (...a: unknown[]) => mockGetRepeatCompliance(...a),
 }));
 
+// eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import { useInstanceActions, useRepeatInstances } from '../use-repeat-instances';
 
 function makeWrapper() {
