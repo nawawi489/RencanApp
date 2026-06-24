@@ -1,0 +1,124 @@
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useCallback } from 'react';
+import { Alert } from 'react-native';
+import { ScrollView, Text, View } from 'react-native-css/components';
+
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
+import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
+import type { KpiArea } from '@/lib/kpi-areas';
+
+function KpiAreaRow({ item, onPress }: { item: KpiArea; onPress: () => void }) {
+  return (
+    <SectionCard onPress={onPress}>
+      <View className="flex-row items-start justify-between gap-3">
+        <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
+        <Badge
+          label={PLANNING_STATUS_LABEL[item.status] ?? item.status}
+          tone={STATUS_TONE[item.status]}
+        />
+      </View>
+    </SectionCard>
+  );
+}
+
+export default function GoalDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const goalQ = useGoal(id);
+  const kpiQ = useKpiAreas(id);
+  const { activate, isPending } = useGoalActions();
+
+  useFocusEffect(
+    useCallback(() => {
+      goalQ.refetch();
+      kpiQ.refetch();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+
+  const goal = goalQ.goal;
+
+  async function onActivate() {
+    try {
+      await activate(id);
+    } catch (e) {
+      Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Goal butuh minimal 1 KPI Area sebelum diaktifkan.');
+    }
+  }
+
+  return (
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+      <Stack.Screen options={{ title: goal?.name ?? 'Goal' }} />
+      <View className="gap-5 p-5">
+        {goalQ.isLoading ? (
+          <SkeletonList count={3} />
+        ) : goalQ.isError || !goal ? (
+          <ErrorState onRetry={() => goalQ.refetch()} />
+        ) : (
+          <>
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <View className="gap-1">
+                <Badge
+                  label={PLANNING_STATUS_LABEL[goal.status] ?? goal.status}
+                  tone={STATUS_TONE[goal.status]}
+                />
+                <Text className="text-2xl font-bold text-black dark:text-white">{goal.name}</Text>
+              </View>
+              <MetaGrid
+                items={[
+                  {
+                    label: 'Periode',
+                    value: `${goal.period_start ?? '—'} → ${goal.period_end ?? '—'}`,
+                  },
+                  { label: 'PIC', value: goal.pic_id ? 'Ditetapkan' : '—' },
+                ]}
+              />
+            </View>
+
+            {goal.description ? (
+              <SectionCard>
+                <Text className="text-sm font-bold text-black dark:text-white">Deskripsi</Text>
+                <Text className="text-base text-black dark:text-white">{goal.description}</Text>
+              </SectionCard>
+            ) : null}
+
+            {goal.status === 'draft' ? (
+              <Button label="Aktifkan Goal" onPress={onActivate} loading={isPending} />
+            ) : null}
+
+            <View className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
+                <Button
+                  label="+ Tambah KPI Area"
+                  variant="secondary"
+                  onPress={() => router.push(`/kpi-area/new?goalId=${id}` as Href)}
+                />
+              </View>
+
+              {kpiQ.isLoading ? (
+                <SkeletonList count={2} />
+              ) : kpiQ.isError ? (
+                <ErrorState onRetry={() => kpiQ.refetch()} />
+              ) : kpiQ.kpiAreas.length > 0 ? (
+                kpiQ.kpiAreas.map((item) => (
+                  <KpiAreaRow
+                    key={item.id}
+                    item={item}
+                    onPress={() => router.push(`/kpi-area/${item.id}` as Href)}
+                  />
+                ))
+              ) : (
+                <EmptyState
+                  title="Belum ada KPI Area"
+                  description="Pecah Goal ini menjadi KPI Area terukur, lalu turunkan jadi Strategy dan Initiative."
+                />
+              )}
+            </View>
+          </>
+        )}
+      </View>
+    </ScrollView>
+  );
+}

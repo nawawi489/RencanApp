@@ -89,3 +89,61 @@ describe('useProfile select created_at', () => {
     expect(result.current.profile?.created_at).toBe('2026-06-20T00:00:00Z');
   });
 });
+
+// K4 — guard regresi cermin client-side dari public.has_permission.
+// can() di use-profile.ts HANYA mirror; penegak akhir tetap server (RLS/RPC),
+// diuji terpisah di supabase/tests contract (A-INS). Test ini menjaga agar
+// ROLE_DEFAULTS + grant eksplisit tidak bocor (mis. create_goal/create_kpi_area
+// TIDAK boleh tersedia ke c_level default).
+describe('K4 — permission create planning card', () => {
+  // Helper: bentuk profil mengikuti ProfileRow (lihat use-profile.ts).
+  function profileRow(
+    level: string,
+    userPermissions: { granted: boolean; permissions: { key: string } }[],
+  ) {
+    return {
+      data: {
+        id: 'u1',
+        full_name: 'Budi',
+        email: 'budi@x.id',
+        organization_id: 'org1',
+        created_at: '2026-06-20T00:00:00Z',
+        role_templates: { name: level, level },
+        organizations: { name: 'Nyantuy' },
+        user_permissions: userPermissions,
+      },
+      error: null,
+    };
+  }
+
+  it('[K4-1] CEO bypass: semua planning card boleh', async () => {
+    mockSingle.mockResolvedValue(profileRow('ceo', []));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(result.current.profile).toBeTruthy());
+    expect(result.current.can('create_goal')).toBe(true);
+    expect(result.current.can('create_kpi_area')).toBe(true);
+    expect(result.current.can('create_strategy')).toBe(true);
+  });
+
+  it('[K4-2] C-Level default: strategy boleh, goal/kpi_area tidak (tidak bocor)', async () => {
+    mockSingle.mockResolvedValue(profileRow('c_level', []));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(result.current.profile).toBeTruthy());
+    expect(result.current.can('create_goal')).toBe(false);
+    expect(result.current.can('create_kpi_area')).toBe(false);
+    expect(result.current.can('create_strategy')).toBe(true);
+  });
+
+  it('[K4-3] grant eksplisit: hanya key yang di-grant yang boleh', async () => {
+    mockSingle.mockResolvedValue(
+      profileRow('staff', [{ granted: true, permissions: { key: 'create_goal' } }]),
+    );
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(result.current.profile).toBeTruthy());
+    expect(result.current.can('create_goal')).toBe(true);
+    expect(result.current.can('create_kpi_area')).toBe(false);
+  });
+});

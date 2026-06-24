@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, View } from 'react-native-css/components';
@@ -16,6 +16,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export default function NewInitiativeScreen() {
   const router = useRouter();
   const qc = useQueryClient();
+  // Fase 4: bila dibuka dari detail Strategy (/initiative/new?strategyId=...), Initiative ditautkan
+  // ke Strategy induk. Tanpa param → Initiative datar (strategy_id null), backward-compat Fase 1.
+  const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -48,6 +51,7 @@ export default function NewInitiativeScreen() {
       period_end: periodEnd || null,
       description: description.trim() || null,
       pic_id: pic?.id ?? null,
+      strategy_id: strategyId ?? null,
     });
   }
 

@@ -84,11 +84,17 @@ export const RESULT_VALUE_TYPE_LABEL: Record<string, string> = {
 
 // ---------------------------------------------------------------- queries
 
-export async function listInitiatives(): Promise<Initiative[]> {
-  const { data, error } = await supabase
-    .from('initiatives')
-    .select('*')
-    .order('created_at', { ascending: false });
+/**
+ * Daftar Initiative. Fase 4: `opts.strategyId` memfilter berdasarkan induk Strategy —
+ * `null` = Initiative datar (tanpa Strategy, section "Tanpa Goal"); string = anak Strategy tertentu;
+ * tanpa opts = semua (backward-compat Fase 1, pemanggil lama tak berubah).
+ */
+export async function listInitiatives(opts?: { strategyId?: string | null }): Promise<Initiative[]> {
+  let query = supabase.from('initiatives').select('*');
+  if (opts && opts.strategyId !== undefined) {
+    query = opts.strategyId === null ? query.is('strategy_id', null) : query.eq('strategy_id', opts.strategyId);
+  }
+  const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -194,6 +200,8 @@ export type NewInitiative = {
   period_start: string | null;
   period_end: string | null;
   description?: string | null;
+  /** Fase 4: induk Strategy. null/absen = Initiative datar (backward-compat Fase 1). */
+  strategy_id?: string | null;
 };
 
 export async function createInitiative(input: NewInitiative): Promise<Initiative> {
