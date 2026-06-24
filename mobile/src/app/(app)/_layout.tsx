@@ -27,6 +27,7 @@ export default function AppLayout() {
         name="action-plan/submit"
         options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
       />
+      <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Initiative' }} />
     </Stack>
   );
 }

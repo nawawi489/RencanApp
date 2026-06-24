@@ -1,10 +1,9 @@
 // Komponen fondasi: EmptyState v2, ErrorState, SkeletonList, ScoreBadge, Avatar.
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
 import { render, screen } from '@testing-library/react-native';
+import { Avatar, EmptyState, ErrorState, ScoreBadge, SkeletonList } from '../ui';
 
 jest.setTimeout(30000);
-
-import { Avatar, EmptyState, ErrorState, ScoreBadge, SkeletonList } from '../ui';
 
 describe('EmptyState', () => {
   it('menampilkan title, description, dan aksi opsional', async () => {

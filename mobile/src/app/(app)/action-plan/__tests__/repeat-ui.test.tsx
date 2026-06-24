@@ -51,9 +51,11 @@ jest.mock('@/lib/repeat', () => ({
   setRepeatRule: jest.fn(),
 }));
 
+/* eslint-disable import/first -- jest.mock must precede the imports it mocks */
 import { INSTANCE_STATUS_LABEL, INSTANCE_STATUS_TONE } from '@/lib/repeat';
 import NewActionPlanScreen from '../new';
 import ActionPlanDetailScreen from '../[id]';
+/* eslint-enable import/first */
 
 function wrap(node: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

@@ -535,6 +535,205 @@ export type Database = {
           },
         ]
       }
+      chat_message_reads: {
+        Row: {
+          chat_message_id: string
+          read_at: string
+          reader_id: string
+        }
+        Insert: {
+          chat_message_id: string
+          read_at?: string
+          reader_id: string
+        }
+        Update: {
+          chat_message_id?: string
+          read_at?: string
+          reader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_reads_chat_message_id_fkey"
+            columns: ["chat_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reads_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          author_id: string | null
+          body: string
+          chat_room_id: string
+          created_at: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          chat_room_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          chat_room_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_chat_room_id_fkey"
+            columns: ["chat_room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_room_members: {
+        Row: {
+          added_at: string
+          chat_room_id: string
+          member_id: string
+        }
+        Insert: {
+          added_at?: string
+          chat_room_id: string
+          member_id: string
+        }
+        Update: {
+          added_at?: string
+          chat_room_id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_room_members_chat_room_id_fkey"
+            columns: ["chat_room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_room_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          initiative_id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initiative_id: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initiative_id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_rooms_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: true
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_files: {
         Row: {
           created_at: string
@@ -736,6 +935,122 @@ export type Database = {
           {
             foreignKeyName: "login_logs_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentions: {
+        Row: {
+          chat_message_id: string | null
+          comment_id: string | null
+          created_at: string
+          id: string
+          mentioned_user_id: string
+        }
+        Insert: {
+          chat_message_id?: string | null
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          mentioned_user_id: string
+        }
+        Update: {
+          chat_message_id?: string | null
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          mentioned_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentions_chat_message_id_fkey"
+            columns: ["chat_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentions_mentioned_user_id_fkey"
+            columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          body: string | null
+          created_at: string
+          dedupe_date: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          is_read: boolean
+          organization_id: string
+          read_at: string | null
+          recipient_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          body?: string | null
+          created_at?: string
+          dedupe_date?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_read?: boolean
+          organization_id: string
+          read_at?: string | null
+          recipient_id: string
+          title: string
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          body?: string | null
+          created_at?: string
+          dedupe_date?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_read?: boolean
+          organization_id?: string
+          read_at?: string | null
+          recipient_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1010,11 +1325,72 @@ export type Database = {
         Args: { p_action_plan: string }
         Returns: boolean
       }
+      can_access_initiative: {
+        Args: { p_initiative: string }
+        Returns: boolean
+      }
       can_view_workspace: { Args: never; Returns: boolean }
+      create_comment: {
+        Args: {
+          p_body: string
+          p_entity_id: string
+          p_entity_type: string
+          p_mentions?: string[]
+        }
+        Returns: string
+      }
       current_user_org: { Args: never; Returns: string }
+      emit_deadline_notifications: { Args: never; Returns: number }
+      emit_notification: {
+        Args: {
+          p_actor: string
+          p_body: string
+          p_dedupe_date?: string
+          p_entity_id: string
+          p_entity_type: string
+          p_org: string
+          p_recipient: string
+          p_title: string
+          p_type: string
+        }
+        Returns: undefined
+      }
       generate_action_plan_instances: {
         Args: { p_action_plan_id: string; p_through_date: string }
         Returns: number
+      }
+      get_chat_rooms: {
+        Args: never
+        Returns: {
+          id: string
+          initiative_id: string
+          last_message_at: string
+          name: string
+          unread_count: number
+        }[]
+      }
+      get_near_deadline_items: {
+        Args: never
+        Returns: {
+          action_plan_id: string
+          due: string
+          id: string
+          kind: string
+          name: string
+          status: string
+        }[]
+      }
+      get_org_today: { Args: never; Returns: string }
+      get_overdue_items: {
+        Args: never
+        Returns: {
+          action_plan_id: string
+          due: string
+          id: string
+          kind: string
+          name: string
+          status: string
+        }[]
       }
       get_repeat_compliance: {
         Args: { p_action_plan_id: string }
@@ -1026,13 +1402,33 @@ export type Database = {
           on_time_count: number
         }[]
       }
+      get_today_repeat_instances: {
+        Args: never
+        Returns: {
+          action_plan_id: string
+          due: string
+          id: string
+          kind: string
+          name: string
+          status: string
+        }[]
+      }
       has_permission: { Args: { p_key: string }; Returns: boolean }
       i_am_initiative_pic: { Args: { p_initiative: string }; Returns: boolean }
       initiative_has_my_action_plan: {
         Args: { p_initiative: string }
         Returns: boolean
       }
+      is_chat_member: { Args: { p_room: string }; Returns: boolean }
+      mark_all_notifications_read: { Args: never; Returns: number }
+      mark_chat_messages_read: { Args: { p_room: string }; Returns: number }
+      mark_notification_read: { Args: { p_id: string }; Returns: undefined }
       mark_overdue_instances: { Args: { p_now?: string }; Returns: number }
+      org_today: { Args: { p_org?: string }; Returns: string }
+      recompute_chat_room_members: {
+        Args: { p_room: string }
+        Returns: undefined
+      }
       review_action_plan_instance_submission: {
         Args: { p_decision: string; p_reason: string; p_submission_id: string }
         Returns: undefined
@@ -1040,6 +1436,10 @@ export type Database = {
       review_action_plan_submission: {
         Args: { p_decision: string; p_reason: string; p_submission_id: string }
         Returns: undefined
+      }
+      send_chat_message: {
+        Args: { p_body: string; p_mentions?: string[]; p_room: string }
+        Returns: string
       }
       set_action_plan_repeat_rule: {
         Args: {

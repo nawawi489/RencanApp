@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Animated, useColorScheme } from 'react-native';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native-css/components';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 import { avatarColor, initials } from '@/lib/avatar-color';
 import { SCORE_DESC, SCORE_LABEL, SCORE_RANGE, scoreBand, type ScoreBand } from '@/lib/score';
 
@@ -264,7 +264,7 @@ export function Skeleton({
 }) {
   const scheme = useColorScheme();
   const base = scheme === 'dark' ? '#27272a' : '#e2e8f0';
-  const opacity = useRef(new Animated.Value(0.5)).current;
+  const [opacity] = useState(() => new Animated.Value(0.5));
   useEffect(() => {
     // Loop tak terbatas membanjiri timer di jest → lewati di test (animasi murni dekoratif).
     if (process.env.NODE_ENV === 'test') return;
@@ -474,6 +474,50 @@ export function PriorityCard({
         {subtitle}
       </Text>
     </Wrap>
+  );
+}
+
+// ---------------------------------------------------------------- TabBar
+
+/** Tab horizontal yang bisa di-scroll (segmentasi Notifications, dll). Badge unread opsional. */
+export function TabBar<T extends string>({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { key: T; label: string; badge?: number }[];
+  active: T;
+  onChange: (key: T) => void;
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View className="flex-row gap-2 px-0.5 py-0.5">
+        {tabs.map((t) => {
+          const on = t.key === active;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => onChange(t.key)}
+              // min-h-[44px]: touch target a11y.
+              className={`min-h-[44px] flex-row items-center gap-1.5 rounded-full px-4 py-2 ${
+                on ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
+              } active:opacity-70`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={t.label}>
+              <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-black dark:text-white'}`}>
+                {t.label}
+              </Text>
+              {t.badge ? (
+                <View className={`min-w-[18px] items-center rounded-full px-1.5 ${on ? 'bg-white/25' : 'bg-red-500'}`}>
+                  <Text className="text-xs font-bold text-white">{t.badge > 99 ? '99+' : t.badge}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 }
 
