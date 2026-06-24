@@ -145,12 +145,14 @@ describe('applyGoalTemplate', () => {
       picId: 'p1',
       periodStart: '2026-01-01',
       periodEnd: '2026-12-31',
+      targets: { 'A/R Collection': 'Tagih 95%' },
     });
     expect(mockRpc).toHaveBeenCalledWith('apply_goal_template', {
       p_goal_template_id: 'tmpl1',
       p_pic_id: 'p1',
       p_period_start: '2026-01-01',
       p_period_end: '2026-12-31',
+      p_targets: { 'A/R Collection': 'Tagih 95%' },
     });
     expect(mockFrom).not.toHaveBeenCalled();
     expect(id).toBe('g-new');

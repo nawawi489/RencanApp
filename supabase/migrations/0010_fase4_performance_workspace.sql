@@ -308,7 +308,7 @@ $$;
 -- Generate Goal draft + KPI Area draft dari template (PRD §49 step 7). Mengembalikan goal_id.
 -- Otorisasi: butuh create_goal (CEO/grant). KPI Area diseed dari kpi_area_templates milik template.
 create or replace function public.apply_goal_template(
-  p_goal_template_id uuid, p_pic_id uuid, p_period_start date, p_period_end date
+  p_goal_template_id uuid, p_pic_id uuid, p_period_start date, p_period_end date, p_targets jsonb default '{}'::jsonb
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare t public.goal_templates; v_goal uuid; v_org uuid;
 begin
@@ -330,8 +330,10 @@ begin
   values (v_org, t.name, p_pic_id, p_period_start, p_period_end, 'draft', t.id, auth.uid())
   returning id into v_goal;
 
-  insert into public.kpi_areas (organization_id, goal_id, name, pic_id, period_start, period_end, status, created_by)
-  select v_org, v_goal, kt.name, p_pic_id, p_period_start, p_period_end, 'draft', auth.uid()
+  -- Target per-KPI dari wizard (PRD §49 step 5); key = nama KPI Area template. Kosong → null (dilengkapi nanti).
+  insert into public.kpi_areas (organization_id, goal_id, name, target, pic_id, period_start, period_end, status, created_by)
+  select v_org, v_goal, kt.name, nullif(trim(coalesce(p_targets ->> kt.name, '')), ''),
+         p_pic_id, p_period_start, p_period_end, 'draft', auth.uid()
   from public.kpi_area_templates kt
   where kt.goal_template_id = p_goal_template_id;
 
@@ -370,7 +372,7 @@ $$;
 revoke execute on function public.activate_goal(uuid) from public, anon;
 revoke execute on function public.activate_kpi_area(uuid) from public, anon;
 revoke execute on function public.activate_strategy(uuid) from public, anon;
-revoke execute on function public.apply_goal_template(uuid, uuid, date, date) from public, anon;
+revoke execute on function public.apply_goal_template(uuid, uuid, date, date, jsonb) from public, anon;
 revoke execute on function public.restore_goal_template_items(uuid) from public, anon;
 
 -- ============================================================ RLS

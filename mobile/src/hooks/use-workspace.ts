@@ -12,8 +12,10 @@ import {
   getGoal,
   listGoalTemplates,
   listGoals,
+  listKpiAreaTemplates,
   restoreGoalTemplateItems,
   type GoalTemplate,
+  type KpiAreaTemplate,
   type Goal,
   type GoalWithKpiCount,
   type NewGoal,
@@ -132,6 +134,21 @@ export function useStrategyInitiatives(strategyId: string) {
   };
 }
 
+/** KPI Area template di bawah satu Goal Template (untuk isian Target di Wizard). */
+export function useKpiAreaTemplates(goalTemplateId: string) {
+  const q = useQuery({
+    queryKey: ['kpi_area_templates', goalTemplateId],
+    queryFn: () => listKpiAreaTemplates(goalTemplateId),
+    enabled: !!goalTemplateId,
+  });
+
+  return {
+    items: (q.data ?? []) as KpiAreaTemplate[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
+}
+
 /** Daftar template Goal. */
 export function useGoalTemplates() {
   const q = useQuery({
@@ -173,6 +190,7 @@ export function useGoalActions() {
       picId: string;
       periodStart: string;
       periodEnd: string;
+      targets?: Record<string, string>;
     }) => applyGoalTemplate(args),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goals'] });
@@ -195,6 +213,7 @@ export function useGoalActions() {
       picId: string;
       periodStart: string;
       periodEnd: string;
+      targets?: Record<string, string>;
     }) => applyTemplateM.mutateAsync(args),
     restore: (goalId: string) => restoreM.mutateAsync(goalId),
     isPending:

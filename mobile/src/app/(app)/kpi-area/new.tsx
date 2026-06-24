@@ -1,11 +1,13 @@
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { ScrollView, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useKpiAreaActions } from '@/hooks/use-workspace';
+import { getGoal } from '@/lib/goals';
 import type { PersonRef } from '@/lib/kpi-areas';
 
 type Person = NonNullable<PersonRef>;
@@ -17,6 +19,8 @@ export default function NewKpiAreaScreen() {
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
   const router = useRouter();
   const { create, isPending } = useKpiAreaActions(goalId);
+  // Default PIC turunan (PRD §52): bila PIC tak diisi, ikut PIC Goal induk.
+  const parentQ = useQuery({ queryKey: ['goal', goalId], queryFn: () => getGoal(goalId), enabled: !!goalId });
 
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
@@ -48,7 +52,7 @@ export default function NewKpiAreaScreen() {
         name: name.trim(),
         description: description.trim() || null,
         target: target.trim(),
-        pic_id: pic?.id ?? null,
+        pic_id: pic?.id ?? parentQ.data?.pic_id ?? null,
         period_start: periodStart || null,
         period_end: periodEnd || null,
       });
@@ -83,6 +87,11 @@ export default function NewKpiAreaScreen() {
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
+          {parentQ.data?.pic_id ? (
+            <Text className="-mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Kosongkan untuk mengikuti PIC Goal induk.
+            </Text>
+          ) : null}
           <LabeledInput
             label="Tanggal Mulai"
             value={periodStart}

@@ -1,12 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { ScrollView, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { createInitiative, type PersonRef } from '@/lib/cards';
+import { getStrategy } from '@/lib/strategies';
 
 type Person = NonNullable<PersonRef>;
 
@@ -19,6 +20,12 @@ export default function NewInitiativeScreen() {
   // Fase 4: bila dibuka dari detail Strategy (/initiative/new?strategyId=...), Initiative ditautkan
   // ke Strategy induk. Tanpa param → Initiative datar (strategy_id null), backward-compat Fase 1.
   const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
+  // Default PIC turunan (PRD §52): di bawah Strategy, bila PIC tak diisi ikut PIC Strategy induk.
+  const parentQ = useQuery({
+    queryKey: ['strategy', strategyId],
+    queryFn: () => getStrategy(strategyId!),
+    enabled: !!strategyId,
+  });
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -50,7 +57,7 @@ export default function NewInitiativeScreen() {
       period_start: periodStart || null,
       period_end: periodEnd || null,
       description: description.trim() || null,
-      pic_id: pic?.id ?? null,
+      pic_id: pic?.id ?? parentQ.data?.pic_id ?? null,
       strategy_id: strategyId ?? null,
     });
   }
@@ -73,6 +80,11 @@ export default function NewInitiativeScreen() {
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
+          {strategyId && parentQ.data?.pic_id ? (
+            <Text className="-mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Kosongkan untuk mengikuti PIC Strategy induk.
+            </Text>
+          ) : null}
           <LabeledInput label="Tanggal Mulai" value={periodStart} onChangeText={setPeriodStart} placeholder={DATE_HINT} keyboardType="numeric" />
           <LabeledInput label="Tanggal Selesai" value={periodEnd} onChangeText={setPeriodEnd} placeholder={DATE_HINT} keyboardType="numeric" />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />

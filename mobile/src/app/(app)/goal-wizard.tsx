@@ -1,7 +1,6 @@
-// Goal Wizard (Fase 4, PRD 49) — satu layar dengan langkah berurutan internal:
-// (1) pilih Goal Template → (2) periode + PIC → (3) Generate Goal via applyGoalTemplate.
-// Meniru pola initiative/new.tsx: mutation onSuccess → router.replace, onError → Alert,
-// validasi tanggal DATE_RE. Card hasil instansiasi mengikuti default RPC (draft).
+// Goal Wizard (Fase 4, PRD §49) — satu layar berurutan: (1) pilih Goal Template (atau Goal kosong),
+// (2) periode + PIC + Target tiap KPI Area, (3) Generate via applyGoalTemplate (atomik di server).
+// Meniru pola initiative/new.tsx: onError → Alert, validasi tanggal DATE_RE.
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
@@ -10,7 +9,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import type { PersonRef } from '@/lib/goals';
-import { useGoalActions, useGoalTemplates } from '@/hooks/use-workspace';
+import { useGoalActions, useGoalTemplates, useKpiAreaTemplates } from '@/hooks/use-workspace';
 
 type Person = NonNullable<PersonRef>;
 
@@ -27,7 +26,9 @@ export default function GoalWizardScreen() {
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
+  const [targets, setTargets] = useState<Record<string, string>>({});
 
+  const { items: kpiTemplates } = useKpiAreaTemplates(templateId ?? '');
   const datesValid = DATE_RE.test(periodStart) && DATE_RE.test(periodEnd);
 
   function next() {
@@ -48,8 +49,7 @@ export default function GoalWizardScreen() {
       return;
     }
     if (!pic) {
-      // PIC wajib (PRD §49 langkah 6): KPI Area template ikut mewarisi PIC ini; tanpa PIC,
-      // KPI Area hasil template tak bisa diaktifkan (gate kelengkapan KPI Area).
+      // PIC wajib (PRD §49 langkah 6): KPI Area template mewarisi PIC ini; tanpa PIC tak bisa diaktifkan.
       Alert.alert('Belum lengkap', 'Tentukan PIC / Owner Goal terlebih dulu.');
       return;
     }
@@ -68,6 +68,7 @@ export default function GoalWizardScreen() {
         picId: pic.id,
         periodStart,
         periodEnd,
+        targets,
       });
       router.replace(`/goal/${goalId}` as Href);
     } catch (e) {
@@ -80,7 +81,7 @@ export default function GoalWizardScreen() {
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal Wizard — Instansiasi dari template"
-          body="Pilih template Goal, tentukan periode & PIC, lalu Generate. KPI Area bawaan template ikut terbentuk sebagai Draft; aktifkan setelah ditinjau."
+          body="Pilih template Goal, tentukan periode, PIC, dan Target tiap KPI Area, lalu Generate. KPI Area terbentuk sebagai Draft; aktifkan setelah ditinjau."
         />
 
         {step === 0 ? (
@@ -97,13 +98,19 @@ export default function GoalWizardScreen() {
               />
             ))}
             <Button label="Lanjut" onPress={next} />
+            <Text className="text-center text-xs text-neutral-500 dark:text-neutral-400">atau</Text>
+            <Button
+              label="Buat Goal Kosong"
+              variant="secondary"
+              onPress={() => router.replace('/goal/new' as Href)}
+            />
           </SectionCard>
         ) : null}
 
         {step === 1 ? (
           <SectionCard>
             <Text className="text-base font-semibold text-black dark:text-white">
-              Langkah 2 — Periode & PIC
+              Langkah 2 — Periode, PIC & Target
             </Text>
             <LabeledInput
               label="Tanggal Mulai"
@@ -121,7 +128,25 @@ export default function GoalWizardScreen() {
               keyboardType="numeric"
               required
             />
-            <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
+            <UserPicker label="PIC / Owner" value={pic} onChange={setPic} required />
+
+            {kpiTemplates.length > 0 ? (
+              <View className="gap-2">
+                <Text className="text-sm font-bold text-black dark:text-white">
+                  Target KPI Area (opsional — bisa dilengkapi nanti)
+                </Text>
+                {kpiTemplates.map((kt) => (
+                  <LabeledInput
+                    key={kt.id}
+                    label={`${kt.division_label} · ${kt.name}`}
+                    value={targets[kt.name] ?? ''}
+                    onChangeText={(v) => setTargets((prev) => ({ ...prev, [kt.name]: v }))}
+                    placeholder="mis. Naik 20% YoY"
+                  />
+                ))}
+              </View>
+            ) : null}
+
             <View className="flex-row gap-3">
               <Button label="Kembali" variant="secondary" onPress={back} />
               <Button label="Lanjut" onPress={next} />

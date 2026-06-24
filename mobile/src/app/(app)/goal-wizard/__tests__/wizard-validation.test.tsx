@@ -15,6 +15,7 @@ const mockApplyTemplate = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useGoalTemplates: () => ({ templates: mockTemplates(), isLoading: false, isError: false }),
+  useKpiAreaTemplates: () => ({ items: [], isLoading: false, isError: false }),
   useGoalActions: () => ({ applyTemplate: mockApplyTemplate, isPending: false }),
 }));
 
@@ -72,7 +73,7 @@ describe('GoalWizardScreen — validasi (blocking)', () => {
     await press(await screen.findByText('Meningkatkan Omset Penjualan'));
     await press(screen.getByText('Lanjut'));
 
-    await screen.findByText('Langkah 2 — Periode & PIC');
+    await screen.findByText('Langkah 2 — Periode, PIC & Target');
     const inputs = screen.getAllByPlaceholderText('Format: YYYY-MM-DD (mis. 2026-07-01)');
     fireEvent.changeText(inputs[0], '01-07-2026');
     fireEvent.changeText(inputs[1], 'bukan-tanggal');

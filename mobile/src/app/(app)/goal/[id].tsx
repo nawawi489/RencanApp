@@ -27,7 +27,7 @@ export default function GoalDetailScreen() {
   const router = useRouter();
   const goalQ = useGoal(id);
   const kpiQ = useKpiAreas(id);
-  const { activate, isPending } = useGoalActions();
+  const { activate, restore, isPending } = useGoalActions();
 
   useFocusEffect(
     useCallback(() => {
@@ -44,6 +44,16 @@ export default function GoalDetailScreen() {
       await activate(id);
     } catch (e) {
       Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Goal butuh minimal 1 KPI Area sebelum diaktifkan.');
+    }
+  }
+
+  // PRD §50: pulihkan KPI Area dari template yang belum ada (idempoten, tak menimpa data aktif).
+  async function onRestore() {
+    try {
+      const added = await restore(id);
+      Alert.alert('Pulihkan dari template', added > 0 ? `${added} KPI Area ditambahkan.` : 'Semua item template sudah ada.');
+    } catch (e) {
+      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
     }
   }
 
@@ -85,6 +95,15 @@ export default function GoalDetailScreen() {
 
             {goal.status === 'draft' ? (
               <Button label="Aktifkan Goal" onPress={onActivate} loading={isPending} />
+            ) : null}
+
+            {goal.goal_template_id ? (
+              <Button
+                label="Pulihkan item dari template"
+                variant="secondary"
+                onPress={onRestore}
+                loading={isPending}
+              />
             ) : null}
 
             <View className="gap-3">

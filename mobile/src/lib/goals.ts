@@ -108,12 +108,15 @@ export async function applyGoalTemplate(args: {
   picId: string;
   periodStart: string;
   periodEnd: string;
+  /** Target per KPI Area template, key = nama KPI Area (PRD §49 step 5). Kosong → null di server. */
+  targets?: Record<string, string>;
 }): Promise<string> {
   const { data, error } = await supabase.rpc('apply_goal_template', {
     p_goal_template_id: args.goalTemplateId,
     p_pic_id: args.picId,
     p_period_start: args.periodStart,
     p_period_end: args.periodEnd,
+    p_targets: (args.targets ?? {}) as never,
   });
   if (error) throw error;
   return data as string;
