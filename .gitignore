@@ -17,3 +17,6 @@ Thumbs.db
 .obsidian/workspace-mobile.json
 .obsidian/cache
 .obsidian/plugins/*/data.json
+
+# UI/UX screenshots & mockups — artefak lokal, tidak perlu di-repo
+ui/
