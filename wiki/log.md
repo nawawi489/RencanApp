@@ -74,3 +74,72 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 - **Bug 2 (ditemukan & diperbaiki, migrasi `0006_fase1_fix_returning_rls.sql`):** `INSERT ... RETURNING` (dipakai supabase-js `.select()`) gagal RLS 42501 di `initiatives` & `action_plans`. Sebab: policy SELECT memanggil fungsi SECURITY DEFINER yang meng-query ULANG tabel yang sama — baris baru belum terlihat snapshot fungsi di tengah statement → false. Fix: policy SELECT mengevaluasi kolom baris sendiri langsung (org/pic/reviewer/created_by) + helper definer hanya untuk cek lintas-tabel (`initiative_has_my_action_plan`, `i_am_initiative_pic`); `can_access_initiative` dibuang.
 - Catatan UX web: `router.replace` dari rute modal (form buat) tidak men-dismiss overlay modal di web (native dismiss normal). Mobile-first, dicatat sebagai quirk web.
 - Pelajaran: `tsc` + uji logika DB tidak menangkap dua bug di atas; keduanya hanya muncul saat integrasi UI↔PostgREST dijalankan. Uji manual wajib untuk slice baru.
+
+## [2026-06-24] update | sdd-plan Fase 3 (Home + Notifications + Inbox)
+
+- Workflow sdd-plan dijalankan (14 agent): Research(4 lens) → Draft(6 bagian) → Grill(produk/eng/governance) → Synthesize.
+- Spec final disimpan: specs/fase-3-home-notifications-inbox.md (43 acceptance criteria, 20 testable behaviors, 7 open questions).
+- Handoff TDD: specs/fase-3-tdd-handoff.json (migrasi 0008_fase3_collab.sql; tabel notifications, comments, mentions, chat_rooms, chat_room_members, chat_messages, chat_message_reads).
+- Keputusan kunci grill: Reviewer Initiative dibuang (initiatives tak punya reviewer_id); Home jadi timezone-aware (organizations.timezone) menggantikan todayISO() device/UTC; RPC submit/review di-replace untuk emit notif tanpa melonggarkan guard; idempotensi cron via unique partial index; governance_warning recipient diturunkan dari PIC/Reviewer card terdampak.
+- Lanjut: jalankan tdd-plan dengan handoff ini.
+
+## [2026-06-24] update | tdd-plan Fase 3 (Home + Notifications + Inbox)
+
+- Workflow tdd-plan dijalankan (8 agent): Map(3 area) → Tests(3 layer) → Plan(27 langkah red/green/refactor) → Critic.
+- Rencana TDD disimpan: specs/fase-3-tdd-plan.md (27 langkah, strategi mock 4 layer: data/hook/screen/SQL, urut A→J).
+- Critic verdict: PERLU-PERBAIKAN (17 missing case, 11 concern). Blocker utama sebelum koding:
+  1. Kontradiksi spec↔test: home.test mengunci RPC get_today_focus/getOrgToday, padahal spec §6.2 default = query per-section + helper SQL org_today(). Harus diputuskan dulu (per-section vs RPC agregat).
+  2. Onboarding AC-H12 butuh profiles.created_at yang BELUM diekspos useProfile → risiko false-green.
+  3. AC-N9 guard regression byte-for-byte belum punya daftar input-pelanggar konkret per guard.
+  4. AC-H6b timezone boundary lebih tepat diuji di SQL, bukan screen (fake timers bentrok jest-expo).
+  5. makeQuery perlu range/in/limit terminal vs intermediate; append-only test harus bedakan tulis-klien-gagal vs tulis-via-RPC-sukses (notifications.is_read mutable via RPC).
+- Status: planning Fase 3 lengkap (spec + TDD). Implementasi belum dimulai; selesaikan 5 blocker di atas dulu.
+
+## [2026-06-24] update | Resolusi 5 blocker Fase 3 (siap koding)
+
+- Workflow fase3-resolve-blockers (7 agent): Research(5 blocker) → Synthesize → Critic.
+- Addendum terkunci: specs/fase-3-resolusi-blocker.md (resolusi B1-B5 + CF-1..CF-4). Pointer ditambahkan di spec & plan (addendum menang bila bentrok).
+- Keputusan kunci: B1 Home = per-section query (RPC agregat get_today_focus DILARANG, pecah retry AC-H11); org_today()+get_org_today() server = sumber tanggal tunggal, hapus todayISO()/isOverdue() device. B2 expose profiles.created_at di useProfile + onboarding <7 hari. B3 enumerasi 29 guard di 5 RPC → suite kontrak SQL guard-regression. B4 AC-H6b boundary diuji di SQL bukan screen. B5 makeQuery thenable (in/range/gte/lt terminal) + append-only 2-lapis.
+- Critic must-fix dikunci: CF-1 governance_warning recipient bercabang per violation_type (reviewer_override=pelaku skip, instance_missed=PIC korban pakai); CF-2 useProfile mock+null-guard getProfileAgeInDays→Infinity; CF-3 dedupe/section pakai org_today() server bukan cache klien; CF-4 gate AC-N9 = 29-case SQL (md5 advisory).
+- Status: blocker tuntas. Mulai implementasi TDD langkah 1 (migrasi 0008 + use-profile + data layer).
+
+## [2026-06-24] update | Fase 3 implementasi: data layer + migrasi 0008 (GREEN)
+
+- Migrasi supabase/migrations/0008_fase3_collab.sql ditulis (BELUM diterapkan): 7 tabel append-only (notifications, chat_rooms, chat_room_members, chat_messages, chat_message_reads, comments, mentions) + helper org_today()/is_chat_member()/emit_notification(); RPC tulis (mark_notification_read, send_chat_message, mark_chat_messages_read, create_comment, get_chat_rooms) + RPC Home per-section (get_today_repeat_instances, get_overdue_items, get_near_deadline_items, get_org_today); trigger auto-create chat room saat Initiative active + sync member + governance_warning (CF-1 bercabang per type); REPLACE 5 RPC existing (guard identik + emit notif); pg_cron emit_deadline_notifications; RLS SELECT-only + revoke tulis langsung (append-only 2-lapis).
+- Data layer + test (jest hijau): use-profile.ts (expose created_at + getProfileAgeInDays null-guard, G0), notifications.ts, inbox.ts, home.ts. Helper test makeQueryThenable (B5.1) mendukung in/range/order di posisi mana pun.
+- Hasil: npm test FULL 91/91 hijau, 0 regresi (home.test.tsx existing tetap hijau). tsc: error TS hanya pada nama RPC/tabel baru yang belum ada di database.types.ts (EXPECTED — butuh regen setelah 0008 diterapkan).
+- GATE berikut (butuh keputusan): terapkan 0008 ke project Supabase dev (fhnqwytqprsptjshoxfn) → regen types → tsc hijau → suite kontrak SQL 29-case (AC-N9) + append-only matrix. Lalu hook + screen.
+
+## [2026-06-24] update | Migrasi 0008 diterapkan ke dev + drift schema ditemukan
+
+- 0008_fase3_collab.sql DITERAPKAN ke project dev fhnqwytqprsptjshoxfn (apply_migration). database.types.ts diregen (7 tabel + RPC baru).
+- DRIFT PENTING: DB dev TIDAK punya can_access_initiative (file repo 0005 punya, deployed pakai initiative_has_my_action_plan inline di policy initiatives_select). Repo migrations 0005+ tampak tidak sinkron dengan DB deployed. 0008 menambah can_access_initiative (semantik live) untuk rekonsiliasi. Perlu audit sinkronisasi migrasi repo vs DB nanti.
+- Hardening: revoke execute fungsi trigger (tg_initiative_chat_room/tg_action_plan_sync_chat/tg_governance_warning) dari REST (advisor WARN) via migrasi fase3_harden_trigger_functions.
+- Verifikasi DB: (a) AC-N9 guard-presence 5 RPC replaced — semua guard (anti-self-approval/evidence/reviewer/reject-reason) tetap ada + emit_notification ditambah. (b) Append-only: 7 tabel RLS on + 0 grant tulis langsung authenticated. (c) Advisor security: hanya pola SECURITY DEFINER executable yang sudah jadi pola proyek + leaked-password (config auth) — tak ada lint baru kritis.
+- Sisa: tsc + jest re-verify (running), lalu hook + screen Home/Notifications/Inbox; suite kontrak SQL 29-case per-user (butuh harness JWT) sebagai gate AC-N9 penuh.
+
+## [2026-06-24] lint | Audit drift migrasi repo vs DB deployed
+
+- Pemicu: dugaan drift can_access_initiative (ada di repo 0005, tak ada di live).
+- HASIL: FALSE ALARM. 0006_fase1_fix_returning_rls.sql baris 65 `drop function if exists can_access_initiative(uuid)` setelah mengganti policy initiatives_select/action_plans_select ke initiative_has_my_action_plan/i_am_initiative_pic. Apply 0001->0008 berurutan MEREPRODUKSI skema live. 0008 membuat ulang can_access_initiative (dipakai comments/mentions, aman: cross-table bukan self-table).
+- Diaudit & COCOK: fungsi (43), policy (30, termasuk supersede 0006), trigger (11 incl on_auth_user_created di auth.users), tabel (26). rls_auto_enable = fungsi bawaan platform Supabase (0004 hanya revoke), bukan drift.
+- SATU divergensi nyata: riwayat migrasi. schema_migrations remote = 9 record; repo = 8 file. Statement REVOKE 3 fungsi trigger diterapkan sbg migrasi terpisah fase3_harden_trigger_functions (20260624104539) tapi sebelumnya dilipat ke file 0008. Skema identik; hanya ledger beda.
+- PERBAIKAN (repo-only, tanpa ubah live): pindahkan 3 revoke trigger ke file baru 0009_fase3_harden_trigger_functions.sql + hapus dari 0008. Kini 9 file <-> 9 record sejajar 1:1.
+- Kesimpulan: tidak perlu migrasi korektif skema; repo sudah jadi sumber kebenaran yang mereproduksi live.
+
+## [2026-06-24] update | Fase 3 UI selesai (Home + Notifications + Inbox/chat)
+
+- Brownfield (main loop): TabBar ditambah ke components/ui.tsx; route inbox/[roomId] didaftarkan di (app)/_layout.tsx; Home (index.tsx) ditulis ulang per-section: hapus todayISO()/isOverdue() device → dateLabel dari getOrgToday() server, 6 section retry-granular (Perlu dikerjakan, Repeat hari ini, Butuh review, Terlewat, Deadline mendekat, Revisi), Prioritas dari listOverdueItems server (error→"Gagal memuat." bukan 0), onboarding GuidanceNote (<7 hari via getProfileAgeInDays). home.test.tsx diperbarui (mock @/lib/home, tanpa mock Date — boundary di SQL).
+- Greenfield (workflow fase3-ui-build, 2 agent paralel + verify): use-notifications.ts + notifications.tsx (TabBar 8 tab, unread badge, mark read/all, 4 state); use-inbox.ts + inbox.tsx (daftar room + unread) + inbox/[roomId].tsx (chat: daftar pesan + composer + markRead on mount).
+- Verifikasi independen: npm test 124/124 (18 suite), tsc 0 error.
+- Sisa Fase 3: suite kontrak SQL 29-case per-user (gate AC-N9 penuh, butuh harness JWT) belum; polish UX chat (urutan pesan terbaru-dulu, composer di dalam scroll) opsional.
+
+## [2026-06-24] update | Suite kontrak SQL per-user Fase 3 HIJAU (gate AC-N9 tuntas)
+
+- Dijalankan via Supabase MCP execute_sql sebagai DO block transaksional (auth.uid() disimulasikan via request.jwt.claims; auth.users insert → trigger handle_new_user buat profil staff; rollback paksa via raise → nol polusi). Disimpan: supabase/tests/fase3_per_user_contract.sql (5 blok, bentuk psql begin/rollback + raise-on-fail).
+- T1 one-time guards (12): submit_action_plan S1-S5 + review_action_plan_submission R1-R7 (decision invalid, not-found, anti-self-approval, non-reviewer, reject-reason, reviewer_override logging, already-reviewed) — ALL_PASS.
+- T2 instance guards (14): submit_action_plan_instance I1-I6 + review_action_plan_instance_submission RI1-RI8 (termasuk bukan-submission-instance, anti-self instance) — ALL_PASS.
+- T3 append-only: 7 tabel tolak INSERT langsung authenticated (42501) + notifications UPDATE/DELETE ditolak; RLS recipient (PIC lihat sendiri, OUT 0, no leak) + chat member (member lihat room, non-member tidak) — ALL_PASS.
+- T4 governance_warning CF-1: reviewer_override → PIC+Reviewer+holder(view_governance_violation), pelaku DIKECUALIKAN; instance_missed → Reviewer+holder, PIC TIDAK via gov-path; low severity diabaikan. Cron idempotency (AC-N10): emit_deadline_notifications 2x → 1 notif — ALL_PASS.
+- T5 mention gating (AC-I6): mention member → row+notif, non-member → nihil; non-member tak bisa kirim; mark_chat_messages_read kecualikan pesan sendiri (AC-I5) — ALL_PASS.
+- STATUS: Fase 3 SELESAI PENUH (DB + data layer + hooks + screens + suite kontrak per-user). Tidak ada gap fitur/verifikasi yang tersisa; hanya 2 polish UX chat opsional (urutan pesan, composer pinned).

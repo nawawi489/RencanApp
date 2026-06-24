@@ -1,0 +1,18 @@
+{
+  "feature": "Fase 3 EMS V1.8.1 — Home (Today Command Center) + Notifications + Inbox (Initiative Chat). Lapisan UI + data aditif di atas loop eksekusi & permission model Fase 1–2, tanpa mengubah invarian governance. (1) Home: per-section query, sadar-permission, timezone-aware (organizations.timezone), section Perlu dikerjakan / Repeat hari ini / Butuh review / Terlewat / Deadline mendekat (<=3 hari) / Revisi diperlukan + onboarding hint user baru; perbaiki todayISO() device/UTC -> perhitungan org timezone di server. (2) Notifications: tabel append-only + tab segmentasi + unread + mark-as-read via RPC; tipe Fase 3 = review_request, approved, rejected, deadline_reminder, repeat_due, instance_missed, comment, mention, governance_warning (deadline_change_request/mbr_warning/card_needs_completion/card_activated DEFER). (3) Inbox: 1 chat_room per Initiative (auto-create on Initiative activate, hidden saat draft), membership = PIC Initiative + PIC/Reviewer Action Plan turunan (TIDAK ada Reviewer Initiative karena kolom tak ada; PIC induk no-op sampai Fase 4) dengan sync add+revoke via trigger pada action_plans, kirim pesan immutable, unread per room via chat_message_reads (exclude pesan sendiri), mention memicu notif akses-gated. Semua tulis via RPC SECURITY DEFINER; tabel kolaborasi hanya SELECT policy + grant write dicabut. RPC submit_action_plan/submit_action_plan_instance/review_action_plan_submission/review_action_plan_instance_submission/mark_overdue_instances di-replace untuk emit notif TANPA melonggarkan guard manapun (regresi wajib). Cron notif idempoten via unique partial index (recipient_id, entity_id, type, tanggal-lokal-org). governance_warning recipient = PIC/Reviewer card terdampak (diturunkan dari entity_id, BUKAN governance_violations.user_id) + pemegang view_governance_violation; body tak melebihi nama entity. Migrasi 0008_fase3_collab.sql urutan DDL dependency-safe: notifications -> chat_rooms -> chat_room_members -> chat_messages -> chat_message_reads -> comments -> mentions (mentions FK ke chat_messages+comments dibuat terakhir), RLS + policy SELECT-only untuk 7 tabel. Helper baru is_chat_member(uuid) SECURITY DEFINER. Regen database.types.ts setelah migrasi. Urutan implementasi TDD: (1) migrasi 0008, (2) regen types, (3) data layer notifications.ts/inbox.ts/home.ts, (4) Home server-side date fix + section queries, (5) Notifications, (6) Inbox. Uji prioritas: append-only enforcement, RLS recipient/member, idempotensi cron, timezone boundary (AC-H6b), no-leak get_today_focus/per-section (AC-G2), membership add+revoke (AC-I2b), guard RPC regression (AC-N9), mention akses-gated (AC-I6), governance_warning recipient (AC-N8).",
+  "paths": [
+    "mobile/src/app/(app)/(tabs)/index.tsx",
+    "mobile/src/app/(app)/(tabs)/notifications.tsx",
+    "mobile/src/app/(app)/(tabs)/inbox.tsx",
+    "mobile/src/app/(app)/inbox/[roomId].tsx",
+    "mobile/src/lib/cards.ts",
+    "mobile/src/lib/home.ts",
+    "mobile/src/lib/notifications.ts",
+    "mobile/src/lib/inbox.ts",
+    "mobile/src/lib/database.types.ts",
+    "mobile/src/hooks/use-repeat-instances.ts",
+    "mobile/src/components/ui.tsx",
+    "mobile/src/components/greeting-hero.tsx",
+    "supabase/migrations/0008_fase3_collab.sql"
+  ]
+}
