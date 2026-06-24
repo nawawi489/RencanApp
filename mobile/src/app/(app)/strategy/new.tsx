@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
-import { useStrategyActions } from '@/hooks/use-workspace';
+import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
 import type { PersonRef } from '@/lib/cards';
 import { getKpiArea } from '@/lib/kpi-areas';
 
@@ -19,8 +19,9 @@ export default function NewStrategyScreen() {
   const { kpiAreaId } = useLocalSearchParams<{ kpiAreaId: string }>();
   const router = useRouter();
   const { create, isPending } = useStrategyActions(kpiAreaId);
-  // Default PIC turunan (PRD §52): bila PIC tak diisi, ikut PIC KPI Area induk.
+  // Default PIC turunan (PRD §52): picker di-prefill PIC KPI Area induk (terlihat & bisa diubah).
   const parentQ = useQuery({ queryKey: ['kpi_area', kpiAreaId], queryFn: () => getKpiArea(kpiAreaId), enabled: !!kpiAreaId });
+  const { person: inheritedPic } = usePerson(parentQ.data?.pic_id);
 
   const [name, setName] = useState('');
   const [reason, setReason] = useState('');
@@ -52,7 +53,7 @@ export default function NewStrategyScreen() {
         reason: reason.trim() || null,
         main_risk: mainRisk.trim() || null,
         alternative: alternative.trim() || null,
-        pic_id: pic?.id ?? parentQ.data?.pic_id ?? null,
+        pic_id: (pic ?? inheritedPic)?.id ?? null,
         period_start: periodStart || null,
         period_end: periodEnd || null,
       });
@@ -99,12 +100,7 @@ export default function NewStrategyScreen() {
             placeholder="Opsi lain bila strategi ini gagal (wajib saat aktivasi)"
             multiline
           />
-          <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
-          {parentQ.data?.pic_id ? (
-            <Text className="-mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Kosongkan untuk mengikuti PIC KPI Area induk.
-            </Text>
-          ) : null}
+          <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
           <LabeledInput
             label="Tanggal Mulai"
             value={periodStart}

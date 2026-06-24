@@ -14,9 +14,20 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
-import { useStrategies } from '@/hooks/use-workspace';
-import { PLANNING_STATUS_LABEL, STATUS_TONE, activateKpiArea, getKpiArea, updateKpiArea } from '@/lib/kpi-areas';
+import { UserPicker } from '@/components/user-picker';
+import { usePerson, useStrategies } from '@/hooks/use-workspace';
+import {
+  PLANNING_STATUS_LABEL,
+  STATUS_TONE,
+  activateKpiArea,
+  getKpiArea,
+  updateKpiArea,
+  type KpiAreaPatch,
+  type PersonRef,
+} from '@/lib/kpi-areas';
 import type { Strategy } from '@/lib/strategies';
+
+type Person = NonNullable<PersonRef>;
 
 function StrategyRow({ item, onPress }: { item: Strategy; onPress: () => void }) {
   return (
@@ -30,23 +41,28 @@ function StrategyRow({ item, onPress }: { item: Strategy; onPress: () => void })
 }
 
 /**
- * Editor kelengkapan KPI Area Draft (Target wajib saat aktivasi). Dirender hanya setelah KPI Area
- * dimuat & berstatus draft → useState(initialTarget) ter-init benar tanpa effect sinkronisasi.
+ * Editor kelengkapan KPI Area Draft (Target & PIC wajib saat aktivasi). Dirender hanya setelah KPI Area
+ * dimuat & berstatus draft → useState ter-init benar tanpa effect sinkronisasi. `initialPic` (PIC tersimpan,
+ * mis. warisan dari Goal Wizard) jadi nilai awal picker; bisa diubah agar Draft tanpa PIC tetap bisa aktif.
  */
 function DraftCompletion({
   initialTarget,
-  onSaveTarget,
-  savingTarget,
+  initialPic,
+  onSave,
+  saving,
   onActivate,
   activating,
 }: {
   initialTarget: string;
-  onSaveTarget: (t: string) => void;
-  savingTarget: boolean;
+  initialPic: PersonRef;
+  onSave: (patch: KpiAreaPatch) => void;
+  saving: boolean;
   onActivate: () => void;
   activating: boolean;
 }) {
   const [target, setTarget] = useState(initialTarget);
+  const [pic, setPic] = useState<Person | null>(null);
+  const unchanged = target.trim() === initialTarget && pic === null;
   return (
     <SectionCard>
       <Text className="text-sm font-bold text-black dark:text-white">Lengkapi sebelum aktivasi</Text>
@@ -58,12 +74,13 @@ function DraftCompletion({
         placeholder="mis. Naik 20% YoY"
         multiline
       />
+      <UserPicker label="PIC / Owner" value={pic ?? initialPic} onChange={setPic} required />
       <Button
-        label="Simpan Target"
+        label="Simpan Kelengkapan"
         variant="secondary"
-        onPress={() => onSaveTarget(target)}
-        loading={savingTarget}
-        disabled={target.trim() === initialTarget}
+        onPress={() => onSave({ target: target.trim() || null, pic_id: (pic ?? initialPic)?.id ?? null })}
+        loading={saving}
+        disabled={unchanged}
       />
       <Button label="Aktifkan KPI Area" onPress={onActivate} loading={activating} />
     </SectionCard>
@@ -98,11 +115,13 @@ export default function KpiAreaDetailScreen() {
   });
 
   const kpiArea = kpiAreaQ.data;
+  // PIC tersimpan (mis. warisan Goal Wizard) untuk prefill picker editor.
+  const { person: currentPic } = usePerson(kpiArea?.pic_id);
 
-  // Target wajib saat aktivasi. KPI Area dari Goal Wizard lahir tanpa Target (null) → editor inline
-  // (DraftCompletion) agar bisa dilengkapi sebelum aktivasi; tanpa ini KPI Area template terjebak Draft.
-  const saveTargetM = useMutation({
-    mutationFn: (t: string) => updateKpiArea(id, { target: t.trim() || null }),
+  // Target & PIC wajib saat aktivasi. KPI Area dari Goal Wizard bisa lahir tanpa Target/PIC → editor
+  // inline (DraftCompletion) agar bisa dilengkapi sebelum aktivasi; tanpa ini Draft template terjebak.
+  const saveM = useMutation({
+    mutationFn: (patch: KpiAreaPatch) => updateKpiArea(id, patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['kpi_area', id] });
       qc.invalidateQueries({ queryKey: ['kpi_areas'] });
@@ -151,8 +170,9 @@ export default function KpiAreaDetailScreen() {
             {kpiArea.status === 'draft' ? (
               <DraftCompletion
                 initialTarget={kpiArea.target ?? ''}
-                onSaveTarget={(t) => saveTargetM.mutate(t)}
-                savingTarget={saveTargetM.isPending}
+                initialPic={currentPic}
+                onSave={(patch) => saveM.mutate(patch)}
+                saving={saveM.isPending}
                 onActivate={() => activateM.mutate()}
                 activating={activateM.isPending}
               />

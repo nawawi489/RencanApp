@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
+import { usePerson } from '@/hooks/use-workspace';
 import { createInitiative, type PersonRef } from '@/lib/cards';
 import { getStrategy } from '@/lib/strategies';
 
@@ -26,6 +27,7 @@ export default function NewInitiativeScreen() {
     queryFn: () => getStrategy(strategyId!),
     enabled: !!strategyId,
   });
+  const { person: inheritedPic } = usePerson(parentQ.data?.pic_id);
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -57,7 +59,7 @@ export default function NewInitiativeScreen() {
       period_start: periodStart || null,
       period_end: periodEnd || null,
       description: description.trim() || null,
-      pic_id: pic?.id ?? parentQ.data?.pic_id ?? null,
+      pic_id: (pic ?? inheritedPic)?.id ?? null,
       strategy_id: strategyId ?? null,
     });
   }
@@ -79,12 +81,7 @@ export default function NewInitiativeScreen() {
             placeholder="mis. 20 konten tayang & 500 leads"
             multiline
           />
-          <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
-          {strategyId && parentQ.data?.pic_id ? (
-            <Text className="-mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Kosongkan untuk mengikuti PIC Strategy induk.
-            </Text>
-          ) : null}
+          <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
           <LabeledInput label="Tanggal Mulai" value={periodStart} onChangeText={setPeriodStart} placeholder={DATE_HINT} keyboardType="numeric" />
           <LabeledInput label="Tanggal Selesai" value={periodEnd} onChangeText={setPeriodEnd} placeholder={DATE_HINT} keyboardType="numeric" />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />

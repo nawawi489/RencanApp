@@ -137,6 +137,18 @@ export async function listSubmissions(actionPlanId: string): Promise<SubmissionD
   return data as unknown as SubmissionDetail[];
 }
 
+/** Resolusi satu profil jadi PersonRef (untuk prefill picker dari pic_id). null id → null. */
+export async function getPersonRef(id: string | null | undefined): Promise<PersonRef> {
+  if (!id) return null;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as PersonRef;
+}
+
 /** Anggota org untuk picker PIC/Reviewer. */
 export async function listOrgProfiles(): Promise<NonNullable<PersonRef>[]> {
   const { data, error } = await supabase

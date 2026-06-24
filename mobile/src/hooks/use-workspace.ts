@@ -4,7 +4,7 @@
 // ['goal_templates']. Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { listInitiatives, type Initiative } from '@/lib/cards';
+import { getPersonRef, listInitiatives, type Initiative, type PersonRef } from '@/lib/cards';
 import {
   activateGoal,
   applyGoalTemplate,
@@ -132,6 +132,16 @@ export function useStrategyInitiatives(strategyId: string) {
     isError: q.isError,
     refetch: q.refetch,
   };
+}
+
+/** Resolusi pic_id → PersonRef (untuk prefill picker dengan PIC induk / PIC tersimpan). */
+export function usePerson(id: string | null | undefined) {
+  const q = useQuery({
+    queryKey: ['person', id],
+    queryFn: () => getPersonRef(id),
+    enabled: !!id,
+  });
+  return { person: (q.data ?? null) as PersonRef };
 }
 
 /** KPI Area template di bawah satu Goal Template (untuk isian Target di Wizard). */
