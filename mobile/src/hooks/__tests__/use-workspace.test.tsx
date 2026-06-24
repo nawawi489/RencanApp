@@ -22,6 +22,7 @@ const mockCreateStrategy = jest.fn();
 const mockActivateStrategy = jest.fn();
 
 const mockListInitiatives = jest.fn();
+const mockGetPersonRef = jest.fn();
 
 jest.mock('@/lib/goals', () => ({
   listGoals: (...a: unknown[]) => mockListGoals(...a),
@@ -47,6 +48,7 @@ jest.mock('@/lib/strategies', () => ({
 
 jest.mock('@/lib/cards', () => ({
   listInitiatives: (...a: unknown[]) => mockListInitiatives(...a),
+  getPersonRef: (...a: unknown[]) => mockGetPersonRef(...a),
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the imports it mocks
@@ -57,6 +59,7 @@ import {
   useGoals,
   useKpiAreaActions,
   useKpiAreas,
+  usePerson,
   useStrategies,
   useStrategyActions,
 } from '../use-workspace';
@@ -209,5 +212,24 @@ describe('useStrategyActions', () => {
     await act(async () => {
       await expect(result.current.activate('s1')).rejects.toThrow('depth');
     });
+  });
+});
+
+describe('usePerson (prefill PIC induk)', () => {
+  it('[9] id kosong → tidak fetch, person null', async () => {
+    mockGetPersonRef.mockResolvedValue({ id: 'p1', full_name: 'Budi', email: null });
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => usePerson(''), { wrapper });
+    await act(async () => {});
+    expect(mockGetPersonRef).not.toHaveBeenCalled();
+    expect(result.current.person).toBeNull();
+  });
+
+  it('[10] id terisi → resolve PersonRef', async () => {
+    mockGetPersonRef.mockResolvedValue({ id: 'p1', full_name: 'Budi', email: null });
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => usePerson('p1'), { wrapper });
+    await waitFor(() => expect(result.current.person).toEqual({ id: 'p1', full_name: 'Budi', email: null }));
+    expect(mockGetPersonRef).toHaveBeenCalledWith('p1');
   });
 });

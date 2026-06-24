@@ -8,12 +8,10 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { UserPicker } from '@/components/user-picker';
 import { usePerson } from '@/hooks/use-workspace';
 import { createInitiative, type PersonRef } from '@/lib/cards';
+import { DATE_HINT, periodError } from '@/lib/date';
 import { getStrategy } from '@/lib/strategies';
 
 type Person = NonNullable<PersonRef>;
-
-const DATE_HINT = 'Format: YYYY-MM-DD (mis. 2026-07-01)';
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function NewInitiativeScreen() {
   const router = useRouter();
@@ -49,8 +47,9 @@ export default function NewInitiativeScreen() {
       Alert.alert('Belum lengkap', 'Nama Initiative wajib diisi.');
       return;
     }
-    if ((periodStart && !DATE_RE.test(periodStart)) || (periodEnd && !DATE_RE.test(periodEnd))) {
-      Alert.alert('Tanggal tidak valid', DATE_HINT);
+    const dateErr = periodError(periodStart, periodEnd);
+    if (dateErr) {
+      Alert.alert('Tanggal tidak valid', dateErr);
       return;
     }
     mutation.mutate({

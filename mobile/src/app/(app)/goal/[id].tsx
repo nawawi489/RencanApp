@@ -27,7 +27,7 @@ export default function GoalDetailScreen() {
   const router = useRouter();
   const goalQ = useGoal(id);
   const kpiQ = useKpiAreas(id);
-  const { activate, restore, isPending } = useGoalActions();
+  const { activate, restore, activatePending, restorePending } = useGoalActions();
 
   useFocusEffect(
     useCallback(() => {
@@ -94,7 +94,7 @@ export default function GoalDetailScreen() {
             ) : null}
 
             {goal.status === 'draft' ? (
-              <Button label="Aktifkan Goal" onPress={onActivate} loading={isPending} />
+              <Button label="Aktifkan Goal" onPress={onActivate} loading={activatePending} />
             ) : null}
 
             {goal.goal_template_id ? (
@@ -102,7 +102,7 @@ export default function GoalDetailScreen() {
                 label="Pulihkan item dari template"
                 variant="secondary"
                 onPress={onRestore}
-                loading={isPending}
+                loading={restorePending}
               />
             ) : null}
 

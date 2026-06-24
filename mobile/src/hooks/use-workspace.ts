@@ -228,6 +228,8 @@ export function useGoalActions() {
     restore: (goalId: string) => restoreM.mutateAsync(goalId),
     isPending:
       createM.isPending || activateM.isPending || applyTemplateM.isPending || restoreM.isPending,
+    activatePending: activateM.isPending,
+    restorePending: restoreM.isPending,
   };
 }
 

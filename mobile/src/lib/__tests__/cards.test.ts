@@ -16,6 +16,7 @@ import {
   INITIATIVE_STATUS_LABEL,
   STATUS_TONE,
   createInitiative,
+  getPersonRef,
   listInitiatives,
   type NewInitiative,
 } from '../cards';
@@ -46,6 +47,7 @@ function makeSingleBuilder(result: { data: unknown; error: unknown }) {
     });
   }
   builder.single = jest.fn(() => Promise.resolve(result));
+  builder.maybeSingle = jest.fn(() => Promise.resolve(result));
   return { builder, calls };
 }
 
@@ -145,5 +147,31 @@ describe('createInitiative — passthrough strategy_id (Fase 4)', () => {
     await createInitiative(base);
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
     expect('strategy_id' in payload).toBe(false);
+  });
+});
+
+describe('getPersonRef (prefill PIC dari pic_id)', () => {
+  it('[11] id null/undefined → null tanpa query', async () => {
+    expect(await getPersonRef(null)).toBeNull();
+    expect(await getPersonRef(undefined)).toBeNull();
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('[12] id → profiles.select().eq().maybeSingle() & kembalikan PersonRef', async () => {
+    const { builder, calls } = makeSingleBuilder({
+      data: { id: 'p1', full_name: 'Budi', email: 'b@x.id' },
+      error: null,
+    });
+    mockFrom.mockReturnValue(builder);
+    const p = await getPersonRef('p1');
+    expect(mockFrom).toHaveBeenCalledWith('profiles');
+    expect(calls.eq).toEqual(['id', 'p1']);
+    expect(p).toEqual({ id: 'p1', full_name: 'Budi', email: 'b@x.id' });
+  });
+
+  it('[13] propagasi error', async () => {
+    const { builder } = makeSingleBuilder({ data: null, error: { message: 'x' } });
+    mockFrom.mockReturnValue(builder);
+    await expect(getPersonRef('p1')).rejects.toEqual({ message: 'x' });
   });
 });

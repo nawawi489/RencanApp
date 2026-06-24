@@ -330,9 +330,10 @@ begin
   values (v_org, t.name, p_pic_id, p_period_start, p_period_end, 'draft', t.id, auth.uid())
   returning id into v_goal;
 
-  -- Target per-KPI dari wizard (PRD §49 step 5); key = nama KPI Area template. Kosong → null (dilengkapi nanti).
+  -- Target per-KPI dari wizard (PRD §49 step 5); key = id KPI Area template (bukan nama → tahan
+  -- nama duplikat antar divisi). Kosong → null (dilengkapi nanti).
   insert into public.kpi_areas (organization_id, goal_id, name, target, pic_id, period_start, period_end, status, created_by)
-  select v_org, v_goal, kt.name, nullif(trim(coalesce(p_targets ->> kt.name, '')), ''),
+  select v_org, v_goal, kt.name, nullif(trim(coalesce(p_targets ->> kt.id::text, '')), ''),
          p_pic_id, p_period_start, p_period_end, 'draft', auth.uid()
   from public.kpi_area_templates kt
   where kt.goal_template_id = p_goal_template_id;

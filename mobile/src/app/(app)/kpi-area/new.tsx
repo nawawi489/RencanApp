@@ -7,13 +7,11 @@ import { ScrollView, View } from 'react-native-css/components';
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useKpiAreaActions, usePerson } from '@/hooks/use-workspace';
+import { DATE_HINT, periodError } from '@/lib/date';
 import { getGoal } from '@/lib/goals';
 import type { PersonRef } from '@/lib/kpi-areas';
 
 type Person = NonNullable<PersonRef>;
-
-const DATE_HINT = 'Format: YYYY-MM-DD (mis. 2026-07-01)';
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function NewKpiAreaScreen() {
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
@@ -39,12 +37,9 @@ export default function NewKpiAreaScreen() {
       Alert.alert('Belum lengkap', 'Target KPI Area wajib diisi.');
       return;
     }
-    if ((periodStart && !DATE_RE.test(periodStart)) || (periodEnd && !DATE_RE.test(periodEnd))) {
-      Alert.alert('Tanggal tidak valid', DATE_HINT);
-      return;
-    }
-    if (periodStart && periodEnd && periodEnd < periodStart) {
-      Alert.alert('Tanggal tidak valid', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
+    const dateErr = periodError(periodStart, periodEnd);
+    if (dateErr) {
+      Alert.alert('Tanggal tidak valid', dateErr);
       return;
     }
     try {

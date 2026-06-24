@@ -8,13 +8,11 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
-import type { PersonRef } from '@/lib/goals';
 import { useGoalActions, useGoalTemplates, useKpiAreaTemplates } from '@/hooks/use-workspace';
+import { DATE_HINT, periodError } from '@/lib/date';
+import type { PersonRef } from '@/lib/goals';
 
 type Person = NonNullable<PersonRef>;
-
-const DATE_HINT = 'Format: YYYY-MM-DD (mis. 2026-07-01)';
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function GoalWizardScreen() {
   const router = useRouter();
@@ -29,7 +27,6 @@ export default function GoalWizardScreen() {
   const [targets, setTargets] = useState<Record<string, string>>({});
 
   const { items: kpiTemplates } = useKpiAreaTemplates(templateId ?? '');
-  const datesValid = DATE_RE.test(periodStart) && DATE_RE.test(periodEnd);
 
   function next() {
     if (step === 0 && !templateId) {
@@ -53,13 +50,10 @@ export default function GoalWizardScreen() {
       Alert.alert('Belum lengkap', 'Tentukan PIC / Owner Goal terlebih dulu.');
       return;
     }
-    if (!datesValid) {
-      Alert.alert('Tanggal tidak valid', DATE_HINT);
-      return;
-    }
-    if (periodEnd < periodStart) {
-      // Bandingkan string YYYY-MM-DD (leksikografis = kronologis). Cegah CHECK *_period_order gagal di server.
-      Alert.alert('Tanggal tidak valid', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
+    // Kedua tanggal wajib (requireBoth) + urutan benar; cegah CHECK *_period_order gagal di server.
+    const dateErr = periodError(periodStart, periodEnd, true);
+    if (dateErr) {
+      Alert.alert('Tanggal tidak valid', dateErr);
       return;
     }
     try {
@@ -139,8 +133,8 @@ export default function GoalWizardScreen() {
                   <LabeledInput
                     key={kt.id}
                     label={`${kt.division_label} · ${kt.name}`}
-                    value={targets[kt.name] ?? ''}
-                    onChangeText={(v) => setTargets((prev) => ({ ...prev, [kt.name]: v }))}
+                    value={targets[kt.id] ?? ''}
+                    onChangeText={(v) => setTargets((prev) => ({ ...prev, [kt.id]: v }))}
                     placeholder="mis. Naik 20% YoY"
                   />
                 ))}
