@@ -40,7 +40,11 @@ const SECTIONS: SettingsSection[] = [
     permission: 'manage_minimum_breakdown_rule',
   },
   { label: 'Card Completion Rule' },
-  { label: 'Score Formula' },
+  {
+    label: 'Score Formula',
+    href: '/settings-score-formula' as Href,
+    permission: 'manage_score_formula',
+  },
   { label: 'Activity Log' },
   { label: 'Governance Violation' },
 ];

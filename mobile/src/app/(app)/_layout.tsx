@@ -46,6 +46,24 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'Strategy Baru', presentation: 'modal' }}
       />
       <Stack.Screen name="strategy/[id]" options={{ headerShown: true, title: 'Strategy' }} />
+
+      {/* Fase 6 — Development Workspace */}
+      <Stack.Screen
+        name="development-area/new"
+        options={{ headerShown: true, title: 'Development Area Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="development-area/[id]"
+        options={{ headerShown: true, title: 'Development Area' }}
+      />
+      <Stack.Screen
+        name="problem-statement/new"
+        options={{ headerShown: true, title: 'Problem Statement Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="problem-statement/[id]"
+        options={{ headerShown: true, title: 'Problem Statement' }}
+      />
     </Stack>
   );
 }

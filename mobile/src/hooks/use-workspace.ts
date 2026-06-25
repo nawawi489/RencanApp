@@ -34,6 +34,23 @@ import {
   type NewStrategy,
   type Strategy,
 } from '@/lib/strategies';
+import {
+  activateDevelopmentArea,
+  createDevelopmentArea,
+  getDevelopmentArea,
+  listDevelopmentAreas,
+  type DevelopmentArea,
+  type DevelopmentAreaWithProblemCount,
+  type NewDevelopmentArea,
+} from '@/lib/development-areas';
+import {
+  activateProblemStatement,
+  createProblemStatement,
+  getProblemStatement,
+  listProblemStatements,
+  type NewProblemStatement,
+  type ProblemStatement,
+} from '@/lib/problem-statements';
 
 // ---------------------------------------------------------------- queries
 
@@ -103,11 +120,11 @@ export function useStrategies(kpiAreaId: string) {
   };
 }
 
-/** Initiative datar (tanpa Strategy). */
+/** Initiative datar (tanpa Strategy DAN tanpa Problem Statement). */
 export function useFlatInitiatives() {
   const q = useQuery({
     queryKey: ['initiatives', 'flat'],
-    queryFn: () => listInitiatives({ strategyId: null }),
+    queryFn: () => listInitiatives({ strategyId: null, problemStatementId: null }),
   });
 
   return {
@@ -256,6 +273,134 @@ export function useKpiAreaActions(goalId: string) {
     create: (input: NewKpiArea) => createM.mutateAsync(input),
     activate: (id: string) => activateM.mutateAsync(id),
     isPending: createM.isPending || activateM.isPending,
+  };
+}
+
+// ---------------------------------------------------------------- Fase 6: Development Workspace
+
+/** Semua Development Area (terbaru dulu). Query key: ['development_areas']. */
+export function useDevelopmentAreas() {
+  const q = useQuery({
+    queryKey: ['development_areas'],
+    queryFn: listDevelopmentAreas,
+  });
+  return {
+    developmentAreas: (q.data ?? []) as DevelopmentAreaWithProblemCount[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Satu Development Area. */
+export function useDevelopmentArea(id: string) {
+  const q = useQuery({
+    queryKey: ['development_area', id],
+    queryFn: () => getDevelopmentArea(id),
+    enabled: !!id,
+  });
+  return {
+    developmentArea: q.data as DevelopmentArea | undefined,
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Problem Statement di bawah satu Development Area. */
+export function useProblemStatements(developmentAreaId: string, enabled = true) {
+  const q = useQuery({
+    queryKey: ['problem_statements', developmentAreaId],
+    queryFn: () => listProblemStatements(developmentAreaId),
+    enabled: !!developmentAreaId && enabled,
+  });
+  return {
+    problemStatements: (q.data ?? []) as ProblemStatement[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Satu Problem Statement. */
+export function useProblemStatement(id: string) {
+  const q = useQuery({
+    queryKey: ['problem_statement', id],
+    queryFn: () => getProblemStatement(id),
+    enabled: !!id,
+  });
+  return {
+    problemStatement: q.data as ProblemStatement | undefined,
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Initiative di bawah satu Problem Statement (jalur Development). */
+export function useProblemStatementInitiatives(problemStatementId: string) {
+  const q = useQuery({
+    queryKey: ['initiatives', 'problem_statement', problemStatementId],
+    queryFn: () => listInitiatives({ problemStatementId }),
+    enabled: !!problemStatementId,
+  });
+  return {
+    initiatives: (q.data ?? []) as Initiative[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Aksi tulis Development Area. */
+export function useDevelopmentAreaActions() {
+  const qc = useQueryClient();
+  const createM = useMutation({
+    mutationFn: (input: NewDevelopmentArea) => createDevelopmentArea(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['development_areas'] });
+    },
+  });
+  const activateM = useMutation({
+    mutationFn: (id: string) => activateDevelopmentArea(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['development_area', id] });
+      qc.invalidateQueries({ queryKey: ['development_areas'] });
+    },
+  });
+  return {
+    create: (input: NewDevelopmentArea) => createM.mutateAsync(input),
+    activate: (id: string) => activateM.mutateAsync(id),
+    isPending: createM.isPending || activateM.isPending,
+    activatePending: activateM.isPending,
+  };
+}
+
+/** Aksi tulis Problem Statement di bawah satu Development Area. */
+export function useProblemStatementActions(developmentAreaId: string) {
+  const qc = useQueryClient();
+  const createM = useMutation({
+    mutationFn: (input: NewProblemStatement) => createProblemStatement(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['development_area', developmentAreaId] });
+      qc.invalidateQueries({ queryKey: ['development_areas'] });
+      qc.invalidateQueries({ queryKey: ['problem_statements', developmentAreaId] });
+      // MC-? — invalidasi MBR compliance DA agar indikator Kelengkapan Perencanaan refresh.
+      qc.invalidateQueries({ queryKey: ['mbr_compliance', 'development_area', developmentAreaId] });
+    },
+  });
+  const activateM = useMutation({
+    mutationFn: (id: string) => activateProblemStatement(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['problem_statement', id] });
+      qc.invalidateQueries({ queryKey: ['problem_statements', developmentAreaId] });
+    },
+  });
+  return {
+    create: (input: NewProblemStatement) => createM.mutateAsync(input),
+    activate: (id: string) => activateM.mutateAsync(id),
+    isPending: createM.isPending || activateM.isPending,
+    activatePending: activateM.isPending,
   };
 }
 

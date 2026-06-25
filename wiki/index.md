@@ -27,6 +27,8 @@ Master index of all wiki pages. Updated on every ingest.
 - [[architecture]] — Pola "thick database, thin client": DB-centric serverless, business logic di Postgres (RLS/trigger/RPC)
 - [[audit-governance]] — Activity Log & Governance Violation append-only; severity & integritas audit
 - [[execution-loop]] — Bukti → Nilai Hasil → Review; submission versioning & evidence locking
+- [[fase6-spec]] — Spec eksekutabel Fase 6 Development Workspace (AC, data contract, non-goals, TDD handoff)
+- [[fase6-tdd-plan]] — Rencana TDD red→green→refactor Fase 6 + addendum kritik (missing cases & concerns)
 - [[minimum-breakdown-rule]] — Jumlah minimal card turunan; tiga mode penerapan & default
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[scope-guardrails]] — Batas scope V1.8.1: fitur masuk vs ditolak (anti-scope-creep)

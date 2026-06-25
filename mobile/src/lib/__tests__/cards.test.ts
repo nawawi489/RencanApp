@@ -108,6 +108,22 @@ describe('listInitiatives — filter strategy_id (Fase 4)', () => {
     mockFrom.mockReturnValue(builder);
     await expect(listInitiatives()).rejects.toEqual({ message: 'boom' });
   });
+
+  it('[7a] problemStatementId:"p1" → .eq(problem_statement_id, p1) (Fase 6)', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listInitiatives({ problemStatementId: 'p1' });
+    expect(calls.eq).toEqual(['problem_statement_id', 'p1']);
+    expect(calls.is).toBeUndefined();
+  });
+
+  it('[7b] problemStatementId:null → .is(problem_statement_id, null)', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listInitiatives({ problemStatementId: null });
+    expect(calls.is).toEqual(['problem_statement_id', null]);
+    expect(calls.eq).toBeUndefined();
+  });
 });
 
 describe('createInitiative — passthrough strategy_id (Fase 4)', () => {
@@ -147,6 +163,20 @@ describe('createInitiative — passthrough strategy_id (Fase 4)', () => {
     await createInitiative(base);
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
     expect('strategy_id' in payload).toBe(false);
+  });
+
+  it('[10a] meneruskan problem_statement_id ke payload INSERT (Fase 6)', async () => {
+    const { inits } = setup();
+    await createInitiative({ ...base, problem_statement_id: 'ps1' });
+    const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
+    expect(payload.problem_statement_id).toBe('ps1');
+  });
+
+  it('[10b] tanpa problem_statement_id → payload tidak memuat field itu', async () => {
+    const { inits } = setup();
+    await createInitiative(base);
+    const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
+    expect('problem_statement_id' in payload).toBe(false);
   });
 });
 

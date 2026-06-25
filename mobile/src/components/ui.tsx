@@ -383,6 +383,91 @@ export function ScoreLegend() {
   );
 }
 
+// ---------------------------------------------------------------- ScoreSparkline (Fase 7, D6)
+
+/**
+ * Sparkline mini untuk Trend skor — N titik (skala 0-100), urut KRONOLOGIS (kiri = terlama).
+ * Graceful saat <2 titik: render single bar atau placeholder; tidak crash.
+ * Implementasi bar-based (tanpa SVG) agar tidak menambah dependency.
+ */
+export function ScoreSparkline({ points, label }: { points: number[]; label?: string }) {
+  if (!points.length) {
+    return (
+      <Text className="text-xs text-neutral-400">
+        {label ?? 'Tren skor menyusul setelah ≥1 periode tertutup.'}
+      </Text>
+    );
+  }
+  const safe = points.map((p) => Math.max(0, Math.min(100, p)));
+  const latest = safe[safe.length - 1];
+  const prev = safe.length >= 2 ? safe[safe.length - 2] : null;
+  const delta = prev != null ? latest - prev : null;
+  const deltaTone =
+    delta == null
+      ? 'text-neutral-400'
+      : delta > 0
+        ? 'text-green-600 dark:text-green-400'
+        : delta < 0
+          ? 'text-amber-600 dark:text-amber-400'
+          : 'text-neutral-500';
+  const deltaLabel =
+    delta == null ? '—' : delta > 0 ? `↑ +${delta}` : delta < 0 ? `↓ ${delta}` : '→ 0';
+  return (
+    <View
+      className="gap-1.5"
+      accessible
+      accessibilityLabel={`Tren skor ${safe.length} periode, terbaru ${latest}, perubahan ${deltaLabel}`}>
+      <View className="flex-row items-end gap-1" style={{ height: 28 }}>
+        {safe.map((p, i) => (
+          <View
+            key={i}
+            style={{ height: `${Math.max(8, p)}%`, width: 6 }}
+            className={`rounded-sm ${
+              i === safe.length - 1 ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
+            }`}
+          />
+        ))}
+      </View>
+      <Text className={`text-xs font-semibold ${deltaTone}`}>{deltaLabel}</Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- ScoreBreakdown (Fase 7)
+
+export type ScoreBreakdownMetric = { label: string; value: number };
+
+/**
+ * Daftar metrik People (label + persen). Clamp 0–100. TIDAK menampilkan bobot
+ * formula (per spec FR-7.8: breakdown menampilkan nama kategori + persentase
+ * TANPA label bobot). ProgressBar dipakai untuk indikasi visual.
+ */
+export function ScoreBreakdown({ metrics }: { metrics: ScoreBreakdownMetric[] }) {
+  if (!metrics.length) {
+    return (
+      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+        Belum ada metrik untuk ditampilkan.
+      </Text>
+    );
+  }
+  return (
+    <View className="gap-3">
+      {metrics.map((m, i) => {
+        const pct = Math.max(0, Math.min(100, Math.round(m.value)));
+        return (
+          <View key={`${m.label}-${i}`} className="gap-1.5">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-sm font-semibold text-black dark:text-white">{m.label}</Text>
+              <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{pct}%</Text>
+            </View>
+            <ProgressBar value={pct} tone="brand" />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------- ProgressBar
 
 /** Bar progres + persen opsional. Warna brand-dark (AA) atau green saat selesai. */

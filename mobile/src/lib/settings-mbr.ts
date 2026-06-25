@@ -90,7 +90,17 @@ export async function listMbrRules(): Promise<MbrRule[]> {
     .select('*')
     .order('parent_card_type', { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as MbrRule[];
+  const rows = (data ?? []) as unknown as MbrRule[];
+  // Deduplicate: org-level row wins over system fallback (organization_id NULL).
+  const map = new Map<string, MbrRule>();
+  for (const r of rows) {
+    const key = `${r.parent_card_type}:${r.child_card_type}`;
+    const existing = map.get(key);
+    if (!existing || (r.organization_id && !existing.organization_id)) {
+      map.set(key, r);
+    }
+  }
+  return Array.from(map.values());
 }
 
 // ---------------------------------------------------------------- mutations (RPC)

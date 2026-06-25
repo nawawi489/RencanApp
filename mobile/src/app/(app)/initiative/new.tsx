@@ -10,22 +10,36 @@ import { usePerson } from '@/hooks/use-workspace';
 import { createInitiative, type PersonRef } from '@/lib/cards';
 import { DATE_HINT, periodError } from '@/lib/date';
 import { getStrategy } from '@/lib/strategies';
+import { getProblemStatement } from '@/lib/problem-statements';
 
 type Person = NonNullable<PersonRef>;
 
 export default function NewInitiativeScreen() {
   const router = useRouter();
   const qc = useQueryClient();
-  // Fase 4: bila dibuka dari detail Strategy (/initiative/new?strategyId=...), Initiative ditautkan
-  // ke Strategy induk. Tanpa param → Initiative datar (strategy_id null), backward-compat Fase 1.
-  const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
-  // Default PIC turunan (PRD §52): di bawah Strategy, bila PIC tak diisi ikut PIC Strategy induk.
-  const parentQ = useQuery({
+  // Fase 4 (strategyId) / Fase 6 (problemStatementId) — Initiative ditautkan ke salah satu induk
+  // (mutually exclusive via CHECK initiatives_single_parent di DB). Tanpa param → Initiative datar.
+  const { strategyId, problemStatementId } = useLocalSearchParams<{
+    strategyId?: string;
+    problemStatementId?: string;
+  }>();
+  // Default PIC turunan: ikut PIC induk yang sesuai.
+  const strategyQ = useQuery({
     queryKey: ['strategy', strategyId],
     queryFn: () => getStrategy(strategyId!),
     enabled: !!strategyId,
   });
-  const { person: inheritedPic } = usePerson(parentQ.data?.pic_id);
+  const psQ = useQuery({
+    queryKey: ['problem_statement', problemStatementId],
+    queryFn: () => getProblemStatement(problemStatementId!),
+    enabled: !!problemStatementId,
+  });
+  const inheritedPicId = strategyId
+    ? strategyQ.data?.pic_id
+    : problemStatementId
+      ? psQ.data?.pic_id
+      : null;
+  const { person: inheritedPic } = usePerson(inheritedPicId);
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -60,6 +74,7 @@ export default function NewInitiativeScreen() {
       description: description.trim() || null,
       pic_id: (pic ?? inheritedPic)?.id ?? null,
       strategy_id: strategyId ?? null,
+      problem_statement_id: problemStatementId ?? null,
     });
   }
 

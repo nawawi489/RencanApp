@@ -734,6 +734,70 @@ export type Database = {
           },
         ]
       }
+      development_areas: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "development_areas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "development_areas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "development_areas_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_files: {
         Row: {
           created_at: string
@@ -951,6 +1015,7 @@ export type Database = {
           period_end: string | null
           period_start: string | null
           pic_id: string | null
+          problem_statement_id: string | null
           status: string
           strategy_id: string | null
           target_result: string | null
@@ -966,6 +1031,7 @@ export type Database = {
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
+          problem_statement_id?: string | null
           status?: string
           strategy_id?: string | null
           target_result?: string | null
@@ -981,6 +1047,7 @@ export type Database = {
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
+          problem_statement_id?: string | null
           status?: string
           strategy_id?: string | null
           target_result?: string | null
@@ -1006,6 +1073,13 @@ export type Database = {
             columns: ["pic_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiatives_problem_statement_id_fkey"
+            columns: ["problem_statement_id"]
+            isOneToOne: false
+            referencedRelation: "problem_statements"
             referencedColumns: ["id"]
           },
           {
@@ -1355,6 +1429,67 @@ export type Database = {
         }
         Relationships: []
       }
+      period_snapshots: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          period_end: string
+          period_name: string
+          period_start: string
+          status: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          period_end: string
+          period_name: string
+          period_start: string
+          status?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          period_end?: string
+          period_name?: string
+          period_start?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_snapshots_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_snapshots_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           created_at: string
@@ -1375,6 +1510,80 @@ export type Database = {
           label?: string
         }
         Relationships: []
+      }
+      problem_statements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          development_area_id: string
+          id: string
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          development_area_id: string
+          id?: string
+          name: string
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          development_area_id?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "problem_statements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "problem_statements_development_area_id_fkey"
+            columns: ["development_area_id"]
+            isOneToOne: false
+            referencedRelation: "development_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "problem_statements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "problem_statements_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1423,6 +1632,61 @@ export type Database = {
             columns: ["role_template_id"]
             isOneToOne: false
             referencedRelation: "role_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ranking_snapshots: {
+        Row: {
+          created_at: string
+          id: string
+          metric_breakdown: Json
+          organization_id: string
+          period_snapshot_id: string
+          rank_number: number
+          score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metric_breakdown?: Json
+          organization_id: string
+          period_snapshot_id: string
+          rank_number: number
+          score: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metric_breakdown?: Json
+          organization_id?: string
+          period_snapshot_id?: string
+          rank_number?: number
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranking_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ranking_snapshots_period_snapshot_id_fkey"
+            columns: ["period_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "period_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ranking_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1510,6 +1774,243 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      score_categories: {
+        Row: {
+          archived_at: string | null
+          code: string
+          created_at: string
+          id: string
+          label: string
+          level: string
+          organization_id: string | null
+          source_metric: string
+        }
+        Insert: {
+          archived_at?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          level: string
+          organization_id?: string | null
+          source_metric: string
+        }
+        Update: {
+          archived_at?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          level?: string
+          organization_id?: string | null
+          source_metric?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      score_formula_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          end_date: string | null
+          formula_version_id: string
+          id: string
+          organization_id: string
+          role_level: string | null
+          scope_level: string
+          start_date: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          end_date?: string | null
+          formula_version_id: string
+          id?: string
+          organization_id: string
+          role_level?: string | null
+          scope_level: string
+          start_date?: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          end_date?: string | null
+          formula_version_id?: string
+          id?: string
+          organization_id?: string
+          role_level?: string | null
+          scope_level?: string
+          start_date?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_formula_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_formula_assignments_formula_version_id_fkey"
+            columns: ["formula_version_id"]
+            isOneToOne: false
+            referencedRelation: "score_formula_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_formula_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_formula_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      score_formula_templates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          level: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          level: string
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          level?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_formula_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_formula_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      score_formula_versions: {
+        Row: {
+          activated_at: string | null
+          approved_by: string | null
+          categories: Json
+          change_reason: string | null
+          created_at: string
+          created_by: string | null
+          effective_date: string | null
+          id: string
+          level: string
+          organization_id: string | null
+          status: string
+          template_id: string | null
+          version_number: number
+        }
+        Insert: {
+          activated_at?: string | null
+          approved_by?: string | null
+          categories?: Json
+          change_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          id?: string
+          level: string
+          organization_id?: string | null
+          status?: string
+          template_id?: string | null
+          version_number: number
+        }
+        Update: {
+          activated_at?: string | null
+          approved_by?: string | null
+          categories?: Json
+          change_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          id?: string
+          level?: string
+          organization_id?: string | null
+          status?: string
+          template_id?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_formula_versions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_formula_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_formula_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_formula_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "score_formula_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1668,6 +2169,103 @@ export type Database = {
           },
         ]
       }
+      user_score_results: {
+        Row: {
+          auto_calculated_score: number
+          calculated_at: string
+          id: string
+          is_current: boolean
+          manual_adjusted_score: number | null
+          metric_breakdown: Json
+          organization_id: string
+          override_approved_by: string | null
+          override_changed_at: string | null
+          override_changed_by: string | null
+          override_reason: string | null
+          period_snapshot_id: string
+          result_kind: string
+          score_formula_version_id: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_calculated_score: number
+          calculated_at?: string
+          id?: string
+          is_current?: boolean
+          manual_adjusted_score?: number | null
+          metric_breakdown?: Json
+          organization_id: string
+          override_approved_by?: string | null
+          override_changed_at?: string | null
+          override_changed_by?: string | null
+          override_reason?: string | null
+          period_snapshot_id: string
+          result_kind?: string
+          score_formula_version_id?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_calculated_score?: number
+          calculated_at?: string
+          id?: string
+          is_current?: boolean
+          manual_adjusted_score?: number | null
+          metric_breakdown?: Json
+          organization_id?: string
+          override_approved_by?: string | null
+          override_changed_at?: string | null
+          override_changed_by?: string | null
+          override_reason?: string | null
+          period_snapshot_id?: string
+          result_kind?: string
+          score_formula_version_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_score_results_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_score_results_override_approved_by_fkey"
+            columns: ["override_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_score_results_override_changed_by_fkey"
+            columns: ["override_changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_score_results_period_snapshot_id_fkey"
+            columns: ["period_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "period_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_score_results_score_formula_version_id_fkey"
+            columns: ["score_formula_version_id"]
+            isOneToOne: false
+            referencedRelation: "score_formula_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_score_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1677,13 +2275,32 @@ export type Database = {
         Args: { p_action_plan_id: string }
         Returns: undefined
       }
+      activate_development_area: {
+        Args: { p_development_area_id: string }
+        Returns: undefined
+      }
       activate_goal: { Args: { p_goal_id: string }; Returns: undefined }
       activate_initiative: {
         Args: { p_initiative_id: string }
         Returns: undefined
       }
       activate_kpi_area: { Args: { p_kpi_area_id: string }; Returns: undefined }
+      activate_problem_statement: {
+        Args: { p_problem_statement_id: string }
+        Returns: undefined
+      }
+      activate_score_formula_version: {
+        Args: { p_effective_date: string; p_version_id: string }
+        Returns: undefined
+      }
       activate_strategy: { Args: { p_strategy_id: string }; Returns: undefined }
+      aggregate_repeat_metrics_per_user: {
+        Args: { p_end: string; p_org: string; p_start: string; p_user: string }
+        Returns: {
+          on_time_rate: number
+          repeat_compliance: number
+        }[]
+      }
       apply_goal_template: {
         Args: {
           p_goal_template_id: string
@@ -1694,8 +2311,26 @@ export type Database = {
         }
         Returns: string
       }
+      assign_score_formula: {
+        Args: {
+          p_role_level: string
+          p_scope_level: string
+          p_start_date: string
+          p_user_id: string
+          p_version_id: string
+        }
+        Returns: string
+      }
+      calculate_period_scores: {
+        Args: { p_period_id: string }
+        Returns: number
+      }
       can_access_action_plan: {
         Args: { p_action_plan: string }
+        Returns: boolean
+      }
+      can_access_development_area: {
+        Args: { p_dev_area: string }
         Returns: boolean
       }
       can_access_goal: { Args: { p_goal: string }; Returns: boolean }
@@ -1704,6 +2339,7 @@ export type Database = {
         Returns: boolean
       }
       can_access_kpi_area: { Args: { p_kpi_area: string }; Returns: boolean }
+      can_access_problem_statement: { Args: { p_ps: string }; Returns: boolean }
       can_access_strategy: { Args: { p_strategy: string }; Returns: boolean }
       can_view_workspace: { Args: never; Returns: boolean }
       check_minimum_breakdown_compliance: {
@@ -1715,6 +2351,23 @@ export type Database = {
           meets_requirement: boolean
           required_count: number
         }[]
+      }
+      close_period_snapshot: { Args: { p_period_id: string }; Returns: number }
+      compute_action_plan_completion: {
+        Args: { p_end: string; p_org: string; p_start: string; p_user: string }
+        Returns: number
+      }
+      compute_development_contribution: {
+        Args: { p_end: string; p_org: string; p_start: string; p_user: string }
+        Returns: number
+      }
+      compute_governance_discipline: {
+        Args: { p_end: string; p_org: string; p_start: string; p_user: string }
+        Returns: number
+      }
+      compute_review_pass_rate: {
+        Args: { p_end: string; p_org: string; p_start: string; p_user: string }
+        Returns: number
       }
       create_comment: {
         Args: {
@@ -1746,6 +2399,14 @@ export type Database = {
         }
       }
       current_user_org: { Args: never; Returns: string }
+      development_area_has_my_descendant: {
+        Args: { p_dev_area: string }
+        Returns: boolean
+      }
+      development_area_in_my_org: {
+        Args: { p_dev_area: string }
+        Returns: boolean
+      }
       emit_deadline_notifications: { Args: never; Returns: number }
       emit_notification: {
         Args: {
@@ -1823,13 +2484,23 @@ export type Database = {
       goal_in_my_org: { Args: { p_goal: string }; Returns: boolean }
       has_permission: { Args: { p_key: string }; Returns: boolean }
       i_am_initiative_pic: { Args: { p_initiative: string }; Returns: boolean }
+      i_am_problem_statement_pic_via_initiative: {
+        Args: { p_initiative: string }
+        Returns: boolean
+      }
       initiative_has_my_action_plan: {
         Args: { p_initiative: string }
         Returns: boolean
       }
       is_chat_member: { Args: { p_room: string }; Returns: boolean }
+      is_development_area_pic: {
+        Args: { p_dev_area: string }
+        Returns: boolean
+      }
       is_goal_pic: { Args: { p_goal: string }; Returns: boolean }
       is_kpi_area_pic: { Args: { p_kpi_area: string }; Returns: boolean }
+      is_problem_statement_pic: { Args: { p_ps: string }; Returns: boolean }
+      is_supervisor_of: { Args: { p_user: string }; Returns: boolean }
       kpi_area_has_my_descendant: {
         Args: { p_kpi_area: string }
         Returns: boolean
@@ -1839,7 +2510,29 @@ export type Database = {
       mark_chat_messages_read: { Args: { p_room: string }; Returns: number }
       mark_notification_read: { Args: { p_id: string }; Returns: undefined }
       mark_overdue_instances: { Args: { p_now?: string }; Returns: number }
+      open_period_snapshot: {
+        Args: {
+          p_period_end: string
+          p_period_name: string
+          p_period_start: string
+        }
+        Returns: string
+      }
       org_today: { Args: { p_org?: string }; Returns: string }
+      override_user_score: {
+        Args: {
+          p_manual_score: number
+          p_period_id: string
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      problem_statement_has_my_descendant: {
+        Args: { p_ps: string }
+        Returns: boolean
+      }
+      problem_statement_in_my_org: { Args: { p_ps: string }; Returns: boolean }
       recompute_chat_room_members: {
         Args: { p_room: string }
         Returns: undefined
@@ -1908,6 +2601,14 @@ export type Database = {
           p_instance_id: string
           p_note: string
           p_result_values: Json
+        }
+        Returns: string
+      }
+      upsert_score_formula_version: {
+        Args: {
+          p_categories: Json
+          p_change_reason: string
+          p_template_id: string
         }
         Returns: string
       }

@@ -24,6 +24,16 @@ const mockActivateStrategy = jest.fn();
 const mockListInitiatives = jest.fn();
 const mockGetPersonRef = jest.fn();
 
+// Fase 6 — Development Workspace mocks
+const mockListDevelopmentAreas = jest.fn();
+const mockGetDevelopmentArea = jest.fn();
+const mockCreateDevelopmentArea = jest.fn();
+const mockActivateDevelopmentArea = jest.fn();
+const mockListProblemStatements = jest.fn();
+const mockGetProblemStatement = jest.fn();
+const mockCreateProblemStatement = jest.fn();
+const mockActivateProblemStatement = jest.fn();
+
 jest.mock('@/lib/goals', () => ({
   listGoals: (...a: unknown[]) => mockListGoals(...a),
   getGoal: (...a: unknown[]) => mockGetGoal(...a),
@@ -51,8 +61,25 @@ jest.mock('@/lib/cards', () => ({
   getPersonRef: (...a: unknown[]) => mockGetPersonRef(...a),
 }));
 
+jest.mock('@/lib/development-areas', () => ({
+  listDevelopmentAreas: (...a: unknown[]) => mockListDevelopmentAreas(...a),
+  getDevelopmentArea: (...a: unknown[]) => mockGetDevelopmentArea(...a),
+  createDevelopmentArea: (...a: unknown[]) => mockCreateDevelopmentArea(...a),
+  activateDevelopmentArea: (...a: unknown[]) => mockActivateDevelopmentArea(...a),
+}));
+
+jest.mock('@/lib/problem-statements', () => ({
+  listProblemStatements: (...a: unknown[]) => mockListProblemStatements(...a),
+  getProblemStatement: (...a: unknown[]) => mockGetProblemStatement(...a),
+  createProblemStatement: (...a: unknown[]) => mockCreateProblemStatement(...a),
+  activateProblemStatement: (...a: unknown[]) => mockActivateProblemStatement(...a),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the imports it mocks
 import {
+  useDevelopmentArea,
+  useDevelopmentAreaActions,
+  useDevelopmentAreas,
   useFlatInitiatives,
   useGoal,
   useGoalActions,
@@ -60,6 +87,10 @@ import {
   useKpiAreaActions,
   useKpiAreas,
   usePerson,
+  useProblemStatement,
+  useProblemStatementActions,
+  useProblemStatementInitiatives,
+  useProblemStatements,
   useStrategies,
   useStrategyActions,
 } from '../use-workspace';
@@ -87,6 +118,14 @@ beforeEach(() => {
   mockCreateStrategy.mockResolvedValue({ id: 's-new' });
   mockActivateStrategy.mockResolvedValue(undefined);
   mockListInitiatives.mockResolvedValue([{ id: 'i1' }]);
+  mockListDevelopmentAreas.mockResolvedValue([{ id: 'd1', name: 'Org Dev' }]);
+  mockGetDevelopmentArea.mockResolvedValue({ id: 'd1', name: 'Org Dev' });
+  mockCreateDevelopmentArea.mockResolvedValue({ id: 'd-new' });
+  mockActivateDevelopmentArea.mockResolvedValue(undefined);
+  mockListProblemStatements.mockResolvedValue([{ id: 'p1' }]);
+  mockGetProblemStatement.mockResolvedValue({ id: 'p1' });
+  mockCreateProblemStatement.mockResolvedValue({ id: 'p-new' });
+  mockActivateProblemStatement.mockResolvedValue(undefined);
 });
 
 describe('useGoals / useGoal (enabled gate)', () => {
@@ -118,11 +157,11 @@ describe('useKpiAreas / useStrategies (enabled gate)', () => {
 });
 
 describe('useFlatInitiatives', () => {
-  it('[3] memanggil listInitiatives({ strategyId: null })', async () => {
+  it('[3] memanggil listInitiatives({ strategyId: null, problemStatementId: null }) — exclude Development', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useFlatInitiatives(), { wrapper });
     await waitFor(() => expect(result.current.initiatives.length).toBe(1));
-    expect(mockListInitiatives).toHaveBeenCalledWith({ strategyId: null });
+    expect(mockListInitiatives).toHaveBeenCalledWith({ strategyId: null, problemStatementId: null });
   });
 });
 
@@ -212,6 +251,116 @@ describe('useStrategyActions', () => {
     await act(async () => {
       await expect(result.current.activate('s1')).rejects.toThrow('depth');
     });
+  });
+});
+
+// ---------------------------------------------------------------- Fase 6: Development hooks
+
+describe('useDevelopmentAreas / useDevelopmentArea (Fase 6)', () => {
+  it('[F6-1] useDevelopmentArea("") tidak fetch; useDevelopmentAreas memanggil listDevelopmentAreas', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(
+      () => ({ d: useDevelopmentArea(''), ds: useDevelopmentAreas() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.ds.developmentAreas.length).toBe(1));
+    expect(mockListDevelopmentAreas).toHaveBeenCalled();
+    expect(mockGetDevelopmentArea).not.toHaveBeenCalled();
+    expect(result.current.d.developmentArea).toBeUndefined();
+  });
+});
+
+describe('useProblemStatements / useProblemStatement (enabled gate)', () => {
+  it('[F6-2] id kosong tidak fetch; useProblemStatements("d1") memanggil listProblemStatements("d1")', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(
+      () => ({
+        empty: useProblemStatements(''),
+        listed: useProblemStatements('d1'),
+        one: useProblemStatement(''),
+      }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.listed.problemStatements.length).toBe(1));
+    expect(mockListProblemStatements).toHaveBeenCalledTimes(1);
+    expect(mockListProblemStatements).toHaveBeenCalledWith('d1');
+    expect(mockGetProblemStatement).not.toHaveBeenCalled();
+  });
+});
+
+describe('useProblemStatementInitiatives', () => {
+  it('[F6-3] memanggil listInitiatives({ problemStatementId })', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProblemStatementInitiatives('p1'), { wrapper });
+    await waitFor(() => expect(result.current.initiatives.length).toBe(1));
+    expect(mockListInitiatives).toHaveBeenCalledWith({ problemStatementId: 'p1' });
+  });
+});
+
+describe('useDevelopmentAreaActions', () => {
+  it('[F6-4] create invalidate ["development_areas"]; activate invalidate keduanya', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useDevelopmentAreaActions(), { wrapper });
+    await act(async () => {
+      await result.current.create({
+        name: 'X',
+        pic_id: null,
+        period_start: null,
+        period_end: null,
+      });
+    });
+    expect(mockCreateDevelopmentArea).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['development_areas'] });
+
+    await act(async () => {
+      await result.current.activate('d1');
+    });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['development_area', 'd1'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['development_areas'] });
+  });
+
+  it('[F6-5] propagate error bila activateDevelopmentArea reject', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useDevelopmentAreaActions(), { wrapper });
+    mockActivateDevelopmentArea.mockRejectedValueOnce(new Error('denied'));
+    await act(async () => {
+      await expect(result.current.activate('d1')).rejects.toThrow('denied');
+    });
+  });
+});
+
+describe('useProblemStatementActions', () => {
+  it('[F6-6] create invalidate semua key relevan + MBR compliance DA (real-time indikator)', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useProblemStatementActions('d1'), { wrapper });
+    await act(async () => {
+      await result.current.create({
+        development_area_id: 'd1',
+        name: 'Bug X',
+        pic_id: null,
+        period_start: null,
+        period_end: null,
+      });
+    });
+    expect(mockCreateProblemStatement).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['development_area', 'd1'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['problem_statements', 'd1'] });
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ['mbr_compliance', 'development_area', 'd1'],
+    });
+  });
+
+  it('[F6-7] activate invalidate ["problem_statement",id] & ["problem_statements",devAreaId]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useProblemStatementActions('d1'), { wrapper });
+    await act(async () => {
+      await result.current.activate('p1');
+    });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['problem_statement', 'p1'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['problem_statements', 'd1'] });
   });
 });
 

@@ -8,10 +8,15 @@ import {
   ErrorState,
   GuidanceNote,
   ScoreBadge,
+  ScoreBreakdown,
   ScoreLegend,
+  ScoreSparkline,
   SkeletonList,
+  type ScoreBreakdownMetric,
 } from '@/components/ui';
 import { listOrgProfiles, type PersonRef } from '@/lib/cards';
+import { METRIC_LABEL, effectiveScore } from '@/lib/people-score';
+import { useActivePeriod, useLatestClosedPeriod, useMyScore, useMyScoreHistory, useRanking } from '@/hooks/use-people-score';
 
 type Person = NonNullable<PersonRef> & { score?: number | null };
 
@@ -19,13 +24,45 @@ function personLabel(p: Person): string {
   return p.full_name?.trim() || p.email || 'Tanpa nama';
 }
 
+function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
+  if (!breakdown || typeof breakdown !== 'object') return [];
+  const obj = breakdown as Record<string, unknown>;
+  const items: ScoreBreakdownMetric[] = [];
+  for (const [code, raw] of Object.entries(obj)) {
+    const label = METRIC_LABEL[code] ?? code;
+    const value = typeof raw === 'number' ? raw : Number(raw);
+    if (Number.isFinite(value)) items.push({ label, value });
+  }
+  return items;
+}
+
 export default function PeopleScreen() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['org-profiles'],
     queryFn: listOrgProfiles,
   });
+  const { period } = useActivePeriod();
+  const { score: myScore } = useMyScore(period?.id);
+  // Per-user ScoreBadge bersumber dari ranking_snapshots periode tertutup terbaru
+  // (D9: ranking hanya tampil setelah close). RLS otomatis menyaring per visibility.
+  const { period: latestClosed } = useLatestClosedPeriod();
+  const { ranking } = useRanking(latestClosed?.id ?? '');
+  const { history } = useMyScoreHistory(6);
+  // Sparkline KRONOLOGIS (kiri = terlama). DB urut DESC → reverse.
+  const sparklinePoints = [...history]
+    .reverse()
+    .map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0);
 
-  const people = (data ?? []) as Person[];
+  const scoreByUser = new Map<string, number>();
+  for (const r of ranking) scoreByUser.set(r.user_id, r.score);
+
+  const peopleRaw = (data ?? []) as Person[];
+  const people: Person[] = peopleRaw.map((p) => ({
+    ...p,
+    score: scoreByUser.has(p.id) ? scoreByUser.get(p.id)! : p.score ?? null,
+  }));
+  const myEffective = effectiveScore(myScore ?? null);
+  const myBreakdown = myScore ? breakdownToMetrics(myScore.metric_breakdown) : [];
 
   return (
     <Screen title="People" subtitle="Ranking dan profil pencapaian.">
@@ -46,10 +83,38 @@ export default function PeopleScreen() {
       ) : (
         <>
           <ScoreLegend />
-          <GuidanceNote
-            title="Score menyusul"
-            body="Achievement Score & ranking aktif setelah ada data eksekusi (Fase 7). Daftar di bawah menampilkan anggota organisasi."
-          />
+
+          {/* Skor saya — hanya tampil saat ada periode aktif & skor sudah dihitung. */}
+          {period && myEffective != null ? (
+            <View
+              className="gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800"
+              accessible
+              accessibilityLabel="Skor saya">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xs font-semibold uppercase text-neutral-400">
+                  Skor saya · {period.period_name}
+                </Text>
+              </View>
+              <ScoreBadge score={myEffective} />
+              {sparklinePoints.length ? (
+                <View className="gap-1.5">
+                  <Text className="text-xs font-semibold uppercase text-neutral-400">Tren</Text>
+                  <ScoreSparkline points={sparklinePoints} />
+                </View>
+              ) : null}
+              {myBreakdown.length ? <ScoreBreakdown metrics={myBreakdown} /> : null}
+            </View>
+          ) : period ? (
+            <GuidanceNote
+              title="Skor menyusul"
+              body={`Periode "${period.period_name}" aktif. Skor Anda muncul setelah perhitungan periode berjalan.`}
+            />
+          ) : (
+            <GuidanceNote
+              title="Belum ada periode skoring"
+              body="Achievement Score muncul setelah administrator membuka periode skoring untuk organisasi."
+            />
+          )}
 
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
@@ -76,7 +141,7 @@ export default function PeopleScreen() {
                       {p.email}
                     </Text>
                   ) : null}
-                  {/* ScoreBadge muncul otomatis begitu Fase 7 mengisi p.score */}
+                  {/* p.score null vs 0: null → tak ada badge; 0 nyata → band attention */}
                   {p.score != null ? (
                     <View className="mt-1.5">
                       <ScoreBadge score={p.score} />
