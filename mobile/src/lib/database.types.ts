@@ -788,6 +788,107 @@ export type Database = {
           },
         ]
       }
+      goal_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          goal_template_id: string | null
+          id: string
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          goal_template_id?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          goal_template_id?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_goal_template_id_fkey"
+            columns: ["goal_template_id"]
+            isOneToOne: false
+            referencedRelation: "goal_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       governance_violations: {
         Row: {
           created_at: string
@@ -851,6 +952,7 @@ export type Database = {
           period_start: string | null
           pic_id: string | null
           status: string
+          strategy_id: string | null
           target_result: string | null
           updated_at: string
         }
@@ -865,6 +967,7 @@ export type Database = {
           period_start?: string | null
           pic_id?: string | null
           status?: string
+          strategy_id?: string | null
           target_result?: string | null
           updated_at?: string
         }
@@ -879,6 +982,7 @@ export type Database = {
           period_start?: string | null
           pic_id?: string | null
           status?: string
+          strategy_id?: string | null
           target_result?: string | null
           updated_at?: string
         }
@@ -899,6 +1003,128 @@ export type Database = {
           },
           {
             foreignKeyName: "initiatives_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiatives_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_area_templates: {
+        Row: {
+          created_at: string
+          division: string
+          division_label: string
+          goal_template_id: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          division: string
+          division_label: string
+          goal_template_id: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          division?: string
+          division_label?: string
+          goal_template_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_area_templates_goal_template_id_fkey"
+            columns: ["goal_template_id"]
+            isOneToOne: false
+            referencedRelation: "goal_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_areas: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          goal_id: string
+          id: string
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          target: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          goal_id: string
+          id?: string
+          name: string
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          target?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          goal_id?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          target?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_areas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_areas_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_areas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_areas_pic_id_fkey"
             columns: ["pic_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -981,6 +1207,57 @@ export type Database = {
           {
             foreignKeyName: "mentions_mentioned_user_id_fkey"
             columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      minimum_breakdown_rules: {
+        Row: {
+          child_card_type: string
+          created_at: string
+          enforcement_mode: string
+          id: string
+          min_count: number
+          organization_id: string | null
+          parent_card_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          child_card_type: string
+          created_at?: string
+          enforcement_mode?: string
+          id?: string
+          min_count?: number
+          organization_id?: string | null
+          parent_card_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          child_card_type?: string
+          created_at?: string
+          enforcement_mode?: string
+          id?: string
+          min_count?: number
+          organization_id?: string | null
+          parent_card_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "minimum_breakdown_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "minimum_breakdown_rules_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1269,6 +1546,89 @@ export type Database = {
           },
         ]
       }
+      strategies: {
+        Row: {
+          alternative: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          kpi_area_id: string
+          main_risk: string | null
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          alternative?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kpi_area_id: string
+          main_risk?: string | null
+          name: string
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          alternative?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kpi_area_id?: string
+          main_risk?: string | null
+          name?: string
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategies_kpi_area_id_fkey"
+            columns: ["kpi_area_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategies_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           created_at: string
@@ -1317,19 +1677,45 @@ export type Database = {
         Args: { p_action_plan_id: string }
         Returns: undefined
       }
+      activate_goal: { Args: { p_goal_id: string }; Returns: undefined }
       activate_initiative: {
         Args: { p_initiative_id: string }
         Returns: undefined
+      }
+      activate_kpi_area: { Args: { p_kpi_area_id: string }; Returns: undefined }
+      activate_strategy: { Args: { p_strategy_id: string }; Returns: undefined }
+      apply_goal_template: {
+        Args: {
+          p_goal_template_id: string
+          p_period_end: string
+          p_period_start: string
+          p_pic_id: string
+          p_targets?: Json
+        }
+        Returns: string
       }
       can_access_action_plan: {
         Args: { p_action_plan: string }
         Returns: boolean
       }
+      can_access_goal: { Args: { p_goal: string }; Returns: boolean }
       can_access_initiative: {
         Args: { p_initiative: string }
         Returns: boolean
       }
+      can_access_kpi_area: { Args: { p_kpi_area: string }; Returns: boolean }
+      can_access_strategy: { Args: { p_strategy: string }; Returns: boolean }
       can_view_workspace: { Args: never; Returns: boolean }
+      check_minimum_breakdown_compliance: {
+        Args: { p_parent_card_id: string; p_parent_card_type: string }
+        Returns: {
+          child_card_type: string
+          current_count: number
+          enforcement_mode: string
+          meets_requirement: boolean
+          required_count: number
+        }[]
+      }
       create_comment: {
         Args: {
           p_body: string
@@ -1338,6 +1724,26 @@ export type Database = {
           p_mentions?: string[]
         }
         Returns: string
+      }
+      current_minimum_breakdown_rule: {
+        Args: { p_child_card_type: string; p_parent_card_type: string }
+        Returns: {
+          child_card_type: string
+          created_at: string
+          enforcement_mode: string
+          id: string
+          min_count: number
+          organization_id: string | null
+          parent_card_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "minimum_breakdown_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       current_user_org: { Args: never; Returns: string }
       emit_deadline_notifications: { Args: never; Returns: number }
@@ -1413,6 +1819,8 @@ export type Database = {
           status: string
         }[]
       }
+      goal_has_my_descendant: { Args: { p_goal: string }; Returns: boolean }
+      goal_in_my_org: { Args: { p_goal: string }; Returns: boolean }
       has_permission: { Args: { p_key: string }; Returns: boolean }
       i_am_initiative_pic: { Args: { p_initiative: string }; Returns: boolean }
       initiative_has_my_action_plan: {
@@ -1420,6 +1828,13 @@ export type Database = {
         Returns: boolean
       }
       is_chat_member: { Args: { p_room: string }; Returns: boolean }
+      is_goal_pic: { Args: { p_goal: string }; Returns: boolean }
+      is_kpi_area_pic: { Args: { p_kpi_area: string }; Returns: boolean }
+      kpi_area_has_my_descendant: {
+        Args: { p_kpi_area: string }
+        Returns: boolean
+      }
+      kpi_area_in_my_org: { Args: { p_kpi_area: string }; Returns: boolean }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_chat_messages_read: { Args: { p_room: string }; Returns: number }
       mark_notification_read: { Args: { p_id: string }; Returns: undefined }
@@ -1428,6 +1843,10 @@ export type Database = {
       recompute_chat_room_members: {
         Args: { p_room: string }
         Returns: undefined
+      }
+      restore_goal_template_items: {
+        Args: { p_goal_id: string }
+        Returns: number
       }
       review_action_plan_instance_submission: {
         Args: { p_decision: string; p_reason: string; p_submission_id: string }
@@ -1456,10 +1875,24 @@ export type Database = {
         }
         Returns: string
       }
+      set_minimum_breakdown_rule: {
+        Args: {
+          p_child_card_type: string
+          p_enforcement_mode: string
+          p_min_count: number
+          p_parent_card_type: string
+        }
+        Returns: string
+      }
       start_action_plan: {
         Args: { p_action_plan_id: string }
         Returns: undefined
       }
+      strategy_has_my_descendant: {
+        Args: { p_strategy: string }
+        Returns: boolean
+      }
+      strategy_in_my_org: { Args: { p_strategy: string }; Returns: boolean }
       submit_action_plan: {
         Args: {
           p_action_plan_id: string

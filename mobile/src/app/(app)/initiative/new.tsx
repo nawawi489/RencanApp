@@ -1,21 +1,31 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter, type Href } from 'expo-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
+import { usePerson } from '@/hooks/use-workspace';
 import { createInitiative, type PersonRef } from '@/lib/cards';
+import { DATE_HINT, periodError } from '@/lib/date';
+import { getStrategy } from '@/lib/strategies';
 
 type Person = NonNullable<PersonRef>;
-
-const DATE_HINT = 'Format: YYYY-MM-DD (mis. 2026-07-01)';
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function NewInitiativeScreen() {
   const router = useRouter();
   const qc = useQueryClient();
+  // Fase 4: bila dibuka dari detail Strategy (/initiative/new?strategyId=...), Initiative ditautkan
+  // ke Strategy induk. Tanpa param → Initiative datar (strategy_id null), backward-compat Fase 1.
+  const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
+  // Default PIC turunan (PRD §52): di bawah Strategy, bila PIC tak diisi ikut PIC Strategy induk.
+  const parentQ = useQuery({
+    queryKey: ['strategy', strategyId],
+    queryFn: () => getStrategy(strategyId!),
+    enabled: !!strategyId,
+  });
+  const { person: inheritedPic } = usePerson(parentQ.data?.pic_id);
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -37,8 +47,9 @@ export default function NewInitiativeScreen() {
       Alert.alert('Belum lengkap', 'Nama Initiative wajib diisi.');
       return;
     }
-    if ((periodStart && !DATE_RE.test(periodStart)) || (periodEnd && !DATE_RE.test(periodEnd))) {
-      Alert.alert('Tanggal tidak valid', DATE_HINT);
+    const dateErr = periodError(periodStart, periodEnd);
+    if (dateErr) {
+      Alert.alert('Tanggal tidak valid', dateErr);
       return;
     }
     mutation.mutate({
@@ -47,7 +58,8 @@ export default function NewInitiativeScreen() {
       period_start: periodStart || null,
       period_end: periodEnd || null,
       description: description.trim() || null,
-      pic_id: pic?.id ?? null,
+      pic_id: (pic ?? inheritedPic)?.id ?? null,
+      strategy_id: strategyId ?? null,
     });
   }
 
@@ -68,7 +80,7 @@ export default function NewInitiativeScreen() {
             placeholder="mis. 20 konten tayang & 500 leads"
             multiline
           />
-          <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
+          <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
           <LabeledInput label="Tanggal Mulai" value={periodStart} onChangeText={setPeriodStart} placeholder={DATE_HINT} keyboardType="numeric" />
           <LabeledInput label="Tanggal Selesai" value={periodEnd} onChangeText={setPeriodEnd} placeholder={DATE_HINT} keyboardType="numeric" />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />

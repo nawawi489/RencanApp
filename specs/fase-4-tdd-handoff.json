@@ -1,0 +1,27 @@
+{
+  "feature": "Fase 4 — Performance Workspace (Hierarki Strategis). Tambahkan lapisan strategis di atas Initiative datar Fase 1 sehingga hierarki Goal → KPI Area → Strategy → Initiative → Action Plan utuh. Migrasi tunggal 0010_fase4_performance_workspace.sql membuat 5 tabel (goal_templates, kpi_area_templates, goals, kpi_areas, strategies) urutan dependency-safe + ALTER initiatives ADD COLUMN strategy_id uuid (nullable, ON DELETE SET NULL, backward-compat Initiative datar). KEPUTUSAN MENGIKAT yang harus dihormati TDD: (1) Card dibuat via INSERT langsung ber-RLS WITH CHECK mengikuti precedent Fase 1 (cards.ts createInitiative + policy initiatives_insert 0005:503) — BUKAN RPC/REVOKE; hanya lifecycle activate_goal/activate_kpi_area/activate_strategy yang lewat RPC SECURITY DEFINER set search_path=''. (2) MBR Fase 4 = HANYA gate keras 'Goal aktif wajib ≥1 KPI Area' (syarat aktif PRD §20.4) + Strategy depth keras (alasan/risiko/alternatif wajib saat aktivasi, PRD §22); mesin MBR kuantitatif 3/3/3, indikator X/N, mode Blokir, tabel minimum_breakdown_rules DEFER Fase 5; indikator tree hanya count-only. (3) TIDAK ada reviewer_id pada planning card (Reviewer hanya Action Plan, PRD §23) — penyimpangan sadar dari PRD §54. (4) Permission: create_goal & create_kpi_area = CEO/Super Admin default (has_permission TIDAK menambahkannya ke default c_level/management); create_strategy tetap default c_level/management; KPI Area dibuat C-Level lewat jalur parent-PIC di RLS WITH CHECK, bukan role default; mirror konsisten di use-profile.ts ROLE_DEFAULTS. (5) FK planning chain ON DELETE RESTRICT (goals/kpi_areas) + initiatives.strategy_id SET NULL agar cascade tak hapus evidence; tutup cross-org FK hole pada initiatives.strategy_id. (6) Seed kpi_area_templates dengan nama PERSIS PRD §47-48 (Omset 5 divisi @2 item; Profit: CFO 1 item, sisanya 2). (7) Helper can_access_goal/kpi_area/strategy meniru pola can_access_initiative 0005:207 (org + view_workspace/pic/creator/PIC-induk/EXISTS-turunan). (8) Violation planning di-log append-only & terlihat view_governance_violation; CHECK notifications enum TIDAK diubah (notifikasi entity baru defer). (9) apply_goal_template atomik. Client: data layer tipis goals.ts/kpi-areas.ts/strategies.ts, Workspace tree expand/collapse (state lokal), Goal Wizard 7-step (gerbang validasi), routes /goal /kpi-area /strategy, regen database.types.ts. Pertahankan semua invarian Fase 0-3 (RLS, anti-self-approval di Action Plan, evidence locking, audit append-only, multi-tenant, Home tak berubah).",
+  "paths": [
+    "supabase/migrations/0010_fase4_performance_workspace.sql",
+    "supabase/migrations/0005_fase1_card_engine.sql",
+    "supabase/migrations/0008_fase3_collab.sql",
+    "supabase/tests/",
+    "mobile/src/lib/database.types.ts",
+    "mobile/src/lib/cards.ts",
+    "mobile/src/lib/goals.ts",
+    "mobile/src/lib/kpi-areas.ts",
+    "mobile/src/lib/strategies.ts",
+    "mobile/src/lib/__tests__/",
+    "mobile/src/hooks/use-profile.ts",
+    "mobile/src/app/(app)/(tabs)/workspace.tsx",
+    "mobile/src/app/(app)/goal/new.tsx",
+    "mobile/src/app/(app)/goal/[id].tsx",
+    "mobile/src/app/(app)/kpi-area/new.tsx",
+    "mobile/src/app/(app)/kpi-area/[id].tsx",
+    "mobile/src/app/(app)/strategy/new.tsx",
+    "mobile/src/app/(app)/strategy/[id].tsx",
+    "mobile/src/app/(app)/goal-wizard/",
+    "mobile/src/components/ui.tsx",
+    "specs/fase-4-performance-workspace.md",
+    "specs/fase-4-tdd-handoff.json"
+  ]
+}

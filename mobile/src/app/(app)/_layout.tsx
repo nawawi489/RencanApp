@@ -28,6 +28,24 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
       />
       <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Initiative' }} />
+
+      {/* Fase 4 — Performance Workspace (Hierarki Strategis) */}
+      <Stack.Screen
+        name="goal-wizard"
+        options={{ headerShown: true, title: 'Goal Wizard', presentation: 'modal' }}
+      />
+      <Stack.Screen name="goal/new" options={{ headerShown: true, title: 'Goal Baru', presentation: 'modal' }} />
+      <Stack.Screen name="goal/[id]" options={{ headerShown: true, title: 'Goal' }} />
+      <Stack.Screen
+        name="kpi-area/new"
+        options={{ headerShown: true, title: 'KPI Area Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen name="kpi-area/[id]" options={{ headerShown: true, title: 'KPI Area' }} />
+      <Stack.Screen
+        name="strategy/new"
+        options={{ headerShown: true, title: 'Strategy Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen name="strategy/[id]" options={{ headerShown: true, title: 'Strategy' }} />
     </Stack>
   );
 }
