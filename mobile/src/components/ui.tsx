@@ -59,7 +59,7 @@ export function Button({
 
 // ---------------------------------------------------------------- Badge
 
-type Tone = 'neutral' | 'info' | 'warn' | 'success' | 'danger';
+export type Tone = 'neutral' | 'info' | 'warn' | 'success' | 'danger';
 
 const BADGE_CLASS: Record<Tone, string> = {
   neutral: 'bg-neutral-100 dark:bg-neutral-800',
@@ -146,6 +146,7 @@ export function LabeledInput({
       </Text>
       <TextInput
         className={`rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white ${multiline ? 'h-24' : ''}`}
+        accessibilityLabel={label}
         placeholder={placeholder}
         placeholderTextColor="#9ca3af"
         value={value}
