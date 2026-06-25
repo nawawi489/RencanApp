@@ -133,15 +133,21 @@ export async function listMyScoreHistory(limit: number = 6): Promise<UserScoreRe
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error('Not authenticated');
+  // Order by period_start (not calculated_at) so recalculations don't break sparkline order.
   const { data, error } = await supabase
     .from('user_score_results')
-    .select('*')
+    .select('*, period_snapshots!period_snapshot_id(period_start)')
     .eq('user_id', uid)
     .eq('is_current', true)
-    .order('calculated_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as UserScoreResult[];
+  const rows = (data ?? []) as Array<UserScoreResult & { period_snapshots: { period_start: string } | null }>;
+  rows.sort((a, b) => {
+    const da = a.period_snapshots?.period_start ?? '';
+    const db = b.period_snapshots?.period_start ?? '';
+    return db.localeCompare(da); // DESC newest first
+  });
+  return rows as unknown as UserScoreResult[];
 }
 
 /** Daftar versi formula untuk satu template, terbaru dulu. */
