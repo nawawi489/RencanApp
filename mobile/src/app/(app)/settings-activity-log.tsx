@@ -9,6 +9,7 @@ import { useProfile } from '@/hooks/use-profile';
 
 const ACTION_LABEL: Record<string, string> = {
   create: 'Dibuat',
+  update: 'Diubah',
   activate: 'Diaktifkan',
   card_archived: 'Diarsipkan',
   card_cancelled: 'Dibatalkan',
@@ -19,6 +20,8 @@ const ACTION_LABEL: Record<string, string> = {
   evaluation_recorded: 'Evaluasi Dicatat',
   setting_updated: 'Pengaturan Diubah',
   confidential_access_granted: 'Akses Rahasia Diberikan',
+  period_opened: 'Periode Dibuka',
+  scores_calculated: 'Skor Dihitung',
 };
 
 export default function SettingsActivityLogScreen() {
