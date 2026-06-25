@@ -27,6 +27,9 @@ Keputusan berikut MENGIKAT dan menggantikan jawaban sementara di §9 Open Questi
 - **Reciprocal override** (OQ-11): dengan single-actor (D10), mitigasi = anti-self + `activity_logs` append-only (semua override auditable). Pola resiprokal (A override B, B override A) = residual risk diterima V1; terdeteksi via audit, bukan blok otomatis.
 - **User non-aktif** (OQ-15): baris skor historis dipertahankan; disembunyikan dari daftar People aktif (tanpa badge), tetap tampil di `ranking_snapshots` periode tertutupnya.
 
+### Keterbatasan teknis V1 (ditemukan saat TDD red phase 2026-06-25)
+- **`governance_violations` row pada override attempts yang ditolak TIDAK persist di V1.** PostgreSQL semantics: ketika `override_user_score` melakukan `insert into governance_violations` lalu `raise exception` (anti-self / unauthorized / closed period), caller's exception handler men-rollback savepoint termasuk row violation tersebut. Tanpa autonomous transaction (butuh `dblink`/`pg_background`/Edge Function — out-of-scope V1), audit row hanya persist pada **SUCCESS path** (`activity_logs 'score_override_applied'`). Self-attempt & unauthorized-attempt logging defer ke Fase 8. AC-7.17/7.18 versi V1 hanya mengunci: exception bahasa Indonesia yang benar fires; audit row pada attempt jadi nice-to-have, tidak wajib.
+
 ### Catatan UX/operasi yang dikunci dari review (tangani saat implementasi)
 - **Non-Staff tanpa skor V1** (terkait D7): CEO/C-Level/Management belum punya formula aktif → People mereka menampilkan copy eksplisit (mis. "Skor untuk level ini menyusul setelah sumber data tersedia"), **bukan** kesan bug.
 - **`role_template_id` NULL** (terkait AC-7.28): user tanpa level di-skip kalkulasi → People beri indikator "Belum memiliki level" alih-alih kosong tanpa penjelasan; onboarding/seed sebaiknya mengisi `role_template_id`.
