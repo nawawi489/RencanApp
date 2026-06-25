@@ -383,6 +383,41 @@ export function ScoreLegend() {
   );
 }
 
+// ---------------------------------------------------------------- ScoreBreakdown (Fase 7)
+
+export type ScoreBreakdownMetric = { label: string; value: number };
+
+/**
+ * Daftar metrik People (label + persen). Clamp 0–100. TIDAK menampilkan bobot
+ * formula (per spec FR-7.8: breakdown menampilkan nama kategori + persentase
+ * TANPA label bobot). ProgressBar dipakai untuk indikasi visual.
+ */
+export function ScoreBreakdown({ metrics }: { metrics: ScoreBreakdownMetric[] }) {
+  if (!metrics.length) {
+    return (
+      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+        Belum ada metrik untuk ditampilkan.
+      </Text>
+    );
+  }
+  return (
+    <View className="gap-3">
+      {metrics.map((m, i) => {
+        const pct = Math.max(0, Math.min(100, Math.round(m.value)));
+        return (
+          <View key={`${m.label}-${i}`} className="gap-1.5">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-sm font-semibold text-black dark:text-white">{m.label}</Text>
+              <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{pct}%</Text>
+            </View>
+            <ProgressBar value={pct} tone="brand" />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------- ProgressBar
 
 /** Bar progres + persen opsional. Warna brand-dark (AA) atau green saat selesai. */

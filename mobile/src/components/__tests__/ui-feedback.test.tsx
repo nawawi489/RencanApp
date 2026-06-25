@@ -1,7 +1,7 @@
 // Komponen fondasi: EmptyState v2, ErrorState, SkeletonList, ScoreBadge, Avatar.
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
 import { render, screen } from '@testing-library/react-native';
-import { Avatar, EmptyState, ErrorState, ScoreBadge, SkeletonList } from '../ui';
+import { Avatar, EmptyState, ErrorState, ScoreBadge, ScoreBreakdown, SkeletonList } from '../ui';
 
 jest.setTimeout(30000);
 
@@ -51,6 +51,41 @@ describe('ScoreBadge', () => {
   it('skor tinggi → On track', async () => {
     await render(<ScoreBadge score={86} />);
     expect(screen.getByText('Score 86 · On track')).toBeTruthy();
+  });
+});
+
+describe('ScoreBreakdown (Fase 7)', () => {
+  it('render label + persen tanpa label bobot', async () => {
+    await render(
+      <ScoreBreakdown
+        metrics={[
+          { label: 'Action Plan Completion', value: 80 },
+          { label: 'Repeat Compliance', value: 65 },
+        ]}
+      />,
+    );
+    expect(screen.getByText('Action Plan Completion')).toBeTruthy();
+    expect(screen.getByText('80%')).toBeTruthy();
+    expect(screen.getByText('Repeat Compliance')).toBeTruthy();
+    expect(screen.getByText('65%')).toBeTruthy();
+  });
+
+  it('clamp di luar 0-100 (negatif & >100)', async () => {
+    await render(
+      <ScoreBreakdown
+        metrics={[
+          { label: 'A', value: -5 },
+          { label: 'B', value: 150 },
+        ]}
+      />,
+    );
+    expect(screen.getByText('0%')).toBeTruthy();
+    expect(screen.getByText('100%')).toBeTruthy();
+  });
+
+  it('empty metrics → empty state copy', async () => {
+    await render(<ScoreBreakdown metrics={[]} />);
+    expect(screen.getByText(/Belum ada/i)).toBeTruthy();
   });
 });
 
