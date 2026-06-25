@@ -10,12 +10,13 @@ import {
   ScoreBadge,
   ScoreBreakdown,
   ScoreLegend,
+  ScoreSparkline,
   SkeletonList,
   type ScoreBreakdownMetric,
 } from '@/components/ui';
 import { listOrgProfiles, type PersonRef } from '@/lib/cards';
 import { METRIC_LABEL, effectiveScore } from '@/lib/people-score';
-import { useActivePeriod, useMyScore } from '@/hooks/use-people-score';
+import { useActivePeriod, useLatestClosedPeriod, useMyScore, useMyScoreHistory, useRanking } from '@/hooks/use-people-score';
 
 type Person = NonNullable<PersonRef> & { score?: number | null };
 
@@ -42,8 +43,24 @@ export default function PeopleScreen() {
   });
   const { period } = useActivePeriod();
   const { score: myScore } = useMyScore(period?.id);
+  // Per-user ScoreBadge bersumber dari ranking_snapshots periode tertutup terbaru
+  // (D9: ranking hanya tampil setelah close). RLS otomatis menyaring per visibility.
+  const { period: latestClosed } = useLatestClosedPeriod();
+  const { ranking } = useRanking(latestClosed?.id ?? '');
+  const { history } = useMyScoreHistory(6);
+  // Sparkline KRONOLOGIS (kiri = terlama). DB urut DESC → reverse.
+  const sparklinePoints = [...history]
+    .reverse()
+    .map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0);
 
-  const people = (data ?? []) as Person[];
+  const scoreByUser = new Map<string, number>();
+  for (const r of ranking) scoreByUser.set(r.user_id, r.score);
+
+  const peopleRaw = (data ?? []) as Person[];
+  const people: Person[] = peopleRaw.map((p) => ({
+    ...p,
+    score: scoreByUser.has(p.id) ? scoreByUser.get(p.id)! : p.score ?? null,
+  }));
   const myEffective = effectiveScore(myScore ?? null);
   const myBreakdown = myScore ? breakdownToMetrics(myScore.metric_breakdown) : [];
 
@@ -79,6 +96,12 @@ export default function PeopleScreen() {
                 </Text>
               </View>
               <ScoreBadge score={myEffective} />
+              {sparklinePoints.length ? (
+                <View className="gap-1.5">
+                  <Text className="text-xs font-semibold uppercase text-neutral-400">Tren</Text>
+                  <ScoreSparkline points={sparklinePoints} />
+                </View>
+              ) : null}
               {myBreakdown.length ? <ScoreBreakdown metrics={myBreakdown} /> : null}
             </View>
           ) : period ? (

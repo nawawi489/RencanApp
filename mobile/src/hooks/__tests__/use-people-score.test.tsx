@@ -4,10 +4,12 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { PropsWithChildren } from 'react';
 import { createElement } from 'react';
 
+const mockGetLatestClosedPeriod = jest.fn();
 const mockGetActivePeriod = jest.fn();
 const mockGetMyScore = jest.fn();
 const mockListRanking = jest.fn();
 const mockListScoreFormulaVersions = jest.fn();
+const mockListScoreFormulaTemplates = jest.fn();
 const mockOpenPeriodSnapshot = jest.fn();
 const mockCalculatePeriodScores = jest.fn();
 const mockClosePeriodSnapshot = jest.fn();
@@ -16,11 +18,15 @@ const mockUpsertScoreFormulaVersion = jest.fn();
 const mockActivateScoreFormulaVersion = jest.fn();
 const mockAssignScoreFormula = jest.fn();
 
+const mockListMyScoreHistory = jest.fn();
 jest.mock('@/lib/people-score', () => ({
   getActivePeriod: (...a: unknown[]) => mockGetActivePeriod(...a),
+  getLatestClosedPeriod: (...a: unknown[]) => mockGetLatestClosedPeriod(...a),
+  listMyScoreHistory: (...a: unknown[]) => mockListMyScoreHistory(...a),
   getMyScore: (...a: unknown[]) => mockGetMyScore(...a),
   listRanking: (...a: unknown[]) => mockListRanking(...a),
   listScoreFormulaVersions: (...a: unknown[]) => mockListScoreFormulaVersions(...a),
+  listScoreFormulaTemplates: (...a: unknown[]) => mockListScoreFormulaTemplates(...a),
   openPeriodSnapshot: (...a: unknown[]) => mockOpenPeriodSnapshot(...a),
   calculatePeriodScores: (...a: unknown[]) => mockCalculatePeriodScores(...a),
   closePeriodSnapshot: (...a: unknown[]) => mockClosePeriodSnapshot(...a),
@@ -34,9 +40,12 @@ jest.mock('@/lib/people-score', () => ({
 import {
   useActivePeriod,
   useFormulaActions,
+  useLatestClosedPeriod,
   useMyScore,
+  useMyScoreHistory,
   usePeriodActions,
   useRanking,
+  useScoreFormulaTemplates,
   useScoreFormulaVersions,
   useScoreOverride,
 } from '../use-people-score';
@@ -51,9 +60,12 @@ function makeWrapper() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetActivePeriod.mockResolvedValue({ id: 'p-active', status: 'active' });
+  mockGetLatestClosedPeriod.mockResolvedValue({ id: 'p-closed', status: 'closed' });
+  mockListMyScoreHistory.mockResolvedValue([{ id: 'h1', auto_calculated_score: 75 }]);
   mockGetMyScore.mockResolvedValue({ id: 'r1', auto_calculated_score: 75 });
   mockListRanking.mockResolvedValue([{ rank_number: 1 }]);
   mockListScoreFormulaVersions.mockResolvedValue([{ version_number: 1 }]);
+  mockListScoreFormulaTemplates.mockResolvedValue([{ id: 't1', level: 'staff' }]);
   mockOpenPeriodSnapshot.mockResolvedValue('p-new');
   mockCalculatePeriodScores.mockResolvedValue(5);
   mockClosePeriodSnapshot.mockResolvedValue(3);
@@ -70,6 +82,26 @@ describe('useActivePeriod', () => {
     await waitFor(() => expect(result.current.period?.id).toBe('p-active'));
     expect(mockGetActivePeriod).toHaveBeenCalledTimes(1);
     expect(qc.getQueryData(['active_period'])).toEqual({ id: 'p-active', status: 'active' });
+  });
+});
+
+describe('useLatestClosedPeriod', () => {
+  it('[1b] fetch + queryKey [latest_closed_period]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useLatestClosedPeriod(), { wrapper });
+    await waitFor(() => expect(result.current.period?.id).toBe('p-closed'));
+    expect(mockGetLatestClosedPeriod).toHaveBeenCalledTimes(1);
+    expect(qc.getQueryData(['latest_closed_period'])).toBeTruthy();
+  });
+});
+
+describe('useMyScoreHistory', () => {
+  it('[1c] fetch + queryKey [my_score_history, limit]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useMyScoreHistory(6), { wrapper });
+    await waitFor(() => expect(result.current.history.length).toBe(1));
+    expect(mockListMyScoreHistory).toHaveBeenCalledWith(6);
+    expect(qc.getQueryData(['my_score_history', 6])).toBeTruthy();
   });
 });
 
@@ -107,6 +139,16 @@ describe('useRanking', () => {
     await waitFor(() => expect(result.current.ranking.length).toBe(1));
     expect(mockListRanking).toHaveBeenCalledWith('p1');
     expect(qc.getQueryData(['ranking', 'p1'])).toBeTruthy();
+  });
+});
+
+describe('useScoreFormulaTemplates', () => {
+  it('[6b] fetch + queryKey [score_formula_templates, level|all]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useScoreFormulaTemplates('staff'), { wrapper });
+    await waitFor(() => expect(result.current.templates.length).toBe(1));
+    expect(mockListScoreFormulaTemplates).toHaveBeenCalledWith('staff');
+    expect(qc.getQueryData(['score_formula_templates', 'staff'])).toBeTruthy();
   });
 });
 

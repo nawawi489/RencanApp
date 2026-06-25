@@ -68,6 +68,23 @@ export async function getActivePeriod(): Promise<PeriodSnapshot | null> {
 }
 
 /**
+ * Periode tertutup terbaru (per D9: ranking hanya muncul setelah close).
+ * Sumber data untuk ranking_snapshots & per-user ScoreBadge di People.
+ * null saat belum pernah ada periode yang ditutup.
+ */
+export async function getLatestClosedPeriod(): Promise<PeriodSnapshot | null> {
+  const { data, error } = await supabase
+    .from('period_snapshots')
+    .select('*')
+    .eq('status', 'closed')
+    .order('closed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Skor saya untuk satu periode. periodId opsional — bila tak diberi, auto-fetch active period.
  * Mengembalikan null saat: belum ada periode aktif, ATAU belum ada baris current untuk user.
  * Filter: user_id = auth.uid() AND period_snapshot_id = id AND is_current = true.
@@ -107,6 +124,26 @@ export async function listRanking(periodId: string): Promise<RankingSnapshot[]> 
   return data as RankingSnapshot[];
 }
 
+/**
+ * Histori skor saya (D6 Trend): user_score_results yang current=true, urut periode terbaru → terlama.
+ * RLS otomatis menyaring ke user_id=auth.uid() (juga via supervisor/manage). Limit default 6.
+ * Mengembalikan array kosong saat user belum punya histori (graceful sparkline).
+ */
+export async function listMyScoreHistory(limit: number = 6): Promise<UserScoreResult[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error('Not authenticated');
+  const { data, error } = await supabase
+    .from('user_score_results')
+    .select('*')
+    .eq('user_id', uid)
+    .eq('is_current', true)
+    .order('calculated_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as UserScoreResult[];
+}
+
 /** Daftar versi formula untuk satu template, terbaru dulu. */
 export async function listScoreFormulaVersions(templateId: string): Promise<ScoreFormulaVersion[]> {
   const { data, error } = await supabase
@@ -116,6 +153,18 @@ export async function listScoreFormulaVersions(templateId: string): Promise<Scor
     .order('version_number', { ascending: false });
   if (error) throw error;
   return data as ScoreFormulaVersion[];
+}
+
+/** Daftar template formula untuk org user (D13 transparan org). Difilter level bila perlu. */
+export async function listScoreFormulaTemplates(level?: string): Promise<ScoreFormulaTemplate[]> {
+  let q = supabase
+    .from('score_formula_templates')
+    .select('*')
+    .order('level', { ascending: true });
+  if (level) q = q.eq('level', level);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as ScoreFormulaTemplate[];
 }
 
 // ---------------------------------------------------------------- writes (RPC SECURITY DEFINER)

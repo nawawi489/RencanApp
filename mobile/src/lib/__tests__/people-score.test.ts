@@ -25,8 +25,11 @@ import {
   closePeriodSnapshot,
   effectiveScore,
   getActivePeriod,
+  getLatestClosedPeriod,
   getMyScore,
+  listMyScoreHistory,
   listRanking,
+  listScoreFormulaTemplates,
   listScoreFormulaVersions,
   openPeriodSnapshot,
   overrideUserScore,
@@ -51,7 +54,7 @@ function makeQueryThenable(result: { data: unknown; error: unknown }) {
 function makeSingleBuilder(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'insert', 'order']) {
+  for (const m of ['select', 'eq', 'insert', 'order', 'limit']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -206,6 +209,23 @@ describe('getMyScore — period auto-detect + user_id=auth.uid()', () => {
 });
 
 // ============================================================ listRanking
+describe('getLatestClosedPeriod', () => {
+  it('[L1] eq status=closed + order closed_at desc + limit 1 + maybeSingle', async () => {
+    const { builder, calls } = makeSingleBuilder({ data: { id: 'p-closed', status: 'closed' }, error: null });
+    mockFrom.mockReturnValue(builder);
+    const row = await getLatestClosedPeriod();
+    expect(mockFrom).toHaveBeenCalledWith('period_snapshots');
+    expect(calls.eq).toEqual(['status', 'closed']);
+    expect(calls.order).toEqual(['closed_at', { ascending: false }]);
+    expect(row?.id).toBe('p-closed');
+  });
+  it('[L2] null saat belum pernah ada periode tertutup', async () => {
+    const { builder } = makeSingleBuilder({ data: null, error: null });
+    mockFrom.mockReturnValue(builder);
+    expect(await getLatestClosedPeriod()).toBeNull();
+  });
+});
+
 describe('listRanking', () => {
   it('[16] eq period_snapshot_id + order rank_number asc', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ rank_number: 1, score: 80 }], error: null });
@@ -236,6 +256,24 @@ describe('listRanking', () => {
 });
 
 // ============================================================ listScoreFormulaVersions
+describe('listMyScoreHistory', () => {
+  it('[H1] eq user_id + is_current=true + order calculated_at desc + limit n', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [{ id: 'h1' }, { id: 'h2' }], error: null });
+    mockFrom.mockReturnValue(builder);
+    const rows = await listMyScoreHistory(6);
+    expect(mockFrom).toHaveBeenCalledWith('user_score_results');
+    const eqCalls = (builder.eq as jest.Mock).mock.calls;
+    expect(eqCalls).toEqual(expect.arrayContaining([['user_id', 'u1'], ['is_current', true]]));
+    expect(calls.order).toEqual(['calculated_at', { ascending: false }]);
+    expect(calls.limit).toEqual([6]);
+    expect(rows).toHaveLength(2);
+  });
+  it('[H2] tanpa auth → throw Not authenticated', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
+    await expect(listMyScoreHistory()).rejects.toThrow('Not authenticated');
+  });
+});
+
 describe('listScoreFormulaVersions', () => {
   it('[19] order by version_number desc (newest first)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ version_number: 2 }, { version_number: 1 }], error: null });
@@ -245,6 +283,24 @@ describe('listScoreFormulaVersions', () => {
     expect(calls.eq).toEqual(['template_id', 't1']);
     expect(calls.order).toEqual(['version_number', { ascending: false }]);
     expect(rows).toHaveLength(2);
+  });
+});
+
+describe('listScoreFormulaTemplates', () => {
+  it('[T1] tanpa level → order by level asc, tanpa filter eq', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [{ id: 't1' }, { id: 't2' }], error: null });
+    mockFrom.mockReturnValue(builder);
+    const rows = await listScoreFormulaTemplates();
+    expect(mockFrom).toHaveBeenCalledWith('score_formula_templates');
+    expect(calls.order).toEqual(['level', { ascending: true }]);
+    expect(builder.eq).not.toHaveBeenCalled();
+    expect(rows).toHaveLength(2);
+  });
+  it('[T2] dgn level → tambah eq level', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [{ id: 't1', level: 'staff' }], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listScoreFormulaTemplates('staff');
+    expect(calls.eq).toEqual(['level', 'staff']);
   });
 });
 

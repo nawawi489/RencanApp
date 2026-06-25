@@ -16,10 +16,16 @@ jest.mock('@/lib/cards', () => ({
 
 const mockUseActivePeriod = jest.fn();
 const mockUseMyScore = jest.fn();
+const mockUseLatestClosedPeriod = jest.fn();
+const mockUseRanking = jest.fn();
+const mockUseMyScoreHistory = jest.fn();
 jest.mock('@/hooks/use-people-score', () => ({
   __esModule: true,
   useActivePeriod: (...a: unknown[]) => mockUseActivePeriod(...a),
   useMyScore: (...a: unknown[]) => mockUseMyScore(...a),
+  useLatestClosedPeriod: (...a: unknown[]) => mockUseLatestClosedPeriod(...a),
+  useRanking: (...a: unknown[]) => mockUseRanking(...a),
+  useMyScoreHistory: (...a: unknown[]) => mockUseMyScoreHistory(...a),
 }));
 
 // eslint-disable-next-line import/first
@@ -37,9 +43,15 @@ beforeEach(() => {
   mockListOrgProfiles.mockReset();
   mockUseActivePeriod.mockReset();
   mockUseMyScore.mockReset();
+  mockUseLatestClosedPeriod.mockReset();
+  mockUseRanking.mockReset();
   // default: no active period, no score (preserves backward-compat shape).
   mockUseActivePeriod.mockReturnValue({ period: null, isLoading: false, isError: false });
   mockUseMyScore.mockReturnValue({ score: null, isLoading: false, isError: false });
+  mockUseLatestClosedPeriod.mockReturnValue({ period: null, isLoading: false, isError: false });
+  mockUseRanking.mockReturnValue({ ranking: [], isLoading: false, isError: false, refetch: jest.fn() });
+  mockUseMyScoreHistory.mockReset();
+  mockUseMyScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
 });
 
 describe('PeopleScreen — 4 state fondasi', () => {
@@ -144,6 +156,74 @@ describe('PeopleScreen — Fase 7 score states', () => {
     expect(screen.getByText('Governance Discipline')).toBeTruthy();
     expect(screen.getByText('90%')).toBeTruthy();
     expect(screen.getByText('70%')).toBeTruthy();
+  });
+
+  it('[F7-6] periode tertutup + ranking → ScoreBadge per user yang ada di ranking', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u-rina', full_name: 'Rina', email: 'r@n.id' },
+      { id: 'u-arman', full_name: 'Arman', email: 'a@n.id' },
+      { id: 'u-belum', full_name: 'Belum Dinilai', email: 'b@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Q1', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [
+        { user_id: 'u-rina', rank_number: 1, score: 88 },
+        { user_id: 'u-arman', rank_number: 2, score: 72 },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText('Score 88 · On track')).toBeTruthy();
+    expect(screen.getByLabelText('Score 72 · Stabil')).toBeTruthy();
+    // 'Belum Dinilai' tidak ada di ranking → tak ada badge.
+    expect(screen.queryByLabelText(/Score \d+ · .* Belum/)).toBeNull();
+  });
+
+  it('[F7-7] tak ada periode tertutup → tidak ada per-user badge (graceful)', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Solo', email: 's@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({ period: null, isLoading: false, isError: false });
+    mockUseRanking.mockReturnValue({ ranking: [], isLoading: false, isError: false, refetch: jest.fn() });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Solo')).toBeTruthy();
+    // tidak ada ScoreBadge muncul untuk profile karena ranking kosong.
+    expect(screen.queryByLabelText(/^Score \d/)).toBeNull();
+  });
+
+  it('[F7-8] Sparkline Trend muncul saat ada histori skor (≥1 titik)', async () => {
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseMyScore.mockReturnValue({
+      score: { auto_calculated_score: 80, manual_adjusted_score: null, metric_breakdown: {} },
+      isLoading: false,
+      isError: false,
+    });
+    // History DESC: terbaru first. Sparkline reverse → kronologis kiri-ke-kanan: 60, 70, 80.
+    mockUseMyScoreHistory.mockReturnValue({
+      history: [
+        { auto_calculated_score: 80, manual_adjusted_score: null },
+        { auto_calculated_score: 70, manual_adjusted_score: null },
+        { auto_calculated_score: 60, manual_adjusted_score: null },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Tren')).toBeTruthy();
+    // a11y label dari ScoreSparkline (3 titik kronologis: 60, 70, 80; terbaru 80; delta +10)
+    expect(
+      screen.getByLabelText(/Tren skor 3 periode, terbaru 80, perubahan ↑ \+10/),
+    ).toBeTruthy();
   });
 
   it('[F7-5] manual_adjusted_score=0 NYATA → effective=0, BUKAN fallback ke auto (?? bukan ||)', async () => {

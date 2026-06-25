@@ -13,8 +13,11 @@ import {
   calculatePeriodScores,
   closePeriodSnapshot,
   getActivePeriod,
+  getLatestClosedPeriod,
   getMyScore,
+  listMyScoreHistory,
   listRanking,
+  listScoreFormulaTemplates,
   listScoreFormulaVersions,
   openPeriodSnapshot,
   overrideUserScore,
@@ -24,6 +27,7 @@ import {
   type OpenPeriodSnapshotInput,
   type PeriodSnapshot,
   type RankingSnapshot,
+  type ScoreFormulaTemplate,
   type ScoreFormulaVersion,
   type UserScoreResult,
 } from '@/lib/people-score';
@@ -40,6 +44,32 @@ export function useActivePeriod() {
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,
+  };
+}
+
+/** Periode tertutup terbaru — sumber per-user ScoreBadge di People (D9). */
+export function useLatestClosedPeriod() {
+  const q = useQuery({
+    queryKey: ['latest_closed_period'],
+    queryFn: getLatestClosedPeriod,
+  });
+  return {
+    period: q.data as PeriodSnapshot | null | undefined,
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
+}
+
+/** Histori skor saya (D6 Trend). N periode terbaru, urut DESC. */
+export function useMyScoreHistory(limit: number = 6) {
+  const q = useQuery({
+    queryKey: ['my_score_history', limit],
+    queryFn: () => listMyScoreHistory(limit),
+  });
+  return {
+    history: (q.data ?? []) as UserScoreResult[],
+    isLoading: q.isLoading,
+    isError: q.isError,
   };
 }
 
@@ -67,6 +97,19 @@ export function useRanking(periodId: string) {
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,
+  };
+}
+
+/** Daftar template formula (D13 transparan org). Filter level opsional. */
+export function useScoreFormulaTemplates(level?: string) {
+  const q = useQuery({
+    queryKey: ['score_formula_templates', level ?? 'all'],
+    queryFn: () => listScoreFormulaTemplates(level),
+  });
+  return {
+    templates: (q.data ?? []) as ScoreFormulaTemplate[],
+    isLoading: q.isLoading,
+    isError: q.isError,
   };
 }
 
