@@ -1,15 +1,37 @@
-// Workspace (Fase 4) — Hierarki Strategis (Goal → KPI Area) + Initiative Tanpa Goal.
-// Indikator count-only (KPI Area: N / —); MBR kuantitatif (X/N) ditunda Fase 5.
+// Workspace (Fase 6) — dual-tab Performance/Development.
+// Performance (Fase 4): Goal → KPI Area → Strategy → Initiative, + Initiative Tanpa Goal.
+// Development (Fase 6): Development Area → Problem Statement → Initiative → Action Plan.
+// Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Badge, Button, EmptyState, ErrorState, SectionCard, SkeletonList } from '@/components/ui';
-import { useFlatInitiatives, useGoals, useKpiAreas } from '@/hooks/use-workspace';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  ErrorState,
+  SectionCard,
+  SkeletonList,
+  TabBar,
+} from '@/components/ui';
+import {
+  useDevelopmentAreas,
+  useFlatInitiatives,
+  useGoals,
+  useKpiAreas,
+  useProblemStatements,
+} from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
 import { type Initiative } from '@/lib/cards';
-import { WS_COPY } from '@/lib/workspace-copy';
+import {
+  problemCountOf,
+  type DevelopmentAreaWithProblemCount,
+} from '@/lib/development-areas';
+import { WS_COPY, WS_DEV_COPY, WS_TABS } from '@/lib/workspace-copy';
+
+type Tab = 'performance' | 'development';
 
 function StatusBadge({ status }: { status: string }) {
   return <Badge label={PLANNING_STATUS_LABEL[status] ?? status} tone={STATUS_TONE[status]} />;
@@ -18,8 +40,6 @@ function StatusBadge({ status }: { status: string }) {
 function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  // Jumlah KPI Area dari embedded count (satu query di listGoals) → tak ada N+1 per baris.
-  // Daftar anak baru di-fetch saat di-expand (lazy): enabled = expanded.
   const { kpiAreas } = useKpiAreas(goal.id, expanded);
 
   const count = kpiCountOf(goal);
@@ -67,6 +87,59 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   );
 }
 
+function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCount }) {
+  const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const { problemStatements } = useProblemStatements(devArea.id, expanded);
+
+  const count = problemCountOf(devArea);
+  const countLabel =
+    count == null ? WS_DEV_COPY.problemCountUnknown : WS_DEV_COPY.problemCount(count);
+
+  return (
+    <SectionCard>
+      <Pressable
+        className="flex-row items-start justify-between gap-3 active:opacity-70"
+        onPress={() => router.push(`/development-area/${devArea.id}` as Href)}
+        accessibilityRole="button"
+        accessibilityLabel={devArea.name}>
+        <Text className="flex-1 text-base font-semibold text-black dark:text-white">
+          {devArea.name}
+        </Text>
+        <StatusBadge status={devArea.status} />
+      </Pressable>
+
+      <Pressable
+        className="min-h-[44px] flex-row items-center justify-between gap-3 active:opacity-70"
+        onPress={() => setExpanded((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? 'Tutup' : 'Lihat Problem Statement'}
+        accessibilityState={{ expanded }}>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
+        <Text className="text-sm font-semibold text-brand-dark">
+          {expanded ? 'Tutup' : 'Lihat Problem Statement'}
+        </Text>
+      </Pressable>
+
+      {expanded ? (
+        <View className="gap-2">
+          {problemStatements.map((p) => (
+            <Pressable
+              key={p.id}
+              className="min-h-[44px] flex-row items-center justify-between gap-3 rounded-xl bg-neutral-50 p-3 active:opacity-70 dark:bg-neutral-900"
+              onPress={() => router.push(`/problem-statement/${p.id}` as Href)}
+              accessibilityRole="button"
+              accessibilityLabel={p.name}>
+              <Text className="flex-1 text-sm font-medium text-black dark:text-white">{p.name}</Text>
+              <StatusBadge status={p.status} />
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </SectionCard>
+  );
+}
+
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
     <SectionCard onPress={onPress}>
@@ -78,7 +151,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
   );
 }
 
-export default function WorkspaceScreen() {
+function PerformancePane() {
   const router = useRouter();
   const { can } = useProfile();
   const goalsQ = useGoals();
@@ -94,66 +167,143 @@ export default function WorkspaceScreen() {
   );
 
   return (
+    <View className="gap-5">
+      <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_COPY.subtitle}</Text>
+
+      {canCreate ? (
+        <Button label={WS_COPY.btnGoalBaru} onPress={() => router.push('/goal-wizard' as Href)} />
+      ) : null}
+
+      <View className="gap-3">
+        <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
+        {goalsQ.isLoading ? (
+          <SkeletonList count={3} />
+        ) : goalsQ.isError ? (
+          <ErrorState onRetry={() => goalsQ.refetch()} />
+        ) : goalsQ.goals.length > 0 ? (
+          <View className="gap-3">
+            {goalsQ.goals.map((goal) => (
+              <GoalRow key={goal.id} goal={goal} />
+            ))}
+          </View>
+        ) : (
+          <EmptyState
+            title={WS_COPY.emptyGoalTitle}
+            description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
+            action={
+              canCreate
+                ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
+                : undefined
+            }
+          />
+        )}
+      </View>
+
+      <View className="gap-3">
+        <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
+        {flatQ.isLoading ? (
+          <SkeletonList count={2} />
+        ) : flatQ.isError ? (
+          <ErrorState onRetry={() => flatQ.refetch()} />
+        ) : flatQ.initiatives.length > 0 ? (
+          <View className="gap-3">
+            {flatQ.initiatives.map((item) => (
+              <InitiativeRow
+                key={item.id}
+                item={item}
+                onPress={() => router.push(`/initiative/${item.id}` as Href)}
+              />
+            ))}
+          </View>
+        ) : (
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+            {WS_COPY.emptyFlatInitiative}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function DevelopmentPane() {
+  const router = useRouter();
+  const { can } = useProfile();
+  const devQ = useDevelopmentAreas();
+  const canCreate = can('create_development_area');
+
+  useFocusEffect(
+    useCallback(() => {
+      devQ.refetch();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+
+  return (
+    <View className="gap-5">
+      <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_DEV_COPY.subtitle}</Text>
+
+      {canCreate ? (
+        <Button
+          label={WS_DEV_COPY.btnDevAreaBaru}
+          onPress={() => router.push('/development-area/new' as Href)}
+        />
+      ) : null}
+
+      <View className="gap-3">
+        <Text className="text-lg font-bold text-black dark:text-white">
+          {WS_DEV_COPY.sectionDevAreas}
+        </Text>
+        {devQ.isLoading ? (
+          <SkeletonList count={3} />
+        ) : devQ.isError ? (
+          <ErrorState onRetry={() => devQ.refetch()} />
+        ) : devQ.developmentAreas.length > 0 ? (
+          <View className="gap-3">
+            {devQ.developmentAreas.map((d) => (
+              <DevelopmentAreaRow key={d.id} devArea={d} />
+            ))}
+          </View>
+        ) : (
+          <EmptyState
+            title={WS_DEV_COPY.emptyDevAreaTitle}
+            description={
+              canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
+            }
+            action={
+              canCreate
+                ? {
+                    label: WS_DEV_COPY.btnDevAreaBaru,
+                    onPress: () => router.push('/development-area/new' as Href),
+                  }
+                : undefined
+            }
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+export default function WorkspaceScreen() {
+  const [tab, setTab] = useState<Tab>('performance');
+
+  return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <View className="gap-5 p-5">
         <View className="gap-1">
           <Text className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
-          <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_COPY.subtitle}</Text>
         </View>
 
-        {canCreate ? (
-          <Button label={WS_COPY.btnGoalBaru} onPress={() => router.push('/goal-wizard' as Href)} />
-        ) : null}
+        <TabBar<Tab>
+          tabs={[
+            { key: 'performance', label: WS_TABS.performance },
+            { key: 'development', label: WS_TABS.development },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
 
-        {/* Section: Hierarki Strategis */}
-        <View className="gap-3">
-          <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
-          {goalsQ.isLoading ? (
-            <SkeletonList count={3} />
-          ) : goalsQ.isError ? (
-            <ErrorState onRetry={() => goalsQ.refetch()} />
-          ) : goalsQ.goals.length > 0 ? (
-            <View className="gap-3">
-              {goalsQ.goals.map((goal) => (
-                <GoalRow key={goal.id} goal={goal} />
-              ))}
-            </View>
-          ) : (
-            <EmptyState
-              title={WS_COPY.emptyGoalTitle}
-              description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
-              action={
-                canCreate
-                  ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
-                  : undefined
-              }
-            />
-          )}
-        </View>
-
-        {/* Section: Initiative Tanpa Goal */}
-        <View className="gap-3">
-          <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
-          {flatQ.isLoading ? (
-            <SkeletonList count={2} />
-          ) : flatQ.isError ? (
-            <ErrorState onRetry={() => flatQ.refetch()} />
-          ) : flatQ.initiatives.length > 0 ? (
-            <View className="gap-3">
-              {flatQ.initiatives.map((item) => (
-                <InitiativeRow
-                  key={item.id}
-                  item={item}
-                  onPress={() => router.push(`/initiative/${item.id}` as Href)}
-                />
-              ))}
-            </View>
-          ) : (
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              {WS_COPY.emptyFlatInitiative}
-            </Text>
-          )}
-        </View>
+        {tab === 'performance' ? <PerformancePane /> : <DevelopmentPane />}
       </View>
     </ScrollView>
   );

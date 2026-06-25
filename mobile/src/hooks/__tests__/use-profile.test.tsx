@@ -146,4 +146,42 @@ describe('K4 — permission create planning card', () => {
     expect(result.current.can('create_goal')).toBe(true);
     expect(result.current.can('create_kpi_area')).toBe(false);
   });
+
+  // Fase 6 — create_development_area mirror server (CN-7). Server-side test ada di
+  // supabase/tests/fase6_development_workspace_contract.sql TEST4.
+  it('[F6-K4-4] CEO bypass: create_development_area boleh', async () => {
+    mockSingle.mockResolvedValue(profileRow('ceo', []));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(result.current.profile).toBeTruthy());
+    expect(result.current.can('create_development_area')).toBe(true);
+  });
+
+  it('[F6-K4-5] C-Level default: create_development_area TIDAK boleh (tidak bocor)', async () => {
+    mockSingle.mockResolvedValue(profileRow('c_level', []));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(result.current.profile).toBeTruthy());
+    expect(result.current.can('create_development_area')).toBe(false);
+  });
+
+  it('[F6-K4-6] Management default: create_development_area TIDAK boleh', async () => {
+    mockSingle.mockResolvedValue(profileRow('management', []));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(result.current.profile).toBeTruthy());
+    expect(result.current.can('create_development_area')).toBe(false);
+  });
+
+  it('[F6-K4-7] grant eksplisit C-Level: create_development_area boleh', async () => {
+    mockSingle.mockResolvedValue(
+      profileRow('c_level', [
+        { granted: true, permissions: { key: 'create_development_area' } },
+      ]),
+    );
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(result.current.profile).toBeTruthy());
+    expect(result.current.can('create_development_area')).toBe(true);
+  });
 });

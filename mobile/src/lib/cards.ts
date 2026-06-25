@@ -86,13 +86,23 @@ export const RESULT_VALUE_TYPE_LABEL: Record<string, string> = {
 
 /**
  * Daftar Initiative. Fase 4: `opts.strategyId` memfilter berdasarkan induk Strategy —
- * `null` = Initiative datar (tanpa Strategy, section "Tanpa Goal"); string = anak Strategy tertentu;
- * tanpa opts = semua (backward-compat Fase 1, pemanggil lama tak berubah).
+ * `null` = Initiative datar (tanpa Strategy, section "Tanpa Goal"); string = anak Strategy tertentu.
+ * Fase 6: `opts.problemStatementId` memfilter berdasarkan induk Problem Statement (sama semantik).
+ * Tanpa opts = semua (backward-compat Fase 1, pemanggil lama tak berubah).
  */
-export async function listInitiatives(opts?: { strategyId?: string | null }): Promise<Initiative[]> {
+export async function listInitiatives(opts?: {
+  strategyId?: string | null;
+  problemStatementId?: string | null;
+}): Promise<Initiative[]> {
   let query = supabase.from('initiatives').select('*');
   if (opts && opts.strategyId !== undefined) {
     query = opts.strategyId === null ? query.is('strategy_id', null) : query.eq('strategy_id', opts.strategyId);
+  }
+  if (opts && opts.problemStatementId !== undefined) {
+    query =
+      opts.problemStatementId === null
+        ? query.is('problem_statement_id', null)
+        : query.eq('problem_statement_id', opts.problemStatementId);
   }
   const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
@@ -214,6 +224,8 @@ export type NewInitiative = {
   description?: string | null;
   /** Fase 4: induk Strategy. null/absen = Initiative datar (backward-compat Fase 1). */
   strategy_id?: string | null;
+  /** Fase 6: induk Problem Statement (jalur Development). Mutually exclusive dgn strategy_id (CHECK initiatives_single_parent). */
+  problem_statement_id?: string | null;
 };
 
 export async function createInitiative(input: NewInitiative): Promise<Initiative> {

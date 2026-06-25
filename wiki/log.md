@@ -143,3 +143,23 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 - T4 governance_warning CF-1: reviewer_override → PIC+Reviewer+holder(view_governance_violation), pelaku DIKECUALIKAN; instance_missed → Reviewer+holder, PIC TIDAK via gov-path; low severity diabaikan. Cron idempotency (AC-N10): emit_deadline_notifications 2x → 1 notif — ALL_PASS.
 - T5 mention gating (AC-I6): mention member → row+notif, non-member → nihil; non-member tak bisa kirim; mark_chat_messages_read kecualikan pesan sendiri (AC-I5) — ALL_PASS.
 - STATUS: Fase 3 SELESAI PENUH (DB + data layer + hooks + screens + suite kontrak per-user). Tidak ada gap fitur/verifikasi yang tersisa; hanya 2 polish UX chat opsional (urutan pesan, composer pinned).
+
+## [2026-06-25] update | Fase 6 SDD spec + TDD plan (multi-agent)
+- Pages created: [[fase6-spec]] (sdd-plan, 14 agen), [[fase6-tdd-plan]] (tdd-plan, 8 agen)
+- Pages updated: [[index]]
+- Key takeaways:
+  - Fase 6 = Development Workspace (Development Area → Problem Statement → Initiative → Action Plan), jalur eksekusi kedua EMS.
+  - Tabel baru: development_areas, problem_statements; kolom initiatives.problem_statement_id (CHECK single-parent strategy_id XOR problem_statement_id).
+  - Migration target: supabase/migrations/0012_fase6_development_workspace.sql. Initiative & Action Plan reuse Fase 1-5; MBR enforcement yang di-defer Fase 5 di-flip ON.
+  - Grill SDD 3× "perlu-perbaikan" → must-fix difold ke AC final (AC-G6/G7/G8 trigger sibling-count, AC-C3 FK null-safe backward-compat).
+  - Critic TDD verdict "perlu-perbaikan": 11 missing cases (MC-1..MC-11) + 8 concerns (CN-1..CN-8) diappend sebagai §5 addendum — gap kritis: regresi 42501 INSERT...RETURNING, null-safety problem_statement_in_my_org, gate MBR blokir_aktivasi belum terkunci.
+
+## [2026-06-25] update | Fase 6 Development Workspace — IMPLEMENTED & VERIFIED
+- Files added: supabase/migrations/0012_fase6_development_workspace.sql; supabase/tests/fase6_development_workspace_contract.sql; mobile/src/lib/{development-areas,problem-statements}.ts (+ tests); mobile/src/app/(app)/development-area/{new,[id]}.tsx; mobile/src/app/(app)/problem-statement/{new,[id]}.tsx
+- Files updated: mobile/src/lib/cards.ts (NewInitiative.problem_statement_id + listInitiatives filter); workspace-copy.ts (WS_TABS + WS_DEV_COPY); use-workspace.ts (5 new queries + 2 action hooks); workspace.tsx (dual-tab Performance/Development); initiative/new.tsx (problemStatementId param); _layout.tsx (4 routes); database.types.ts (regen); use-mbr.test.tsx + use-profile.test.tsx (Fase 6 dev card types + create_development_area gating tests)
+- Status verifikasi:
+  - DB contract: 12/12 PASS via MCP execute_sql per-block (schema, single_parent, INSERT-RETURNING 42501 MC-1, permission CN-7, null-safe CN-8, visibility chain, activate DA+PS+MBR gate MC-4/CN-5, MBR flip, trigger mode 2, guidance seed).
+  - Jest: 276/276 PASS (35 suites). tsc 0 errors.
+  - UI live: Expo web preview, dual-tab Workspace render & switch OK; Development pane shows + button + EmptyState dengan copy benar.
+- Critic gaps closed: MC-1 (42501 INSERT...RETURNING DA+PS), MC-4 (MBR blokir_aktivasi gate untested), CN-5 (gate ambigu), CN-7 (server-side has_permission deny C-Level w/o grant), CN-8 (problem_statement_in_my_org null-safe untuk Performance Initiative backward-compat).
+- Belum di-commit. Branch: feat/fase-4-performance-workspace.

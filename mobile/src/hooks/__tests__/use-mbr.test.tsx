@@ -134,6 +134,52 @@ describe('useMbrCompliance', () => {
   });
 });
 
+// ---------------------------------------------------------------- Fase 6: MBR flip — dev types
+// Regression guard: useMbrCompliance generik tidak berubah. Hijau di sini menegaskan hook
+// meneruskan tipe 'development_area' / 'problem_statement' apa adanya — sumber kebenaran
+// flip RPC ada di DB contract suite (TEST10 fase6 contract).
+describe('useMbrCompliance — Fase 6 dev types', () => {
+  it('[F6-12] meneruskan parentType "development_area" ke data layer', async () => {
+    const DEV_COMPLIANCE = {
+      child_card_type: 'problem_statement' as const,
+      child_count: 0,
+      min_count: 1,
+      enforcement_mode: 'hanya_peringatan' as const,
+      is_compliant: false,
+    };
+    mockCheckMbrCompliance.mockResolvedValueOnce(DEV_COMPLIANCE);
+    const { qc, wrapper } = makeWrapper();
+    const { result } = await renderHook(
+      () => useMbrCompliance('development_area', 'd1'),
+      { wrapper },
+    );
+    await waitFor(() =>
+      expect(mockCheckMbrCompliance).toHaveBeenCalledWith('development_area', 'd1'),
+    );
+    expect(qc.getQueryData(['mbr_compliance', 'development_area', 'd1'])).toEqual(DEV_COMPLIANCE);
+    expect(result.current.isCompliant).toBe(false);
+  });
+
+  it('[F6-13] meneruskan parentType "problem_statement"', async () => {
+    const PS_COMPLIANCE = {
+      child_card_type: 'initiative' as const,
+      child_count: 1,
+      min_count: 1,
+      enforcement_mode: 'hanya_peringatan' as const,
+      is_compliant: true,
+    };
+    mockCheckMbrCompliance.mockResolvedValueOnce(PS_COMPLIANCE);
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(
+      () => useMbrCompliance('problem_statement', 'p1'),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.compliance).toEqual(PS_COMPLIANCE));
+    expect(mockCheckMbrCompliance).toHaveBeenCalledWith('problem_statement', 'p1');
+    expect(result.current.isCompliant).toBe(true);
+  });
+});
+
 describe('useMbrRuleActions', () => {
   it('[9] setRule meneruskan input ke data layer & mengembalikan id baru', async () => {
     const { wrapper } = makeWrapper();

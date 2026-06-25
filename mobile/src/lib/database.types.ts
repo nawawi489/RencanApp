@@ -734,6 +734,70 @@ export type Database = {
           },
         ]
       }
+      development_areas: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "development_areas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "development_areas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "development_areas_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_files: {
         Row: {
           created_at: string
@@ -951,6 +1015,7 @@ export type Database = {
           period_end: string | null
           period_start: string | null
           pic_id: string | null
+          problem_statement_id: string | null
           status: string
           strategy_id: string | null
           target_result: string | null
@@ -966,6 +1031,7 @@ export type Database = {
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
+          problem_statement_id?: string | null
           status?: string
           strategy_id?: string | null
           target_result?: string | null
@@ -981,6 +1047,7 @@ export type Database = {
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
+          problem_statement_id?: string | null
           status?: string
           strategy_id?: string | null
           target_result?: string | null
@@ -1006,6 +1073,13 @@ export type Database = {
             columns: ["pic_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiatives_problem_statement_id_fkey"
+            columns: ["problem_statement_id"]
+            isOneToOne: false
+            referencedRelation: "problem_statements"
             referencedColumns: ["id"]
           },
           {
@@ -1376,6 +1450,80 @@ export type Database = {
         }
         Relationships: []
       }
+      problem_statements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          development_area_id: string
+          id: string
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          development_area_id: string
+          id?: string
+          name: string
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          development_area_id?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          pic_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "problem_statements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "problem_statements_development_area_id_fkey"
+            columns: ["development_area_id"]
+            isOneToOne: false
+            referencedRelation: "development_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "problem_statements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "problem_statements_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1677,12 +1825,20 @@ export type Database = {
         Args: { p_action_plan_id: string }
         Returns: undefined
       }
+      activate_development_area: {
+        Args: { p_development_area_id: string }
+        Returns: undefined
+      }
       activate_goal: { Args: { p_goal_id: string }; Returns: undefined }
       activate_initiative: {
         Args: { p_initiative_id: string }
         Returns: undefined
       }
       activate_kpi_area: { Args: { p_kpi_area_id: string }; Returns: undefined }
+      activate_problem_statement: {
+        Args: { p_problem_statement_id: string }
+        Returns: undefined
+      }
       activate_strategy: { Args: { p_strategy_id: string }; Returns: undefined }
       apply_goal_template: {
         Args: {
@@ -1698,12 +1854,17 @@ export type Database = {
         Args: { p_action_plan: string }
         Returns: boolean
       }
+      can_access_development_area: {
+        Args: { p_dev_area: string }
+        Returns: boolean
+      }
       can_access_goal: { Args: { p_goal: string }; Returns: boolean }
       can_access_initiative: {
         Args: { p_initiative: string }
         Returns: boolean
       }
       can_access_kpi_area: { Args: { p_kpi_area: string }; Returns: boolean }
+      can_access_problem_statement: { Args: { p_ps: string }; Returns: boolean }
       can_access_strategy: { Args: { p_strategy: string }; Returns: boolean }
       can_view_workspace: { Args: never; Returns: boolean }
       check_minimum_breakdown_compliance: {
@@ -1746,6 +1907,14 @@ export type Database = {
         }
       }
       current_user_org: { Args: never; Returns: string }
+      development_area_has_my_descendant: {
+        Args: { p_dev_area: string }
+        Returns: boolean
+      }
+      development_area_in_my_org: {
+        Args: { p_dev_area: string }
+        Returns: boolean
+      }
       emit_deadline_notifications: { Args: never; Returns: number }
       emit_notification: {
         Args: {
@@ -1823,13 +1992,22 @@ export type Database = {
       goal_in_my_org: { Args: { p_goal: string }; Returns: boolean }
       has_permission: { Args: { p_key: string }; Returns: boolean }
       i_am_initiative_pic: { Args: { p_initiative: string }; Returns: boolean }
+      i_am_problem_statement_pic_via_initiative: {
+        Args: { p_initiative: string }
+        Returns: boolean
+      }
       initiative_has_my_action_plan: {
         Args: { p_initiative: string }
         Returns: boolean
       }
       is_chat_member: { Args: { p_room: string }; Returns: boolean }
+      is_development_area_pic: {
+        Args: { p_dev_area: string }
+        Returns: boolean
+      }
       is_goal_pic: { Args: { p_goal: string }; Returns: boolean }
       is_kpi_area_pic: { Args: { p_kpi_area: string }; Returns: boolean }
+      is_problem_statement_pic: { Args: { p_ps: string }; Returns: boolean }
       kpi_area_has_my_descendant: {
         Args: { p_kpi_area: string }
         Returns: boolean
@@ -1840,6 +2018,11 @@ export type Database = {
       mark_notification_read: { Args: { p_id: string }; Returns: undefined }
       mark_overdue_instances: { Args: { p_now?: string }; Returns: number }
       org_today: { Args: { p_org?: string }; Returns: string }
+      problem_statement_has_my_descendant: {
+        Args: { p_ps: string }
+        Returns: boolean
+      }
+      problem_statement_in_my_org: { Args: { p_ps: string }; Returns: boolean }
       recompute_chat_room_members: {
         Args: { p_room: string }
         Returns: undefined
