@@ -15,6 +15,8 @@ import {
   SkeletonList,
 } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
+import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
+import { useMbrCompliance } from '@/hooks/use-mbr';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
 import {
   PLANNING_STATUS_LABEL,
@@ -96,10 +98,15 @@ export default function KpiAreaDetailScreen() {
   const { strategies, isLoading: strategiesLoading, isError: strategiesError, refetch: refetchStrategies } =
     useStrategies(id);
 
+  // Fase 5 — Kelengkapan Perencanaan (MBR). Fail-open di klien: bila data belum tersedia,
+  // tombol aktivasi tetap berjalan; server (RPC activate_kpi_area) penegak akhir.
+  const { compliance, refetch: refetchCompliance } = useMbrCompliance('kpi_area', id);
+
   useFocusEffect(
     useCallback(() => {
       kpiAreaQ.refetch();
       refetchStrategies();
+      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Strategy
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -117,6 +124,15 @@ export default function KpiAreaDetailScreen() {
   const kpiArea = kpiAreaQ.data;
   // PIC tersimpan (mis. warisan Goal Wizard) untuk prefill picker editor.
   const { person: currentPic } = usePerson(kpiArea?.pic_id);
+
+  function handleActivate() {
+    const blocked = guardMbrActivation(compliance, {
+      childLabel: 'Strategy',
+      onAddChild: () => router.push(`/strategy/new?kpiAreaId=${id}` as Href),
+    });
+    if (blocked) return;
+    activateM.mutate();
+  }
 
   // Target & PIC wajib saat aktivasi. KPI Area dari Goal Wizard bisa lahir tanpa Target/PIC → editor
   // inline (DraftCompletion) agar bisa dilengkapi sebelum aktivasi; tanpa ini Draft template terjebak.
@@ -167,13 +183,15 @@ export default function KpiAreaDetailScreen() {
               </SectionCard>
             ) : null}
 
+            <MbrCompletionIndicator compliance={compliance} />
+
             {kpiArea.status === 'draft' ? (
               <DraftCompletion
                 initialTarget={kpiArea.target ?? ''}
                 initialPic={currentPic}
                 onSave={(patch) => saveM.mutate(patch)}
                 saving={saveM.isPending}
-                onActivate={() => activateM.mutate()}
+                onActivate={handleActivate}
                 activating={activateM.isPending}
               />
             ) : null}

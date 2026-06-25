@@ -4,7 +4,9 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
+import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useStrategyInitiatives } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL, type Initiative } from '@/lib/cards';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } from '@/lib/strategies';
@@ -41,11 +43,13 @@ export default function StrategyDetailScreen() {
     isError: initiativesError,
     refetch: refetchInitiatives,
   } = useStrategyInitiatives(id);
+  const { compliance, refetch: refetchCompliance } = useMbrCompliance('strategy', id);
 
   useFocusEffect(
     useCallback(() => {
       strategyQ.refetch();
       refetchInitiatives();
+      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Initiative
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -60,6 +64,15 @@ export default function StrategyDetailScreen() {
   });
 
   const strategy = strategyQ.data;
+
+  function handleActivate() {
+    const blocked = guardMbrActivation(compliance, {
+      childLabel: 'Initiative',
+      onAddChild: () => router.push(`/initiative/new?strategyId=${id}` as Href),
+    });
+    if (blocked) return;
+    activateM.mutate();
+  }
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
@@ -96,10 +109,12 @@ export default function StrategyDetailScreen() {
             <DetailField label="Risiko Utama" value={strategy.main_risk || '—'} />
             <DetailField label="Alternatif" value={strategy.alternative || '—'} />
 
+            <MbrCompletionIndicator compliance={compliance} />
+
             {strategy.status === 'draft' ? (
               <Button
                 label="Aktifkan Strategy"
-                onPress={() => activateM.mutate()}
+                onPress={handleActivate}
                 loading={activateM.isPending}
               />
             ) : null}

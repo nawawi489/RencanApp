@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { useRouter, type Href } from 'expo-router';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Avatar, Button, SkeletonCard } from '@/components/ui';
+import { useProfile } from '@/hooks/use-profile';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -24,20 +26,29 @@ async function fetchProfile(): Promise<ProfileRow | null> {
   return data as unknown as ProfileRow;
 }
 
-const SECTIONS = [
-  'User & Permission',
-  'Role Template',
-  'Organization',
-  'Goal Template Library',
-  'Minimum Breakdown Rule',
-  'Card Completion Rule',
-  'Score Formula',
-  'Activity Log',
-  'Governance Violation',
+type SettingsSection = { label: string; href?: Href; permission?: string };
+
+// Bagian aktif bertahap (Fase 5–8). href + permission diisi saat layarnya siap.
+const SECTIONS: SettingsSection[] = [
+  { label: 'User & Permission' },
+  { label: 'Role Template' },
+  { label: 'Organization' },
+  { label: 'Goal Template Library' },
+  {
+    label: 'Minimum Breakdown Rule',
+    href: '/settings-mbr' as Href,
+    permission: 'manage_minimum_breakdown_rule',
+  },
+  { label: 'Card Completion Rule' },
+  { label: 'Score Formula' },
+  { label: 'Activity Log' },
+  { label: 'Governance Violation' },
 ];
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
+  const router = useRouter();
+  const { can } = useProfile();
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', session?.user.id],
     queryFn: fetchProfile,
@@ -71,14 +82,34 @@ export default function SettingsScreen() {
         <View className="gap-1">
           <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">Pengaturan</Text>
           <View className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-            {SECTIONS.map((label, i) => (
-              <View
-                key={label}
-                className={`flex-row items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-neutral-200 dark:border-neutral-800' : ''}`}>
-                <Text className="text-base text-neutral-400 dark:text-neutral-500">{label}</Text>
-                <Text className="text-neutral-300 dark:text-neutral-600">›</Text>
-              </View>
-            ))}
+            {SECTIONS.map((section, i) => {
+              const active = !!section.href && (!section.permission || can(section.permission));
+              const border = i > 0 ? 'border-t border-neutral-200 dark:border-neutral-800' : '';
+              const row = (
+                <View className={`flex-row items-center justify-between px-4 py-3 ${border}`}>
+                  <Text
+                    className={`text-base ${active ? 'text-black dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                    {section.label}
+                  </Text>
+                  <Text
+                    className={active ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-300 dark:text-neutral-600'}>
+                    ›
+                  </Text>
+                </View>
+              );
+              return active ? (
+                <Pressable
+                  key={section.label}
+                  accessibilityRole="button"
+                  accessibilityLabel={section.label}
+                  className="active:opacity-70"
+                  onPress={() => router.push(section.href!)}>
+                  {row}
+                </Pressable>
+              ) : (
+                <View key={section.label}>{row}</View>
+              );
+            })}
           </View>
           <Text className="px-1 text-xs text-neutral-400">
             Bagian pengaturan aktif bertahap mulai Fase 5–8 sesuai permission.

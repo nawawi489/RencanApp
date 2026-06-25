@@ -1213,6 +1213,57 @@ export type Database = {
           },
         ]
       }
+      minimum_breakdown_rules: {
+        Row: {
+          child_card_type: string
+          created_at: string
+          enforcement_mode: string
+          id: string
+          min_count: number
+          organization_id: string | null
+          parent_card_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          child_card_type: string
+          created_at?: string
+          enforcement_mode?: string
+          id?: string
+          min_count?: number
+          organization_id?: string | null
+          parent_card_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          child_card_type?: string
+          created_at?: string
+          enforcement_mode?: string
+          id?: string
+          min_count?: number
+          organization_id?: string | null
+          parent_card_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "minimum_breakdown_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "minimum_breakdown_rules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           actor_id: string | null
@@ -1639,6 +1690,7 @@ export type Database = {
           p_period_end: string
           p_period_start: string
           p_pic_id: string
+          p_targets?: Json
         }
         Returns: string
       }
@@ -1654,6 +1706,16 @@ export type Database = {
       can_access_kpi_area: { Args: { p_kpi_area: string }; Returns: boolean }
       can_access_strategy: { Args: { p_strategy: string }; Returns: boolean }
       can_view_workspace: { Args: never; Returns: boolean }
+      check_minimum_breakdown_compliance: {
+        Args: { p_parent_card_id: string; p_parent_card_type: string }
+        Returns: {
+          child_card_type: string
+          current_count: number
+          enforcement_mode: string
+          meets_requirement: boolean
+          required_count: number
+        }[]
+      }
       create_comment: {
         Args: {
           p_body: string
@@ -1662,6 +1724,26 @@ export type Database = {
           p_mentions?: string[]
         }
         Returns: string
+      }
+      current_minimum_breakdown_rule: {
+        Args: { p_child_card_type: string; p_parent_card_type: string }
+        Returns: {
+          child_card_type: string
+          created_at: string
+          enforcement_mode: string
+          id: string
+          min_count: number
+          organization_id: string | null
+          parent_card_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "minimum_breakdown_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       current_user_org: { Args: never; Returns: string }
       emit_deadline_notifications: { Args: never; Returns: number }
@@ -1790,6 +1872,15 @@ export type Database = {
           p_repeat_start_date: string
           p_time_of_day: string
           p_weekdays: number[]
+        }
+        Returns: string
+      }
+      set_minimum_breakdown_rule: {
+        Args: {
+          p_child_card_type: string
+          p_enforcement_mode: string
+          p_min_count: number
+          p_parent_card_type: string
         }
         Returns: string
       }

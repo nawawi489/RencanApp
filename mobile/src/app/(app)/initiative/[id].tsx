@@ -4,7 +4,9 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
+import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useProfile } from '@/hooks/use-profile';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -56,12 +58,14 @@ export default function InitiativeDetailScreen() {
 
   const initiativeQ = useQuery({ queryKey: ['initiative', id], queryFn: () => getInitiative(id) });
   const plansQ = useQuery({ queryKey: ['action-plans', id], queryFn: () => listActionPlans(id) });
+  const { compliance, refetch: refetchCompliance } = useMbrCompliance('initiative', id);
 
   useFocusEffect(
     useCallback(() => {
       initiativeQ.refetch();
       plansQ.refetch();
-    }, [initiativeQ, plansQ]),
+      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Action Plan
+    }, [initiativeQ, plansQ, refetchCompliance]),
   );
 
   const activateM = useMutation({
@@ -74,6 +78,15 @@ export default function InitiativeDetailScreen() {
   });
 
   const initiative = initiativeQ.data;
+
+  function handleActivate() {
+    const blocked = guardMbrActivation(compliance, {
+      childLabel: 'Action Plan',
+      onAddChild: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),
+    });
+    if (blocked) return;
+    activateM.mutate();
+  }
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
@@ -109,10 +122,12 @@ export default function InitiativeDetailScreen() {
               </SectionCard>
             ) : null}
 
+            <MbrCompletionIndicator compliance={compliance} />
+
             {initiative.status === 'draft' ? (
               <Button
                 label="Aktifkan Initiative"
-                onPress={() => activateM.mutate()}
+                onPress={handleActivate}
                 loading={activateM.isPending}
               />
             ) : null}
