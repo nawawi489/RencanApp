@@ -3157,6 +3157,8 @@ export type Database = {
           id: string
           initiative_id: string
           last_message_at: string
+          last_message_author_name: string
+          last_message_body: string
           name: string
           unread_count: number
         }[]

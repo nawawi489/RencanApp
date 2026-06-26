@@ -189,3 +189,42 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
   - Live RLS impersonation (Staff/Manager/CEO): score privacy & notif isolation intact (ceo_scores=0, foreign_notifs=0 untuk non-CEO); workspace differentiation utuh (Staff 2 aps vs CEO 3).
   - Security advisor: tetap 81 SECURITY DEFINER (by-design) + 1 leaked-password (F-2).
 - Sisa (non-migrasi): **F-2** leaked-password protection = toggle dashboard Auth→Security (1 klik, tak bisa via MCP). **F-7** notif body & **F-8** smoke-test mobile (Detox/EAS) = ditunda.
+
+## [2026-06-26] update | Backlog UI dari perbandingan prototype
+
+- Pages created: [[ui-prototype-gap]] — perbandingan 46 layar `design.html` vs `mobile/src/app/`, ditulis sebagai backlog ber-ID (`UI-G-###` lintas-layar, `UI-N-###` navigasi, `UI-S-###` per-layar).
+- Pages updated: `index.md` (entry baru + tanggal).
+- Diagnosis: prototype = dashboard kaya visual; app = utility eksekusi fungsional & governance-correct. Dua regresi nyata: Inbox/chat polos (UI-S-IN1–IN4) dan Score Formula read-only (UI-S-SF1).
+- Gap sistemik utama: tidak ada progress orb sistemik (UI-G-001), Log Aktivitas panel (UI-G-002), stepper + Draft & Aktifkan footer (UI-G-004), search pill di topbar (UI-G-005).
+- Gap struktural utama: tab "Menu" hilang ke People (UI-N-001), Workspace hub-card → tab-switcher (UI-N-002), pohon hanya 2 level (UI-N-003).
+- Prioritisasi P0–P3 ditulis langsung di dokumen untuk dipakai sebagai backlog tim UI.
+
+## [2026-06-26] update | Spec sdd-plan: Inbox & Chat UI (UI-S-IN1–IN4)
+
+- Files created (specs/, bukan wiki): `specs/inbox-chat-ui.md` (spec final) + `specs/inbox-chat-ui-tdd-handoff.json`.
+- Pages updated: `index.md` (catatan spec turunan di entry [[ui-prototype-gap]]).
+- Dijalankan via skill `/sdd-plan` (workflow 4 fase, 14 agen, ~1.2M token): Research → Draft → Grill (produk/eng/governance) → Synthesize.
+- TEMUAN UTAMA: backend chat SUDAH lengkap sejak Fase 3 (migrasi 0008 — chat_rooms/messages/reads/mentions, RPC send/mark/get ber-RLS is_chat_member). Gap UI-S-IN murni lapisan presentasi, KECUALI UI-S-IN3 (reactions/read-receipt/reply-quote/system-events) yang butuh migrasi baru → DEFER ke V2.
+- SCOPE V1.8.1 terkunci: UI-S-IN1 (minus chip PIC/Review/Deadline + search isi pesan), UI-S-IN2 penuh, composer circular-send, banner governance WAJIB. FR-DATA.1 (extend get_chat_rooms utk preview) opsional P0.
+- 3 KEPUTUSAN OWNER TERBUKA (memblok sebagian scope): OWNER-1 Reviewer Initiative bukan chat member (initiatives tak punya reviewer_id — koreksi PRD atau migrasi); OWNER-2 emoji reaction vs scope-guardrails §88 (default TOLAK); OWNER-3 PIC induk bukan member room turunan (klaim US-16 dihapus).
+- Handoff siap ke `/tdd-plan`; prasyarat: daftarkan token ChatBubble/DateDivider/ContextBanner/SendButton di DESIGN.md §7 dulu.
+
+## [2026-06-26] update | Rencana TDD: Inbox & Chat UI
+
+- Files created: `specs/inbox-chat-ui-tdd-plan.md` (rencana red→green→refactor + addendum critic).
+- Dijalankan via skill `/tdd-plan` (workflow 4 fase, 8 agen): Map → Tests → Plan → Critic.
+- Keputusan owner terkunci: FR-DATA.1 MASUK → migrasi baru **0018** (extend get_chat_rooms +last_message_body +last_message_author_name).
+- Urutan: Fase A data/migrasi → B hooks (loadOlder/hasMore) → C token gate DESIGN.md → D inbox list → E thread → F verifikasi suite.
+- Critic verdict **perlu-perbaikan** → addendum mengikat (§8) ditambahkan: (1) contract FR-DATA.1 WAJIB set jwt claims + seed-as-owner (tanpa ini false-green); (2) assertion anti-bypass search salah semantik → ganti ke output terfilter; (3) useAuth mock TDZ footgun; (4) ≥44dp testability pakai inline style + accessibilityState eksplisit; (5) tambahan case off-by-one clamp, null author, tie created_at, room kosong, anti double-submit.
+- Siap dieksekusi (kode test-first). Belum ada kode ditulis — menunggu owner lanjut implementasi.
+
+## [2026-06-26] update | Eksekusi TDD Inbox & Chat (P0 UI-S-IN1..IN4)
+
+- **Hasil:** Jest **540/540 pass** (sebelumnya 512 → +28). TSC bersih. Lint: 0 issue baru dari fase ini (3 error pre-existing di `settings-permission-users.tsx`). Advisor security: 0.
+- **Fase A — Data (FR-DATA.1):** migrasi **0018_fr_data1_inbox_preview** apply (DROP+CREATE `get_chat_rooms()` +2 kolom). Contract `supabase/tests/0018_inbox_preview_contract.sql` lulus 6 invarian (T1 preview, T2 non-member 0 baris dgn jwt switch, T3 empty room, T4 null author LEFT join, T5 tie id desc, T6 outer order nulls last). Per Critic §8.1 — auth context eksplisit via `set_config('request.jwt.claims')` + `execute 'set local role authenticated'`, seed sbg postgres dulu (insert revoked dari authenticated). `database.types.ts` di-regen; `ChatRoom` di [`inbox.ts`](mobile/src/lib/inbox.ts) +2 field nullable; `CHAT_PAGE_SIZE` diekspor.
+- **Fase B — Hooks:** 10/10 pass. `useChatMessages` direfactor ke `useInfiniteQuery` → `loadOlder()` + `hasMore`. Regression guards baru: send-fail tidak invalidate; markRead invalidate HANYA `['chat-rooms']`. Critic §8.7: baseline case [2] di-rewrite ke `toHaveBeenCalledWith('r1', 0)`.
+- **Fase C — Token gate:** ChatBubble / DateDivider / ContextBanner / SendButton didaftarkan di [`DESIGN.md §7`](DESIGN.md) sesuai aturan `mobile/CLAUDE.md` (token diregistrasi sebelum kode UI). Critic §8.4: SendButton WAJIB inline `{width:44,height:44}` + `accessibilityState={{disabled}}` eksplisit (NativeWind class tak selalu flatten di jest).
+- **Fase D — Inbox list:** 14/14 pass. Avatar seed=room.id, preview `'{author}: {body}'` (fallback `body` saat author null; fallback timestamp saat body null), clamp 99/100 boundary (Critic §8.5 off-by-one), search by-nama (Critic §8.2: assert OUTPUT terfilter, bukan call-count), chip Semua/Belum dibaca, chip ter-defer (Saya PIC/Review/Deadline) sengaja tidak dirender (scope-lock), empty-state kontekstual per search/filter.
+- **Fase E — Thread:** 18/18 pass. Urutan kronologis-menaik via `[...messages].reverse()`, bubble me/them via `useAuth().session?.user?.id` (default 'them' saat null), Avatar+nama untuk them (author null → '?'), DateDivider per-hari device-tz + skip invalid created_at, satu hari = tepat satu divider, `roomId` undefined → ErrorState + markRead TIDAK dipanggil, composer SendButton circular (inline 44/44, `accessibilityLabel='Kirim pesan'`), anti double-submit (`isSending` → button disabled), gagal-send → input tetap + `role='alert'`, GovernanceBanner "Chat bukan jalur formal: …" dgn tombol Tutup, `Muat pesan lama` saat hasMore.
+- **Closes backlog:** UI-S-IN1, UI-S-IN2, UI-S-IN3 (banner governance varian — bukan banner reply-AP yang ter-defer), UI-S-IN4 (circular SendButton); UI-G-005 (search pill bagian dari Inbox list, bukan topbar — belum). Catatan: regresi "chat polos" pada [[ui-prototype-gap]] kini tertutup.
+- **Item ter-defer (sengaja tidak dieksekusi V1):** reactions, reply-quote, banner per-pesan reply-AP, system events, attach-evidence paperclip, chip Saya PIC/Review/Deadline, workspace-viewer composer gating (FR-IN4.3) — tetap di backlog.

@@ -1,0 +1,18 @@
+{
+  "feature": "Inbox & Chat Initiative UI V1.8.1 (UI-S-IN1 + UI-S-IN2 + composer circular-send + banner governance). Tutup regresi visual presentasi di atas backend chat existing (migrasi 0008, RLS is_chat_member, append-only, RPC SECURITY DEFINER). SCOPE TERKUNCI: (1) Inbox list — search by nama room (anti-bypass: tidak query jaringan baru), chip 'Semua'/'Belum dibaca' saja, komponen Avatar seed=room.id, unread dot+Badge clamp '99+ baru', empty-state kontekstual saat filter/search 0 hasil, no-regress loading/error/empty. (2) Thread — PERUBAHAN perilaku: balik urutan pesan jadi kronologis-menaik (baseline saat ini messages.map newest-first TANPA reverse); bubble me/them pakai useAuth().session.user.id (sudah tersedia, lihat settings.tsx:96/use-profile.ts:80); reuse komponen Avatar({name,seed,size}) existing untuk sender identity (them) dengan guard author null→'?'; date-divider client-side pakai device timezone (org tz tidak diekspos — known limitation); guard roomId undefined→ErrorState; markRead no-regress; kontrol 'Muat pesan lama' untuk page>0. (3) Composer — tombol kirim circular ≥44dp accessibilityLabel='Kirim pesan', disabled kosong/isSending, send(body) no-regress (mentions=[] , picker DEFER); banner konteks level-room WAJIB dengan microcopy governance kanonik. PRASYARAT: daftarkan token ChatBubble/DateDivider/ContextBanner/SendButton di DESIGN.md §7 + global.css SEBELUM implementasi (mobile/CLAUDE.md). OPSIONAL P0: FR-DATA.1 (perluas get_chat_rooms +last_message_body +last_message_author_name via lateral join, SECURITY DEFINER + is_chat_member gate) untuk preview pengirim; jika tidak dikerjakan, preview degrade ke timestamp. AC-IN4.3 composer-gating workspace-viewer butuh keputusan kontrak can_send (DATA-2) — DEFER jika belum diputuskan. SEMUA UI-S-IN3 (reactions, read-receipt avatars, reply-quote, system events, banner per-pesan) + UI-S-IN4 attach-evidence DI LUAR SCOPE (butuh migrasi/keputusan owner). Bahasa Indonesia untuk semua label/error.",
+  "paths": [
+    "mobile/src/app/(app)/(tabs)/inbox.tsx",
+    "mobile/src/app/(app)/inbox/[roomId].tsx",
+    "mobile/src/lib/inbox.ts",
+    "mobile/src/hooks/use-inbox.ts",
+    "mobile/src/components/ui.tsx",
+    "mobile/src/lib/avatar-color.ts",
+    "mobile/src/providers/auth-provider.tsx",
+    "mobile/DESIGN.md",
+    "mobile/src/global.css",
+    "supabase/migrations/0008_fase3_collab.sql",
+    "supabase/migrations/ (migrasi baru opsional untuk FR-DATA.1 extend get_chat_rooms)",
+    "mobile/src/app/(app)/__tests__/ (test inbox list + thread)",
+    "mobile/src/hooks/__tests__/ (test use-inbox)"
+  ]
+}
