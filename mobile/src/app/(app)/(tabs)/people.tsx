@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import { FlatList } from 'react-native';
-import { Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
 import {
@@ -39,6 +40,7 @@ function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
 }
 
 export default function PeopleScreen() {
+  const router = useRouter();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['org-profiles'],
     queryFn: listOrgProfiles,
@@ -160,6 +162,23 @@ export default function PeopleScreen() {
         />
       )}
 
+      {/* Papan peringkat lengkap — hanya tampil setelah ada periode tertutup (D9). */}
+      {latestClosed ? (
+        <Pressable
+          className="flex-row items-center justify-between rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
+          accessibilityRole="button"
+          accessibilityLabel="Lihat papan peringkat lengkap"
+          onPress={() => router.push('/people-ranking' as Href)}>
+          <View className="flex-1 gap-0.5">
+            <Text className="text-base font-semibold text-black dark:text-white">Papan peringkat</Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+              Ranking periode {latestClosed.period_name}
+            </Text>
+          </View>
+          <Text className="text-lg text-neutral-400">›</Text>
+        </Pressable>
+      ) : null}
+
       <View className="flex-row items-center justify-between">
         <Text className="text-xs font-semibold uppercase text-neutral-400">
           Anggota Organisasi
@@ -170,7 +189,11 @@ export default function PeopleScreen() {
   );
 
   const renderItem = ({ item: p, index: i }: { item: Person; index: number }) => (
-    <View className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+    <Pressable
+      className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
+      accessibilityRole="button"
+      accessibilityLabel={`Buka profil ${personLabel(p)}`}
+      onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
       {/* Hanya tampilkan angka rank untuk user yang punya skor; user tanpa skor → em-dash. */}
       <View className="h-7 w-7 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950">
         <Text className="text-xs font-bold text-blue-700 dark:text-blue-300">
@@ -194,7 +217,8 @@ export default function PeopleScreen() {
           </View>
         ) : null}
       </View>
-    </View>
+      <Text className="text-lg text-neutral-400">›</Text>
+    </Pressable>
   );
 
   return (

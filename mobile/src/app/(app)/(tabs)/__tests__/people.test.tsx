@@ -14,6 +14,11 @@ jest.mock('@/lib/cards', () => ({
   listOrgProfiles: () => mockListOrgProfiles(),
 }));
 
+jest.mock('expo-router', () => ({
+  __esModule: true,
+  useRouter: () => ({ push: jest.fn() }),
+}));
+
 const mockUseActivePeriod = jest.fn();
 const mockUseMyScore = jest.fn();
 const mockUseLatestClosedPeriod = jest.fn();

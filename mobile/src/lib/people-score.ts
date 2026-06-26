@@ -119,6 +119,25 @@ export async function getMyScore(periodId?: string): Promise<UserScoreResult | n
   return data;
 }
 
+/**
+ * Skor user tertentu untuk satu periode (profil People). RLS membatasi visibility (D1):
+ * lolos hanya bila viewer = user itu sendiri, pemegang manage_score_formula/CEO/view_all_workspace,
+ * atau supervisor (is_supervisor_of). Di luar scope → null (graceful, AC-7.26 — bukan error).
+ * userId/periodId kosong → null tanpa fetch.
+ */
+export async function getUserScore(userId: string, periodId: string): Promise<UserScoreResult | null> {
+  if (!userId || !periodId) return null;
+  const { data, error } = await supabase
+    .from('user_score_results')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('period_snapshot_id', periodId)
+    .eq('is_current', true)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 /** Ranking untuk satu periode (ASC rank_number). periodId kosong → array kosong tanpa fetch. */
 export async function listRanking(periodId: string): Promise<RankingSnapshot[]> {
   if (!periodId) return [];

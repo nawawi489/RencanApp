@@ -5,23 +5,19 @@ import { Alert } from 'react-native';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { Badge, Button, Field, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { SubmissionCard } from '@/components/submission-card';
 import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
 import {
   ACTION_PLAN_STATUS_LABEL,
-  EVIDENCE_KIND_LABEL,
   PRIORITY_LABEL,
-  RESULT_VALUE_TYPE_LABEL,
   STATUS_TONE,
   activateActionPlan,
   getActionPlan,
   listSubmissions,
   reviewSubmission,
   startActionPlan,
-  type EvidenceFile,
-  type ResultValue,
-  type SubmissionDetail,
 } from '@/lib/cards';
 import {
   INSTANCE_STATUS_LABEL,
@@ -29,98 +25,23 @@ import {
   type InstanceWithSubmissions,
 } from '@/lib/repeat';
 
-function formatDateTime(iso: string): string {
-  return iso.replace('T', ' ').slice(0, 16);
-}
-
-const REVIEW_STATUS: Record<string, { label: string; tone: 'warn' | 'success' | 'danger' }> = {
-  pending: { label: 'Menunggu Review', tone: 'warn' },
-  approved: { label: 'Disetujui', tone: 'success' },
-  rejected: { label: 'Ditolak', tone: 'danger' },
-};
-
-function EvidenceItem({ ev }: { ev: EvidenceFile }) {
-  const detail = ev.text_content || ev.url || ev.file_name || '—';
-  return (
-    <View className="rounded-lg bg-neutral-50 px-3 py-2 dark:bg-neutral-800/60">
-      <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-        {EVIDENCE_KIND_LABEL[ev.kind] ?? ev.kind}
-      </Text>
-      <Text className="text-sm text-black dark:text-white">{detail}</Text>
-    </View>
-  );
-}
-
-function ResultValueItem({ rv }: { rv: ResultValue }) {
-  return (
-    <View className="flex-row justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2 dark:bg-neutral-800/60">
-      <Text className="text-sm text-neutral-600 dark:text-neutral-300">
-        {rv.label || RESULT_VALUE_TYPE_LABEL[rv.value_type] || 'Nilai'}
-      </Text>
-      <Text className="text-sm font-semibold text-black dark:text-white">{rv.value_text ?? '—'}</Text>
-    </View>
-  );
-}
-
-function SubmissionCard({ s }: { s: SubmissionDetail }) {
-  const status = REVIEW_STATUS[s.review_status] ?? REVIEW_STATUS.pending;
-  return (
-    <SectionCard>
-      <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-bold text-black dark:text-white">Versi {s.version_number}</Text>
-        <Badge label={status.label} tone={status.tone} />
-      </View>
-      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        Oleh {s.submitter ? personLabel(s.submitter) : '—'} · {formatDateTime(s.submitted_at)}
-      </Text>
-      {s.note ? <Text className="text-sm text-black dark:text-white">{s.note}</Text> : null}
-
-      {s.evidence_files.length > 0 ? (
-        <View className="gap-1.5">
-          <Text className="text-xs font-semibold uppercase text-neutral-400">Bukti</Text>
-          {s.evidence_files.map((ev) => (
-            <EvidenceItem key={ev.id} ev={ev} />
-          ))}
-        </View>
-      ) : null}
-
-      {s.action_plan_result_values.length > 0 ? (
-        <View className="gap-1.5">
-          <Text className="text-xs font-semibold uppercase text-neutral-400">Nilai Hasil</Text>
-          {s.action_plan_result_values.map((rv) => (
-            <ResultValueItem key={rv.id} rv={rv} />
-          ))}
-        </View>
-      ) : null}
-
-      {s.review_status === 'rejected' && s.review_reason ? (
-        <View className="rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950/40">
-          <Text className="text-xs font-semibold text-red-700 dark:text-red-300">Alasan ditolak</Text>
-          <Text className="text-sm text-red-700 dark:text-red-300">{s.review_reason}</Text>
-        </View>
-      ) : null}
-      {s.reviewed_at ? (
-        <Text className="text-xs text-neutral-400">
-          Direview {s.reviewer ? `oleh ${personLabel(s.reviewer)} ` : ''}· {formatDateTime(s.reviewed_at)}
-        </Text>
-      ) : null}
-    </SectionCard>
-  );
-}
-
 function InstanceRow({
   inst,
   profileId,
   onSubmit,
+  onOpen,
 }: {
   inst: InstanceWithSubmissions;
   profileId: string | null;
   onSubmit: (id: string) => void;
+  onOpen: (id: string) => void;
 }) {
   const actions = useInstanceActions(inst, profileId);
   const time = (inst.instance_time ?? '').slice(0, 5);
+  // Reviewer perlu jalan masuk ke detail untuk approve/reject (review tidak inline di sini).
+  const needsReview = actions.canReview && inst.status === 'submitted';
   return (
-    <SectionCard>
+    <SectionCard onPress={() => onOpen(inst.id)}>
       <View className="flex-row items-center justify-between">
         <Text className="text-sm font-bold text-black dark:text-white">{inst.instance_date}</Text>
         <Badge label={INSTANCE_STATUS_LABEL[inst.status] ?? inst.status} tone={INSTANCE_STATUS_TONE[inst.status]} />
@@ -131,9 +52,16 @@ function InstanceRow({
           Terlewat — deadline terlewati tanpa submit.
         </Text>
       ) : null}
+      {needsReview ? (
+        <Text className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+          Menunggu review Anda — buka detail untuk menyetujui/menolak.
+        </Text>
+      ) : null}
       {actions.canSubmit ? (
         <Button label="Submit Bukti & Nilai Hasil" onPress={() => onSubmit(inst.id)} />
-      ) : null}
+      ) : (
+        <Text className="text-xs text-neutral-400">Lihat detail & riwayat ›</Text>
+      )}
     </SectionCard>
   );
 }
@@ -142,10 +70,12 @@ function RepeatSection({
   actionPlanId,
   profileId,
   onSubmitInstance,
+  onOpenInstance,
 }: {
   actionPlanId: string;
   profileId: string | null;
   onSubmitInstance: (id: string) => void;
+  onOpenInstance: (id: string) => void;
 }) {
   const { instances, isLoading, compliance, compliancePercent } = useRepeatInstances(actionPlanId, {
     enabled: true,
@@ -172,7 +102,13 @@ function RepeatSection({
         <ActivityIndicator />
       ) : instances.length > 0 ? (
         instances.map((inst) => (
-          <InstanceRow key={inst.id} inst={inst} profileId={profileId} onSubmit={onSubmitInstance} />
+          <InstanceRow
+            key={inst.id}
+            inst={inst}
+            profileId={profileId}
+            onSubmit={onSubmitInstance}
+            onOpen={onOpenInstance}
+          />
         ))
       ) : (
         <Text className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -282,6 +218,9 @@ export default function ActionPlanDetailScreen() {
                 profileId={profile?.id ?? null}
                 onSubmitInstance={(instanceId) =>
                   router.push(`/action-plan/submit?instanceId=${instanceId}` as Href)
+                }
+                onOpenInstance={(instanceId) =>
+                  router.push(`/action-plan/instance/${instanceId}` as Href)
                 }
               />
             ) : null}
