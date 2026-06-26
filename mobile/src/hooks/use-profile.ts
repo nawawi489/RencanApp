@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { MGR_DEFAULT_KEYS } from '@/lib/permission-defaults';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -65,14 +66,12 @@ async function fetchCurrentProfile(): Promise<CurrentProfile> {
   };
 }
 
-// Cermin client-side dari public.has_permission (server tetap penegak akhir).
-// Fase 8: c_level/management default DAPAT create_department, manage_teams, review_deadline_changes
-// (spec §4.2; cocok dgn has_permission migration 0014). Key Fase 8 LAIN (manage_positions,
-// manage_confidential_access, manage_video_briefs) TIDAK default — butuh grant eksplisit.
-const FASE8_MGR_DEFAULTS = ['create_department', 'manage_teams', 'review_deadline_changes'];
+// Cermin client-side dari public.has_permission (server tetap penegak akhir). 6 key default
+// c_level/management bersumber tunggal dari MGR_DEFAULT_KEYS (lib/permission-defaults.ts) agar
+// sinkron dengan has_permission (0016) + is_default (0017). Key LAIN butuh grant eksplisit.
 const ROLE_DEFAULTS: Record<string, string[]> = {
-  c_level: ['create_initiative', 'create_action_plan', 'create_strategy', ...FASE8_MGR_DEFAULTS],
-  management: ['create_initiative', 'create_action_plan', 'create_strategy', ...FASE8_MGR_DEFAULTS],
+  c_level: [...MGR_DEFAULT_KEYS],
+  management: [...MGR_DEFAULT_KEYS],
 };
 
 export function useProfile() {

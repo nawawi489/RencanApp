@@ -24,6 +24,10 @@ export default function AppLayout() {
       />
       <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Action Plan' }} />
       <Stack.Screen
+        name="action-plan/instance/[id]"
+        options={{ headerShown: true, title: 'Instance' }}
+      />
+      <Stack.Screen
         name="action-plan/submit"
         options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
       />
@@ -81,7 +85,20 @@ export default function AppLayout() {
       <Stack.Screen name="settings-status-priority" options={{ headerShown: true, title: 'Status & Prioritas' }} />
       <Stack.Screen name="settings-notifications-rule" options={{ headerShown: true, title: 'Notifications Rule' }} />
       <Stack.Screen name="settings-archive" options={{ headerShown: true, title: 'Arsip' }} />
+      <Stack.Screen name="settings-goal-templates" options={{ headerShown: true, title: 'Goal Template' }} />
+      <Stack.Screen
+        name="settings-permission-users"
+        options={{ headerShown: true, title: 'User & Permission' }}
+      />
       <Stack.Screen name="search" options={{ headerShown: true, title: 'Cari' }} />
+
+      {/* Fase 7 — People & Score (surface) */}
+      <Stack.Screen name="people-ranking" options={{ headerShown: true, title: 'Ranking' }} />
+      <Stack.Screen name="people-profile/[id]" options={{ headerShown: true, title: 'Profil' }} />
+      <Stack.Screen
+        name="manual-score-override"
+        options={{ headerShown: true, title: 'Override Skor', presentation: 'modal' }}
+      />
       <Stack.Screen
         name="deadline-change-request"
         options={{ headerShown: true, title: 'Perubahan Deadline', presentation: 'modal' }}
