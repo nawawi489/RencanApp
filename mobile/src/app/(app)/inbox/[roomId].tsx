@@ -28,11 +28,20 @@ export default function ChatRoomScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- jalankan sekali saat room dibuka
   }, [roomId]);
 
+  const [sendError, setSendError] = useState<string | null>(null);
+
   async function handleSend() {
+    if (isSending) return; // anti double-submit
     const body = text.trim();
     if (!body) return;
-    await send(body);
-    setText('');
+    setSendError(null);
+    try {
+      await send(body);
+      // Reset hanya jika sukses agar input tidak terhapus saat error.
+      setText('');
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Gagal mengirim pesan.');
+    }
   }
 
   return (
@@ -73,6 +82,11 @@ export default function ChatRoomScreen() {
           onChangeText={setText}
           multiline
         />
+        {sendError ? (
+          <Text className="text-sm text-red-600" accessibilityRole="alert">
+            {sendError}
+          </Text>
+        ) : null}
         <Button label="Kirim" onPress={handleSend} loading={isSending} disabled={!text.trim()} />
       </View>
     </Screen>

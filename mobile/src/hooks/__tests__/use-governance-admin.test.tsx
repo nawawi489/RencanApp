@@ -94,7 +94,8 @@ describe('deadline change requests', () => {
       await result.current.reviewRequest({ requestId: 'dcr1', decision: 'approved', entityId: 'ap1' });
     });
     expect(mockGov.reviewDeadlineChange).toHaveBeenCalledWith('dcr1', 'approved', undefined);
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['deadline_change_requests', 'ap1'] });
+    // Invalidate via prefix supaya entityId opsional yang dihilangkan caller tidak bikin list basi.
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['deadline_change_requests'] });
   });
 
   it('[F8-H12] reviewRequest self-approval error propagasi', async () => {
@@ -153,7 +154,8 @@ describe('cancellation', () => {
       await result.current.approveCancellation({ cancellationId: 'c1', entityId: 'i1' });
     });
     expect(mockGov.approveCancellation).toHaveBeenCalledWith('c1');
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['cancellations', 'i1'] });
+    // Invalidate via prefix (entityId opsional & tidak dipakai server).
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['cancellations'] });
   });
 });
 
@@ -192,7 +194,7 @@ describe('evaluation', () => {
 });
 
 describe('archive', () => {
-  it('[F8-H33] archive meneruskan entityType+entityId & invalidate workspace key', async () => {
+  it('[F8-H33] archive meneruskan entityType+entityId & invalidate semua list workspace nyata', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useArchiveActions(), { wrapper });
@@ -200,7 +202,13 @@ describe('archive', () => {
       await result.current.archive({ entityType: 'goal', entityId: 'g1' });
     });
     expect(mockGov.archiveCard).toHaveBeenCalledWith('goal', 'g1');
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['workspace'] });
+    // Key nyata yang dipakai use-workspace.ts; key 'workspace' tidak pernah ada di kode.
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['goals'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['kpi_areas'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['strategies'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['initiatives'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['development_areas'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['problem_statements'] });
   });
 
   it('[F8-H34] archive card active error propagasi', async () => {

@@ -18,7 +18,8 @@ export function avatarColor(seed: string): string {
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) | 0;
   }
-  const index = Math.abs(hash) % AVATAR_PALETTE.length;
+  // Unsigned shift menghindari Math.abs(INT_MIN) === INT_MIN bug → index negatif → undefined.
+  const index = (hash >>> 0) % AVATAR_PALETTE.length;
   return AVATAR_PALETTE[index];
 }
 

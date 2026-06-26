@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { Text, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
@@ -49,20 +50,39 @@ export default function PeopleScreen() {
   const { ranking } = useRanking(latestClosed?.id ?? '');
   const { history } = useMyScoreHistory(6);
   // Sparkline KRONOLOGIS (kiri = terlama). DB urut DESC → reverse.
-  const sparklinePoints = [...history]
-    .reverse()
-    .map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0);
+  const sparklinePoints = useMemo(
+    () => [...history].reverse().map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0),
+    [history],
+  );
 
-  const scoreByUser = new Map<string, number>();
-  for (const r of ranking) scoreByUser.set(r.user_id, r.score);
+  const scoreByUser = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of ranking) m.set(r.user_id, r.score);
+    return m;
+  }, [ranking]);
 
-  const peopleRaw = (data ?? []) as Person[];
-  const people: Person[] = peopleRaw.map((p) => ({
-    ...p,
-    score: scoreByUser.has(p.id) ? scoreByUser.get(p.id)! : p.score ?? null,
-  }));
+  // Roster diurutkan by score DESC supaya angka rank (i+1) sesuai dengan posisi nyata.
+  // User tanpa skor → ke bawah dan tak diberi badge angka rank.
+  const people: Person[] = useMemo(() => {
+    const raw = (data ?? []) as Person[];
+    const mapped = raw.map((p) => ({
+      ...p,
+      score: scoreByUser.has(p.id) ? scoreByUser.get(p.id)! : p.score ?? null,
+    }));
+    mapped.sort((a, b) => {
+      const sa = a.score ?? -Infinity;
+      const sb = b.score ?? -Infinity;
+      if (sa !== sb) return sb - sa;
+      return personLabel(a).localeCompare(personLabel(b));
+    });
+    return mapped;
+  }, [data, scoreByUser]);
+
   const myEffective = effectiveScore(myScore ?? null);
-  const myBreakdown = myScore ? breakdownToMetrics(myScore.metric_breakdown) : [];
+  const myBreakdown = useMemo(
+    () => (myScore ? breakdownToMetrics(myScore.metric_breakdown) : []),
+    [myScore],
+  );
 
   return (
     <Screen title="People" subtitle="Ranking dan profil pencapaian.">
@@ -128,8 +148,11 @@ export default function PeopleScreen() {
               <View
                 key={p.id}
                 className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+                {/* Hanya tampilkan angka rank untuk user yang punya skor; user tanpa skor → em-dash. */}
                 <View className="h-7 w-7 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950">
-                  <Text className="text-xs font-bold text-blue-700 dark:text-blue-300">{i + 1}</Text>
+                  <Text className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                    {p.score != null ? i + 1 : '—'}
+                  </Text>
                 </View>
                 <Avatar name={personLabel(p)} seed={p.id} />
                 <View className="flex-1">

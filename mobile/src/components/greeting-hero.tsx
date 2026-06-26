@@ -13,7 +13,9 @@ export function GreetingHero({
 }) {
   return (
     <LinearGradient
-      colors={['#1564b3', '#14845c']}
+      // Brand gradient: dari brand-dark ke green-700 #15803d (AA-safe utk teks putih).
+      // #14845c sebelumnya gagal AA — lihat DESIGN.md §2.
+      colors={['#1564b3', '#15803d']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{ borderRadius: 20, padding: 20 }}>

@@ -80,7 +80,7 @@ describe('deadline-change-request', () => {
     fireEvent.changeText(dl, '2026-06-30');
     await waitFor(() => expect(dl.props.value).toBe('2026-06-30'));
     fireEvent.press(screen.getByLabelText('Kirim Permintaan'));
-    expect(await screen.findByText(/tidak boleh lebih awal/i)).toBeTruthy();
+    expect(await screen.findByText(/harus setelah deadline saat ini/i)).toBeTruthy();
     expect(mockCreateRequest).not.toHaveBeenCalled();
   });
 

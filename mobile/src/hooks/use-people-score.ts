@@ -143,6 +143,8 @@ export function usePeriodActions() {
     onSuccess: (_data, periodId) => {
       qc.invalidateQueries({ queryKey: ['my_score'] });
       qc.invalidateQueries({ queryKey: ['ranking', periodId] });
+      // Recalculation mengubah histori per-user → sparkline Trend basi tanpa invalidasi ini.
+      qc.invalidateQueries({ queryKey: ['my_score_history'] });
     },
   });
 
@@ -152,6 +154,9 @@ export function usePeriodActions() {
       qc.invalidateQueries({ queryKey: ['active_period'] });
       qc.invalidateQueries({ queryKey: ['ranking', periodId] });
       qc.invalidateQueries({ queryKey: ['my_score'] });
+      // Periode tertutup baru → People ScoreBadge (sumbernya getLatestClosedPeriod) jadi basi.
+      qc.invalidateQueries({ queryKey: ['latest_closed_period'] });
+      qc.invalidateQueries({ queryKey: ['my_score_history'] });
     },
   });
 
@@ -178,7 +183,9 @@ export function useScoreOverride(periodId: string) {
       overrideUserScore({ periodId, ...args }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my_score'] });
-      qc.invalidateQueries({ queryKey: ['ranking', periodId] });
+      // Invalidate semua ranking (override pada periode closed mempengaruhi badge People juga).
+      qc.invalidateQueries({ queryKey: ['ranking'] });
+      qc.invalidateQueries({ queryKey: ['my_score_history'] });
     },
   });
   return {
@@ -208,6 +215,8 @@ export function useFormulaActions(templateId: string) {
       activateScoreFormulaVersion(args.versionId, args.effectiveDate),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['score_formula_versions', templateId] });
+      // Aktivasi mengubah "active version" pada listing template (D13 transparan org).
+      qc.invalidateQueries({ queryKey: ['score_formula_templates'] });
     },
   });
 
@@ -215,6 +224,7 @@ export function useFormulaActions(templateId: string) {
     mutationFn: (input: AssignScoreFormulaInput) => assignScoreFormula(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['score_formula_versions', templateId] });
+      qc.invalidateQueries({ queryKey: ['score_formula_templates'] });
     },
   });
 

@@ -44,7 +44,8 @@ function Chips({
         return (
           <Pressable
             key={opt}
-            className={`rounded-full border px-3 py-1.5 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
+            accessibilityRole="button"
+            className={`min-h-[44px] items-center justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
             onPress={() => onChange(opt)}>
             <Text className={active ? 'text-xs font-semibold text-white' : 'text-xs text-black dark:text-white'}>
               {labels[opt] ?? opt}
@@ -171,7 +172,9 @@ export default function SubmitScreen() {
               />
               {evidence.length > 1 ? (
                 <Pressable
-                  className="self-end active:opacity-60"
+                  accessibilityRole="button"
+                  accessibilityLabel="Hapus bukti"
+                  className="min-h-[44px] items-center justify-center self-end px-3 active:opacity-60"
                   onPress={() => setEvidence((prev) => prev.filter((_, idx) => idx !== i))}>
                   <Text className="text-sm text-red-500">Hapus</Text>
                 </Pressable>
@@ -179,7 +182,8 @@ export default function SubmitScreen() {
             </View>
           ))}
           <Pressable
-            className="active:opacity-60"
+            accessibilityRole="button"
+            className="min-h-[44px] items-center justify-center self-start px-3 active:opacity-60"
             onPress={() => setEvidence((prev) => [...prev, { kind: 'text_note', content: '' }])}>
             <Text className="text-sm font-semibold text-brand-dark">+ Tambah bukti</Text>
           </Pressable>
@@ -219,14 +223,17 @@ export default function SubmitScreen() {
                 }
               />
               <Pressable
-                className="self-end active:opacity-60"
+                accessibilityRole="button"
+                accessibilityLabel="Hapus nilai hasil"
+                className="min-h-[44px] items-center justify-center self-end px-3 active:opacity-60"
                 onPress={() => setResults((prev) => prev.filter((_, idx) => idx !== i))}>
                 <Text className="text-sm text-red-500">Hapus</Text>
               </Pressable>
             </View>
           ))}
           <Pressable
-            className="active:opacity-60"
+            accessibilityRole="button"
+            className="min-h-[44px] items-center justify-center self-start px-3 active:opacity-60"
             onPress={() => setResults((prev) => [...prev, { label: '', value_type: 'number', value_text: '' }])}>
             <Text className="text-sm font-semibold text-brand-dark">+ Tambah Nilai Hasil</Text>
           </Pressable>
