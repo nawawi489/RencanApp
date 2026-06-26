@@ -26,6 +26,7 @@ Master index of all wiki pages. Updated on every ingest.
 
 - [[architecture]] — Pola "thick database, thin client": DB-centric serverless, business logic di Postgres (RLS/trigger/RPC)
 - [[audit-governance]] — Activity Log & Governance Violation append-only; severity & integritas audit
+- [[evidence-kinds]] — Whitelist `evidence_files.kind` (termasuk `link_generic`) + aturan mapping link untuk UI
 - [[execution-loop]] — Bukti → Nilai Hasil → Review; submission versioning & evidence locking
 - [[fase6-spec]] — Spec eksekutabel Fase 6 Development Workspace (AC, data contract, non-goals, TDD handoff)
 - [[fase6-tdd-plan]] — Rencana TDD red→green→refactor Fase 6 + addendum kritik (missing cases & concerns)
@@ -39,3 +40,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[konsep-dan-fondasi]] — Ringkasan PRD 01: definisi EMS, scope, bahasa, status, makna card
 - [[sistem-permission-data-governance]] — Ringkasan PRD 03: permission, surface, score, audit, DB
 - [[spesifikasi-card-dan-eksekusi]] — Ringkasan PRD 02: field card, loop eksekusi, MBR, lifecycle
+
+## Test Reports
+
+- [[test-reports/2026-06-26-manual-qa]] — Pengujian manual menyeluruh V1.8.1 (Fase 0–8): Jest 463/463, DB contract A–D Fase 8 + sampling Fase 3–7, 16 skenario E2E per role, advisor triage

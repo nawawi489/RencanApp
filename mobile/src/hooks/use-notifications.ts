@@ -25,14 +25,22 @@ export function useNotifications(tab?: NotificationTab) {
   };
 }
 
-/** Jumlah notifikasi belum dibaca lintas tab (untuk badge header / tab Perlu Tindakan). */
+/**
+ * Jumlah notifikasi belum dibaca lintas tab (untuk badge header / tab Perlu Tindakan).
+ * Surface isLoading/isError supaya pemanggil bisa menyembunyikan badge saat error
+ * — dulu fail-silent sebagai "0" yang menutupi notifikasi nyata.
+ */
 export function useUnreadCount() {
   const q = useQuery({
     queryKey: ['notifications', 'unread'],
     queryFn: () => listNotifications(),
   });
 
-  return { count: unreadCount(q.data ?? []) };
+  return {
+    count: unreadCount(q.data ?? []),
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
 }
 
 /** Aksi tulis: tandai satu / semua dibaca; sukses → invalidate semua query notifications. */

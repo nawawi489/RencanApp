@@ -4,7 +4,8 @@
 // Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { FlatList } from 'react-native';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 import {
   Badge,
@@ -151,7 +152,31 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
   );
 }
 
-function PerformancePane() {
+function PaneTopHeader({
+  tab,
+  onTabChange,
+}: {
+  tab: Tab;
+  onTabChange: (t: Tab) => void;
+}) {
+  return (
+    <View className="gap-5 pb-5">
+      <View className="gap-1">
+        <Text className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
+      </View>
+      <TabBar<Tab>
+        tabs={[
+          { key: 'performance', label: WS_TABS.performance },
+          { key: 'development', label: WS_TABS.development },
+        ]}
+        active={tab}
+        onChange={onTabChange}
+      />
+    </View>
+  );
+}
+
+function PerformancePane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab) => void }) {
   const router = useRouter();
   const { can } = useProfile();
   const goalsQ = useGoals();
@@ -166,66 +191,77 @@ function PerformancePane() {
     }, []),
   );
 
-  return (
-    <View className="gap-5">
+  const header = (
+    <View className="gap-5 pb-3">
+      <PaneTopHeader tab={tab} onTabChange={onTabChange} />
       <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_COPY.subtitle}</Text>
-
       {canCreate ? (
         <Button label={WS_COPY.btnGoalBaru} onPress={() => router.push('/goal-wizard' as Href)} />
       ) : null}
+      <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
+      {goalsQ.isLoading ? <SkeletonList count={3} /> : null}
+      {goalsQ.isError ? <ErrorState onRetry={() => goalsQ.refetch()} /> : null}
+    </View>
+  );
 
-      <View className="gap-3">
-        <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
-        {goalsQ.isLoading ? (
-          <SkeletonList count={3} />
-        ) : goalsQ.isError ? (
-          <ErrorState onRetry={() => goalsQ.refetch()} />
-        ) : goalsQ.goals.length > 0 ? (
-          <View className="gap-3">
-            {goalsQ.goals.map((goal) => (
-              <GoalRow key={goal.id} goal={goal} />
-            ))}
-          </View>
-        ) : (
-          <EmptyState
-            title={WS_COPY.emptyGoalTitle}
-            description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
-            action={
-              canCreate
-                ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
-                : undefined
-            }
-          />
-        )}
-      </View>
+  const footer = (
+    <View className="gap-3 pt-5">
+      <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
+      {flatQ.isLoading ? (
+        <SkeletonList count={2} />
+      ) : flatQ.isError ? (
+        <ErrorState onRetry={() => flatQ.refetch()} />
+      ) : flatQ.initiatives.length > 0 ? (
+        <View className="gap-3">
+          {flatQ.initiatives.map((item) => (
+            <InitiativeRow
+              key={item.id}
+              item={item}
+              onPress={() => router.push(`/initiative/${item.id}` as Href)}
+            />
+          ))}
+        </View>
+      ) : (
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+          {WS_COPY.emptyFlatInitiative}
+        </Text>
+      )}
+    </View>
+  );
 
-      <View className="gap-3">
-        <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
-        {flatQ.isLoading ? (
-          <SkeletonList count={2} />
-        ) : flatQ.isError ? (
-          <ErrorState onRetry={() => flatQ.refetch()} />
-        ) : flatQ.initiatives.length > 0 ? (
-          <View className="gap-3">
-            {flatQ.initiatives.map((item) => (
-              <InitiativeRow
-                key={item.id}
-                item={item}
-                onPress={() => router.push(`/initiative/${item.id}` as Href)}
-              />
-            ))}
-          </View>
-        ) : (
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-            {WS_COPY.emptyFlatInitiative}
-          </Text>
-        )}
-      </View>
+  const goalsData = goalsQ.isLoading || goalsQ.isError ? [] : goalsQ.goals;
+  const showEmpty = !goalsQ.isLoading && !goalsQ.isError && goalsQ.goals.length === 0;
+
+  const renderItem = ({ item: goal }: { item: GoalWithKpiCount }) => <GoalRow goal={goal} />;
+
+  return (
+    <View className="flex-1 bg-neutral-50 dark:bg-black">
+      <FlatList<GoalWithKpiCount>
+        contentContainerStyle={{ gap: 12, padding: 20 }}
+        data={goalsData}
+        keyExtractor={(goal) => goal.id}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          showEmpty ? (
+            <EmptyState
+              title={WS_COPY.emptyGoalTitle}
+              description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
+              action={
+                canCreate
+                  ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
+                  : undefined
+              }
+            />
+          ) : null
+        }
+        ListFooterComponent={footer}
+        renderItem={renderItem}
+      />
     </View>
   );
 }
 
-function DevelopmentPane() {
+function DevelopmentPane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab) => void }) {
   const router = useRouter();
   const { can } = useProfile();
   const devQ = useDevelopmentAreas();
@@ -238,48 +274,58 @@ function DevelopmentPane() {
     }, []),
   );
 
-  return (
-    <View className="gap-5">
+  const header = (
+    <View className="gap-5 pb-3">
+      <PaneTopHeader tab={tab} onTabChange={onTabChange} />
       <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_DEV_COPY.subtitle}</Text>
-
       {canCreate ? (
         <Button
           label={WS_DEV_COPY.btnDevAreaBaru}
           onPress={() => router.push('/development-area/new' as Href)}
         />
       ) : null}
+      <Text className="text-lg font-bold text-black dark:text-white">
+        {WS_DEV_COPY.sectionDevAreas}
+      </Text>
+      {devQ.isLoading ? <SkeletonList count={3} /> : null}
+      {devQ.isError ? <ErrorState onRetry={() => devQ.refetch()} /> : null}
+    </View>
+  );
 
-      <View className="gap-3">
-        <Text className="text-lg font-bold text-black dark:text-white">
-          {WS_DEV_COPY.sectionDevAreas}
-        </Text>
-        {devQ.isLoading ? (
-          <SkeletonList count={3} />
-        ) : devQ.isError ? (
-          <ErrorState onRetry={() => devQ.refetch()} />
-        ) : devQ.developmentAreas.length > 0 ? (
-          <View className="gap-3">
-            {devQ.developmentAreas.map((d) => (
-              <DevelopmentAreaRow key={d.id} devArea={d} />
-            ))}
-          </View>
-        ) : (
-          <EmptyState
-            title={WS_DEV_COPY.emptyDevAreaTitle}
-            description={
-              canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
-            }
-            action={
-              canCreate
-                ? {
-                    label: WS_DEV_COPY.btnDevAreaBaru,
-                    onPress: () => router.push('/development-area/new' as Href),
-                  }
-                : undefined
-            }
-          />
-        )}
-      </View>
+  const devData = devQ.isLoading || devQ.isError ? [] : devQ.developmentAreas;
+  const showEmpty = !devQ.isLoading && !devQ.isError && devQ.developmentAreas.length === 0;
+
+  const renderItem = ({ item: d }: { item: DevelopmentAreaWithProblemCount }) => (
+    <DevelopmentAreaRow devArea={d} />
+  );
+
+  return (
+    <View className="flex-1 bg-neutral-50 dark:bg-black">
+      <FlatList<DevelopmentAreaWithProblemCount>
+        contentContainerStyle={{ gap: 12, padding: 20 }}
+        data={devData}
+        keyExtractor={(d) => d.id}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          showEmpty ? (
+            <EmptyState
+              title={WS_DEV_COPY.emptyDevAreaTitle}
+              description={
+                canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
+              }
+              action={
+                canCreate
+                  ? {
+                      label: WS_DEV_COPY.btnDevAreaBaru,
+                      onPress: () => router.push('/development-area/new' as Href),
+                    }
+                  : undefined
+              }
+            />
+          ) : null
+        }
+        renderItem={renderItem}
+      />
     </View>
   );
 }
@@ -287,24 +333,9 @@ function DevelopmentPane() {
 export default function WorkspaceScreen() {
   const [tab, setTab] = useState<Tab>('performance');
 
-  return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <View className="gap-5 p-5">
-        <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
-        </View>
-
-        <TabBar<Tab>
-          tabs={[
-            { key: 'performance', label: WS_TABS.performance },
-            { key: 'development', label: WS_TABS.development },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
-
-        {tab === 'performance' ? <PerformancePane /> : <DevelopmentPane />}
-      </View>
-    </ScrollView>
+  return tab === 'performance' ? (
+    <PerformancePane tab={tab} onTabChange={setTab} />
+  ) : (
+    <DevelopmentPane tab={tab} onTabChange={setTab} />
   );
 }

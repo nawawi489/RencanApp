@@ -212,7 +212,7 @@ describe('usePeriodActions — open / calculate / close + invalidasi', () => {
 });
 
 describe('useScoreOverride — single-actor', () => {
-  it('[10] override → overrideUserScore; invalidasi [my_score] + [ranking, p1]', async () => {
+  it('[10] override → overrideUserScore; invalidasi [my_score] + prefix [ranking] + [my_score_history]', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useScoreOverride('p1'), { wrapper });
@@ -223,9 +223,12 @@ describe('useScoreOverride — single-actor', () => {
       periodId: 'p1', userId: 'u2', manualScore: 82, reason: 'koreksi',
     });
     const keys = spy.mock.calls.map(c => JSON.stringify(c[0]));
+    // Override pada periode closed juga mempengaruhi badge People; invalidate prefix 'ranking'.
+    // History juga ikut basi → invalidate 'my_score_history'.
     expect(keys).toEqual(expect.arrayContaining([
       JSON.stringify({ queryKey: ['my_score'] }),
-      JSON.stringify({ queryKey: ['ranking', 'p1'] }),
+      JSON.stringify({ queryKey: ['ranking'] }),
+      JSON.stringify({ queryKey: ['my_score_history'] }),
     ]));
   });
 

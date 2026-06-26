@@ -56,12 +56,19 @@ export function effectiveScore(r: UserScoreResult | null): number | null {
 
 // ---------------------------------------------------------------- reads (RLS)
 
-/** Periode aktif untuk org user (max 1 per D9/AC-7.29). null saat tak ada. */
+/**
+ * Periode aktif untuk org user (max 1 per D9/AC-7.29). null saat tak ada.
+ * Order+limit(1) sebagai pengaman defensif: jika RLS pernah mengekspos >1 baris aktif
+ * (mis. supervisor multi-org di masa depan), .maybeSingle() tanpa limit akan PGRST116 →
+ * mematikan layar Score. Sort tie-break by period_start desc → ambil yang paling baru.
+ */
 export async function getActivePeriod(): Promise<PeriodSnapshot | null> {
   const { data, error } = await supabase
     .from('period_snapshots')
     .select('*')
     .eq('status', 'active')
+    .order('period_start', { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -134,14 +141,18 @@ export async function listMyScoreHistory(limit: number = 6): Promise<UserScoreRe
   const uid = auth.user?.id;
   if (!uid) throw new Error('Not authenticated');
   // Order by period_start (not calculated_at) so recalculations don't break sparkline order.
+  // Server-side ORDER + LIMIT memastikan ambil window terbaru, bukan arbitrary N rows lalu sort.
   const { data, error } = await supabase
     .from('user_score_results')
     .select('*, period_snapshots!period_snapshot_id(period_start)')
     .eq('user_id', uid)
     .eq('is_current', true)
+    .order('period_start', { ascending: false, foreignTable: 'period_snapshots' })
     .limit(limit);
   if (error) throw error;
   const rows = (data ?? []) as Array<UserScoreResult & { period_snapshots: { period_start: string } | null }>;
+  // Safety net: re-sort client-side identitas urutan (server-side order via foreignTable kadang
+  // tidak memerintahkan baris induk; klien menjamin newest-first untuk konsumen).
   rows.sort((a, b) => {
     const da = a.period_snapshots?.period_start ?? '';
     const db = b.period_snapshots?.period_start ?? '';

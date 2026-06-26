@@ -29,21 +29,38 @@ export default function DeadlineChangeRequestScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const canReview = can('review_deadline_changes');
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
   async function handleSubmit() {
+    if (isPending) return; // anti double-submit
     setError(null);
-    if (!newDeadline.trim() || newDeadline <= oldDeadline) {
-      setError('Tanggal baru tidak boleh lebih awal dari deadline saat ini.');
+    const next = newDeadline.trim();
+    if (!DATE_RE.test(next)) {
+      setError('Format tanggal harus YYYY-MM-DD.');
+      return;
+    }
+    if (!oldDeadline || !DATE_RE.test(oldDeadline)) {
+      setError('Deadline saat ini tidak valid.');
+      return;
+    }
+    // Bandingkan sebagai Date (lexicographic kebetulan jalan utk YYYY-MM-DD, tapi explicit lebih aman).
+    if (new Date(next) <= new Date(oldDeadline)) {
+      setError('Tanggal baru harus setelah deadline saat ini.');
       return;
     }
     if (!reason.trim()) {
       setError('Alasan wajib diisi.');
       return;
     }
-    await createRequest({ entityId: actionPlanId, oldDeadline, newDeadline, reason: reason.trim(), impact });
-    setNewDeadline('');
-    setReason('');
-    setImpact('');
+    try {
+      await createRequest({ entityId: actionPlanId, oldDeadline, newDeadline: next, reason: reason.trim(), impact });
+      // Reset hanya pada jalur sukses agar input tidak terhapus saat error jaringan.
+      setNewDeadline('');
+      setReason('');
+      setImpact('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal mengirim permintaan.');
+    }
   }
 
   return (

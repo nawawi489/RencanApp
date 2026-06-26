@@ -412,6 +412,10 @@ export function useStrategyActions(kpiAreaId: string) {
     mutationFn: (input: NewStrategy) => createStrategy(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['strategies', kpiAreaId] });
+      // KPI Area & Goal punya embedded count anak → wajib refresh agar badge tidak basi.
+      // Tidak ada goalId di scope; pakai prefix.
+      qc.invalidateQueries({ queryKey: ['kpi_areas'] });
+      qc.invalidateQueries({ queryKey: ['goal'] });
     },
   });
 
@@ -419,6 +423,8 @@ export function useStrategyActions(kpiAreaId: string) {
     mutationFn: (id: string) => activateStrategy(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['strategies', kpiAreaId] });
+      qc.invalidateQueries({ queryKey: ['kpi_areas'] });
+      qc.invalidateQueries({ queryKey: ['goal'] });
     },
   });
 

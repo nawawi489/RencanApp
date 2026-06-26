@@ -229,16 +229,20 @@ export type NewInitiative = {
 };
 
 export async function createInitiative(input: NewInitiative): Promise<Initiative> {
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth, error: authErr } = await supabase.auth.getUser();
+  if (authErr) throw authErr;
   const uid = auth.user?.id;
-  const { data: profile } = await supabase
+  if (!uid) throw new Error('Not authenticated');
+  const { data: profile, error: profErr } = await supabase
     .from('profiles')
     .select('organization_id')
-    .eq('id', uid!)
+    .eq('id', uid)
     .single();
+  if (profErr) throw profErr;
+  if (!profile?.organization_id) throw new Error('Organization not found');
   const { data, error } = await supabase
     .from('initiatives')
-    .insert({ ...input, organization_id: profile!.organization_id!, created_by: uid! })
+    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;
@@ -261,16 +265,20 @@ export type NewActionPlan = {
 };
 
 export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan> {
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth, error: authErr } = await supabase.auth.getUser();
+  if (authErr) throw authErr;
   const uid = auth.user?.id;
-  const { data: profile } = await supabase
+  if (!uid) throw new Error('Not authenticated');
+  const { data: profile, error: profErr } = await supabase
     .from('profiles')
     .select('organization_id')
-    .eq('id', uid!)
+    .eq('id', uid)
     .single();
+  if (profErr) throw profErr;
+  if (!profile?.organization_id) throw new Error('Organization not found');
   const { data, error } = await supabase
     .from('action_plans')
-    .insert({ ...input, organization_id: profile!.organization_id!, created_by: uid! })
+    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;

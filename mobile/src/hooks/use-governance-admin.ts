@@ -48,8 +48,10 @@ export function useDeadlineChangeActions() {
   const reviewM = useMutation({
     mutationFn: (input: { requestId: string; decision: 'approved' | 'rejected'; reason?: string; entityId?: string }) =>
       reviewDeadlineChange(input.requestId, input.decision, input.reason),
-    onSuccess: (_d, vars) =>
-      qc.invalidateQueries({ queryKey: ['deadline_change_requests', vars.entityId] }),
+    // Server tidak menerima entityId; invalidate prefix supaya semua list DCR ikut refresh
+    // tanpa bergantung pada caller mengirim entityId (yang opsional).
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['deadline_change_requests'] }),
   });
   return {
     createRequest: (input: NewDeadlineChangeRequest) => createM.mutateAsync(input),
@@ -80,7 +82,9 @@ export function useCancellationActions() {
   });
   const approveM = useMutation({
     mutationFn: (input: { cancellationId: string; entityId?: string }) => approveCancellation(input.cancellationId),
-    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['cancellations', vars.entityId] }),
+    // entityId opsional & tidak dipakai server; invalidate prefix supaya list cancellations refresh
+    // tanpa bergantung pada caller mengirim entityId.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cancellations'] }),
   });
   return {
     cancel: (input: { entityType: CardEntityType; entityId: string; reason: string }) => cancelM.mutateAsync(input),
@@ -125,9 +129,16 @@ export function useArchiveActions() {
   const archiveM = useMutation({
     mutationFn: (input: { entityType: CardEntityType; entityId: string }) =>
       archiveCard(input.entityType, input.entityId),
+    // Invalidate semua key list workspace nyata (use-workspace.ts). Key 'workspace' tidak dipakai
+    // di mana pun — sebelumnya cuma 'initiatives' yang ke-invalidate karena prefix match.
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['workspace'] });
+      qc.invalidateQueries({ queryKey: ['goals'] });
+      qc.invalidateQueries({ queryKey: ['goal'] });
+      qc.invalidateQueries({ queryKey: ['kpi_areas'] });
+      qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['initiatives'] });
+      qc.invalidateQueries({ queryKey: ['development_areas'] });
+      qc.invalidateQueries({ queryKey: ['problem_statements'] });
     },
   });
   return {

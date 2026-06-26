@@ -2,6 +2,7 @@
 // notifikasi action_plan membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
+import { FlatList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
@@ -82,41 +83,93 @@ export default function NotificationsScreen() {
     }
   }
 
-  return (
-    <Screen title="Notifications" subtitle="Notifikasi resmi dan respons.">
+  const header = (
+    <View className="gap-5 pb-3">
+      <View className="gap-1">
+        <Text className="text-2xl font-bold text-black dark:text-white">Notifications</Text>
+        <Text className="text-base text-neutral-500 dark:text-neutral-400">
+          Notifikasi resmi dan respons.
+        </Text>
+      </View>
       {count > 0 ? (
         <Pressable
           onPress={() => markAllRead()}
           className="min-h-[44px] items-center justify-center self-start rounded-xl border border-neutral-300 px-4 py-2.5 active:opacity-70 dark:border-neutral-700"
           accessibilityRole="button"
           accessibilityLabel="Tandai semua dibaca">
-          <Text className="text-sm font-semibold text-black dark:text-white">Tandai semua dibaca</Text>
+          <Text className="text-sm font-semibold text-black dark:text-white">
+            Tandai semua dibaca
+          </Text>
         </Pressable>
       ) : null}
-
       <TabBar tabs={tabs} active={tab} onChange={setTab} />
+    </View>
+  );
 
-      {isLoading ? (
+  if (isLoading) {
+    return (
+      <Screen title="Notifications" subtitle="Notifikasi resmi dan respons.">
+        {count > 0 ? (
+          <Pressable
+            onPress={() => markAllRead()}
+            className="min-h-[44px] items-center justify-center self-start rounded-xl border border-neutral-300 px-4 py-2.5 active:opacity-70 dark:border-neutral-700"
+            accessibilityRole="button"
+            accessibilityLabel="Tandai semua dibaca">
+            <Text className="text-sm font-semibold text-black dark:text-white">
+              Tandai semua dibaca
+            </Text>
+          </Pressable>
+        ) : null}
+        <TabBar tabs={tabs} active={tab} onChange={setTab} />
         <SkeletonList count={4} />
-      ) : isError ? (
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen title="Notifications" subtitle="Notifikasi resmi dan respons.">
+        {count > 0 ? (
+          <Pressable
+            onPress={() => markAllRead()}
+            className="min-h-[44px] items-center justify-center self-start rounded-xl border border-neutral-300 px-4 py-2.5 active:opacity-70 dark:border-neutral-700"
+            accessibilityRole="button"
+            accessibilityLabel="Tandai semua dibaca">
+            <Text className="text-sm font-semibold text-black dark:text-white">
+              Tandai semua dibaca
+            </Text>
+          </Pressable>
+        ) : null}
+        <TabBar tabs={tabs} active={tab} onChange={setTab} />
         <ErrorState
           title="Gagal memuat notifikasi"
           description="Periksa koneksi lalu coba lagi."
           onRetry={() => refetch()}
         />
-      ) : notifications.length === 0 ? (
-        <EmptyState
-          icon={<Text className="text-2xl">🔔</Text>}
-          title="Belum ada notifikasi"
-          description="Review request, approval, deadline reminder, dan repeat due akan tampil di sini."
-        />
-      ) : (
-        <View className="gap-3">
-          {notifications.map((item) => (
-            <NotificationRow key={item.id} item={item} onPress={() => openRow(item)} />
-          ))}
-        </View>
-      )}
-    </Screen>
+      </Screen>
+    );
+  }
+
+  const renderItem = ({ item }: { item: Notification }) => (
+    <NotificationRow item={item} onPress={() => openRow(item)} />
+  );
+
+  return (
+    <View className="flex-1 bg-white dark:bg-black">
+      <FlatList<Notification>
+        contentContainerStyle={{ gap: 12, padding: 20 }}
+        data={notifications}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          <EmptyState
+            icon={<Text className="text-2xl">🔔</Text>}
+            title="Belum ada notifikasi"
+            description="Review request, approval, deadline reminder, dan repeat due akan tampil di sini."
+          />
+        }
+        renderItem={renderItem}
+      />
+    </View>
   );
 }

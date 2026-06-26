@@ -66,7 +66,7 @@ function FormulaVersionCard({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Aktifkan versi ${version.version_number}`}
-          className="h-9 items-center justify-center rounded-lg bg-brand-dark active:opacity-80"
+          className="min-h-[44px] items-center justify-center rounded-lg bg-brand-dark px-4 py-2 active:opacity-80"
           onPress={() => onActivate(version.id)}>
           <Text className="text-sm font-semibold text-white">Aktifkan</Text>
         </Pressable>
@@ -180,6 +180,10 @@ export default function SettingsScoreFormulaScreen() {
       setInlineError('Skor manual harus angka.');
       return;
     }
+    if (scoreNum < 0 || scoreNum > 100) {
+      setInlineError('Skor manual harus dalam rentang 0–100.');
+      return;
+    }
     try {
       await override({ userId: targetUserId.trim(), manualScore: scoreNum, reason: trimmedReason });
       Alert.alert('Berhasil', 'Override skor tersimpan.');
@@ -281,7 +285,7 @@ export default function SettingsScoreFormulaScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Simpan Override"
                 disabled={isPending}
-                className={`h-11 items-center justify-center rounded-xl ${
+                className={`min-h-[44px] items-center justify-center rounded-xl px-4 py-3 ${
                   isPending ? 'bg-neutral-300 dark:bg-neutral-700' : 'bg-brand-dark active:opacity-80'
                 }`}
                 onPress={submitOverride}>

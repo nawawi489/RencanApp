@@ -134,14 +134,21 @@ export default function HomeScreen() {
   const overdueQ = useQuery({ queryKey: ['home-overdue'], queryFn: listOverdueItems });
   const nearQ = useQuery({ queryKey: ['home-near'], queryFn: listNearDeadline });
 
+  // Depend hanya pada fungsi refetch (identitas stabil) — bukan seluruh query object yang
+  // identitasnya berubah tiap render, menyebabkan refetch berlebih saat focus.
+  const refetchMine = mineQ.refetch;
+  const refetchReview = reviewQ.refetch;
+  const refetchTodayRepeat = todayRepeatQ.refetch;
+  const refetchOverdue = overdueQ.refetch;
+  const refetchNear = nearQ.refetch;
   useFocusEffect(
     useCallback(() => {
-      mineQ.refetch();
-      reviewQ.refetch();
-      todayRepeatQ.refetch();
-      overdueQ.refetch();
-      nearQ.refetch();
-    }, [mineQ, reviewQ, todayRepeatQ, overdueQ, nearQ]),
+      refetchMine();
+      refetchReview();
+      refetchTodayRepeat();
+      refetchOverdue();
+      refetchNear();
+    }, [refetchMine, refetchReview, refetchTodayRepeat, refetchOverdue, refetchNear]),
   );
 
   const mine = mineQ.data ?? [];

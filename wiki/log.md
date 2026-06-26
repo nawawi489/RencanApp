@@ -163,3 +163,29 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
   - UI live: Expo web preview, dual-tab Workspace render & switch OK; Development pane shows + button + EmptyState dengan copy benar.
 - Critic gaps closed: MC-1 (42501 INSERT...RETURNING DA+PS), MC-4 (MBR blokir_aktivasi gate untested), CN-5 (gate ambigu), CN-7 (server-side has_permission deny C-Level w/o grant), CN-8 (problem_statement_in_my_org null-safe untuk Performance Initiative backward-compat).
 - Belum di-commit. Branch: feat/fase-4-performance-workspace.
+
+## [2026-06-26] qa | Manual QA menyeluruh V1.8.1
+
+- Pages created: [[test-reports/2026-06-26-manual-qa]]
+- Pages updated: [[index]]
+- Highlights:
+  - Jest mobile: **463/463 PASS** (53 suite)
+  - DB contract: 4/4 Fase 8 + 5/5 sampling Fase 3-7 PASS
+  - 16 skenario E2E per role (CEO/Manager/Staff) — semua PASS
+  - Advisor: 0 BLOCKER, 1 HIGH (leaked-password protection off), 4 MEDIUM perf
+  - Findings F-1..F-8; verdict GO setelah F-2/F-3/F-4 (~30 menit kerja)
+
+## [2026-06-26] update | QA follow-up fixes V1.8.1 — migrasi 0015 (F-1/F-3/F-4/F-5/F-6)
+
+- Files added: supabase/migrations/0015_qa_followup_fixes.sql; wiki/concepts/evidence-kinds.md
+- Files updated: wiki/test-reports/2026-06-26-manual-qa.md (§ Remediation); wiki/log.md; wiki/index.md
+- Diterapkan ke DB live (project fhnqwytqprsptjshoxfn) via apply_migration + diverifikasi:
+  - **F-3** duplicate unique → DROP CONSTRAINT settings_organization_id_key_key. Advisor duplicate_index 1→0.
+  - **F-4** auth.uid() → (select auth.uid()) di 42 policy (DO-block idempoten). Advisor auth_rls_initplan 42→0; 0 bare auth.uid() tersisa.
+  - **F-6** composite index (entity_type,entity_id) di notifications + governance_violations (activity_logs sudah ada).
+  - **F-1** evidence_files.kind + 'link_generic' (lihat [[evidence-kinds]]).
+  - **F-5** handle_new_user hormati raw_app_meta_data->>'role_level' (service-role only; default tetap staff).
+- Re-test pasca-fix:
+  - Live RLS impersonation (Staff/Manager/CEO): score privacy & notif isolation intact (ceo_scores=0, foreign_notifs=0 untuk non-CEO); workspace differentiation utuh (Staff 2 aps vs CEO 3).
+  - Security advisor: tetap 81 SECURITY DEFINER (by-design) + 1 leaked-password (F-2).
+- Sisa (non-migrasi): **F-2** leaked-password protection = toggle dashboard Auth→Security (1 klik, tak bisa via MCP). **F-7** notif body & **F-8** smoke-test mobile (Detox/EAS) = ditunda.
