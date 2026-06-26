@@ -22,6 +22,10 @@ const ACTION_LABEL: Record<string, string> = {
   confidential_access_granted: 'Akses Rahasia Diberikan',
   period_opened: 'Periode Dibuka',
   scores_calculated: 'Skor Dihitung',
+  score_override_applied: 'Override Skor Diterapkan',
+  period_closed: 'Periode Ditutup',
+  user_permission_granted: 'Hak Akses Diberikan',
+  user_permission_revoked: 'Hak Akses Dicabut',
 };
 
 export default function SettingsActivityLogScreen() {

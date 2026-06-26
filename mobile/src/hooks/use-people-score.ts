@@ -15,6 +15,7 @@ import {
   getActivePeriod,
   getLatestClosedPeriod,
   getMyScore,
+  getUserScore,
   listMyScoreHistory,
   listRanking,
   listScoreFormulaTemplates,
@@ -77,6 +78,24 @@ export function useMyScore(periodId?: string) {
   const q = useQuery({
     queryKey: ['my_score', periodId ?? 'active'],
     queryFn: () => getMyScore(periodId),
+  });
+  return {
+    score: q.data as UserScoreResult | null | undefined,
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/**
+ * Skor satu user untuk satu periode (profil People). RLS menyaring per visibility (D1) →
+ * di luar scope mengembalikan null, bukan error. Disabled saat userId/periodId kosong.
+ */
+export function useUserScore(userId: string, periodId: string) {
+  const q = useQuery({
+    queryKey: ['user_score', userId, periodId],
+    queryFn: () => getUserScore(userId, periodId),
+    enabled: !!userId && !!periodId,
   });
   return {
     score: q.data as UserScoreResult | null | undefined,
@@ -183,6 +202,8 @@ export function useScoreOverride(periodId: string) {
       overrideUserScore({ periodId, ...args }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my_score'] });
+      // Override mengubah skor user target → profil People (useUserScore) ikut basi.
+      qc.invalidateQueries({ queryKey: ['user_score'] });
       // Invalidate semua ranking (override pada periode closed mempengaruhi badge People juga).
       qc.invalidateQueries({ queryKey: ['ranking'] });
       qc.invalidateQueries({ queryKey: ['my_score_history'] });

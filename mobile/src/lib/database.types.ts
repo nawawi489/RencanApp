@@ -3241,6 +3241,10 @@ export type Database = {
         Returns: boolean
       }
       kpi_area_in_my_org: { Args: { p_kpi_area: string }; Returns: boolean }
+      list_user_permissions_admin: {
+        Args: { p_target_user_id: string }
+        Returns: Json[]
+      }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_chat_messages_read: { Args: { p_room: string }; Returns: number }
       mark_notification_read: { Args: { p_id: string }; Returns: undefined }
@@ -3337,6 +3341,15 @@ export type Database = {
           p_parent_card_type: string
         }
         Returns: string
+      }
+      set_user_permission: {
+        Args: {
+          p_granted: boolean
+          p_permission_key: string
+          p_reason: string
+          p_target_user_id: string
+        }
+        Returns: undefined
       }
       start_action_plan: {
         Args: { p_action_plan_id: string }

@@ -30,10 +30,14 @@ type SettingsSection = { label: string; href?: Href; permission?: string };
 
 // Bagian aktif bertahap (Fase 5–8). href + permission diisi saat layarnya siap.
 const SECTIONS: SettingsSection[] = [
-  { label: 'User & Permission' },
+  {
+    label: 'User & Permission',
+    href: '/settings-permission-users' as Href,
+    permission: 'manage_users_permissions',
+  },
   { label: 'Role Template' },
   { label: 'Organisasi', href: '/settings-org-structure' as Href, permission: 'create_department' },
-  { label: 'Goal Template Library' },
+  { label: 'Goal Template Library', href: '/settings-goal-templates' as Href },
   {
     label: 'Minimum Breakdown Rule',
     href: '/settings-mbr' as Href,
