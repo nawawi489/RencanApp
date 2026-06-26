@@ -68,6 +68,7 @@ export const EVIDENCE_KIND_LABEL: Record<string, string> = {
   pdf: 'PDF',
   link_gdrive: 'Link Google Drive',
   link_doc: 'Link Dokumen',
+  link_generic: 'Link', // ER-9: whitelist DB sudah ada sejak migrasi 0015 — tambah ke UI mapping.
   text_note: 'Catatan Teks',
   report: 'Rekap Laporan',
 };
@@ -311,27 +312,97 @@ export type EvidenceInput = {
   mime_type?: string | null;
 };
 
+/** Per addendum §10.2 ER-1: kpi_area_id wajib di RPC (kecuali OD-1 fallback Fase 1). */
 export type ResultValueInput = {
+  kpi_area_id: string | null; // null hanya valid bila OD-1 fallback (0 kandidat) — server validate.
   label: string | null;
   value_type: string;
   value_text: string | null;
+  value_numeric?: number | null;
 };
 
-export async function submitActionPlan(args: {
-  actionPlanId: string;
+/** Kandidat KPI Area untuk picker (RPC list_kpi_area_candidates_for_action_plan). */
+export type KpiAreaCandidate = { id: string; name: string };
+
+/** Snapshot agregat dari VIEW kpi_area_current_values (untuk render "nilai lama"). */
+export type KpiAreaCurrentValue = {
+  numeric_total: number;
+  text_count: number;
+  last_approved_at: string | null;
+};
+
+/**
+ * 2-phase commit step 1: create submission draft (Pre-upload).
+ * Server validate: auth.uid()=PIC, attachment_count ≤5, AP status in_progress, no pending review.
+ * Return draft id yang dipakai untuk path Storage upload.
+ */
+export async function createSubmissionDraft(
+  actionPlanId: string,
+  attachmentCount: number,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('create_submission_draft', {
+    p_action_plan_id: actionPlanId,
+    p_attachment_count: attachmentCount,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/**
+ * 2-phase commit step 3: finalize draft → submitted.
+ * Sekarang menerima `submissionDraftId` (BUKAN actionPlanId — signature lama BREAKING per OQ-4 deploy-atomic).
+ * Server compute previous_value_text (ER-8 anti-TOCTOU).
+ */
+export async function finalizeSubmission(args: {
+  submissionDraftId: string;
   note: string | null;
   evidence: EvidenceInput[];
   resultValues: ResultValueInput[];
 }): Promise<string> {
   const { data, error } = await supabase.rpc('submit_action_plan', {
-    p_action_plan_id: args.actionPlanId,
-    // RPC memakai nullif(trim(...),'') → string kosong setara null.
+    p_submission_draft_id: args.submissionDraftId,
     p_note: args.note ?? '',
     p_evidence: args.evidence as never,
     p_result_values: args.resultValues as never,
   });
   if (error) throw error;
   return data as string;
+}
+
+/** List KPI Area kandidat untuk Action Plan ini (chain initiative→strategy→kpi_area).
+ * 0 baris = Fase 1 fallback (OD-1 → UI hide section Nilai Hasil). */
+export async function listKpiAreaCandidates(actionPlanId: string): Promise<KpiAreaCandidate[]> {
+  const { data, error } = await supabase.rpc('list_kpi_area_candidates_for_action_plan', {
+    p_action_plan_id: actionPlanId,
+  });
+  if (error) throw error;
+  return (data ?? []) as KpiAreaCandidate[];
+}
+
+/**
+ * @deprecated Pakai 2-phase: `createSubmissionDraft()` → upload via `uploadEvidenceFile()` → `finalizeSubmission()`.
+ * Stub ini menjaga TS compile sebelum submit.tsx di-refactor di Fase E. Jangan dipanggil.
+ */
+export async function submitActionPlan(_args: {
+  actionPlanId: string;
+  note: string | null;
+  evidence: EvidenceInput[];
+  resultValues: ResultValueInput[];
+}): Promise<string> {
+  throw new Error(
+    'submitActionPlan deprecated. Pakai createSubmissionDraft → uploadEvidenceFile → finalizeSubmission (2-phase commit, addendum §10.2 ER-2).',
+  );
+}
+
+/** Read current aggregate value untuk KPI Area (sumber "nilai lama" di UI DeltaArrow). */
+export async function getKpiAreaCurrentValue(kpiAreaId: string): Promise<KpiAreaCurrentValue | null> {
+  const { data, error } = await supabase
+    .from('kpi_area_current_values')
+    .select('numeric_total, text_count, last_approved_at')
+    .eq('kpi_area_id', kpiAreaId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as KpiAreaCurrentValue | null) ?? null;
 }
 
 export async function reviewSubmission(args: {

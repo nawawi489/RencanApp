@@ -148,14 +148,14 @@ describe('submitInstance', () => {
       instanceId: 'i1',
       note: null,
       evidence: [{ kind: 'text_note', text_content: 'ok' }],
-      resultValues: [{ label: 'Selisih', value_type: 'currency', value_text: '0' }],
+      resultValues: [{ kpi_area_id: null, label: 'Selisih', value_type: 'currency', value_text: '0' }],
     });
     expect(out).toBe('sub-1');
     expect(mockRpc).toHaveBeenCalledWith('submit_action_plan_instance', {
       p_instance_id: 'i1',
       p_note: '',
       p_evidence: [{ kind: 'text_note', text_content: 'ok' }],
-      p_result_values: [{ label: 'Selisih', value_type: 'currency', value_text: '0' }],
+      p_result_values: [{ kpi_area_id: null, label: 'Selisih', value_type: 'currency', value_text: '0' }],
     });
   });
 

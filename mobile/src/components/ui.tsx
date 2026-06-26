@@ -609,6 +609,222 @@ export function TabBar<T extends string>({
 
 // ---------------------------------------------------------------- StatPill
 
+// ---------------------------------------------------------------- AP5+AP6 components
+
+/** UI-S-AP5 (UploadButton DA-AP5-1). Disabled saat sudah penuh atau sedang upload. */
+export function UploadButton({
+  onPress,
+  disabled,
+  count,
+  max = 5,
+}: {
+  onPress: () => void;
+  disabled?: boolean;
+  count: number;
+  max?: number;
+}) {
+  const isFull = count >= max;
+  const isDisabled = disabled || isFull;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel="Pilih file bukti"
+      accessibilityState={{ disabled: !!isDisabled }}
+      className={`min-h-[44px] flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 px-4 py-3 dark:border-neutral-700 ${isDisabled ? 'opacity-40' : 'active:opacity-70'}`}>
+      <Text className="text-base font-bold text-brand-dark dark:text-brand">+</Text>
+      <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+        {isFull ? `Maksimum ${max} file` : `Pilih file (${count}/${max})`}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** UI-S-AP5 (ProgressPill DA-AP5-3). 4 state — warna BUKAN satu-satunya sinyal (a11y label eksplisit). */
+export type UploadState = 'ready' | 'uploading' | 'ok' | 'failed';
+const PROGRESS_CLASS: Record<UploadState, string> = {
+  ready: 'bg-neutral-100 dark:bg-neutral-800',
+  uploading: 'bg-blue-100 dark:bg-blue-950',
+  ok: 'bg-green-100 dark:bg-green-950',
+  failed: 'bg-red-100 dark:bg-red-950',
+};
+const PROGRESS_TEXT_CLASS: Record<UploadState, string> = {
+  ready: 'text-neutral-600 dark:text-neutral-300',
+  uploading: 'text-blue-700 dark:text-blue-300',
+  ok: 'text-green-700 dark:text-green-300',
+  failed: 'text-red-700 dark:text-red-300',
+};
+const PROGRESS_LABEL: Record<UploadState, string> = {
+  ready: 'Siap unggah',
+  uploading: 'Mengunggah',
+  ok: 'OK',
+  failed: 'Gagal',
+};
+export function ProgressPill({ state }: { state: UploadState }) {
+  return (
+    <View
+      className={`self-start rounded-full px-2.5 py-1 ${PROGRESS_CLASS[state]}`}
+      accessible
+      accessibilityLabel={`Status unggahan: ${PROGRESS_LABEL[state]}`}>
+      <Text className={`text-xs font-semibold ${PROGRESS_TEXT_CLASS[state]}`}>{PROGRESS_LABEL[state]}</Text>
+    </View>
+  );
+}
+
+const KIND_ICON: Record<string, string> = { photo: '🖼', pdf: '📕', file: '📄' };
+
+/** UI-S-AP5 (AttachmentRow DA-AP5-2). Filename + size + chip kind + remove + progress. */
+export function AttachmentRow({
+  fileName,
+  sizeBytes,
+  kind,
+  kindLabel,
+  uploadState = 'ready',
+  onRemove,
+  onRetry,
+}: {
+  fileName: string;
+  sizeBytes: number;
+  kind: 'photo' | 'pdf' | 'file' | string;
+  kindLabel: string;
+  uploadState?: UploadState;
+  onRemove?: () => void;
+  onRetry?: () => void;
+}) {
+  const sizeStr = formatBytes(sizeBytes);
+  return (
+    <View className="flex-row items-center gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+      <Text className="text-xl">{KIND_ICON[kind] ?? '📄'}</Text>
+      <View className="flex-1 gap-0.5">
+        <Text className="text-sm font-semibold text-black dark:text-white" numberOfLines={1}>
+          {fileName}
+        </Text>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">{sizeStr}</Text>
+          <Badge label={kindLabel} tone="neutral" />
+          <ProgressPill state={uploadState} />
+        </View>
+      </View>
+      {onRetry && uploadState === 'failed' ? (
+        <Pressable
+          onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel={`Coba lagi unggah ${fileName}`}
+          hitSlop={8}
+          className="active:opacity-70">
+          <Text className="text-xs font-semibold text-brand-dark">Coba lagi</Text>
+        </Pressable>
+      ) : null}
+      {onRemove ? (
+        <Pressable
+          onPress={onRemove}
+          accessibilityRole="button"
+          accessibilityLabel={`Hapus ${fileName}`}
+          hitSlop={8}
+          className="active:opacity-70">
+          <Text className="text-base text-neutral-500">✕</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** UI-S-AP6 (KpiLinkageCard DA-AP6-1). "Masuk KPI Area" + nama + sumber. */
+export function KpiLinkageCard({
+  kpiName,
+  sourceLabel,
+}: {
+  kpiName: string;
+  sourceLabel: string;
+}) {
+  return (
+    <View className="gap-1 rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/40">
+      <Text className="text-xs font-semibold uppercase text-blue-700 dark:text-blue-300">
+        Masuk KPI Area
+      </Text>
+      <Text className="text-base font-bold text-black dark:text-white">{kpiName}</Text>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">{sourceLabel}</Text>
+    </View>
+  );
+}
+
+/** UI-S-AP6 (DeltaArrow DA-AP6-2). a11y label EKSPLISIT menyebut arah (DESIGN §4: warna ≠ satu-satunya sinyal). */
+export function DeltaArrow({
+  previous,
+  proposed,
+}: {
+  previous: number | null;
+  proposed: number | null;
+}) {
+  const hasBoth = previous != null && proposed != null;
+  const delta = hasBoth ? proposed! - previous! : null;
+  const tone =
+    delta == null
+      ? 'text-neutral-500'
+      : delta > 0
+        ? 'text-green-700 dark:text-green-400'
+        : delta < 0
+          ? 'text-amber-700 dark:text-amber-400'
+          : 'text-neutral-500';
+  const arrow = delta == null ? '→' : delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+  const directionLabel =
+    delta == null
+      ? 'belum ada perubahan'
+      : delta > 0
+        ? `naik ${delta}`
+        : delta < 0
+          ? `turun ${Math.abs(delta)}`
+          : 'tetap';
+  const a11y = `Perubahan nilai: ${directionLabel}. Nilai lama ${previous ?? '-'}, nilai baru ${proposed ?? '-'}.`;
+  return (
+    <View className="flex-row items-center gap-2" accessible accessibilityLabel={a11y}>
+      <Text className="text-base font-bold text-neutral-500">{previous ?? '—'}</Text>
+      <Text className={`text-xl font-bold ${tone}`}>{arrow}</Text>
+      <Text className={`text-2xl font-extrabold ${tone}`}>{proposed ?? '—'}</Text>
+    </View>
+  );
+}
+
+/** UI-S-AP6 (ImpactApprovalCard DA-AP6-3). Copy via konstanta IMPACT_APPROVAL_COPY (FR-AP6-10). */
+export const IMPACT_APPROVAL_COPY = {
+  heading: 'Setelah disetujui Reviewer',
+  body: (kpiName: string, proposed: number | string | null) =>
+    proposed == null
+      ? `Nilai KPI Area "${kpiName}" akan diperbarui setelah Reviewer menyetujui submission ini.`
+      : `Nilai KPI Area "${kpiName}" akan diperbarui menjadi ${proposed} setelah Reviewer menyetujui submission ini.`,
+};
+
+export function ImpactApprovalCard({
+  kpiName,
+  proposed,
+}: {
+  kpiName: string;
+  proposed: number | string | null;
+}) {
+  return (
+    <View
+      className="gap-1 rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40"
+      accessible
+      accessibilityLabel={IMPACT_APPROVAL_COPY.body(kpiName, proposed)}>
+      <Text className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-300">
+        ⚠ {IMPACT_APPROVAL_COPY.heading}
+      </Text>
+      <Text className="text-sm text-amber-900 dark:text-amber-200">
+        {IMPACT_APPROVAL_COPY.body(kpiName, proposed)}
+      </Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- StatPill
+
 /** Angka ringkas berlabel (snapshot tim di Home). */
 export function StatPill({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: Tone }) {
   return (
