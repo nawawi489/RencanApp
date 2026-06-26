@@ -5,9 +5,10 @@ import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useProfile } from '@/hooks/use-profile';
+import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
   INITIATIVE_STATUS_LABEL,
@@ -97,12 +98,19 @@ export default function InitiativeDetailScreen() {
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <View className="gap-1">
-                <Badge
-                  label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
-                  tone={STATUS_TONE[initiative.status]}
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1 gap-1">
+                  <Badge
+                    label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
+                    tone={STATUS_TONE[initiative.status]}
+                  />
+                  <Text className="text-2xl font-bold text-black dark:text-white">{initiative.name}</Text>
+                </View>
+                <ProgressOrb
+                  size={72}
+                  value={ratioDoneOfChildren(plansQ.data ?? [])}
+                  sublabel={childrenSublabel(plansQ.data ?? [])}
                 />
-                <Text className="text-2xl font-bold text-black dark:text-white">{initiative.name}</Text>
               </View>
               <MetaGrid
                 items={[

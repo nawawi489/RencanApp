@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Animated, useColorScheme } from 'react-native';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import Svg, { Circle } from 'react-native-svg';
 import { avatarColor, initials } from '@/lib/avatar-color';
 import { SCORE_DESC, SCORE_LABEL, SCORE_RANGE, scoreBand, type ScoreBand } from '@/lib/score';
 
@@ -491,6 +492,96 @@ export function ProgressBar({
       {showLabel ? (
         <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{pct}%</Text>
       ) : null}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- ProgressOrb (UI-G-001)
+
+/**
+ * Orb capaian sistemik untuk header detail Goal/KPI/Strategy/Initiative/Action Plan.
+ * Discrete size 56 (compact) atau 72 (hero). Tone otomatis dari nilai bila tidak diisi:
+ *   - 0–34 → danger (merah) "Perlu perhatian"
+ *   - 35–69 → warn  (amber) "Berjalan"
+ *   - 70–99 → brand (biru)  "Menuju target"
+ *   - 100   → success (hijau) "Selesai"
+ * A11y mengikat (DESIGN §4): warna BUKAN satu-satunya sinyal — `accessibilityLabel`
+ * selalu menyebut persen + label tone eksplisit; angka tetap tampil di tengah orb.
+ */
+export type OrbTone = 'brand' | 'success' | 'warn' | 'danger';
+export type OrbSize = 56 | 72;
+
+const ORB_COLOR: Record<OrbTone, string> = {
+  brand: '#1564b3',   // brand-dark (AA)
+  success: '#15803d', // green-700
+  warn: '#b45309',    // amber-700
+  danger: '#b91c1c',  // red-700
+};
+const ORB_TONE_LABEL: Record<OrbTone, string> = {
+  brand: 'Menuju target',
+  success: 'Selesai',
+  warn: 'Berjalan',
+  danger: 'Perlu perhatian',
+};
+
+export function orbToneFor(value: number): OrbTone {
+  const v = Math.max(0, Math.min(100, Math.round(value)));
+  if (v >= 100) return 'success';
+  if (v >= 70) return 'brand';
+  if (v >= 35) return 'warn';
+  return 'danger';
+}
+
+export function ProgressOrb({
+  value,
+  size = 56,
+  tone,
+  sublabel,
+}: {
+  value: number;
+  size?: OrbSize;
+  tone?: OrbTone;
+  sublabel?: string;
+}) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  const resolvedTone = tone ?? orbToneFor(pct);
+  const stroke = size === 72 ? 8 : 6;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  const color = ORB_COLOR[resolvedTone];
+  const numberSize = size === 72 ? 20 : 16;
+  const a11y = `Capaian ${pct} persen, ${ORB_TONE_LABEL[resolvedTone]}${
+    sublabel ? `. ${sublabel}` : ''
+  }`;
+  return (
+    <View
+      style={{ width: size, height: size }}
+      className="items-center justify-center"
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={a11y}
+      accessibilityValue={{ now: pct, min: 0, max: 100 }}>
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke="#e2e8f0" strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={color}
+          strokeWidth={stroke}
+          fill="none"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <Text
+        className="font-extrabold text-black dark:text-white"
+        style={{ fontSize: numberSize, lineHeight: numberSize + 2 }}>
+        {pct}
+      </Text>
     </View>
   );
 }

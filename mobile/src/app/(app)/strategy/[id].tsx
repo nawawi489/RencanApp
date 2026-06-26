@@ -5,10 +5,11 @@ import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useStrategyInitiatives } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL, type Initiative } from '@/lib/cards';
+import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } from '@/lib/strategies';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
@@ -87,12 +88,19 @@ export default function StrategyDetailScreen() {
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <View className="gap-1">
-                <Badge
-                  label={PLANNING_STATUS_LABEL[strategy.status] ?? strategy.status}
-                  tone={STATUS_TONE[strategy.status]}
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1 gap-1">
+                  <Badge
+                    label={PLANNING_STATUS_LABEL[strategy.status] ?? strategy.status}
+                    tone={STATUS_TONE[strategy.status]}
+                  />
+                  <Text className="text-2xl font-bold text-black dark:text-white">{strategy.name}</Text>
+                </View>
+                <ProgressOrb
+                  size={72}
+                  value={ratioDoneOfChildren(initiatives)}
+                  sublabel={childrenSublabel(initiatives)}
                 />
-                <Text className="text-2xl font-bold text-black dark:text-white">{strategy.name}</Text>
               </View>
               <MetaGrid
                 items={[

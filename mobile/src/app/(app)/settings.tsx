@@ -6,6 +6,55 @@ import { Avatar, Button, SkeletonCard } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
+import { useThemePreference, type ThemeMode } from '@/providers/theme-provider';
+
+const THEME_OPTIONS: { key: ThemeMode; label: string }[] = [
+  { key: 'system', label: 'Sistem' },
+  { key: 'light', label: 'Terang' },
+  { key: 'dark', label: 'Gelap' },
+];
+
+function ThemeSwitch() {
+  const { mode, setMode } = useThemePreference();
+  return (
+    <View className="gap-1">
+      <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">Tampilan</Text>
+      <View className="overflow-hidden rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+        <Text className="mb-2 text-sm text-neutral-500 dark:text-neutral-400">
+          Mode warna aplikasi. "Sistem" mengikuti pengaturan perangkat.
+        </Text>
+        <View
+          className="flex-row gap-2"
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Mode tampilan">
+          {THEME_OPTIONS.map((opt) => {
+            const active = opt.key === mode;
+            return (
+              <Pressable
+                key={opt.key}
+                onPress={() => setMode(opt.key)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={opt.label}
+                className={`min-h-[44px] flex-1 items-center justify-center rounded-xl px-3 py-2 ${
+                  active
+                    ? 'bg-brand-dark'
+                    : 'border border-neutral-300 dark:border-neutral-700'
+                } active:opacity-70`}>
+                <Text
+                  className={`text-sm font-semibold ${
+                    active ? 'text-white' : 'text-black dark:text-white'
+                  }`}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
 
 type ProfileRow = {
   full_name: string | null;
@@ -108,6 +157,8 @@ export default function SettingsScreen() {
             </View>
           </View>
         )}
+
+        <ThemeSwitch />
 
         <View className="gap-1">
           <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">Pengaturan</Text>

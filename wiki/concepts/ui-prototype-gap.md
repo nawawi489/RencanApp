@@ -186,7 +186,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 **P0 — pengalaman inti yang rusak**
 - ~~UI-S-IN1 → UI-S-IN4~~ ✅ **Selesai 2026-06-26** (Inbox/chat full UI di belakang migrasi 0018; jest 540/540).
 - ~~UI-S-SF1~~ ✅ **Selesai 2026-06-27** (editor bobot inline + validasi 100% live + 4 chip level + 2 RPC migrasi 0020; jest 600/600).
-- UI-G-001 (progress orb sistemik) — sinyal capaian utama hilang lintas Performance.
+- ~~UI-G-001~~ ✅ **Selesai 2026-06-27** (komponen `ProgressOrb` 56/72 + `lib/progress.ts` derivasi children-done & status-AP; terintegrasi di header detail Goal/KPI/Strategy/Initiative/Action Plan; jest 614/614).
 - ~~UI-S-AP5~~ ✅ **Selesai 2026-06-26** (file upload via Supabase Storage + 2-phase commit; migrasi 0019).
 - ~~UI-S-AP6~~ ✅ **Selesai 2026-06-26** (KPI Area linkage + DeltaArrow + ImpactApprovalCard; previous_value server-computed via VIEW).
 

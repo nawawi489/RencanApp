@@ -143,6 +143,7 @@ Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), 
 | `WeightTotalBadge` (DA-SF1-3) | chip `self-start rounded-full px-2.5 py-1 text-xs font-semibold`; valid (sum==100) `bg-green-100 text-green-700`; invalid `bg-amber-100 text-amber-700`; `accessibilityLabel` selalu menyebut total + status eksplisit ("Total bobot 95%, harus 100% untuk aktivasi") — DESIGN §4 warna ≠ satu-satunya sinyal | `mobile/src/app/(app)/settings-score-formula.tsx` |
 | `FormulaStickyFooter` (DA-SF1-4) | container `flex-row gap-2 border-t border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-black`; isi 2 tombol: `Simpan Draft` (secondary, disabled saat tidak dirty), `Aktifkan` (primary, disabled saat sum!=100 OR dirty OR isActivating); `accessibilityState={{disabled}}` EKSPLISIT | `mobile/src/app/(app)/settings-score-formula.tsx` |
 | `VersionStatusBadge` (DA-SF1-5) | reuse `Badge` dengan tone: `draft`→warn (kuning), `active`→success (hijau), `archived`→neutral (abu); label dari `FORMULA_STATUS_LABEL` konstanta yg sudah ada di `lib/people-score.ts` | `mobile/src/app/(app)/settings-score-formula.tsx` |
+| `ProgressOrb` (UI-G-001) | SVG ring 2 lapis (`Circle` track `#e2e8f0` + `Circle` value rotate `-90`, `strokeLinecap='round'`); size diskrit **56** (stroke 6) atau **72** (stroke 8); angka persen di tengah (`font-extrabold`, 16/20px). Tone otomatis dari nilai: `<35 danger` (red-700 `#b91c1c`), `35–69 warn` (amber-700 `#b45309`), `70–99 brand` (brand-dark `#1564b3`), `100 success` (green-700 `#15803d`); override via prop `tone` jika perlu. **A11y mengikat** (DESIGN §4: warna ≠ satu-satunya sinyal): `accessibilityRole='progressbar'` + `accessibilityLabel` selalu menyebut persen + label tone eksplisit (mis. "Capaian 68 persen, Berjalan"); angka tetap tampil di tengah orb | `mobile/src/components/ui.tsx`, header detail Goal/KPI Area/Strategy/Initiative/Action Plan |
 
 ---
 
@@ -183,5 +184,21 @@ Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), 
 1. **Brand hue** — `#208aef` (kode) vs `#1877f2` (prototype). Default: pertahankan `#208aef`.
 2. **Inter** — muat font asli vs tetap `system-ui`. Default: system (lebih ringan).
 3. ~~**Button contrast** — ganti fill primary ke `brand-dark` `#1564b3` agar teks putih lulus AA.~~ ✅ **Selesai** — `Button` primary kini `bg-brand-dark` (5.99:1).
+
+---
+
+## 12. Theme switch (Sistem / Terang / Gelap)
+
+Mode tampilan dapat dipilih oleh pengguna di **Settings → Tampilan** dengan 3 opsi: `Sistem` (default — ikut OS), `Terang`, `Gelap`. Preferensi dipersist di `AsyncStorage` (key `rencanaapp:theme`).
+
+**Implementasi** ([`theme-provider.tsx`](mobile/src/providers/theme-provider.tsx)):
+- `ThemeProvider` membungkus app di [`_layout.tsx`](mobile/src/app/_layout.tsx) sebelum `AuthProvider`.
+- Memanggil `Appearance.setColorScheme()` agar NativeWind v5 (lewat `react-native-css`) ikut mengganti varian `dark:*` realtime.
+- `expo-router` `ThemeProvider` + `StatusBar` ikut nilai `effective` (`'light' | 'dark'`).
+- Hook `useThemePreference()` mengembalikan `{ mode, effective, setMode }`. Fallback aman tanpa provider (test-friendly: default `'system'` + `effective: 'light'`).
+
+**Kontrol UI:** segmented 3 chip (Sistem/Terang/Gelap) di Settings, `accessibilityRole='radiogroup'` + tiap chip `radio` dengan `accessibilityState.selected`. Touch target ≥44px sesuai §4.
+
+**Cakupan:** semua layar utama (Home, Workspace, Inbox, People, Notifications, Settings + sub-settings, detail Goal/KPI/Strategy/Initiative/Action Plan, Login) sudah memakai pola `class dark:class` sehingga otomatis terbaca di kedua mode. Saat menambah layar/komponen baru, **wajib** sediakan varian `dark:*` untuk: latar (`bg-*`), border (`border-*`), teks (`text-*`), dan placeholder/icon non-tailwind (pakai `useThemePreference().effective` untuk pick warna eksplisit).
 
 Saat sebuah keputusan diambil, perbarui token terkait di sini + `global.css`.

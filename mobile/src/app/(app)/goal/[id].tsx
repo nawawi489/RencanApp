@@ -3,10 +3,11 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import type { KpiArea } from '@/lib/kpi-areas';
+import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 
 function KpiAreaRow({ item, onPress }: { item: KpiArea; onPress: () => void }) {
   return (
@@ -68,12 +69,19 @@ export default function GoalDetailScreen() {
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <View className="gap-1">
-                <Badge
-                  label={PLANNING_STATUS_LABEL[goal.status] ?? goal.status}
-                  tone={STATUS_TONE[goal.status]}
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1 gap-1">
+                  <Badge
+                    label={PLANNING_STATUS_LABEL[goal.status] ?? goal.status}
+                    tone={STATUS_TONE[goal.status]}
+                  />
+                  <Text className="text-2xl font-bold text-black dark:text-white">{goal.name}</Text>
+                </View>
+                <ProgressOrb
+                  size={72}
+                  value={ratioDoneOfChildren(kpiQ.kpiAreas ?? [])}
+                  sublabel={childrenSublabel(kpiQ.kpiAreas ?? [])}
                 />
-                <Text className="text-2xl font-bold text-black dark:text-white">{goal.name}</Text>
               </View>
               <MetaGrid
                 items={[

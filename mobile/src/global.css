@@ -2,6 +2,10 @@
 @import 'tailwindcss/preflight.css' layer(base);
 @import 'tailwindcss/utilities.css';
 
+/* Dark mode lewat class strategy — agar theme-provider bisa override OS via .dark di <html>.
+   Default Tailwind v4 cuma prefers-color-scheme; class strategy biar manual toggle jalan di web. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Brand tokens EMS */
 @theme {
   --color-brand: #208aef;
