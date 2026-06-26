@@ -257,16 +257,23 @@ describe('listRanking', () => {
 
 // ============================================================ listScoreFormulaVersions
 describe('listMyScoreHistory', () => {
-  it('[H1] eq user_id + is_current=true + order calculated_at desc + limit n', async () => {
-    const { builder, calls } = makeQueryThenable({ data: [{ id: 'h1' }, { id: 'h2' }], error: null });
+  it('[H1] eq user_id + is_current=true + join period_start + limit n, sort desc by period_start', async () => {
+    // Impl mengurutkan client-side by period_start (join), recalculation-safe (commit fase7).
+    const { builder, calls } = makeQueryThenable({
+      data: [
+        { id: 'h1', period_snapshots: { period_start: '2026-01-01' } },
+        { id: 'h2', period_snapshots: { period_start: '2026-03-01' } },
+      ],
+      error: null,
+    });
     mockFrom.mockReturnValue(builder);
     const rows = await listMyScoreHistory(6);
     expect(mockFrom).toHaveBeenCalledWith('user_score_results');
     const eqCalls = (builder.eq as jest.Mock).mock.calls;
     expect(eqCalls).toEqual(expect.arrayContaining([['user_id', 'u1'], ['is_current', true]]));
-    expect(calls.order).toEqual(['calculated_at', { ascending: false }]);
     expect(calls.limit).toEqual([6]);
-    expect(rows).toHaveLength(2);
+    // DESC by period_start → h2 (Mar) sebelum h1 (Jan)
+    expect((rows as Array<{ id: string }>).map((r) => r.id)).toEqual(['h2', 'h1']);
   });
   it('[H2] tanpa auth → throw Not authenticated', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: null } });

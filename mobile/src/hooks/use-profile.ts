@@ -66,9 +66,13 @@ async function fetchCurrentProfile(): Promise<CurrentProfile> {
 }
 
 // Cermin client-side dari public.has_permission (server tetap penegak akhir).
+// Fase 8: c_level/management default DAPAT create_department, manage_teams, review_deadline_changes
+// (spec §4.2; cocok dgn has_permission migration 0014). Key Fase 8 LAIN (manage_positions,
+// manage_confidential_access, manage_video_briefs) TIDAK default — butuh grant eksplisit.
+const FASE8_MGR_DEFAULTS = ['create_department', 'manage_teams', 'review_deadline_changes'];
 const ROLE_DEFAULTS: Record<string, string[]> = {
-  c_level: ['create_initiative', 'create_action_plan', 'create_strategy'],
-  management: ['create_initiative', 'create_action_plan', 'create_strategy'],
+  c_level: ['create_initiative', 'create_action_plan', 'create_strategy', ...FASE8_MGR_DEFAULTS],
+  management: ['create_initiative', 'create_action_plan', 'create_strategy', ...FASE8_MGR_DEFAULTS],
 };
 
 export function useProfile() {

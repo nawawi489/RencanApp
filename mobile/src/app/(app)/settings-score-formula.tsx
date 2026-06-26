@@ -30,7 +30,7 @@ function FormulaVersionCard({
     : [];
   const sum = cats.reduce((acc, c) => acc + Number(c.weight || 0), 0);
   const tone =
-    version.status === 'active' ? 'success' : version.status === 'draft' ? 'warning' : 'neutral';
+    version.status === 'active' ? 'success' : version.status === 'draft' ? 'warn' : 'neutral';
   return (
     <View
       className="gap-2.5 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800"

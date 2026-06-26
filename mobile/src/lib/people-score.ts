@@ -217,8 +217,8 @@ export async function assignScoreFormula(input: AssignScoreFormulaInput): Promis
   const { data, error } = await supabase.rpc('assign_score_formula', {
     p_version_id: input.versionId,
     p_scope_level: input.scopeLevel,
-    p_role_level: input.roleLevel,
-    p_user_id: input.userId,
+    p_role_level: input.roleLevel as unknown as string,
+    p_user_id: input.userId as unknown as string,
     p_start_date: input.startDate,
   });
   if (error) throw error;

@@ -64,6 +64,36 @@ export default function AppLayout() {
         name="problem-statement/[id]"
         options={{ headerShown: true, title: 'Problem Statement' }}
       />
+
+      {/* Fase 8 — Governance & Admin */}
+      <Stack.Screen name="settings-org-structure" options={{ headerShown: true, title: 'Organisasi' }} />
+      <Stack.Screen name="settings-activity-log" options={{ headerShown: true, title: 'Activity Log' }} />
+      <Stack.Screen
+        name="settings-governance-violation"
+        options={{ headerShown: true, title: 'Governance Violation' }}
+      />
+      <Stack.Screen name="settings-confidential-access" options={{ headerShown: true, title: 'Akses Rahasia' }} />
+      <Stack.Screen
+        name="settings-card-completion-rule"
+        options={{ headerShown: true, title: 'Card Completion Rule' }}
+      />
+      <Stack.Screen name="settings-card-guidance" options={{ headerShown: true, title: 'Keterangan Card' }} />
+      <Stack.Screen name="settings-status-priority" options={{ headerShown: true, title: 'Status & Prioritas' }} />
+      <Stack.Screen name="settings-notifications-rule" options={{ headerShown: true, title: 'Notifications Rule' }} />
+      <Stack.Screen name="settings-archive" options={{ headerShown: true, title: 'Arsip' }} />
+      <Stack.Screen name="search" options={{ headerShown: true, title: 'Cari' }} />
+      <Stack.Screen
+        name="deadline-change-request"
+        options={{ headerShown: true, title: 'Perubahan Deadline', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="cancellation"
+        options={{ headerShown: true, title: 'Batalkan Card', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="evaluation"
+        options={{ headerShown: true, title: 'Evaluasi', presentation: 'modal' }}
+      />
     </Stack>
   );
 }

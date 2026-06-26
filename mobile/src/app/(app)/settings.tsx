@@ -32,21 +32,43 @@ type SettingsSection = { label: string; href?: Href; permission?: string };
 const SECTIONS: SettingsSection[] = [
   { label: 'User & Permission' },
   { label: 'Role Template' },
-  { label: 'Organization' },
+  { label: 'Organisasi', href: '/settings-org-structure' as Href, permission: 'create_department' },
   { label: 'Goal Template Library' },
   {
     label: 'Minimum Breakdown Rule',
     href: '/settings-mbr' as Href,
     permission: 'manage_minimum_breakdown_rule',
   },
-  { label: 'Card Completion Rule' },
+  {
+    label: 'Card Completion Rule',
+    href: '/settings-card-completion-rule' as Href,
+    permission: 'manage_card_completion_rule',
+  },
+  {
+    label: 'Keterangan Card',
+    href: '/settings-card-guidance' as Href,
+    permission: 'manage_card_completion_rule',
+  },
+  { label: 'Status & Prioritas', href: '/settings-status-priority' as Href, permission: 'manage_settings' },
+  { label: 'Notifications Rule', href: '/settings-notifications-rule' as Href, permission: 'manage_settings' },
+  {
+    label: 'Confidential Access',
+    href: '/settings-confidential-access' as Href,
+    permission: 'manage_confidential_access',
+  },
   {
     label: 'Score Formula',
     href: '/settings-score-formula' as Href,
     permission: 'manage_score_formula',
   },
-  { label: 'Activity Log' },
-  { label: 'Governance Violation' },
+  { label: 'Activity Log', href: '/settings-activity-log' as Href, permission: 'view_activity_log' },
+  {
+    label: 'Governance Violation',
+    href: '/settings-governance-violation' as Href,
+    permission: 'view_governance_violation',
+  },
+  { label: 'Arsip', href: '/settings-archive' as Href },
+  { label: 'Cari', href: '/search' as Href },
 ];
 
 export default function SettingsScreen() {

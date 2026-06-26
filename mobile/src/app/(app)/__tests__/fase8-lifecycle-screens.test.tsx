@@ -1,0 +1,223 @@
+// UI Fase 8 — layar lifecycle: DCR, Cancellation, Evaluation, Search.
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { createElement, type PropsWithChildren } from 'react';
+
+jest.setTimeout(30000);
+
+jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+
+const mockProfile: { id: string; role_level: string } = { id: 'u-pic', role_level: 'staff' };
+const mockCan = jest.fn();
+jest.mock('@/hooks/use-profile', () => ({
+  __esModule: true,
+  useProfile: () => ({ profile: mockProfile, isLoading: false, can: mockCan }),
+}));
+
+const mockUseDcrRequests = jest.fn();
+const mockCreateRequest = jest.fn();
+const mockReviewRequest = jest.fn();
+const mockCancel = jest.fn();
+const mockUseEvaluation = jest.fn();
+const mockRecord = jest.fn();
+jest.mock('@/hooks/use-governance-admin', () => ({
+  __esModule: true,
+  useDeadlineChangeRequests: (...a: unknown[]) => mockUseDcrRequests(...a),
+  useDeadlineChangeActions: () => ({ createRequest: mockCreateRequest, reviewRequest: mockReviewRequest, isPending: false }),
+  useCancellationActions: () => ({ cancel: mockCancel, approveCancellation: jest.fn(), isPending: false }),
+  useEvaluation: (...a: unknown[]) => mockUseEvaluation(...a),
+  useEvaluationActions: () => ({ record: mockRecord, isPending: false }),
+}));
+
+const mockUseSearch = jest.fn();
+jest.mock('@/hooks/use-search', () => ({
+  __esModule: true,
+  useSearchCards: (...a: unknown[]) => mockUseSearch(...a),
+}));
+
+const mockParams: { current: Record<string, string> } = { current: {} };
+jest.mock('expo-router', () => ({
+  Stack: { Screen: () => null },
+  useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
+  useLocalSearchParams: () => mockParams.current,
+}));
+
+// eslint-disable-next-line import/first
+import DeadlineChangeRequestScreen from '../deadline-change-request';
+// eslint-disable-next-line import/first
+import CancellationScreen from '../cancellation';
+// eslint-disable-next-line import/first
+import EvaluationScreen from '../evaluation';
+// eslint-disable-next-line import/first
+import SearchScreen from '../search';
+
+function wrapper() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const W = ({ children }: PropsWithChildren) => createElement(QueryClientProvider, { client }, children);
+  W.displayName = 'TestWrapper';
+  return W;
+}
+
+beforeEach(() => {
+  mockCan.mockReset().mockReturnValue(false);
+  mockUseDcrRequests.mockReset().mockReturnValue({ requests: [], isLoading: false, enabled: true });
+  mockCreateRequest.mockReset().mockResolvedValue('dcr1');
+  mockReviewRequest.mockReset().mockResolvedValue(undefined);
+  mockCancel.mockReset().mockResolvedValue('c1');
+  mockUseEvaluation.mockReset().mockReturnValue({ evaluation: null, isLoading: false, enabled: true });
+  mockRecord.mockReset().mockResolvedValue('e1');
+  mockUseSearch.mockReset().mockReturnValue({ results: [], isLoading: false, enabled: false });
+  mockProfile.id = 'u-pic';
+  mockProfile.role_level = 'staff';
+  mockParams.current = {};
+});
+
+describe('deadline-change-request', () => {
+  it('[F8-UI-11] validasi deadline baru wajib > deadline lama', async () => {
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
+    await render(<DeadlineChangeRequestScreen />, { wrapper: wrapper() });
+    const dl = screen.getByLabelText(/Deadline baru/i);
+    fireEvent.changeText(dl, '2026-06-30');
+    await waitFor(() => expect(dl.props.value).toBe('2026-06-30'));
+    fireEvent.press(screen.getByLabelText('Kirim Permintaan'));
+    expect(await screen.findByText(/tidak boleh lebih awal/i)).toBeTruthy();
+    expect(mockCreateRequest).not.toHaveBeenCalled();
+  });
+
+  it('[F8-UI-12] alasan wajib (tidak boleh kosong)', async () => {
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
+    await render(<DeadlineChangeRequestScreen />, { wrapper: wrapper() });
+    const dl = screen.getByLabelText(/Deadline baru/i);
+    fireEvent.changeText(dl, '2026-07-10');
+    await waitFor(() => expect(dl.props.value).toBe('2026-07-10'));
+    fireEvent.press(screen.getByLabelText('Kirim Permintaan'));
+    expect(await screen.findByText(/Alasan wajib diisi/i)).toBeTruthy();
+    expect(mockCreateRequest).not.toHaveBeenCalled();
+  });
+
+  it('[F8-UI-13] riwayat DCR menampilkan status Menunggu Review', async () => {
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
+    mockUseDcrRequests.mockReturnValue({
+      requests: [
+        { id: 'req1', status: 'pending', requestor_id: 'u-pic', old_deadline: '2026-07-01', new_deadline: '2026-07-10', reason: 'r' },
+      ],
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<DeadlineChangeRequestScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Menunggu Review')).toBeTruthy();
+  });
+
+  it('[F8-UI-14] approver lihat tombol Setujui/Tolak; anti-self menyembunyikan', async () => {
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
+    mockCan.mockReturnValue(true);
+    mockProfile.id = 'u-approver';
+    mockUseDcrRequests.mockReturnValue({
+      requests: [{ id: 'req1', status: 'pending', requestor_id: 'u-pic', old_deadline: '2026-07-01', new_deadline: '2026-07-10', reason: 'r' }],
+      isLoading: false,
+      enabled: true,
+    });
+    const view = await render(<DeadlineChangeRequestScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText('Setujui permintaan req1')).toBeTruthy();
+    expect(screen.getByLabelText('Tolak permintaan req1')).toBeTruthy();
+
+    // anti-self: requestor = approver → tombol hilang
+    mockUseDcrRequests.mockReturnValue({
+      requests: [{ id: 'req1', status: 'pending', requestor_id: 'u-approver', old_deadline: '2026-07-01', new_deadline: '2026-07-10', reason: 'r' }],
+      isLoading: false,
+      enabled: true,
+    });
+    view.rerender(<DeadlineChangeRequestScreen />);
+    await waitFor(() => expect(screen.queryByLabelText('Setujui permintaan req1')).toBeNull());
+  });
+});
+
+describe('cancellation', () => {
+  it('[F8-UI-15] error child aktif saat RPC gagal', async () => {
+    mockParams.current = { entityType: 'goal', entityId: 'g1' };
+    mockCancel.mockRejectedValue(new Error('Terdapat 2 card turunan yang masih aktif.'));
+    await render(<CancellationScreen />, { wrapper: wrapper() });
+    const reason = screen.getByLabelText(/Alasan pembatalan/i);
+    fireEvent.changeText(reason, 'x');
+    await waitFor(() => expect(reason.props.value).toBe('x'));
+    fireEvent.press(screen.getByLabelText('Batalkan Card'));
+    expect(await screen.findByText(/card turunan/i)).toBeTruthy();
+  });
+
+  it('[F8-UI-16a] CEO flow: feedback langsung berhasil dibatalkan', async () => {
+    mockParams.current = { entityType: 'initiative', entityId: 'i1' };
+    mockProfile.role_level = 'ceo';
+    await render(<CancellationScreen />, { wrapper: wrapper() });
+    const reason = screen.getByLabelText(/Alasan pembatalan/i);
+    fireEvent.changeText(reason, 'x');
+    await waitFor(() => expect(reason.props.value).toBe('x'));
+    fireEvent.press(screen.getByLabelText('Batalkan Card'));
+    expect(await screen.findByText(/berhasil dibatalkan/i)).toBeTruthy();
+  });
+
+  it('[F8-UI-16b] non-CEO flow: feedback menunggu persetujuan', async () => {
+    mockParams.current = { entityType: 'initiative', entityId: 'i1' };
+    mockProfile.role_level = 'staff';
+    await render(<CancellationScreen />, { wrapper: wrapper() });
+    const reason = screen.getByLabelText(/Alasan pembatalan/i);
+    fireEvent.changeText(reason, 'x');
+    await waitFor(() => expect(reason.props.value).toBe('x'));
+    fireEvent.press(screen.getByLabelText('Batalkan Card'));
+    expect(await screen.findByText(/menunggu persetujuan/i)).toBeTruthy();
+  });
+});
+
+describe('evaluation', () => {
+  it('[F8-UI-17] anti-self: PIC = profil → tidak bisa submit + pesan error', async () => {
+    mockParams.current = { initiativeId: 'i1', picId: 'u-pic', status: 'done' };
+    mockProfile.id = 'u-pic';
+    await render(<EvaluationScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText(/tidak dapat mengevaluasi initiativenya sendiri/i)).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Simpan Evaluasi'));
+    await waitFor(() => expect(mockRecord).not.toHaveBeenCalled());
+  });
+
+  it('[F8-UI-18] UPSERT pre-fill existing evaluation; submit memanggil record', async () => {
+    mockParams.current = { initiativeId: 'i1', picId: 'u-pic', status: 'done' };
+    mockProfile.id = 'u-reviewer';
+    mockUseEvaluation.mockReturnValue({
+      evaluation: { id: 'ev1', target_achieved: 'sebagian', results: 'hampir tercapai', lessons_learned: '' },
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<EvaluationScreen />, { wrapper: wrapper() });
+    const input = await screen.findByDisplayValue('hampir tercapai');
+    fireEvent.changeText(input, 'lebih baik');
+    await waitFor(() => expect(input.props.value).toBe('lebih baik'));
+    fireEvent.press(screen.getByLabelText('Simpan Evaluasi'));
+    await waitFor(() =>
+      expect(mockRecord).toHaveBeenCalledWith(expect.objectContaining({ initiativeId: 'i1', results: 'lebih baik' })),
+    );
+  });
+
+  it('[F8-UI-19] status bukan done/active → prompt evaluasi tidak muncul', async () => {
+    mockParams.current = { initiativeId: 'i1', picId: 'u-pic', status: 'draft' };
+    mockProfile.id = 'u-reviewer';
+    await render(<EvaluationScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText(/belum tersedia/i)).toBeTruthy();
+    expect(screen.queryByLabelText('Simpan Evaluasi')).toBeNull();
+  });
+});
+
+describe('search', () => {
+  it('[F8-UI-20a] empty state saat query kosong', async () => {
+    await render(<SearchScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText(/Mulai mencari/i)).toBeTruthy();
+  });
+
+  it('[F8-UI-20b] hasil pencarian dengan label entity_type', async () => {
+    mockUseSearch.mockReturnValue({
+      results: [{ id: 'i1', entity_type: 'initiative', name: 'Migrasi Server', status: 'active' }],
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<SearchScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Migrasi Server')).toBeTruthy();
+    expect(screen.getByText('Initiative')).toBeTruthy();
+  });
+});
