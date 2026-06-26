@@ -1,0 +1,17 @@
+{
+  "feature": "UI-S-SF1 Score Formula Editor Inline: refactor mobile/src/app/(app)/settings-score-formula.tsx dari read-only ke editor admin dengan (1) role chip 4-level selector, (2) tombol 'Buat Draft Baru' (modal change_reason ≥8 char) memanggil RPC create_score_formula_draft (server auto-clone categories dari versi terbaru template, 1-draft-per-template enforce), (3) TextInput numeric integer 0-100 per kategori dengan live WeightTotalBadge (debounce 120ms, tone positive saat sum===100), (4) tombol 'Simpan Draft' (in-place UPDATE row draft via update_score_formula_version_weights, izinkan sum≠100, change_reason ≥8 char wajib, disabled bila no-changes), (5) tombol 'Aktifkan Template' disabled saat dirty/sum≠100/reason invalid memanggil activate_score_formula_version existing (signature beku, effective_date hard-code current_date, V1 server menolak retroaktif). Migrasi 0020_fase7_score_formula_editor.sql menambah 2 RPC SECURITY DEFINER + trigger column-level immutability + extend tg_block_delete_append_only ke score_formula_versions + patch activate RPC menolak p_effective_date<current_date + 3 action key audit baru (score_formula_draft_created/weights_updated, activated tetap). Backward-compat: upsert_score_formula_version & event score_formula_changed dipertahankan. UI viewer Activity Log diperluas mengenali 3 action baru. DESIGN.md §7 wajib didaftarkan 5 token (WeightInput, RoleChipGroup, WeightTotalBadge, FormulaStickyFooter, VersionStatusBadge) dengan nilai konkret sebelum kode RN. Defense-in-depth: REVOKE direct DML, self-gate has_permission, cross-org guard, change_reason ≥8 char server-side, validasi shape p_categories integer 0-100 unique code; concurrency last-write-wins + refetch banner. V1 menerima keterbatasan governance_violations rollback (silent permission_denied) — defer autonomous tx ke Fase 8.",
+  "paths": [
+    "D:\\Projects\\RencanApp\\supabase\\migrations\\0020_fase7_score_formula_editor.sql",
+    "D:\\Projects\\RencanApp\\mobile\\src\\app\\(app)\\settings-score-formula.tsx",
+    "D:\\Projects\\RencanApp\\mobile\\src\\lib\\people-score.ts",
+    "D:\\Projects\\RencanApp\\mobile\\src\\hooks\\use-people-score.ts",
+    "D:\\Projects\\RencanApp\\mobile\\src\\lib\\database.types.ts",
+    "D:\\Projects\\RencanApp\\DESIGN.md",
+    "D:\\Projects\\RencanApp\\mobile\\src\\app\\(app)\\activity-log.tsx",
+    "D:\\Projects\\RencanApp\\mobile\\src\\__tests__\\settings-score-formula.test.tsx",
+    "D:\\Projects\\RencanApp\\supabase\\tests\\score_formula_editor_contract.sql",
+    "D:\\Projects\\RencanApp\\wiki\\concepts\\ui-prototype-gap.md",
+    "D:\\Projects\\RencanApp\\wiki\\entities\\score-formula.md",
+    "D:\\Projects\\RencanApp\\wiki\\log.md"
+  ]
+}

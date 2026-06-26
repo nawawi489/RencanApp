@@ -33,6 +33,8 @@ import {
   listScoreFormulaVersions,
   openPeriodSnapshot,
   overrideUserScore,
+  createScoreFormulaDraft,
+  updateFormulaVersionWeights,
   upsertScoreFormulaVersion,
   type UserScoreResult,
 } from '../people-score';
@@ -428,5 +430,66 @@ describe('overrideUserScore — single-actor (D10 revisi)', () => {
       p_reason: 'koreksi data',
     });
     expect(id).toBe('r-over');
+  });
+});
+
+// ============================================================ UI-S-SF1 wrappers (migrasi 0020)
+describe('createScoreFormulaDraft', () => {
+  it('[29] passthrough p_template_id/p_level/p_change_reason/p_categories (null untuk auto-clone)', async () => {
+    mockRpc.mockResolvedValue({ data: 'draft-new', error: null });
+    const id = await createScoreFormulaDraft({
+      templateId: 't1',
+      level: 'staff',
+      changeReason: 'inisialisasi v1 fase awal',
+      categories: null,
+    });
+    expect(mockRpc).toHaveBeenCalledWith('create_score_formula_draft', {
+      p_template_id: 't1',
+      p_level: 'staff',
+      p_change_reason: 'inisialisasi v1 fase awal',
+      p_categories: null,
+    });
+    expect(id).toBe('draft-new');
+  });
+
+  it('[30] pass categories eksplisit saat disuplai (bukan null)', async () => {
+    mockRpc.mockResolvedValue({ data: 'draft-x', error: null });
+    const cats = [
+      { code: 'perf', weight: 60, source_metric: 'm1' },
+      { code: 'disc', weight: 40, source_metric: 'm2' },
+    ];
+    await createScoreFormulaDraft({
+      templateId: 't1', level: 'management', changeReason: 'override default seed', categories: cats,
+    });
+    expect(mockRpc).toHaveBeenCalledWith('create_score_formula_draft', expect.objectContaining({
+      p_categories: cats,
+    }));
+  });
+
+  it('[31] propagasi error (mis. draft_already_exists)', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'draft_already_exists' } });
+    await expect(
+      createScoreFormulaDraft({ templateId: 't1', level: 'staff', changeReason: 'sudah ada draft' }),
+    ).rejects.toEqual({ message: 'draft_already_exists' });
+  });
+});
+
+describe('updateFormulaVersionWeights', () => {
+  it('[32] passthrough p_version_id/p_categories/p_change_reason', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    const cats = [{ code: 'perf', weight: 70, source_metric: 'm1' }];
+    await updateFormulaVersionWeights({ versionId: 'v1', categories: cats, changeReason: 'tweak bobot' });
+    expect(mockRpc).toHaveBeenCalledWith('update_score_formula_version_weights', {
+      p_version_id: 'v1',
+      p_categories: cats,
+      p_change_reason: 'tweak bobot',
+    });
+  });
+
+  it('[33] propagasi error (mis. categories_set_mismatch)', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'categories_set_mismatch' } });
+    await expect(
+      updateFormulaVersionWeights({ versionId: 'v1', categories: [], changeReason: 'reset kategori' }),
+    ).rejects.toEqual({ message: 'categories_set_mismatch' });
   });
 });

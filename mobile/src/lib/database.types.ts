@@ -3130,6 +3130,15 @@ export type Database = {
         Args: { p_description: string; p_name: string }
         Returns: string
       }
+      create_score_formula_draft: {
+        Args: {
+          p_categories?: Json
+          p_change_reason: string
+          p_level: string
+          p_template_id: string
+        }
+        Returns: string
+      }
       create_submission_draft: {
         Args: { p_action_plan_id: string; p_attachment_count: number }
         Returns: string
@@ -3437,6 +3446,14 @@ export type Database = {
           p_result_values: Json
         }
         Returns: string
+      }
+      update_score_formula_version_weights: {
+        Args: {
+          p_categories: Json
+          p_change_reason: string
+          p_version_id: string
+        }
+        Returns: undefined
       }
       upsert_score_formula_version: {
         Args: {

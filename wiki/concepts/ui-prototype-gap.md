@@ -185,7 +185,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 **P0 — pengalaman inti yang rusak**
 - ~~UI-S-IN1 → UI-S-IN4~~ ✅ **Selesai 2026-06-26** (Inbox/chat full UI di belakang migrasi 0018; jest 540/540).
-- UI-S-SF1 (Score Formula read-only vs editor inline) — regresi nyata.
+- ~~UI-S-SF1~~ ✅ **Selesai 2026-06-27** (editor bobot inline + validasi 100% live + 4 chip level + 2 RPC migrasi 0020; jest 600/600).
 - UI-G-001 (progress orb sistemik) — sinyal capaian utama hilang lintas Performance.
 - ~~UI-S-AP5~~ ✅ **Selesai 2026-06-26** (file upload via Supabase Storage + 2-phase commit; migrasi 0019).
 - ~~UI-S-AP6~~ ✅ **Selesai 2026-06-26** (KPI Area linkage + DeltaArrow + ImpactApprovalCard; previous_value server-computed via VIEW).
