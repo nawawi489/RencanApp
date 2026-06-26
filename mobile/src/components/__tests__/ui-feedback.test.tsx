@@ -1,7 +1,7 @@
 // Komponen fondasi: EmptyState v2, ErrorState, SkeletonList, ScoreBadge, Avatar.
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
 import { render, screen } from '@testing-library/react-native';
-import { Avatar, EmptyState, ErrorState, ScoreBadge, ScoreBreakdown, ScoreSparkline, SkeletonList } from '../ui';
+import { Avatar, EmptyState, ErrorState, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SkeletonList, orbToneFor } from '../ui';
 
 jest.setTimeout(30000);
 
@@ -121,5 +121,32 @@ describe('Avatar', () => {
     await render(<Avatar name="Rina Jaya" />);
     expect(screen.getByLabelText('Rina Jaya')).toBeTruthy();
     expect(screen.getByText('RJ')).toBeTruthy();
+  });
+});
+
+describe('ProgressOrb (UI-G-001)', () => {
+  it('tone otomatis dari nilai (warna bukan satu-satunya sinyal, label eksplisit)', () => {
+    expect(orbToneFor(0)).toBe('danger');
+    expect(orbToneFor(34)).toBe('danger');
+    expect(orbToneFor(35)).toBe('warn');
+    expect(orbToneFor(69)).toBe('warn');
+    expect(orbToneFor(70)).toBe('brand');
+    expect(orbToneFor(99)).toBe('brand');
+    expect(orbToneFor(100)).toBe('success');
+  });
+
+  it('clamp 0–100 dan menampilkan angka di tengah', async () => {
+    await render(<ProgressOrb value={150} />);
+    expect(screen.getByText('100')).toBeTruthy();
+  });
+
+  it('a11y label menyebut persen + label tone + sublabel', async () => {
+    await render(<ProgressOrb value={68} sublabel="2/3 selesai" />);
+    expect(screen.getByLabelText('Capaian 68 persen, Berjalan. 2/3 selesai')).toBeTruthy();
+  });
+
+  it('size 72 → render normal (hero variant)', async () => {
+    await render(<ProgressOrb value={42} size={72} />);
+    expect(screen.getByText('42')).toBeTruthy();
   });
 });

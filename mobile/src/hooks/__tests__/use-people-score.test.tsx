@@ -17,6 +17,8 @@ const mockOverrideUserScore = jest.fn();
 const mockUpsertScoreFormulaVersion = jest.fn();
 const mockActivateScoreFormulaVersion = jest.fn();
 const mockAssignScoreFormula = jest.fn();
+const mockCreateScoreFormulaDraft = jest.fn();
+const mockUpdateFormulaVersionWeights = jest.fn();
 
 const mockListMyScoreHistory = jest.fn();
 jest.mock('@/lib/people-score', () => ({
@@ -34,6 +36,8 @@ jest.mock('@/lib/people-score', () => ({
   upsertScoreFormulaVersion: (...a: unknown[]) => mockUpsertScoreFormulaVersion(...a),
   activateScoreFormulaVersion: (...a: unknown[]) => mockActivateScoreFormulaVersion(...a),
   assignScoreFormula: (...a: unknown[]) => mockAssignScoreFormula(...a),
+  createScoreFormulaDraft: (...a: unknown[]) => mockCreateScoreFormulaDraft(...a),
+  updateFormulaVersionWeights: (...a: unknown[]) => mockUpdateFormulaVersionWeights(...a),
 }));
 
 // eslint-disable-next-line import/first
@@ -269,5 +273,49 @@ describe('useFormulaActions — upsert / activate / assign', () => {
     expect(keys).toEqual(expect.arrayContaining([
       JSON.stringify({ queryKey: ['score_formula_versions', 't1'] }),
     ]));
+  });
+
+  it('[13] UI-S-SF1 createDraft passthrough + invalidasi', async () => {
+    mockCreateScoreFormulaDraft.mockResolvedValue('draft-new');
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useFormulaActions('t1'), { wrapper });
+    await act(async () => {
+      await result.current.createDraft({ templateId: 't1', level: 'staff', changeReason: 'fase awal v1', categories: null });
+    });
+    expect(mockCreateScoreFormulaDraft).toHaveBeenCalledWith({
+      templateId: 't1', level: 'staff', changeReason: 'fase awal v1', categories: null,
+    });
+    const keys = spy.mock.calls.map(c => JSON.stringify(c[0]));
+    expect(keys).toEqual(expect.arrayContaining([
+      JSON.stringify({ queryKey: ['score_formula_versions', 't1'] }),
+    ]));
+  });
+
+  it('[14] UI-S-SF1 updateWeights passthrough + invalidasi', async () => {
+    mockUpdateFormulaVersionWeights.mockResolvedValue(undefined);
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useFormulaActions('t1'), { wrapper });
+    const cats = [{ code: 'perf', weight: 60, source_metric: 'm1' }];
+    await act(async () => {
+      await result.current.updateWeights({ versionId: 'v1', categories: cats, changeReason: 'tweak bobot perf' });
+    });
+    expect(mockUpdateFormulaVersionWeights).toHaveBeenCalledWith({
+      versionId: 'v1', categories: cats, changeReason: 'tweak bobot perf',
+    });
+    const keys = spy.mock.calls.map(c => JSON.stringify(c[0]));
+    expect(keys).toEqual(expect.arrayContaining([
+      JSON.stringify({ queryKey: ['score_formula_versions', 't1'] }),
+    ]));
+  });
+
+  it('[15] UI-S-SF1 createDraft error propagation (draft_already_exists)', async () => {
+    mockCreateScoreFormulaDraft.mockRejectedValueOnce(new Error('draft_already_exists'));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useFormulaActions('t1'), { wrapper });
+    await expect(
+      result.current.createDraft({ templateId: 't1', level: 'staff', changeReason: 'duplikat draft' }),
+    ).rejects.toThrow(/draft_already_exists/);
   });
 });

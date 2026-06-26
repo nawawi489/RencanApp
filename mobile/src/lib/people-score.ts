@@ -235,6 +235,53 @@ export async function activateScoreFormulaVersion(versionId: string, effectiveDa
   if (error) throw error;
 }
 
+// ---------------------------------------------------------------- UI-S-SF1 (migrasi 0020)
+
+export type FormulaLevel = 'staff' | 'management' | 'c_level' | 'ceo';
+
+export type CreateScoreFormulaDraftInput = {
+  templateId: string;
+  level: FormulaLevel;
+  changeReason: string;
+  categories?: FormulaCategory[] | null; // null → server auto-clone dari versi terbaru
+};
+
+/**
+ * 2-phase: create draft baru per (template, level).
+ * Server: 1-draft enforce, change_reason min 8 char trimmed, hybrid clone categories.
+ * Throws 'draft_already_exists' bila sudah ada draft untuk template+level.
+ */
+export async function createScoreFormulaDraft(input: CreateScoreFormulaDraftInput): Promise<string> {
+  const { data, error } = await supabase.rpc('create_score_formula_draft', {
+    p_template_id: input.templateId,
+    p_level: input.level,
+    p_change_reason: input.changeReason,
+    p_categories: (input.categories ?? null) as never,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export type UpdateFormulaVersionWeightsInput = {
+  versionId: string;
+  categories: FormulaCategory[];
+  changeReason: string;
+};
+
+/**
+ * UPDATE in-place pada draft.
+ * Server: change_reason min 8 trimmed, categories_set_mismatch guard, weight integer 0..100.
+ * Save sum != 100 DIIZINKAN (validasi 100 hanya di activate).
+ */
+export async function updateFormulaVersionWeights(input: UpdateFormulaVersionWeightsInput): Promise<void> {
+  const { error } = await supabase.rpc('update_score_formula_version_weights', {
+    p_version_id: input.versionId,
+    p_categories: input.categories as never,
+    p_change_reason: input.changeReason,
+  });
+  if (error) throw error;
+}
+
 export type AssignScoreFormulaInput = {
   versionId: string;
   scopeLevel: 'org_role' | 'user';

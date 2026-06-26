@@ -11,9 +11,11 @@ import {
   ErrorState,
   LabeledInput,
   MetaGrid,
+  ProgressOrb,
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
+import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { UserPicker } from '@/components/user-picker';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { useMbrCompliance } from '@/hooks/use-mbr';
@@ -158,12 +160,19 @@ export default function KpiAreaDetailScreen() {
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <View className="gap-1">
-                <Badge
-                  label={PLANNING_STATUS_LABEL[kpiArea.status] ?? kpiArea.status}
-                  tone={STATUS_TONE[kpiArea.status]}
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1 gap-1">
+                  <Badge
+                    label={PLANNING_STATUS_LABEL[kpiArea.status] ?? kpiArea.status}
+                    tone={STATUS_TONE[kpiArea.status]}
+                  />
+                  <Text className="text-2xl font-bold text-black dark:text-white">{kpiArea.name}</Text>
+                </View>
+                <ProgressOrb
+                  size={72}
+                  value={ratioDoneOfChildren(strategies)}
+                  sublabel={childrenSublabel(strategies)}
                 />
-                <Text className="text-2xl font-bold text-black dark:text-white">{kpiArea.name}</Text>
               </View>
               <MetaGrid
                 items={[

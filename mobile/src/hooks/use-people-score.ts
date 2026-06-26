@@ -9,6 +9,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   activateScoreFormulaVersion,
+  createScoreFormulaDraft,
+  updateFormulaVersionWeights,
+  type CreateScoreFormulaDraftInput,
+  type UpdateFormulaVersionWeightsInput,
   assignScoreFormula,
   calculatePeriodScores,
   closePeriodSnapshot,
@@ -249,11 +253,35 @@ export function useFormulaActions(templateId: string) {
     },
   });
 
+  // UI-S-SF1: 2 mutasi baru — createDraft + updateWeights.
+  const createDraftM = useMutation({
+    mutationFn: (input: CreateScoreFormulaDraftInput) => createScoreFormulaDraft(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['score_formula_versions', templateId] });
+    },
+  });
+
+  const updateWeightsM = useMutation({
+    mutationFn: (input: UpdateFormulaVersionWeightsInput) => updateFormulaVersionWeights(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['score_formula_versions', templateId] });
+    },
+  });
+
   return {
     upsert: (args: UpsertFormulaArgs) => upsertM.mutateAsync(args),
     activate: (versionId: string, effectiveDate: string) =>
       activateM.mutateAsync({ versionId, effectiveDate }),
     assign: (input: AssignScoreFormulaInput) => assignM.mutateAsync(input),
-    isPending: upsertM.isPending || activateM.isPending || assignM.isPending,
+    createDraft: (input: CreateScoreFormulaDraftInput) => createDraftM.mutateAsync(input),
+    updateWeights: (input: UpdateFormulaVersionWeightsInput) => updateWeightsM.mutateAsync(input),
+    isPending:
+      upsertM.isPending ||
+      activateM.isPending ||
+      assignM.isPending ||
+      createDraftM.isPending ||
+      updateWeightsM.isPending,
+    isCreatingDraft: createDraftM.isPending,
+    isUpdatingWeights: updateWeightsM.isPending,
   };
 }

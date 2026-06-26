@@ -4,11 +4,12 @@ import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
-import { Badge, Button, Field, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { SubmissionCard } from '@/components/submission-card';
 import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
+import { computeActionPlanProgress } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
   PRIORITY_LABEL,
@@ -129,6 +130,9 @@ export default function ActionPlanDetailScreen() {
 
   const apQ = useQuery({ queryKey: ['action-plan', id], queryFn: () => getActionPlan(id) });
   const subsQ = useQuery({ queryKey: ['submissions', id], queryFn: () => listSubmissions(id) });
+  // Capaian header (UI-G-001): repeat → compliancePercent; one-time → status-based.
+  const isRepeat = apQ.data?.repeat_setting === 'repeat';
+  const { compliancePercent: headerCompliance } = useRepeatInstances(id, { enabled: !!isRepeat });
 
   useFocusEffect(
     useCallback(() => {
@@ -177,12 +181,27 @@ export default function ActionPlanDetailScreen() {
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <View className="gap-1">
-                <Badge
-                  label={ACTION_PLAN_STATUS_LABEL[ap.status] ?? ap.status}
-                  tone={STATUS_TONE[ap.status]}
+              <View className="flex-row items-start gap-3">
+                <View className="flex-1 gap-1">
+                  <Badge
+                    label={ACTION_PLAN_STATUS_LABEL[ap.status] ?? ap.status}
+                    tone={STATUS_TONE[ap.status]}
+                  />
+                  <Text className="text-2xl font-bold text-black dark:text-white">{ap.name}</Text>
+                </View>
+                <ProgressOrb
+                  size={72}
+                  value={computeActionPlanProgress({
+                    status: ap.status,
+                    repeat: ap.repeat_setting === 'repeat',
+                    compliancePercent: headerCompliance,
+                  })}
+                  sublabel={
+                    ap.repeat_setting === 'repeat'
+                      ? 'On-time compliance'
+                      : (ACTION_PLAN_STATUS_LABEL[ap.status] ?? ap.status)
+                  }
                 />
-                <Text className="text-2xl font-bold text-black dark:text-white">{ap.name}</Text>
               </View>
               <MetaGrid
                 items={[
