@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-06-23
+updated: 2026-06-26
 ---
 
 # RencanApp Wiki — Index
@@ -34,6 +34,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[scope-guardrails]] — Batas scope V1.8.1: fitur masuk vs ditolak (anti-scope-creep)
 - [[tech-stack]] — Expo + Supabase + RLS; alasan tiap pilihan diturunkan dari PRD
+- [[ui-prototype-gap]] — Backlog UI ber-ID dari perbandingan `design.html` (46 layar) vs implementasi `mobile/`. Spec turunan pertama: `specs/inbox-chat-ui.md` (UI-S-IN1/IN2, dari sdd-plan 2026-06-26)
 
 ## Sources
 

@@ -1,6 +1,9 @@
 // Data layer Fase 3 — Inbox (Initiative Chat). Pemanggil tipis. RLS membatasi visibilitas ke
-// anggota room (is_chat_member); semua tulis lewat RPC SECURITY DEFINER. Tipe di-hand-define
-// s/d regen database.types.ts setelah migrasi 0008.
+// anggota room (is_chat_member); semua tulis lewat RPC SECURITY DEFINER.
+//
+// FR-DATA.1 (migrasi 0018): get_chat_rooms() menambah last_message_body + last_message_author_name
+// untuk preview Inbox (UI-S-IN1). Keduanya nullable: body null = room kosong; author_name null =
+// author_id NULL / profil terhapus (LEFT join lateral).
 import type { PersonRef } from './cards';
 import { supabase } from './supabase';
 
@@ -10,6 +13,8 @@ export type ChatRoom = {
   name: string;
   unread_count: number;
   last_message_at: string | null;
+  last_message_body: string | null;
+  last_message_author_name: string | null;
 };
 
 export type ChatMessage = {
@@ -21,7 +26,9 @@ export type ChatMessage = {
   author?: PersonRef;
 };
 
-const PAGE_SIZE = 30;
+/** Ukuran halaman listChatMessages. Diekspor agar hook (`useChatMessages`) menghitung `hasMore` dari `batch === CHAT_PAGE_SIZE` tanpa konstanta duplikat. */
+export const CHAT_PAGE_SIZE = 30;
+const PAGE_SIZE = CHAT_PAGE_SIZE;
 
 // ---------------------------------------------------------------- queries
 

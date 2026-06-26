@@ -128,6 +128,10 @@ Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), 
 | `ErrorState` | latar `red-50`, role `alert`, retry | `ui.tsx` |
 | `ScoreBadge`/`ScoreLegend` | band §8 + label teks | `ui.tsx` + [`score.ts`](mobile/src/lib/score.ts) |
 | `Avatar` | warna deterministik §8 + inisial | `ui.tsx` + [`avatar-color.ts`](mobile/src/lib/avatar-color.ts) |
+| `ChatBubble` (UI-S-IN2) | me: `bg-brand-dark text-white self-end rounded-2xl rounded-br-md px-3 py-2 max-w-[80%]`; them: `bg-neutral-100 dark:bg-neutral-800 self-start rounded-2xl rounded-bl-md px-3 py-2 max-w-[80%]`; identitas `them` = Avatar 28px + nama (`text-xs font-semibold text-neutral-500`) di atas bubble pertama hari itu | `mobile/src/app/(app)/inbox/[roomId].tsx` |
+| `DateDivider` (UI-S-IN2) | `flex-row items-center gap-2 my-3`; chip tengah `bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-full text-xs font-semibold text-neutral-600 dark:text-neutral-300`; garis tipis `flex-1 h-px bg-neutral-200 dark:bg-neutral-800` di kiri & kanan; label = tanggal device-tz (`'Hari ini' / 'Kemarin' / 'd MMM yyyy'`) | `mobile/src/app/(app)/inbox/[roomId].tsx` |
+| `ContextBanner` (UI-S-IN3 governance) | `flex-row items-start gap-2 rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40 p-3`; ikon `ℹ`, body teks `text-sm text-blue-800`, tombol "Tutup" `text-xs font-semibold text-blue-700`; state `dismissed` lokal (re-mount akan munculkan lagi — by design V1) | `mobile/src/app/(app)/inbox/[roomId].tsx` |
+| `SendButton` (UI-S-IN4) | circular `w-11 h-11` (inline style `{width:44,height:44}` — Critic §8.4: NativeWind class tak selalu flatten di jest); `rounded-full bg-brand-dark items-center justify-center`; ikon paper-plane putih; `accessibilityRole='button'` + `accessibilityLabel='Kirim pesan'` + `accessibilityState={{disabled}}` eksplisit (a11y mengikat); disabled saat input kosong/whitespace/`isSending` → `opacity-40` | `mobile/src/app/(app)/inbox/[roomId].tsx` |
 
 ---
 
