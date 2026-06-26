@@ -1,10 +1,12 @@
 // Fase 8 — Search global (RLS-scoped via search_cards RPC). Empty state saat query kosong.
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { FlatList } from 'react-native';
+import { Text, TextInput, View } from 'react-native-css/components';
 
 import { EmptyState, SectionCard, SkeletonList } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
+import type { SearchResult } from '@/lib/governance-admin';
 
 const ENTITY_LABEL: Record<string, string> = {
   goal: 'Goal',
@@ -20,35 +22,61 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const { results, isLoading, enabled } = useSearchCards({ query });
 
-  return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Cari' }} />
-      <View className="gap-3 p-5">
-        <TextInput
-          className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-          placeholder="Cari Goal, Initiative, Action Plan…"
-          placeholderTextColor="#9ca3af"
-          value={query}
-          onChangeText={setQuery}
-          accessibilityLabel="Kotak pencarian"
-        />
-        {!enabled ? (
-          <EmptyState title="Mulai mencari" description="Ketik kata kunci untuk mencari card yang dapat Anda akses." />
-        ) : isLoading ? (
-          <SkeletonList count={4} />
-        ) : results.length === 0 ? (
-          <EmptyState title="Tidak ada hasil" description="Tidak ada card cocok yang dapat Anda akses." />
-        ) : (
-          results.map((r) => (
-            <SectionCard key={`${r.entity_type}:${r.id}`}>
-              <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                {ENTITY_LABEL[r.entity_type] ?? r.entity_type}
-              </Text>
-            </SectionCard>
-          ))
-        )}
+  const header = (
+    <View className="pb-3">
+      <TextInput
+        className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+        placeholder="Cari Goal, Initiative, Action Plan…"
+        placeholderTextColor="#9ca3af"
+        value={query}
+        onChangeText={setQuery}
+        accessibilityLabel="Kotak pencarian"
+      />
+    </View>
+  );
+
+  let body: React.ReactNode = null;
+  if (!enabled) {
+    body = (
+      <EmptyState title="Mulai mencari" description="Ketik kata kunci untuk mencari card yang dapat Anda akses." />
+    );
+  } else if (isLoading) {
+    body = <SkeletonList count={4} />;
+  } else if (results.length === 0) {
+    body = <EmptyState title="Tidak ada hasil" description="Tidak ada card cocok yang dapat Anda akses." />;
+  }
+
+  if (body !== null) {
+    return (
+      <View className="flex-1 bg-neutral-50 dark:bg-black">
+        <Stack.Screen options={{ title: 'Cari' }} />
+        <View className="gap-3 p-5">
+          {header}
+          {body}
+        </View>
       </View>
-    </ScrollView>
+    );
+  }
+
+  const renderItem = ({ item: r }: { item: SearchResult }) => (
+    <SectionCard>
+      <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
+      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+        {ENTITY_LABEL[r.entity_type] ?? r.entity_type}
+      </Text>
+    </SectionCard>
+  );
+
+  return (
+    <View className="flex-1 bg-neutral-50 dark:bg-black">
+      <Stack.Screen options={{ title: 'Cari' }} />
+      <FlatList<SearchResult>
+        contentContainerStyle={{ gap: 12, padding: 20 }}
+        data={results}
+        keyExtractor={(r) => `${r.entity_type}:${r.id}`}
+        ListHeaderComponent={header}
+        renderItem={renderItem}
+      />
+    </View>
   );
 }
