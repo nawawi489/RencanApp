@@ -228,3 +228,22 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 - **Fase E — Thread:** 18/18 pass. Urutan kronologis-menaik via `[...messages].reverse()`, bubble me/them via `useAuth().session?.user?.id` (default 'them' saat null), Avatar+nama untuk them (author null → '?'), DateDivider per-hari device-tz + skip invalid created_at, satu hari = tepat satu divider, `roomId` undefined → ErrorState + markRead TIDAK dipanggil, composer SendButton circular (inline 44/44, `accessibilityLabel='Kirim pesan'`), anti double-submit (`isSending` → button disabled), gagal-send → input tetap + `role='alert'`, GovernanceBanner "Chat bukan jalur formal: …" dgn tombol Tutup, `Muat pesan lama` saat hasMore.
 - **Closes backlog:** UI-S-IN1, UI-S-IN2, UI-S-IN3 (banner governance varian — bukan banner reply-AP yang ter-defer), UI-S-IN4 (circular SendButton); UI-G-005 (search pill bagian dari Inbox list, bukan topbar — belum). Catatan: regresi "chat polos" pada [[ui-prototype-gap]] kini tertutup.
 - **Item ter-defer (sengaja tidak dieksekusi V1):** reactions, reply-quote, banner per-pesan reply-AP, system events, attach-evidence paperclip, chip Saya PIC/Review/Deadline, workspace-viewer composer gating (FR-IN4.3) — tetap di backlog.
+
+## [2026-06-26] update | Eksekusi TDD AP5 (file upload) + AP6 (KPI linkage)
+
+- **Hasil sementara:** migrasi 0019 apply + contract 10 invarian PASS; storage.test 25/25; cards.test 17/17; use-submission 13/13; submit.test 10/10. Full suite + tsc verify Fase F berikutnya.
+- **Fase A — Data (migrasi 0019_fase_exec_ap5_ap6):**
+  - ALTER `action_plan_result_values` +kpi_area_id (NULLABLE per ER-1/A2 backward-compat) +value_numeric +previous_value_text
+  - ALTER `action_plan_submissions` +status check ('draft'/'submitted') untuk 2-phase finalize
+  - VIEW `kpi_area_current_values` (security_invoker, WHERE review_status='approved')
+  - 3 RPC baru: `create_submission_draft`, `submit_action_plan` (REPLACE signature lama — BREAKING per OQ-4 deploy-atomic), `cleanup_orphan_upload` (set GUC storage.allow_delete_query untuk bypass protect_delete trigger)
+  - Helper `log_governance_violation` SECURITY DEFINER (revoke dari authenticated)
+  - `list_kpi_area_candidates_for_action_plan` (Fase 1 fallback per OD-1: initiative.strategy_id NULL → 0 baris)
+  - Storage RLS bucket `evidence`: INSERT `auth.uid()=pic_id` (ER-3 anti-Reviewer-injection); SELECT `can_access_action_plan`; DELETE conditional draft (ER-4 evidence locking)
+  - Bug rencana yg di-fix saat eksekusi: VIEW perlu kolom `value_numeric` (A1); ADD COLUMN NOT NULL → diganti NULLABLE+RPC enforce (A2); bucket name = 'evidence' (A3); RPC name `cleanup_orphan_upload` (A4); sequential→parallel upload (A5); migrasi 0019 (0018 PR #13) (A6); ambiguous `name` → `objects.name` table-qualified; drop policy lama `evidence_objects_insert/select` yg permisif; severity 'warning'→'medium' (governance_violations_severity_check).
+- **Fase B — Data layer:** `cards.ts` +EVIDENCE_KIND_LABEL.link_generic (ER-9), `ResultValueInput` +kpi_area_id+value_numeric, `createSubmissionDraft`/`finalizeSubmission`/`listKpiAreaCandidates`/`getKpiAreaCurrentValue`. New `storage.ts`: `classifyKind` (MIME deterministik per ER-6), `validateFile` (10MB cap), `validateBatch` (5 file + 25MB cap), `safeFilename`, `buildEvidencePath`, `uploadEvidenceFile`, `cleanupOrphanUpload`. New `file-picker.ts` wrapper expo-document-picker.
+- **Fase C — Hooks:** new `use-submission.ts`: `useKpiCandidates`, `useKpiCurrentValue`, `useSubmissionFlow` (state machine + anti double-tap guard di API surface bukan mutationFn — useMutation tidak share in-flight promise; pakai useRef + mutateAsync wrapper).
+- **Fase D — Komponen UI:** ui.tsx +UploadButton +AttachmentRow +ProgressPill +KpiLinkageCard +DeltaArrow (a11y label eksplisit menyebut arah — DESIGN §4) +ImpactApprovalCard +IMPACT_APPROVAL_COPY konstanta.
+- **Fase E — Refactor submit.tsx:** integrasi 2-phase commit + UploadButton + KpiResultRow (KPI picker auto-select bila 1 kandidat, sembunyikan section bila 0 per OD-1, DeltaArrow + ImpactApprovalCard saat valid value). Mode instance (repeat) tetap pakai jalur lama (OD-3 out of scope).
+- **Closes backlog:** UI-S-AP5, UI-S-AP6 ✅. wiki/concepts/ui-prototype-gap.md di-update.
+- **DEFER V2 sengaja:** Reviewer-side render attachment + KPI delta di SubmissionCard/action-plan[id]/instance[id] (OD-3 → PR follow-up); telemetri analytics (OQ-5); telemetri governance_violation untuk reject path (V1 limitation — exception rollback log; butuh autonomous tx, preseden Fase 7 OQ-1).

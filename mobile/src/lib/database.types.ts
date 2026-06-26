@@ -200,28 +200,44 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kpi_area_id: string | null
           label: string | null
+          previous_value_text: string | null
           submission_id: string
+          value_numeric: number | null
           value_text: string | null
           value_type: string
         }
         Insert: {
           created_at?: string
           id?: string
+          kpi_area_id?: string | null
           label?: string | null
+          previous_value_text?: string | null
           submission_id: string
+          value_numeric?: number | null
           value_text?: string | null
           value_type: string
         }
         Update: {
           created_at?: string
           id?: string
+          kpi_area_id?: string | null
           label?: string | null
+          previous_value_text?: string | null
           submission_id?: string
+          value_numeric?: number | null
           value_text?: string | null
           value_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "action_plan_result_values_kpi_area_id_fkey"
+            columns: ["kpi_area_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_areas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "action_plan_result_values_submission_id_fkey"
             columns: ["submission_id"]
@@ -242,6 +258,7 @@ export type Database = {
           review_status: string
           reviewed_at: string | null
           reviewed_by: string | null
+          status: string
           submitted_at: string
           submitted_by: string | null
           version_number: number
@@ -256,6 +273,7 @@ export type Database = {
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          status?: string
           submitted_at?: string
           submitted_by?: string | null
           version_number: number
@@ -270,6 +288,7 @@ export type Database = {
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          status?: string
           submitted_at?: string
           submitted_by?: string | null
           version_number?: number
@@ -2949,7 +2968,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      kpi_area_current_values: {
+        Row: {
+          kpi_area_id: string | null
+          last_approved_at: string | null
+          numeric_total: number | null
+          text_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_result_values_kpi_area_id_fkey"
+            columns: ["kpi_area_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       activate_action_plan: {
@@ -3053,6 +3088,7 @@ export type Database = {
           required_count: number
         }[]
       }
+      cleanup_orphan_upload: { Args: { p_path: string }; Returns: undefined }
       close_period_snapshot: { Args: { p_period_id: string }; Returns: number }
       compute_action_plan_completion: {
         Args: { p_end: string; p_org: string; p_start: string; p_user: string }
@@ -3092,6 +3128,10 @@ export type Database = {
       }
       create_department: {
         Args: { p_description: string; p_name: string }
+        Returns: string
+      }
+      create_submission_draft: {
+        Args: { p_action_plan_id: string; p_attachment_count: number }
         Returns: string
       }
       create_team: {
@@ -3243,9 +3283,27 @@ export type Database = {
         Returns: boolean
       }
       kpi_area_in_my_org: { Args: { p_kpi_area: string }; Returns: boolean }
+      list_kpi_area_candidates_for_action_plan: {
+        Args: { p_action_plan_id: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       list_user_permissions_admin: {
         Args: { p_target_user_id: string }
         Returns: Json[]
+      }
+      log_governance_violation: {
+        Args: {
+          p_detail?: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_severity?: string
+          p_user_id: string
+          p_violation_type: string
+        }
+        Returns: undefined
       }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_chat_messages_read: { Args: { p_room: string }; Returns: number }
@@ -3364,10 +3422,10 @@ export type Database = {
       strategy_in_my_org: { Args: { p_strategy: string }; Returns: boolean }
       submit_action_plan: {
         Args: {
-          p_action_plan_id: string
           p_evidence: Json
           p_note: string
           p_result_values: Json
+          p_submission_draft_id: string
         }
         Returns: string
       }

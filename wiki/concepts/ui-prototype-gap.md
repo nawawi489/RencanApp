@@ -187,8 +187,8 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 - ~~UI-S-IN1 → UI-S-IN4~~ ✅ **Selesai 2026-06-26** (Inbox/chat full UI di belakang migrasi 0018; jest 540/540).
 - UI-S-SF1 (Score Formula read-only vs editor inline) — regresi nyata.
 - UI-G-001 (progress orb sistemik) — sinyal capaian utama hilang lintas Performance.
-- UI-S-AP5 (file upload bukti) — fundamental untuk [[execution-loop]].
-- UI-S-AP6 (linkage KPI Area di Result Value) — kontrak data ke KPI Area lemah.
+- ~~UI-S-AP5~~ ✅ **Selesai 2026-06-26** (file upload via Supabase Storage + 2-phase commit; migrasi 0019).
+- ~~UI-S-AP6~~ ✅ **Selesai 2026-06-26** (KPI Area linkage + DeltaArrow + ImpactApprovalCard; previous_value server-computed via VIEW).
 
 **P1 — gap fungsional yang nyata**
 - UI-S-K01 (Pecahan Target Q/M).
