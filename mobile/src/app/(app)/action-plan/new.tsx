@@ -5,6 +5,7 @@ import { Alert, Switch } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createActionPlan, type PersonRef } from '@/lib/cards';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
@@ -230,8 +231,8 @@ export default function NewActionPlanScreen() {
           <LabeledInput label="Nama Action Plan" value={name} onChangeText={setName} required placeholder="mis. Buat 20 Konten Iklan" />
           <UserPicker label="PIC (eksekutor)" required value={pic} onChange={setPic} excludeId={reviewer?.id} />
           <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />
-          <LabeledInput label="Tanggal Mulai" value={startDate} onChangeText={setStartDate} placeholder={DATE_HINT} keyboardType="numeric" />
-          <LabeledInput label="Deadline" value={deadline} onChangeText={setDeadline} placeholder={DATE_HINT} keyboardType="numeric" />
+          <DateField label="Tanggal Mulai" value={startDate} onChange={setStartDate} />
+          <DateField label="Deadline" value={deadline} onChange={setDeadline} />
           <LabeledInput label="Output yang Diharapkan" value={output} onChangeText={setOutput} multiline placeholder="Hasil konkret yang diharapkan" />
           <LabeledInput label="Definition of Done" value={dod} onChangeText={setDod} multiline placeholder="Kriteria pekerjaan dianggap selesai" />
           <PrioritySelector value={priority} onChange={setPriority} />
@@ -315,22 +316,8 @@ export default function NewActionPlanScreen() {
                 />
               ) : null}
 
-              <LabeledInput
-                label="Mulai Repeat"
-                value={repeatStart}
-                onChangeText={setRepeatStart}
-                required
-                placeholder={DATE_HINT}
-                keyboardType="numeric"
-              />
-              <LabeledInput
-                label="Selesai Repeat"
-                value={repeatEnd}
-                onChangeText={setRepeatEnd}
-                required
-                placeholder={DATE_HINT}
-                keyboardType="numeric"
-              />
+              <DateField label="Mulai Repeat" value={repeatStart} onChange={setRepeatStart} required />
+              <DateField label="Selesai Repeat" value={repeatEnd} onChange={setRepeatEnd} required />
               <LabeledInput
                 label="Jam Deadline"
                 value={timeOfDay}

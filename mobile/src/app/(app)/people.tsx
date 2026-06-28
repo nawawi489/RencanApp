@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList } from 'react-native';
-import { Pressable, Text, View } from 'react-native-css/components';
+import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
 import {
   Avatar,
+  Badge,
   EmptyState,
   ErrorState,
   GuidanceNote,
@@ -17,15 +18,33 @@ import {
   SkeletonList,
   type ScoreBreakdownMetric,
 } from '@/components/ui';
-import { listOrgProfiles, type PersonRef } from '@/lib/cards';
+import { listOrgProfilesWithRoles, type OrgProfileWithRole } from '@/lib/cards';
 import { METRIC_LABEL, effectiveScore } from '@/lib/people-score';
 import { useActivePeriod, useLatestClosedPeriod, useMyScore, useMyScoreHistory, useRanking } from '@/hooks/use-people-score';
 
-type Person = NonNullable<PersonRef> & { score?: number | null };
+type Person = OrgProfileWithRole & { score?: number | null };
 
 function personLabel(p: Person): string {
   return p.full_name?.trim() || p.email || 'Tanpa nama';
 }
+
+// UI-S-PP2 — subhead: position + role bila ada, fallback email.
+function personSubhead(p: Person): string {
+  const parts: string[] = [];
+  if (p.position_title) parts.push(p.position_title);
+  if (p.role_name) parts.push(p.role_name);
+  if (parts.length === 0 && p.email) return p.email;
+  return parts.join(' · ');
+}
+
+// UI-S-PP1 — tabs sederhana (V1: Ranking/Bulan/Quarter — Admin ditunda).
+const PEOPLE_TABS = ['ranking', 'bulan', 'quarter'] as const;
+type PeopleTab = (typeof PEOPLE_TABS)[number];
+const PEOPLE_TAB_LABEL: Record<PeopleTab, string> = {
+  ranking: 'Ranking',
+  bulan: 'Bulan',
+  quarter: 'Quarter',
+};
 
 function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
   if (!breakdown || typeof breakdown !== 'object') return [];
@@ -41,9 +60,11 @@ function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
 
 export default function PeopleScreen() {
   const router = useRouter();
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState<PeopleTab>('ranking');
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['org-profiles'],
-    queryFn: listOrgProfiles,
+    queryKey: ['org-profiles-with-roles'],
+    queryFn: listOrgProfilesWithRoles,
   });
   const { period } = useActivePeriod();
   const { score: myScore } = useMyScore(period?.id);
@@ -80,6 +101,20 @@ export default function PeopleScreen() {
     });
     return mapped;
   }, [data, scoreByUser]);
+
+  // UI-S-PP1 — filter case-insensitive di name/email/position/role.
+  const filtered: Person[] = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return people;
+    return people.filter((p) => {
+      return (
+        (p.full_name ?? '').toLowerCase().includes(q) ||
+        (p.email ?? '').toLowerCase().includes(q) ||
+        (p.position_title ?? '').toLowerCase().includes(q) ||
+        (p.role_name ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [people, search]);
 
   const myEffective = effectiveScore(myScore ?? null);
   const myBreakdown = useMemo(
@@ -179,11 +214,45 @@ export default function PeopleScreen() {
         </Pressable>
       ) : null}
 
+      {/* UI-S-PP1 — search + tabs */}
+      <View className="gap-3">
+        <TextInput
+          accessibilityLabel="Cari anggota"
+          className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+          placeholder="Cari nama, posisi, atau role…"
+          placeholderTextColor="#9ca3af"
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+        />
+        <View className="flex-row flex-wrap gap-2">
+          {PEOPLE_TABS.map((k) => {
+            const active = tab === k;
+            return (
+              <Pressable
+                key={k}
+                onPress={() => setTab(k)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`Tab ${PEOPLE_TAB_LABEL[k]}`}
+                className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}>
+                <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
+                  {PEOPLE_TAB_LABEL[k]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {tab !== 'ranking' ? (
+          <Badge label="V1: filter periode menyusul" tone="neutral" />
+        ) : null}
+      </View>
+
       <View className="flex-row items-center justify-between">
         <Text className="text-xs font-semibold uppercase text-neutral-400">
           Anggota Organisasi
         </Text>
-        <Text className="text-xs font-semibold text-neutral-400">{people.length} user</Text>
+        <Text className="text-xs font-semibold text-neutral-400">{filtered.length}/{people.length} user</Text>
       </View>
     </View>
   );
@@ -205,11 +274,9 @@ export default function PeopleScreen() {
         <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
           {personLabel(p)}
         </Text>
-        {p.email ? (
-          <Text className="text-xs text-neutral-400" numberOfLines={1}>
-            {p.email}
-          </Text>
-        ) : null}
+        <Text className="text-xs text-neutral-400" numberOfLines={1}>
+          {personSubhead(p)}
+        </Text>
         {/* p.score null vs 0: null → tak ada badge; 0 nyata → band attention */}
         {p.score != null ? (
           <View className="mt-1.5">
@@ -225,9 +292,18 @@ export default function PeopleScreen() {
     <View className="flex-1 bg-white dark:bg-black">
       <FlatList<Person>
         contentContainerStyle={{ gap: 12, padding: 20 }}
-        data={people}
+        data={filtered}
         keyExtractor={(p) => p.id}
         ListHeaderComponent={header}
+        ListEmptyComponent={
+          search.trim() ? (
+            <EmptyState
+              icon={<Text className="text-2xl">🔍</Text>}
+              title="Tidak ditemukan"
+              description={`Tidak ada anggota cocok untuk "${search.trim()}".`}
+            />
+          ) : null
+        }
         renderItem={renderItem}
       />
     </View>

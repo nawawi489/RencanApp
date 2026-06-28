@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
@@ -96,20 +97,8 @@ export default function NewStrategyScreen() {
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
-          <LabeledInput
-            label="Tanggal Mulai"
-            value={periodStart}
-            onChangeText={setPeriodStart}
-            placeholder={DATE_HINT}
-            keyboardType="numeric"
-          />
-          <LabeledInput
-            label="Tanggal Selesai"
-            value={periodEnd}
-            onChangeText={setPeriodEnd}
-            placeholder={DATE_HINT}
-            keyboardType="numeric"
-          />
+          <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
+          <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
         </SectionCard>
 

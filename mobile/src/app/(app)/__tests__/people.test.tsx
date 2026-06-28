@@ -12,6 +12,9 @@ const mockListOrgProfiles = jest.fn();
 jest.mock('@/lib/cards', () => ({
   __esModule: true,
   listOrgProfiles: () => mockListOrgProfiles(),
+  // UI-S-PP2 — sibling baru yang dipakai PeopleScreen; default ke listOrgProfiles supaya test lama
+  // tidak perlu mock dua-duanya. Mock entry per test boleh override.
+  listOrgProfilesWithRoles: () => mockListOrgProfiles(),
 }));
 
 jest.mock('expo-router', () => ({
@@ -75,7 +78,7 @@ describe('PeopleScreen — 4 state fondasi', () => {
     expect(await screen.findByText('Skala Score')).toBeTruthy();
     expect(await screen.findByText('Rina Jaya')).toBeTruthy();
     expect(screen.getByLabelText('Arman Malik')).toBeTruthy();
-    expect(screen.getByText('2 user')).toBeTruthy();
+    expect(screen.getByText('2/2 user')).toBeTruthy();
   });
 
   it('kosong → EmptyState', async () => {

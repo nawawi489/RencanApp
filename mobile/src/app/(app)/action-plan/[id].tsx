@@ -20,12 +20,210 @@ import {
   listSubmissions,
   reviewSubmission,
   startActionPlan,
+  type ActionPlanWithPeople,
+  type SubmissionDetail,
 } from '@/lib/cards';
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,
   type InstanceWithSubmissions,
 } from '@/lib/repeat';
+
+// ---------- UI-S-AP1 — Panduan Selesai (checklist 5-langkah PIC journey) ----------
+// Centang otomatis: Draft→0/5, Aktif/Assigned→1/5, In Progress→2/5, Submitted→3/5,
+// Done→5/5 (4 langkah + approval). Revision → balik ke langkah 3 dengan note.
+function GuidanceChecklist({
+  ap,
+  lastSubmission,
+}: {
+  ap: ActionPlanWithPeople;
+  lastSubmission?: SubmissionDetail;
+}) {
+  const isRepeat = ap.repeat_setting === 'repeat';
+  const hasSubmission = !!lastSubmission;
+  const items: { label: string; checked: boolean; note?: string }[] = [
+    {
+      label: 'Pelajari brief, output yang diharapkan, dan Definition of Done',
+      checked: ap.status !== 'draft',
+    },
+    {
+      label: 'Aktifkan & ambil tanggung jawab (status Ditugaskan)',
+      checked: !['draft'].includes(ap.status),
+    },
+    {
+      label: 'Mulai kerjakan sesuai brief',
+      checked: ['in_progress', 'submitted', 'done', 'revision'].includes(ap.status),
+    },
+    {
+      label: ap.evidence_required
+        ? 'Submit bukti + nilai hasil sebelum deadline'
+        : 'Submit penyelesaian sebelum deadline',
+      checked: ['submitted', 'done'].includes(ap.status) || hasSubmission,
+      note:
+        ap.status === 'revision'
+          ? 'Reviewer menolak — submit ulang dengan perbaikan.'
+          : undefined,
+    },
+    {
+      label: 'Tunggu approval reviewer untuk menyelesaikan',
+      checked: ap.status === 'done',
+    },
+  ];
+  const doneCount = items.filter((i) => i.checked).length;
+  return (
+    <SectionCard>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-sm font-bold text-black dark:text-white">Panduan Selesai</Text>
+        <Badge label={`${doneCount}/${items.length}`} tone={doneCount === items.length ? 'success' : 'info'} />
+      </View>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        {isRepeat
+          ? 'Untuk Action Plan repeat: tiap instance mengikuti langkah yang sama.'
+          : 'Langkah berurutan dari Draft hingga disetujui reviewer.'}
+      </Text>
+      <View className="gap-2 pt-1">
+        {items.map((it, i) => (
+          <View key={i} className="flex-row items-start gap-2">
+            <View
+              className={`mt-0.5 h-5 w-5 items-center justify-center rounded-md border ${it.checked ? 'border-emerald-600 bg-emerald-600' : 'border-neutral-300 dark:border-neutral-700'}`}
+              accessible
+              accessibilityLabel={it.checked ? 'Selesai' : 'Belum selesai'}>
+              {it.checked ? (
+                <Text className="text-[10px] font-bold text-white">✓</Text>
+              ) : null}
+            </View>
+            <View className="flex-1 gap-0.5">
+              <Text
+                className={`text-sm ${it.checked ? 'text-neutral-400 line-through dark:text-neutral-500' : 'text-black dark:text-white'}`}>
+                {it.label}
+              </Text>
+              {it.note ? (
+                <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">{it.note}</Text>
+              ) : null}
+            </View>
+          </View>
+        ))}
+      </View>
+    </SectionCard>
+  );
+}
+
+// ---------- UI-S-AP2 — Gate & kendala (blokir-status derivasi field) ----------
+// Setiap baris = satu syarat aktif/eksekusi. tone: success (ok) / warn (lemah) / danger (blocker).
+type GateStatus = 'ok' | 'warn' | 'danger' | 'blocker';
+function gateTone(s: GateStatus): 'success' | 'warn' | 'danger' {
+  if (s === 'ok') return 'success';
+  if (s === 'warn') return 'warn';
+  return 'danger';
+}
+function gateLabel(s: GateStatus): string {
+  if (s === 'ok') return 'OK';
+  if (s === 'warn') return 'Perhatian';
+  if (s === 'blocker') return 'Blokir';
+  return 'Lewat';
+}
+
+function GateAndConstraints({
+  ap,
+  repeatConfigured,
+}: {
+  ap: ActionPlanWithPeople;
+  repeatConfigured?: boolean;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = !!ap.deadline && ap.deadline < today && ap.status !== 'done';
+  const isRepeat = ap.repeat_setting === 'repeat';
+  const items: { label: string; status: GateStatus; hint?: string }[] = [
+    {
+      label: 'PIC ditetapkan',
+      status: ap.pic_id ? 'ok' : 'blocker',
+      hint: ap.pic_id ? undefined : 'Wajib pilih PIC sebelum diaktifkan.',
+    },
+    {
+      label: 'Reviewer ditetapkan & ≠ PIC',
+      status:
+        !ap.reviewer_id
+          ? 'blocker'
+          : ap.pic_id && ap.reviewer_id === ap.pic_id
+            ? 'blocker'
+            : 'ok',
+      hint:
+        !ap.reviewer_id
+          ? 'Wajib pilih reviewer.'
+          : ap.reviewer_id === ap.pic_id
+            ? 'Reviewer tidak boleh sama dengan PIC (anti self-approval).'
+            : undefined,
+    },
+    {
+      label: 'Deadline diset',
+      status: ap.deadline ? (overdue ? 'danger' : 'ok') : 'warn',
+      hint: !ap.deadline
+        ? 'Tanpa deadline, tidak ada sinyal urgensi.'
+        : overdue
+          ? `Lewat dari ${ap.deadline}.`
+          : undefined,
+    },
+    {
+      label: 'Output yang Diharapkan',
+      status: ap.expected_output ? 'ok' : 'warn',
+      hint: ap.expected_output ? undefined : 'PIC tidak tahu hasil konkret yang ditagih.',
+    },
+    {
+      label: 'Definition of Done',
+      status: ap.definition_of_done ? 'ok' : 'warn',
+      hint: ap.definition_of_done ? undefined : 'Tanpa DoD, kriteria selesai ambigu.',
+    },
+    {
+      label: ap.evidence_required ? 'Bukti wajib (sesuai aturan)' : 'Bukti opsional',
+      status: ap.evidence_required ? 'ok' : 'warn',
+      hint: ap.evidence_required ? undefined : 'Hasil sulit diaudit tanpa bukti.',
+    },
+  ];
+  if (isRepeat) {
+    items.push({
+      label: 'Repeat rule terkonfigurasi',
+      status: repeatConfigured ? 'ok' : 'blocker',
+      hint: repeatConfigured ? undefined : 'Aktifkan card untuk membuat instance terjadwal.',
+    });
+  }
+  const blockers = items.filter((i) => i.status === 'blocker').length;
+  const warns = items.filter((i) => i.status !== 'ok' && i.status !== 'blocker').length;
+  const summaryTone: 'success' | 'warn' | 'danger' =
+    blockers > 0 ? 'danger' : warns > 0 ? 'warn' : 'success';
+  const summary =
+    blockers > 0
+      ? `${blockers} blokir`
+      : warns > 0
+        ? `${warns} perhatian`
+        : 'Tidak ada kendala';
+
+  return (
+    <SectionCard>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-sm font-bold text-black dark:text-white">Gate & kendala</Text>
+        <Badge label={summary} tone={summaryTone} />
+      </View>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        Syarat aktivasi & eksekusi dari field card ini.
+      </Text>
+      <View className="gap-2 pt-1">
+        {items.map((it, i) => (
+          <View key={i} className="flex-row items-start gap-2">
+            <View className="mt-0.5">
+              <Badge label={gateLabel(it.status)} tone={gateTone(it.status)} />
+            </View>
+            <View className="flex-1 gap-0.5">
+              <Text className="text-sm text-black dark:text-white">{it.label}</Text>
+              {it.hint ? (
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">{it.hint}</Text>
+              ) : null}
+            </View>
+          </View>
+        ))}
+      </View>
+    </SectionCard>
+  );
+}
 
 function InstanceRow({
   inst,
@@ -213,6 +411,15 @@ export default function ActionPlanDetailScreen() {
                 ]}
               />
             </View>
+
+            {/* UI-S-AP1 — Panduan Selesai (auto-derived dari status + submissions) */}
+            <GuidanceChecklist ap={ap} lastSubmission={subsQ.data?.[0]} />
+
+            {/* UI-S-AP2 — Gate & kendala (derivasi field card) */}
+            <GateAndConstraints
+              ap={ap}
+              repeatConfigured={ap.repeat_setting === 'repeat' && ap.status !== 'draft'}
+            />
 
             <SectionCard>
               <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>

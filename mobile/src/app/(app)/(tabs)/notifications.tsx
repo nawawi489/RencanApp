@@ -1,13 +1,16 @@
 // Notifications (Fase 3) — segmentasi 8 tab + 4 state per tab. Baris menandai dibaca saat ditekan;
 // notifikasi action_plan membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
+// UI-S-N01 — tombol aksi inline per row sesuai (type, entity_type).
+// UI-S-N02 — section "Baru" (≤24 jam) vs "Sebelumnya".
 import { useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
-import { FlatList } from 'react-native';
+import { useMemo, useState } from 'react';
+import { SectionList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
 import {
   Badge,
+  Button,
   EmptyState,
   ErrorState,
   SectionCard,
@@ -20,6 +23,7 @@ import {
   NOTIFICATION_TYPE_TONE,
   type Notification,
   type NotificationTab,
+  type NotificationType,
 } from '@/lib/notifications';
 
 const TABS: { key: NotificationTab; label: string }[] = [
@@ -35,7 +39,34 @@ const TABS: { key: NotificationTab; label: string }[] = [
 
 // ---------------------------------------------------------------- row
 
-function NotificationRow({ item, onPress }: { item: Notification; onPress: () => void }) {
+// UI-S-N01 — aksi inline diturunkan dari (type, entity_type). null = baris hanya bisa ditandai dibaca.
+function inlineAction(item: Notification): { label: string; href: Href | null } | null {
+  const t: NotificationType = item.type;
+  const et = item.entity_type;
+  if (et === 'action_plan_instance') {
+    return { label: 'Buka Instance', href: `/action-plan/instance/${item.entity_id}` as Href };
+  }
+  if (et === 'action_plan') {
+    if (t === 'review_request') return { label: 'Review Sekarang', href: `/action-plan/${item.entity_id}` as Href };
+    if (t === 'rejected') return { label: 'Lihat Revisi', href: `/action-plan/${item.entity_id}` as Href };
+    if (t === 'approved') return { label: 'Lihat Bukti', href: `/action-plan/${item.entity_id}` as Href };
+    if (t === 'deadline_reminder') return { label: 'Buka Request', href: `/action-plan/${item.entity_id}` as Href };
+    return { label: 'Buka Detail', href: `/action-plan/${item.entity_id}` as Href };
+  }
+  if (t === 'governance_warning') return null;
+  return null;
+}
+
+function NotificationRow({
+  item,
+  onPress,
+  onAction,
+}: {
+  item: Notification;
+  onPress: () => void;
+  onAction: (href: Href) => void;
+}) {
+  const action = inlineAction(item);
   return (
     <SectionCard onPress={onPress}>
       <View className="flex-row items-start gap-2">
@@ -57,9 +88,40 @@ function NotificationRow({ item, onPress }: { item: Notification; onPress: () =>
           {item.body ? (
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">{item.body}</Text>
           ) : null}
+          {action && action.href ? (
+            <View className="pt-1">
+              <Button label={action.label} variant="secondary" onPress={() => onAction(action.href!)} />
+            </View>
+          ) : null}
         </View>
       </View>
     </SectionCard>
+  );
+}
+
+// UI-S-N02 — group notifikasi ke section "Baru" (≤24 jam) vs "Sebelumnya".
+type NotifSection = { title: string; data: Notification[] };
+function groupByRecency(items: Notification[]): NotifSection[] {
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+  const fresh: Notification[] = [];
+  const old: Notification[] = [];
+  for (const n of items) {
+    const created = Date.parse(n.created_at);
+    if (Number.isFinite(created) && now - created < DAY) fresh.push(n);
+    else old.push(n);
+  }
+  const sections: NotifSection[] = [];
+  if (fresh.length) sections.push({ title: 'Baru', data: fresh });
+  if (old.length) sections.push({ title: 'Sebelumnya', data: old });
+  return sections;
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <View className="bg-white py-2 dark:bg-black">
+      <Text className="text-xs font-semibold uppercase text-neutral-400">{title}</Text>
+    </View>
   );
 }
 
@@ -80,8 +142,17 @@ export default function NotificationsScreen() {
     markRead(item.id);
     if (item.entity_type === 'action_plan') {
       router.push(`/action-plan/${item.entity_id}` as Href);
+    } else if (item.entity_type === 'action_plan_instance') {
+      router.push(`/action-plan/instance/${item.entity_id}` as Href);
     }
   }
+
+  function openAction(item: Notification, href: Href) {
+    markRead(item.id);
+    router.push(href);
+  }
+
+  const sections = useMemo(() => groupByRecency(notifications), [notifications]);
 
   const header = (
     <View className="gap-5 pb-3">
@@ -151,16 +222,21 @@ export default function NotificationsScreen() {
   }
 
   const renderItem = ({ item }: { item: Notification }) => (
-    <NotificationRow item={item} onPress={() => openRow(item)} />
+    <NotificationRow
+      item={item}
+      onPress={() => openRow(item)}
+      onAction={(href) => openAction(item, href)}
+    />
   );
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
-      <FlatList<Notification>
+      <SectionList<Notification, NotifSection>
         contentContainerStyle={{ gap: 12, padding: 20 }}
-        data={notifications}
+        sections={sections}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={header}
+        renderSectionHeader={({ section }) => <SectionHeader title={section.title} />}
         ListEmptyComponent={
           <EmptyState
             icon={<Text className="text-2xl">🔔</Text>}
@@ -169,6 +245,7 @@ export default function NotificationsScreen() {
           />
         }
         renderItem={renderItem}
+        stickySectionHeadersEnabled={false}
       />
     </View>
   );
