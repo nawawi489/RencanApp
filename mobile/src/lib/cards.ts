@@ -171,6 +171,47 @@ export async function listOrgProfiles(): Promise<NonNullable<PersonRef>[]> {
   return data as NonNullable<PersonRef>[];
 }
 
+/** UI-S-PR1 — Detail profil satu user (untuk header rich chrome di people-profile). */
+export type OrgProfileDetail = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  position_title: string | null;
+  is_active: boolean;
+  created_at: string | null;
+  role_name: string | null;
+  role_level: string | null;
+};
+
+export async function getOrgProfileDetail(id: string): Promise<OrgProfileDetail | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, position_title, is_active, created_at, role_templates(name, level)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const row = data as unknown as {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    position_title: string | null;
+    is_active: boolean;
+    created_at: string | null;
+    role_templates: { name: string; level: string } | null;
+  };
+  return {
+    id: row.id,
+    full_name: row.full_name,
+    email: row.email,
+    position_title: row.position_title,
+    is_active: row.is_active,
+    created_at: row.created_at,
+    role_name: row.role_templates?.name ?? null,
+    role_level: row.role_templates?.level ?? null,
+  };
+}
+
 export type Guidance = Tables<'card_guidance_contents'>;
 export async function getGuidance(cardType: string): Promise<Guidance | null> {
   const { data, error } = await supabase
@@ -195,6 +236,21 @@ export async function listPendingReviews(): Promise<ActionPlanWithPeople[]> {
     .eq('reviewer_id', uid)
     .eq('status', 'submitted')
     .order('deadline', { ascending: true });
+  if (error) throw error;
+  return data as unknown as ActionPlanWithPeople[];
+}
+
+/**
+ * UI-S-PR4 — Action plan di mana user TERTENTU adalah PIC (untuk people-profile).
+ * RLS otomatis menyaring; statuses ke-aktif (assigned/in_progress/revision/submitted).
+ */
+export async function listActionPlansByPic(userId: string): Promise<ActionPlanWithPeople[]> {
+  const { data, error } = await supabase
+    .from('action_plans')
+    .select('*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email)')
+    .eq('pic_id', userId)
+    .in('status', ['assigned', 'in_progress', 'submitted', 'revision'])
+    .order('deadline', { ascending: true, nullsFirst: false });
   if (error) throw error;
   return data as unknown as ActionPlanWithPeople[];
 }

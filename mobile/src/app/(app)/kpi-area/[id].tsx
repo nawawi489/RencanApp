@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
+import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { CardHelpTrigger } from '@/components/card-help-trigger';
 import {
   Badge,
   Button,
@@ -232,7 +234,10 @@ export default function KpiAreaDetailScreen() {
 
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Strategy</Text>
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-lg font-bold text-black dark:text-white">Strategy</Text>
+                  <CardHelpTrigger topic="strategy" />
+                </View>
                 <Button
                   label="+ Tambah Strategy"
                   variant="secondary"
@@ -259,6 +264,8 @@ export default function KpiAreaDetailScreen() {
                 />
               )}
             </View>
+
+            <ActivityLogPanel entityType="kpi_area" entityId={id} />
           </>
         )}
       </View>

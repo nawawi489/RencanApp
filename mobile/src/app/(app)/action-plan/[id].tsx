@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
+import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { SubmissionCard } from '@/components/submission-card';
 import { personLabel } from '@/components/user-picker';
@@ -337,6 +338,8 @@ export default function ActionPlanDetailScreen() {
               )}
             </View>
             ) : null}
+
+            <ActivityLogPanel entityType="action_plan" entityId={id} />
           </>
         )}
       </View>

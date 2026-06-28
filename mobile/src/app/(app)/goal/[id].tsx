@@ -3,6 +3,8 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
+import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { CardHelpTrigger } from '@/components/card-help-trigger';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
@@ -136,7 +138,10 @@ export default function GoalDetailScreen() {
 
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
+                  <CardHelpTrigger topic="kpi_area" />
+                </View>
                 <Button
                   label="+ Tambah KPI Area"
                   variant="secondary"
@@ -163,6 +168,8 @@ export default function GoalDetailScreen() {
                 />
               )}
             </View>
+
+            <ActivityLogPanel entityType="goal" entityId={id} />
           </>
         )}
       </View>

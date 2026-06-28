@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
+import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import {
   Badge,
@@ -183,6 +184,8 @@ export default function DevelopmentAreaDetailScreen() {
                 />
               )}
             </View>
+
+            <ActivityLogPanel entityType="development_area" entityId={id} />
           </>
         )}
       </View>
