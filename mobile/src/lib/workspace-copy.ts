@@ -24,6 +24,25 @@ export const WS_TABS = {
   development: 'Development',
 } as const;
 
+/** UI-N-002 Stage 2 — Hub view (lobby) di tab Workspace. 2 hub-card + back-to-hub button. */
+export const WS_HUB_COPY = {
+  title: 'Workspace',
+  subtitle: '2 ruang eksekusi — pilih untuk masuk.',
+  backToHub: '← Workspace',
+  perf: {
+    kicker: 'Performance',
+    title: 'Target Kinerja',
+    meta: 'Goal → KPI Area → Strategy → Initiative → Action Plan',
+    enter: 'Masuk Performance',
+  },
+  dev: {
+    kicker: 'Development',
+    title: 'Pembangunan Sistem',
+    meta: 'Development Area → Problem Statement → Initiative → Action Plan',
+    enter: 'Masuk Development',
+  },
+} as const;
+
 /** Label Development Workspace (Fase 6). */
 export const WS_DEV_COPY = {
   subtitle: 'Development — Development Area, Problem Statement, Initiative & Action Plan.',

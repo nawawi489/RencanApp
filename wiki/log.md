@@ -425,3 +425,128 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 **Advisors security check (security):** 5 WARN baru — kelima SECURITY DEFINER RPC baru (restore_card, resolve_governance_violation, create_position, create_role_template, set_user_permission_scope) — pola intentional sama dgn semua RPC fase sebelumnya.
 
 **SELURUH BACKLOG `ui-prototype-gap.md` Cat-3 SELESAI** untuk PR scope ini. Sisa P2/P3 backlog (UI-N-002 hub-card workspace, UI-N-003 tree 4-5 level, UI-G-002 log panel sistemik, dst.) tetap perlu putusan produk terpisah.
+
+## [2026-06-28] update | Sweep backlog ui-prototype-gap (UI-S-EV1, UI-G-002, UI-S-H05, UI-S-PR1, UI-S-AR1 metadata)
+
+Lima item P2/P3 yang bisa dieksekusi tanpa keputusan produk diselesaikan dalam satu sweep — semuanya bersandar pada schema/data yang sudah ada (tidak ada migrasi baru).
+
+**Item terselesaikan:**
+- **UI-S-EV1** — `evaluation.tsx` tambah komponen `CheckboxRow` (≥44px touch target) + dua flag `should_become_sop` / `rollout_needed` + textarea `rollout_notes` (conditional saat rollout aktif). RPC `record_evaluation` sudah terima 3 param sejak migrasi 0014 — UI sebelumnya hanya pakai 3 dari 6 field schema.
+- **UI-G-002** — Panel "Log Aktivitas" sistemik. Komponen baru `components/activity-log-panel.tsx` (collapsible, lazy fetch saat expand, batasi 10 entri terbaru dgn link ke Activity Log lengkap). `lib/activity-governance.ts::listEntityActivityLog(entityType, entityId)` + hook `useEntityActivityLog`. Ter-wire di 7 layar detail: Goal/KPI/Strategy/Initiative/DevArea/ProblemStatement/ActionPlan.
+- **UI-S-H05** — `greeting-hero.tsx` ubah caption uppercase → pill `bg-white/20 rounded-full px-3 py-1` (match prototype).
+- **UI-S-PR1** — `people-profile/[id].tsx` header rich chrome. `lib/cards.ts::getOrgProfileDetail(id)` join `role_templates(name, level)` + ambil `position_title`/`is_active`/`created_at`. Header sekarang: Avatar 88px + nama + Badge Aktif/Nonaktif + role+level + position_title + email + "Bergabung <tanggal>". Cover image ditunda (tidak ada kolom di schema).
+- **UI-S-AR1 metadata** — `settings-archive.tsx` tampilkan tanggal arsip per row. Helper baru `lib/activity-governance.ts::getArchiveMetadata(entityType, entityId)` lookup entri terbaru `card_archived` di `activity_logs`. UI memakai `useQueries` (1 query per row) — listing arsip umumnya kecil. Nama actor (resolusi `actor_id` → nama) ditunda.
+
+**Tidak diubah / sengaja diskip (perlu putusan produk):**
+- UI-N-002 / UI-S-W01 (Workspace hub-card) — perlu putusan IA.
+- UI-N-003 / UI-S-W02 (Tree 4–5 level) — perlu putusan IA.
+- UI-G-007/008 (hue brand, radius kartu) — perlu putusan tim desain.
+- UI-S-H01–H03 (Snapshot Tim + Fokus kaya) — perlu data Snapshot Tim (belum ada di server).
+- UI-S-PR2/PR3/PR4 (chat/tugaskan, ranking card besar, detail+tugas+kontribusi) — ditunda untuk PR berikut.
+- UI-S-OR1 partial "Garis laporan" — perlu schema graph hubungan posisi (tabel `position_reports_to` belum ada).
+
+**Verifikasi:** `tsc --noEmit` bersih; jest **74 suite / 714 tes pass** (= baseline). Tidak ada migrasi baru — bersandar pada `activity_logs` (sejak 0001), `evaluations` (sejak 0014), `role_templates` (sejak 0001). Tidak ada perubahan RLS / RPC server.
+
+## [2026-06-28] update | Sweep people-profile rich chrome (UI-S-PR2/PR3/PR4 partial)
+
+Lanjutan sweep tanpa migrasi — fokus 3 item P2 di people-profile yang masih bisa dieksekusi.
+
+**Item terselesaikan:**
+- **UI-S-PR2** — `people-profile/[id].tsx` action row dengan tombol "Chat" + overflow `⋯`. Kedua tombol route ke `/(tabs)/inbox` (V1: belum ada DM rooms — chat via Inbox tab kontekstual ke AP/Initiative). Tombol hidden saat profil milik diri sendiri (anti-self). "Tugaskan" diskip karena Action Plan butuh konteks Initiative — bukan dari halaman profile.
+- **UI-S-PR3** — Ranking card besar. `SectionCard` dgn tile `#N` brand-dark 64×64 di kiri + nama periode tertutup di kanan. Tampil hanya bila ada `ranking_snapshots` entry untuk user ini di periode tertutup terbaru (D9: ranking hanya tampil setelah periode close).
+- **UI-S-PR4 partial** — Detail People + Tugas collapsible:
+  - "Detail People" `SectionCard`: row Status/Hak akses/Posisi/Email dari `getOrgProfileDetail` (di-fetch utk PR1).
+  - "Tugas aktif" collapsible (lazy fetch saat user expand) via `listActionPlansByPic(userId)` baru di [`cards.ts`](mobile/src/lib/cards.ts) — query status `assigned/in_progress/submitted/revision`; RLS otomatis filter. Tampilkan badge status + deadline; tap row → buka AP detail.
+  - "Kontribusi Bulan Ini" + "Atasan" **ditunda** (perlu schema reporting-graph yang belum ada).
+
+**Verifikasi:** `tsc --noEmit` bersih; jest **74 suite / 714 tes pass** (= baseline). Tidak ada migrasi baru.
+
+## [2026-06-28] update | Sweep edukasi/polish (UI-G-006 help trigger + UI-S-MBR1 demo visual)
+
+**Item terselesaikan:**
+- **UI-G-006** — `components/card-help-trigger.tsx` (tombol bulat "?" 24×24, tap → native Alert) + `lib/glossary.ts` (13 topik stabil: goal/kpi_area/strategy/initiative/action_plan/development_area/problem_statement/mbr/score_formula/achievement_score/activity_log/evaluation/target_breakdown). Konten ringkas ≤2 kalimat per topik. Ter-wire di Goal detail (section "KPI Area"), KPI Area detail (section "Strategy"), dan Settings MBR (helper text). Sisa surface: tinggal `<CardHelpTrigger topic="..." />` di sebelah judul.
+- **UI-S-MBR1** — `MbrExampleCard` di `settings-mbr.tsx` (Badge "Edukasi" + mock card Strategy "Tingkatkan retensi" 1/2 (50%) + tombol "Aktifkan Strategy" opacity-40 + caption dialog "Butuh minimal 2 Initiative; saat ini 1."). Murni visual edukatif — tidak terhubung ke data nyata.
+
+**Verifikasi:** `tsc --noEmit` bersih; jest **74 suite / 714 tes pass** (= baseline). Tidak ada migrasi baru. Tidak ada perubahan RLS/RPC.
+
+## [2026-06-28] update | UI-N-003 Stage 1 — Tree 3-level inline (B′ kompromi)
+
+Konteks: keputusan CEO review hari ini (lihat sesi `/plan-ceo-review` di transcript). Approach B′ dipilih
+sebagai kompromi rasional antara Approach A (kosmetik) dan Approach B/C (tree 5-level penuh, risiko
+mendegradasi UX mobile untuk org besar). Stage 2 (hub-card UI-N-002 Approach A) akan dikejar setelah
+Stage 1 terbukti dipakai.
+
+**Item terselesaikan (UI-N-003 Stage 1):**
+- **Performance pane:** Workspace tree dari 2-level → **3-level inline** (Goal → KPI Area → Strategy).
+  - `KpiAreaSubRow` (level-2) baru — sebelumnya inline `<View>` non-expandable. Sekarang punya `CardActionRow` dgn "Lihat Strategy" / "Tutup" / Detail / ⋯ / "+ Strategy" (gated `create_kpi_area` proxy + past-period lock).
+  - `StrategySubRow` (level-3) baru — tampilan kompak `rounded-xl bg-white border` p-2.5 text-sm dgn aksesi-label spesifik. `+ Initiative` button gated `create_initiative` + past-period `Alert`.
+- **Development pane (symmetric):** DevArea → Problem Statement → Initiative inline.
+  - `ProblemStatementSubRow` (level-2) baru — expandable ke Initiative children.
+  - `InitiativeSubRow` (level-3) baru — Detail + ⋯ (Action Plan tetap stack-nav).
+- **Hooks updated** — `useStrategies(kpiAreaId, enabled=true)` + `useProblemStatementInitiatives(psId, enabled=true)` sekarang menerima `enabled` agar lazy (sama dgn pattern `useKpiAreas`/`useProblemStatements`). Fetch hanya jalan saat user expand baris parent.
+
+**Tap-count impact:**
+- Goal → Strategy: **3 tap → 1 tap** (cukup expand Goal + expand KPI di workspace).
+- Goal → Initiative (Development): **3 tap → 1 tap** (DevArea expand + PS expand).
+- Initiative → AP & Strategy → Initiative (Performance) tetap stack-nav (4-5 level penuh ditunda — mobile real-estate concern per CEO review).
+
+**Decisions ter-konfirmasi (per Open Questions Q1-Q4):**
+- Q1 ✅ Symmetry Development pane: ya — pola identik di kedua pane.
+- Q2 ✅ `+ Initiative` button wire-up nyata (bukan placeholder) → push `/initiative/new?strategyId=...` / `/initiative/new?problemStatementId=...`.
+- Q3 ✅ Empty state inline saat child level kosong → text guidance, bukan collapse otomatis.
+- Q4 ✅ MBR gating untuk Strategy → Initiative tidak ditambah inline di workspace (akan tampil saat masuk Strategy detail; pattern existing `confirmAddDescendantIfIncomplete` jaga konsistensi).
+
+**Tests baru:** 9 tes baru di `mobile/src/app/(app)/(tabs)/__tests__/workspace.test.tsx`:
+- UI-N-003·1 lazy fetch `enabled=false → true` saat expand
+- UI-N-003·2 expand/collapse Strategy level
+- UI-N-003·3 empty state Strategy
+- UI-N-003·4 error state Strategy + retry
+- UI-N-003·5 `+ Initiative` push route
+- UI-N-003·6 past period Strategy → Alert tidak push
+- UI-N-003·7 permission `create_initiative=false` → tombol "+" hidden
+- UI-N-003·8 RowActionsMenu dari Strategy ⋯
+- UI-N-003·DEV·1 Development pane symmetric (DevArea→PS→Initiative)
+
+**Verifikasi:** `tsc --noEmit` bersih; jest **74 suite / 723 tes pass** (+9 tes baru). Tidak ada migrasi DB; semua hook layer sudah ada sejak Fase 4/6 — hanya ditambah parameter `enabled` di 2 hook untuk lazy.
+
+## [2026-06-28] update | UI-N-002 Stage 2 — Workspace hub-card lobby (Approach A)
+
+Lanjutan Stage 1. Stage 2 dipilih sebagai polish kosmetik setelah deep tree (Stage 1) shipped.
+Per CEO review: Approach A = hub-only (S effort, zero query baru), tanpa stack route baru.
+
+**Item terselesaikan (UI-N-002 Stage 2):**
+- **`HubView` di workspace.tsx** — default state `tab='hub'`. Render 2 `WorkspaceHubCard` (Performance + Development). Tap hub → `setTab('performance')` / `setTab('development')` → pindah ke pane existing (deep tree dari Stage 1).
+- **`components/workspace-hub-card.tsx`** — komponen reusable, komposisi: kicker uppercase + title + meta line (jalur card) + `ProgressOrb` 72px (orb % = `Math.round(active/non-archived * 100)`); 3-stat row 1/3 columns; "Masuk ›" CTA brand-dark. Tap di area card ATAU di CTA → `onEnter()`. AccessibilityLabel agregat: `"{enterLabel}: {parentCount} {parentStatLabel}, {childCount} {childStatLabel}"` agar SR & tes mudah inspect angka tanpa scrub UI.
+- **`lib/workspace-hub-stats.ts`** — helper `derivePerformanceHubStats(goals)` + `deriveDevelopmentHubStats(devAreas)`. Orb = `ratioActive` (active/non-archived). `parentCount` = goals/devAreas length. `childCount` = sum embedded `kpi_areas[0].count` / `problem_statements[0].count`. `activeCount` = goals/devAreas yg status=active. Empty (0 parent) → orb null → render "—" fallback (bukan 0% misleading).
+- **`PaneTopHeader` extended** — tombol "← Workspace" muncul di header tiap pane (Performance/Development) sebelum `<TabBar>`. Tap → `onBackToHub()` → `setTab('hub')`. TabBar tetap untuk switching dalam pane.
+- **Copy ditambah** — `WS_HUB_COPY` di `workspace-copy.ts` (locked constants).
+
+**Tap-count impact:**
+- Sebelum Stage 1+2: Workspace tab → TabBar tap (kalau perlu) → Goal expand → KPI Area detail → Strategy detail → ... → AP (4+ tap)
+- Setelah Stage 1+2: Workspace tab → Hub card tap (1) → Goal expand → KPI expand → Strategy detail (2-3 tap untuk Strategy). Hub menambah 1 tap upfront tapi memberikan context ringkasan + lobby feel intentional yang preview-able.
+
+**Decisions implementasi (per CEO review Step 0E):**
+- **Orb agg method:** `ratioActive` simple (active/non-archived %) — bukan children-aware progress (mahal). Cukup mewakili "kepadatan aktivitas" di lobby.
+- **Navigation pattern:** Tap hub → swap state inline (no new stack route). Existing pane jadi "deeper view"; tombol "← Workspace" balik ke hub. Simpler dari prototype 1:1 (dedicated stack screen) tapi same UX intent.
+- **Hub stats source:** Parent count (Goal/DevArea), child count via embedded count (KPI Area/Problem Statement), active count. Notif count skip (perlu query `useNotifications` tambahan yang tidak fit "zero query baru" constraint).
+- **Empty state:** 0 parent → orb null → "—" fallback. Tetap render hub-card (bukan empty state besar) agar user paham bisa entry.
+
+**Tests baru:** 6 tes baru di `mobile/src/app/(app)/(tabs)/__tests__/workspace.test.tsx`:
+- UI-N-002·1 default state = hub view (no pane content)
+- UI-N-002·2 tap hub Performance → pane Performance + back button
+- UI-N-002·3 tap hub Development → pane Development
+- UI-N-002·4 tombol "← Workspace" balik ke hub
+- UI-N-002·5 hub-card stats agregat (2 Goal, 5 KPI, 1 aktif)
+- UI-N-002·6 hub-card empty → orb "—" fallback
+
+Test `[5a] loading useGoals → SkeletonList` diadaptasi: ubah ke `renderScreen(null)` agar tahan di hub (hub view sendiri tampil SkeletonList saat goals loading — masih valid intent).
+
+**Helper test baru:** `renderScreen(autoEnter?)` — default 'performance' (auto-tap "Masuk Performance" → tetap kompatibel dgn 41 tes existing yg expect pane). Pass `null` untuk tes hub-specific.
+
+**Verifikasi:** `tsc --noEmit` bersih; jest **74 suite / 729 tes pass** (+6 tes baru, +9 dari Stage 1 = 15 total tes Stage 1+2). Tidak ada migrasi baru. Tidak ada perubahan RLS/RPC.
+
+**Status backlog UI-N-002 + UI-N-003 (sepenuhnya tutup):**
+- ~~UI-N-002 Workspace hub-card~~ ✅ Stage 2 done.
+- ~~UI-N-003 Tree 4-5 level~~ ✅ Stage 1 done (3-level kompromi; Initiative+AP stack-nav per CEO review mobile real-estate concern).
+- ~~UI-S-W01 hub-card~~ ✅ (= UI-N-002).
+- UI-S-W02 tree 4-5 level: 3-level done; 5-level penuh ditunda — bila org membutuhkan, bisa di-ship sebagai expansion phase berikutnya.
