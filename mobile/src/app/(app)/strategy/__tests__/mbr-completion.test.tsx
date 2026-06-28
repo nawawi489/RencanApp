@@ -59,6 +59,7 @@ const DRAFT_STRATEGY = {
   name: 'Optimasi Funnel',
   status: 'draft',
   kpi_area_id: 'k1',
+  pic_id: 'u1',
   reason: 'r',
   main_risk: 'm',
   alternative: 'a',

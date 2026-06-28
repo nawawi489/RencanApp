@@ -22,6 +22,7 @@ import {
 import { personLabel } from '@/components/user-picker';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 
 function ActionPlanRow({ item, onPress }: { item: ActionPlanWithPeople; onPress: () => void }) {
   return (
@@ -88,10 +89,16 @@ export default function InitiativeDetailScreen() {
       showPastPeriodAlert(initiative?.name);
       return;
     }
-    router.push(`/action-plan/new?initiativeId=${id}` as Href);
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: initiative?.name ?? 'Initiative',
+      childLabel: 'Action Plan',
+      onProceed: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),
+    });
   };
 
   function handleActivate() {
+    if (initiative && guardActivationFields('initiative', initiative)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Action Plan',
       onAddChild: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),

@@ -13,6 +13,7 @@ import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } from '@/lib/strategies';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
@@ -74,10 +75,16 @@ export default function StrategyDetailScreen() {
       showPastPeriodAlert(strategy?.name);
       return;
     }
-    router.push(`/initiative/new?strategyId=${id}` as Href);
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: strategy?.name ?? 'Strategy',
+      childLabel: 'Initiative',
+      onProceed: () => router.push(`/initiative/new?strategyId=${id}` as Href),
+    });
   };
 
   function handleActivate() {
+    if (strategy && guardActivationFields('strategy', strategy)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Initiative',
       onAddChild: () => router.push(`/initiative/new?strategyId=${id}` as Href),

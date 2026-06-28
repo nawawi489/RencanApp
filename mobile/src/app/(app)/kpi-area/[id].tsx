@@ -21,6 +21,7 @@ import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-com
 import { KpiAreaBreakdownPanel } from '@/components/kpi-area-breakdown-panel';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
 import {
@@ -136,10 +137,16 @@ export default function KpiAreaDetailScreen() {
       showPastPeriodAlert(kpiArea?.name);
       return;
     }
-    router.push(`/strategy/new?kpiAreaId=${id}` as Href);
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: kpiArea?.name ?? 'KPI Area',
+      childLabel: 'Strategy',
+      onProceed: () => router.push(`/strategy/new?kpiAreaId=${id}` as Href),
+    });
   };
 
   function handleActivate() {
+    if (kpiArea && guardActivationFields('kpi_area', kpiArea)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Strategy',
       onAddChild: () => router.push(`/strategy/new?kpiAreaId=${id}` as Href),

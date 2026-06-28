@@ -368,3 +368,27 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 - Period switcher di People profil (UI-G-010 expand): di luar lingkup S3.
 
 **Next:** S4 — Completeness popups (§7.4 / §7.5).
+
+## [2026-06-28] update | S4 Completeness popups (§7.4 / §7.5)
+
+**Yang dibangun:**
+- **lib/activation-check.ts** baru — pure helpers:
+  - `missingRequiredFor(cardType, card)`: kembali daftar label field kosong sesuai aturan server `activate_*` (Goal: name/PIC/periode; KPI Area: + Target; Strategy: + Alasan/Risiko Utama/Alternatif; Initiative: + Target Hasil; Development Area & Problem Statement: shared).
+  - `guardActivationFields(cardType, card, alertImpl?)`: §7.4 pre-flight popup "Lengkapi data wajib" — return `true` bila terblokir (caller berhenti). Alert injectable utk test.
+  - `confirmAddDescendantIfIncomplete({compliance, parentLabel, childLabel, onProceed, alertImpl?})`: §7.5 popup arahan saat "+ Tambah". Bila MBR sudah memenuhi atau data belum tersedia → `onProceed()` langsung. Bila belum memenuhi → Alert "Kelengkapan Perencanaan" dgn rasio "X dari Y" + CTA "Tutup" / "+ Tambah X" (CTA proceed → server tetap penegak akhir).
+- **6 detail screen** di-wire:
+  - **§7.4** (Aktifkan pre-flight): `goal/[id]`, `kpi-area/[id]`, `strategy/[id]`, `initiative/[id]`, `development-area/[id]`, `problem-statement/[id]` — setiap `handleActivate` panggil `guardActivationFields` di depan, return bila terblokir (sebelum `guardMbrActivation` + `activateM.mutate()`).
+  - **§7.5** (+ Tambah arahan): wrap existing `handleAddX` (yg sudah cek past period dari S3) dgn `confirmAddDescendantIfIncomplete` — past-period lock di depan, lalu MBR guidance, lalu `router.push(create-route)`. Goal screen tambah `useMbrCompliance('goal', id)` (lainnya sudah punya).
+
+**Catatan §7.4/§7.5 penting:**
+- Sinyal persisten (`MbrCompletionIndicator` panel) tetap tampil — keputusan owner "keep signal + popup".
+- Popup tidak menggantikan rule backend; klien hanya UX shortcut. Server tetap RAISE bila field wajib kosong saat user override popup.
+- Popup §7.5 sengaja boleh proceed (bukan blok) supaya UX tidak terlalu kaku — mode `blokir_akses_turunan` server akan tolak saat sampai ke RPC.
+
+**Tests baru/disesuaikan:**
+- `lib/__tests__/activation-check.test.ts` (13 unit: missingRequiredFor per tipe + guardActivationFields blok vs lewat + confirmAddDescendantIfIncomplete proceed/popup/CTA).
+- `strategy/__tests__/mbr-completion.test.tsx` + `initiative/__tests__/mbr-completion.test.tsx`: tambah `pic_id: 'u1'` di fixture draft (sebelumnya field optional di test, kini guard wajib).
+
+**Hasil:** **74 suite / 714 tes pass** (sebelumnya 73/701; +1 suite +13 tes); `tsc --noEmit` bersih. Tidak ada migrasi DB.
+
+**TODOS S0-S4 SELESAI.** Sisa backlog Cat-3 (UI-S-OR1/GV1/AL1/AR1/PRM1/KT1/AP7, UI-G-005, UI-S-SF2) paralel-safe — kandidat PR berikutnya.

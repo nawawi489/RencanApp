@@ -25,6 +25,7 @@ import {
 } from '@/lib/problem-statements';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
@@ -93,10 +94,16 @@ export default function ProblemStatementDetailScreen() {
       showPastPeriodAlert(ps?.name);
       return;
     }
-    router.push(`/initiative/new?problemStatementId=${id}` as Href);
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: ps?.name ?? 'Problem Statement',
+      childLabel: 'Initiative',
+      onProceed: () => router.push(`/initiative/new?problemStatementId=${id}` as Href),
+    });
   };
 
   function handleActivate() {
+    if (ps && guardActivationFields('problem_statement', ps)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Initiative',
       onAddChild: () => router.push(`/initiative/new?problemStatementId=${id}` as Href),

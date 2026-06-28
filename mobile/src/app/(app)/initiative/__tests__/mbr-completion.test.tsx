@@ -57,6 +57,7 @@ const DRAFT_INITIATIVE = {
   name: 'Kampanye Q1',
   status: 'draft',
   strategy_id: 's1',
+  pic_id: 'u1',
   target_result: 'naik 20%',
   description: null,
   period_start: '2026-01-01',
