@@ -28,6 +28,12 @@ import {
   type NewKpiArea,
 } from '@/lib/kpi-areas';
 import {
+  listKpiAreaBreakdown,
+  replaceKpiAreaBreakdown,
+  type BreakdownRow,
+  type ReplaceArgs,
+} from '@/lib/kpi-area-breakdown';
+import {
   activateStrategy,
   createStrategy,
   listStrategies,
@@ -247,6 +253,39 @@ export function useGoalActions() {
       createM.isPending || activateM.isPending || applyTemplateM.isPending || restoreM.isPending,
     activatePending: activateM.isPending,
     restorePending: restoreM.isPending,
+  };
+}
+
+// ---------------------------------------------------------------- KPI Area Target Breakdown (S2)
+
+/** Baris breakdown periode untuk satu KPI Area. Hanya fetch saat kpiAreaId terisi. */
+export function useKpiAreaBreakdown(kpiAreaId: string) {
+  const q = useQuery({
+    queryKey: ['kpi_area_breakdown', kpiAreaId],
+    queryFn: () => listKpiAreaBreakdown(kpiAreaId),
+    enabled: !!kpiAreaId,
+  });
+  return {
+    rows: (q.data ?? []) as BreakdownRow[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Aksi tulis Target Breakdown KPI Area: replace atomik (Σ=100% per Q dan per Q-bulan). */
+export function useKpiAreaBreakdownActions(kpiAreaId: string) {
+  const qc = useQueryClient();
+  const replaceM = useMutation({
+    mutationFn: (args: Omit<ReplaceArgs, 'kpiAreaId'>) =>
+      replaceKpiAreaBreakdown({ ...args, kpiAreaId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['kpi_area_breakdown', kpiAreaId] });
+    },
+  });
+  return {
+    replace: (args: Omit<ReplaceArgs, 'kpiAreaId'>) => replaceM.mutateAsync(args),
+    isPending: replaceM.isPending,
   };
 }
 

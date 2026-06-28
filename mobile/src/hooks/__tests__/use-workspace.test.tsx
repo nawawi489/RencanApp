@@ -75,6 +75,13 @@ jest.mock('@/lib/problem-statements', () => ({
   activateProblemStatement: (...a: unknown[]) => mockActivateProblemStatement(...a),
 }));
 
+// S2 — KPI Area Target Breakdown (lib menyentuh supabase; mock untuk hindari env throw).
+jest.mock('@/lib/kpi-area-breakdown', () => ({
+  __esModule: true,
+  listKpiAreaBreakdown: jest.fn(),
+  replaceKpiAreaBreakdown: jest.fn(),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the imports it mocks
 import {
   useDevelopmentArea,
