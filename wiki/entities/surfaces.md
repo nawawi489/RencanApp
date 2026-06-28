@@ -1,15 +1,18 @@
 ---
 type: entity
 tags: [ui, navigation, surface]
-updated: 2026-06-22
-sources: 1
+updated: 2026-06-27
+sources: 2
 ---
 
 # Surfaces (Main Navigation)
 
-Lima surface utama [[overview|EMS]] di bottom nav. Settings diakses via avatar/profile, **bukan** di bottom nav.
+Lima surface utama [[overview|EMS]] di bottom nav (PRD V1.8.2 §7.1). Settings dan People **tidak** tampil sebagai bottom nav mandiri — keduanya masuk lewat **Menu**.
 
-`Home · Notifications · Workspace · Inbox · People`
+`Home · Notifications · Workspace · Inbox · Menu`
+
+> [!warning] Berubah di V1.8.2 — kode shipped masih lag
+> V1.8.1 memakai slot 5 = **People**. **V1.8.2 §7.1: slot 5 = Menu**, People pindah ke dalam Menu. Kode `mobile/src/app/(app)/(tabs)/_layout.tsx` masih memakai People (perlu fix **P0**). Lihat [[ui-prototype-gap#3 Gap navigasi struktural|UI-N-001]] (resolved).
 
 ## Home — Today Command Center
 
@@ -23,19 +26,23 @@ Tabs: Semua, Perlu Tindakan, Review, Deadline, Komentar, Terlewat, Repeat, Gover
 
 ## Workspace
 
-Akses ke dua [[workspace|workspace]] (Performance & Development) dan navigasi hierarki card.
+Akses ke dua [[workspace|workspace]] (Performance & Development) dan navigasi hierarki card. Menampilkan struktur per **periode aktif** (Period Focus Engine, V1.8.2 §7.6): default bulan berjalan, bisa pindah Quarter; Goal tahunan tetap konteks. Card periode lewat dibuat redup dan dikunci untuk turunan baru (§7.7).
 
 ## Inbox
 
 Pusat chat per Initiative. Setiap Initiative otomatis punya **chat room**. **Inbox bukan tempat approval resmi** — keputusan resmi tetap via Comment, Review, Status, [[audit-governance#Activity Log|Activity Log]]. Member chat ikut akses card Initiative (lihat [[permission-model]]).
 
-## People
+## Menu (slot 5, V1.8.2 §7.1 / §31)
+
+Pintu masuk sekunder bergaya Facebook mobile: profil, **People**, tools admin, Goal & KPI Area Template Library, **Settings**, **Archive**, dan logout. Menggantikan slot bottom nav ke-5 (sebelumnya People). Alasan: People bukan aktivitas harian utama semua user; Menu memberi akses cepat ke admin/settings tanpa membuang slot.
+
+## People (di dalam Menu)
 
 Performa user secara objektif: Achievement Score, Action Plan Completion, Repeat Compliance, On-Time Rate, Review Pass Rate, Result Achievement, Development Contribution, Governance Discipline, Ranking, Trend. Skor dihitung via [[score-formula]].
 **Bukan tempat mempermalukan** — dilarang label "karyawan terburuk/staff malas". Hanya data objektif.
 
-## Settings
+## Settings (via Menu / avatar)
 
-Via avatar/profile. Mengelola: User & Permission, Role Template, Organization/Department/Position/Team, Goal & KPI Area Template Library, [[minimum-breakdown-rule|Minimum Breakdown Rule]], Card Completion Rule, Keterangan Card, Status, Prioritas, Notifications Rule, [[score-formula|Score Formula]], [[audit-governance|Activity Log & Governance Violation]], Archive, Confidential Access.
+Diakses dari Menu (atau avatar/profile) — **bukan** bottom nav mandiri. Mengelola: User & Permission, Role Template, Organization/Department/Position/Team, Goal & KPI Area Template Library, [[minimum-breakdown-rule|Minimum Breakdown Rule]], Card Completion Rule, Keterangan Card, Status, Prioritas, Notifications Rule, [[score-formula|Score Formula]], [[audit-governance|Activity Log & Governance Violation]], Archive, Confidential Access.
 
 Berkaitan dengan: [[permission-model]], [[score-formula]], [[audit-governance]], [[workspace]].
