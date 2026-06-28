@@ -1,6 +1,8 @@
 // Workspace (Fase 6) — dual-tab Performance/Development.
 // Performance (Fase 4): Goal → KPI Area → Strategy → Initiative, + Initiative Tanpa Goal.
 // Development (Fase 6): Development Area → Problem Statement → Initiative → Action Plan.
+// UI-N-003 (Stage 1 B′): tree 3-level inline — KPI Area & Problem Statement EXPANDABLE
+//   ke level-3 (Strategy / Initiative) untuk turunkan tap-count Goal→Strategy dari 3 → 1.
 // Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -23,10 +25,15 @@ import {
   useGoals,
   useKpiAreas,
   useProblemStatements,
+  useProblemStatementInitiatives,
+  useStrategies,
 } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
 import { type Initiative } from '@/lib/cards';
+import type { KpiArea } from '@/lib/kpi-areas';
+import type { Strategy } from '@/lib/strategies';
+import type { ProblemStatement } from '@/lib/problem-statements';
 import {
   problemCountOf,
   type DevelopmentAreaWithProblemCount,
@@ -34,9 +41,19 @@ import {
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { RowActionsMenu } from '@/components/row-actions-menu';
-import { WS_COPY, WS_DEV_COPY, WS_TABS } from '@/lib/workspace-copy';
+import { WorkspaceHubCard } from '@/components/workspace-hub-card';
+import {
+  derivePerformanceHubStats,
+  deriveDevelopmentHubStats,
+} from '@/lib/workspace-hub-stats';
+import { WS_COPY, WS_DEV_COPY, WS_HUB_COPY, WS_TABS } from '@/lib/workspace-copy';
 
-type Tab = 'performance' | 'development';
+/**
+ * Tab Workspace + state lobby. `'hub'` = HubView (2 hub-card pilih ruang); `'performance'`/
+ * `'development'` = panel detail. UI-N-002 Stage 2: default = `'hub'` agar user lihat ringkasan
+ * dulu sebelum dive in. Pane dapat tombol "← Workspace" untuk balik ke hub.
+ */
+type Tab = 'hub' | 'performance' | 'development';
 
 function StatusBadge({ status }: { status: string }) {
   return <Badge label={PLANNING_STATUS_LABEL[status] ?? status} tone={STATUS_TONE[status]} />;
@@ -138,6 +155,154 @@ function defaultRowActions(cardLabel: string): { label: string; onPress: () => v
   ];
 }
 
+/**
+ * Sub-row level 3: Strategy di bawah satu KPI Area. Per UI-N-003 (Stage 1 B′).
+ * Tidak punya tree expand sendiri (Initiative tetap stack-nav via Strategy detail).
+ * Punya RowActionsMenu + tombol "+ Initiative" (gated `create_initiative`, past-period lock).
+ */
+function StrategySubRow({ strategy }: { strategy: Strategy }) {
+  const router = useRouter();
+  const { can } = useProfile();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { focus } = usePeriodFocus();
+  const past = cardPeriodStatus(strategy, focus) === 'past';
+  const canAddInit = can('create_initiative');
+
+  return (
+    <View className={past ? 'opacity-50' : undefined}>
+      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+        <View className="flex-row items-start justify-between gap-2">
+          <Text
+            className="flex-1 text-sm font-medium text-black dark:text-white"
+            numberOfLines={2}
+            accessibilityLabel={`Strategy ${strategy.name}`}>
+            {strategy.name}
+          </Text>
+          <View className="flex-row items-center gap-1">
+            {past ? <PastPeriodBadge /> : null}
+            <StatusBadge status={strategy.status} />
+          </View>
+        </View>
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            className="min-h-[44px] flex-1 items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            accessibilityRole="button"
+            accessibilityLabel={`Buka detail ${strategy.name}`}
+            onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
+            <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
+          </Pressable>
+          <Pressable
+            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            accessibilityRole="button"
+            accessibilityLabel={`Aksi lain ${strategy.name}`}
+            onPress={() => setMenuOpen(true)}>
+            <Text className="text-base font-bold text-black dark:text-white">⋯</Text>
+          </Pressable>
+          {canAddInit ? (
+            <Pressable
+              className={`min-h-[44px] w-11 items-center justify-center rounded-lg active:opacity-70 ${
+                past ? 'border border-neutral-300 dark:border-neutral-700' : 'bg-brand-dark'
+              }`}
+              accessibilityRole="button"
+              accessibilityLabel={`Tambah Initiative ke ${strategy.name}`}
+              accessibilityState={{ disabled: past }}
+              onPress={() =>
+                past
+                  ? showPastPeriodAlert(strategy.name)
+                  : router.push(`/initiative/new?strategyId=${strategy.id}` as Href)
+              }>
+              <Text
+                className={`text-lg font-bold ${
+                  past ? 'text-neutral-400 dark:text-neutral-500' : 'text-white'
+                }`}>
+                +
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+      <RowActionsMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={strategy.name}
+        items={defaultRowActions(strategy.name)}
+      />
+    </View>
+  );
+}
+
+/**
+ * Sub-row level 2: KPI Area di bawah satu Goal. Expandable → Strategy children.
+ * Lazy fetch Strategy hanya saat `expanded` (parameter `enabled` di useStrategies).
+ */
+function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
+  const router = useRouter();
+  const { can } = useProfile();
+  const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { strategies, isLoading, isError, refetch } = useStrategies(kpi.id, expanded);
+  const { focus } = usePeriodFocus();
+  const past = cardPeriodStatus(kpi, focus) === 'past';
+  const canAddStrategy = can('create_kpi_area'); // proxy izin tambah turunan (existing pattern)
+
+  return (
+    <View className={past ? 'opacity-50' : undefined}>
+      <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+        <View className="flex-row items-start justify-between gap-3">
+          <Text className="flex-1 text-sm font-medium text-black dark:text-white">
+            {kpi.name}
+          </Text>
+          <View className="flex-row items-center gap-1.5">
+            {past ? <PastPeriodBadge /> : null}
+            <StatusBadge status={kpi.status} />
+          </View>
+        </View>
+        <CardActionRow
+          cardLabel={kpi.name}
+          expanded={expanded}
+          onToggleExpand={() => setExpanded((v) => !v)}
+          expandLabel="Lihat Strategy"
+          collapseLabel="Tutup"
+          onDetail={() => router.push(`/kpi-area/${kpi.id}` as Href)}
+          detailLabel={`Buka detail ${kpi.name}`}
+          onMore={() => setMenuOpen(true)}
+          past={past}
+          onAdd={
+            canAddStrategy
+              ? () => router.push(`/strategy/new?kpiAreaId=${kpi.id}` as Href)
+              : undefined
+          }
+          addLabel={`Tambah Strategy ke ${kpi.name}`}
+        />
+
+        {expanded ? (
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : strategies.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada Strategy. Tambah Strategy untuk pecah KPI Area ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {strategies.map((s) => (
+                <StrategySubRow key={s.id} strategy={s} />
+              ))}
+            </View>
+          )
+        ) : null}
+      </View>
+      <RowActionsMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={kpi.name}
+        items={defaultRowActions(kpi.name)}
+      />
+    </View>
+  );
+}
+
 function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   const router = useRouter();
   const { can } = useProfile();
@@ -180,34 +345,9 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
 
         {expanded ? (
           <View className="gap-2">
-            {kpiAreas.map((k) => {
-              const kPast = cardPeriodStatus(k, focus) === 'past';
-              return (
-                <View
-                  key={k.id}
-                  className={`gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900 ${
-                    kPast ? 'opacity-50' : ''
-                  }`}>
-                  <View className="flex-row items-start justify-between gap-3">
-                    <Text className="flex-1 text-sm font-medium text-black dark:text-white">
-                      {k.name}
-                    </Text>
-                    <View className="flex-row items-center gap-1.5">
-                      {kPast ? <PastPeriodBadge /> : null}
-                      <StatusBadge status={k.status} />
-                    </View>
-                  </View>
-                  <Pressable
-                    className="min-h-[44px] flex-row items-center justify-end gap-2 active:opacity-70"
-                    accessibilityRole="button"
-                    accessibilityLabel={`Buka detail ${k.name}`}
-                    onPress={() => router.push(`/kpi-area/${k.id}` as Href)}>
-                    <Text className="text-sm font-semibold text-brand-dark">Detail</Text>
-                    <Text className="text-sm text-brand-dark">›</Text>
-                  </Pressable>
-                </View>
-              );
-            })}
+            {kpiAreas.map((k) => (
+              <KpiAreaSubRow key={k.id} kpi={k} />
+            ))}
           </View>
         ) : null}
       </SectionCard>
@@ -216,6 +356,128 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
         onClose={() => setMenuOpen(false)}
         title={goal.name}
         items={defaultRowActions(goal.name)}
+      />
+    </View>
+  );
+}
+
+/**
+ * Sub-row level 3: Initiative di bawah satu Problem Statement (Development pane).
+ * Action Plan tetap stack-nav via Initiative detail (4-level penuh ditunda — lihat ADR Stage 1).
+ */
+function InitiativeSubRow({ item }: { item: Initiative }) {
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { focus } = usePeriodFocus();
+  const past = cardPeriodStatus(item, focus) === 'past';
+
+  return (
+    <View className={past ? 'opacity-50' : undefined}>
+      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+        <View className="flex-row items-start justify-between gap-2">
+          <Text
+            className="flex-1 text-sm font-medium text-black dark:text-white"
+            numberOfLines={2}
+            accessibilityLabel={`Initiative ${item.name}`}>
+            {item.name}
+          </Text>
+          <View className="flex-row items-center gap-1">
+            {past ? <PastPeriodBadge /> : null}
+            <StatusBadge status={item.status} />
+          </View>
+        </View>
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            className="min-h-[44px] flex-1 items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            accessibilityRole="button"
+            accessibilityLabel={`Buka detail ${item.name}`}
+            onPress={() => router.push(`/initiative/${item.id}` as Href)}>
+            <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
+          </Pressable>
+          <Pressable
+            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            accessibilityRole="button"
+            accessibilityLabel={`Aksi lain ${item.name}`}
+            onPress={() => setMenuOpen(true)}>
+            <Text className="text-base font-bold text-black dark:text-white">⋯</Text>
+          </Pressable>
+        </View>
+      </View>
+      <RowActionsMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={item.name}
+        items={defaultRowActions(item.name)}
+      />
+    </View>
+  );
+}
+
+/**
+ * Sub-row level 2: Problem Statement di bawah satu Development Area. Expandable → Initiative.
+ * Symmetric dgn KpiAreaSubRow di Performance pane.
+ */
+function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
+  const router = useRouter();
+  const { can } = useProfile();
+  const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { initiatives, isLoading, isError, refetch } = useProblemStatementInitiatives(ps.id, expanded);
+  const { focus } = usePeriodFocus();
+  const past = cardPeriodStatus(ps, focus) === 'past';
+  const canAddInit = can('create_initiative');
+
+  return (
+    <View className={past ? 'opacity-50' : undefined}>
+      <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+        <View className="flex-row items-start justify-between gap-3">
+          <Text className="flex-1 text-sm font-medium text-black dark:text-white">{ps.name}</Text>
+          <View className="flex-row items-center gap-1.5">
+            {past ? <PastPeriodBadge /> : null}
+            <StatusBadge status={ps.status} />
+          </View>
+        </View>
+        <CardActionRow
+          cardLabel={ps.name}
+          expanded={expanded}
+          onToggleExpand={() => setExpanded((v) => !v)}
+          expandLabel="Lihat Initiative"
+          collapseLabel="Tutup"
+          onDetail={() => router.push(`/problem-statement/${ps.id}` as Href)}
+          detailLabel={`Buka detail ${ps.name}`}
+          onMore={() => setMenuOpen(true)}
+          past={past}
+          onAdd={
+            canAddInit
+              ? () => router.push(`/initiative/new?problemStatementId=${ps.id}` as Href)
+              : undefined
+          }
+          addLabel={`Tambah Initiative ke ${ps.name}`}
+        />
+
+        {expanded ? (
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : initiatives.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada Initiative. Tambah Initiative untuk eksekusi Problem Statement ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {initiatives.map((i) => (
+                <InitiativeSubRow key={i.id} item={i} />
+              ))}
+            </View>
+          )
+        ) : null}
+      </View>
+      <RowActionsMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={ps.name}
+        items={defaultRowActions(ps.name)}
       />
     </View>
   );
@@ -270,34 +532,9 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
 
         {expanded ? (
           <View className="gap-2">
-            {problemStatements.map((p) => {
-              const pPast = cardPeriodStatus(p, focus) === 'past';
-              return (
-                <View
-                  key={p.id}
-                  className={`gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900 ${
-                    pPast ? 'opacity-50' : ''
-                  }`}>
-                  <View className="flex-row items-start justify-between gap-3">
-                    <Text className="flex-1 text-sm font-medium text-black dark:text-white">
-                      {p.name}
-                    </Text>
-                    <View className="flex-row items-center gap-1.5">
-                      {pPast ? <PastPeriodBadge /> : null}
-                      <StatusBadge status={p.status} />
-                    </View>
-                  </View>
-                  <Pressable
-                    className="min-h-[44px] flex-row items-center justify-end gap-2 active:opacity-70"
-                    accessibilityRole="button"
-                    accessibilityLabel={`Buka detail ${p.name}`}
-                    onPress={() => router.push(`/problem-statement/${p.id}` as Href)}>
-                    <Text className="text-sm font-semibold text-brand-dark">Detail</Text>
-                    <Text className="text-sm text-brand-dark">›</Text>
-                  </Pressable>
-                </View>
-              );
-            })}
+            {problemStatements.map((p) => (
+              <ProblemStatementSubRow key={p.id} ps={p} />
+            ))}
           </View>
         ) : null}
       </SectionCard>
@@ -355,28 +592,107 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
 function PaneTopHeader({
   tab,
   onTabChange,
+  onBackToHub,
 }: {
   tab: Tab;
   onTabChange: (t: Tab) => void;
+  onBackToHub: () => void;
 }) {
   return (
     <View className="gap-5 pb-5">
-      <View className="gap-1">
+      <View className="gap-2">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Kembali ke Workspace"
+          onPress={onBackToHub}
+          className="min-h-[36px] self-start active:opacity-70">
+          <Text className="text-sm font-semibold text-brand-dark">{WS_HUB_COPY.backToHub}</Text>
+        </Pressable>
         <Text className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
       </View>
-      <TabBar<Tab>
+      <TabBar<'performance' | 'development'>
         tabs={[
           { key: 'performance', label: WS_TABS.performance },
           { key: 'development', label: WS_TABS.development },
         ]}
-        active={tab}
-        onChange={onTabChange}
+        active={tab === 'hub' ? 'performance' : tab}
+        onChange={(t) => onTabChange(t)}
       />
     </View>
   );
 }
 
-function PerformancePane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab) => void }) {
+/**
+ * UI-N-002 Stage 2 — HubView (lobby). 2 hub-card derive stats dari `useGoals`/`useDevelopmentAreas`
+ * (zero query baru). Tap hub → masuk pane dgn back button.
+ */
+function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') => void }) {
+  const goalsQ = useGoals();
+  const devQ = useDevelopmentAreas();
+
+  useFocusEffect(
+    useCallback(() => {
+      goalsQ.refetch();
+      devQ.refetch();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+
+  const perfStats = derivePerformanceHubStats(goalsQ.goals);
+  const devStats = deriveDevelopmentHubStats(devQ.developmentAreas);
+  const loading = goalsQ.isLoading || devQ.isLoading;
+
+  return (
+    <View className="flex-1 bg-neutral-50 dark:bg-black">
+      <View className="gap-5 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">{WS_HUB_COPY.title}</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            {WS_HUB_COPY.subtitle}
+          </Text>
+        </View>
+        {loading ? (
+          <SkeletonList count={2} />
+        ) : (
+          <View className="gap-3">
+            <WorkspaceHubCard
+              kicker={WS_HUB_COPY.perf.kicker}
+              title={WS_HUB_COPY.perf.title}
+              meta={WS_HUB_COPY.perf.meta}
+              stats={perfStats}
+              enterLabel={WS_HUB_COPY.perf.enter}
+              parentStatLabel="Goal"
+              childStatLabel="KPI Area"
+              activeStatLabel="Aktif"
+              onEnter={() => onSelect('performance')}
+            />
+            <WorkspaceHubCard
+              kicker={WS_HUB_COPY.dev.kicker}
+              title={WS_HUB_COPY.dev.title}
+              meta={WS_HUB_COPY.dev.meta}
+              stats={devStats}
+              enterLabel={WS_HUB_COPY.dev.enter}
+              parentStatLabel="Dev Area"
+              childStatLabel="Problem"
+              activeStatLabel="Aktif"
+              onEnter={() => onSelect('development')}
+            />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function PerformancePane({
+  tab,
+  onTabChange,
+  onBackToHub,
+}: {
+  tab: Tab;
+  onTabChange: (t: Tab) => void;
+  onBackToHub: () => void;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const goalsQ = useGoals();
@@ -393,7 +709,7 @@ function PerformancePane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab)
 
   const header = (
     <View className="gap-5 pb-3">
-      <PaneTopHeader tab={tab} onTabChange={onTabChange} />
+      <PaneTopHeader tab={tab} onTabChange={onTabChange} onBackToHub={onBackToHub} />
       <PeriodSwitcher />
       <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_COPY.subtitle}</Text>
       {canCreate ? (
@@ -462,7 +778,15 @@ function PerformancePane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab)
   );
 }
 
-function DevelopmentPane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab) => void }) {
+function DevelopmentPane({
+  tab,
+  onTabChange,
+  onBackToHub,
+}: {
+  tab: Tab;
+  onTabChange: (t: Tab) => void;
+  onBackToHub: () => void;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const devQ = useDevelopmentAreas();
@@ -477,7 +801,7 @@ function DevelopmentPane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab)
 
   const header = (
     <View className="gap-5 pb-3">
-      <PaneTopHeader tab={tab} onTabChange={onTabChange} />
+      <PaneTopHeader tab={tab} onTabChange={onTabChange} onBackToHub={onBackToHub} />
       <PeriodSwitcher />
       <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_DEV_COPY.subtitle}</Text>
       {canCreate ? (
@@ -533,11 +857,14 @@ function DevelopmentPane({ tab, onTabChange }: { tab: Tab; onTabChange: (t: Tab)
 }
 
 export default function WorkspaceScreen() {
-  const [tab, setTab] = useState<Tab>('performance');
+  // UI-N-002 Stage 2: default `hub` agar user lihat lobby dulu sebelum dive in.
+  const [tab, setTab] = useState<Tab>('hub');
+  const backToHub = () => setTab('hub');
 
+  if (tab === 'hub') return <HubView onSelect={setTab} />;
   return tab === 'performance' ? (
-    <PerformancePane tab={tab} onTabChange={setTab} />
+    <PerformancePane tab={tab} onTabChange={setTab} onBackToHub={backToHub} />
   ) : (
-    <DevelopmentPane tab={tab} onTabChange={setTab} />
+    <DevelopmentPane tab={tab} onTabChange={setTab} onBackToHub={backToHub} />
   );
 }

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import {
   listActivityLog,
+  listEntityActivityLog,
   listGovernanceViolations,
   type ActivityLog,
   type GovernanceViolation,
@@ -15,6 +16,26 @@ export function useActivityLog(opts?: { action?: string; page?: number }) {
     queryFn: () => listActivityLog({ action: opts?.action, page }),
   });
   // Read-only: TIDAK mengekspos mutation apapun (append-only di DB).
+  return {
+    logs: (q.data ?? []) as ActivityLog[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** UI-G-002 — activity log untuk satu entity (collapsible panel di layar detail). */
+export function useEntityActivityLog(
+  entityType: string,
+  entityId: string | null | undefined,
+  enabled = true,
+) {
+  const isEnabled = !!entityId && enabled;
+  const q = useQuery({
+    queryKey: ['activity_log', 'entity', entityType, entityId],
+    queryFn: () => listEntityActivityLog(entityType, entityId as string),
+    enabled: isEnabled,
+  });
   return {
     logs: (q.data ?? []) as ActivityLog[],
     isLoading: q.isLoading,

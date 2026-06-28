@@ -110,12 +110,15 @@ export function useKpiAreas(goalId: string, enabled = true) {
   };
 }
 
-/** Strategy di bawah satu KPI Area. Hanya fetch saat kpiAreaId terisi. */
-export function useStrategies(kpiAreaId: string) {
+/**
+ * Strategy di bawah satu KPI Area. Hanya fetch saat kpiAreaId terisi DAN `enabled` (lazy:
+ * dipakai oleh KpiAreaSubRow di Workspace tree 3-level — fetch saat user expand baris KPI).
+ */
+export function useStrategies(kpiAreaId: string, enabled = true) {
   const q = useQuery({
     queryKey: ['strategies', kpiAreaId],
     queryFn: () => listStrategies(kpiAreaId),
-    enabled: !!kpiAreaId,
+    enabled: !!kpiAreaId && enabled,
   });
 
   return {
@@ -376,12 +379,15 @@ export function useProblemStatement(id: string) {
   };
 }
 
-/** Initiative di bawah satu Problem Statement (jalur Development). */
-export function useProblemStatementInitiatives(problemStatementId: string) {
+/**
+ * Initiative di bawah satu Problem Statement (jalur Development).
+ * Lazy: dipakai oleh ProblemStatementSubRow di Workspace tree 3-level (Stage 1 B′).
+ */
+export function useProblemStatementInitiatives(problemStatementId: string, enabled = true) {
   const q = useQuery({
     queryKey: ['initiatives', 'problem_statement', problemStatementId],
     queryFn: () => listInitiatives({ problemStatementId }),
-    enabled: !!problemStatementId,
+    enabled: !!problemStatementId && enabled,
   });
   return {
     initiatives: (q.data ?? []) as Initiative[],

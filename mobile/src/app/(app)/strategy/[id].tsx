@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
+import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useStrategyInitiatives } from '@/hooks/use-workspace';
@@ -174,6 +175,8 @@ export default function StrategyDetailScreen() {
                 />
               )}
             </View>
+
+            <ActivityLogPanel entityType="strategy" entityId={id} />
           </>
         )}
       </View>

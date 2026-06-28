@@ -24,6 +24,52 @@ export const GOVERNANCE_VIOLATION_SEVERITY_LABEL: Record<string, string> = {
 
 const PAGE_SIZE = 50;
 
+/**
+ * UI-S-AR1 — metadata arsip (kapan & oleh siapa) dari activity_logs.
+ * Mengambil entri TERBARU dgn action 'card_archived' utk satu (entity_type, entity_id).
+ * Returns null bila belum ada (mis. record arsip lama sebelum logging).
+ */
+export type ArchiveMetadata = {
+  archived_at: string;
+  archived_by: string | null;
+};
+
+export async function getArchiveMetadata(
+  entityType: string,
+  entityId: string,
+): Promise<ArchiveMetadata | null> {
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select('actor_id, created_at')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+    .eq('action', 'card_archived')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { archived_at: data.created_at, archived_by: data.actor_id ?? null };
+}
+
+/** UI-G-002 — activity log untuk satu entity (entity_type + entity_id). RLS aktif (org-scoped). */
+export async function listEntityActivityLog(
+  entityType: string,
+  entityId: string,
+  opts?: { limit?: number },
+): Promise<ActivityLog[]> {
+  const limit = opts?.limit ?? 25;
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select('*')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as ActivityLog[];
+}
+
 export async function listActivityLog(opts?: {
   action?: string;
   limit?: number;

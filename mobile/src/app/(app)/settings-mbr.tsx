@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
+import { CardHelpTrigger } from '@/components/card-help-trigger';
 import { Badge, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrRuleActions, useMbrRules } from '@/hooks/use-mbr';
 import { useProfile } from '@/hooks/use-profile';
@@ -16,6 +17,46 @@ import {
 /** Aturan Goal → KPI Area dikunci: konsisten dgn gerbang aktivasi Goal (≥1 KPI Area) Fase 4. */
 function isLocked(rule: MbrRule): boolean {
   return rule.parent_card_type === 'goal' && rule.child_card_type === 'kpi_area';
+}
+
+/**
+ * UI-S-MBR1 — Kartu demo edukasi "Contoh Tombol Ditahan".
+ * Menampilkan visual tombol Aktifkan yang ditahan saat MBR belum terpenuhi
+ * (rasio <100% atau jumlah turunan < min_count). Bukan kontrol fungsional — hanya ilustrasi.
+ */
+function MbrExampleCard() {
+  return (
+    <SectionCard>
+      <View className="flex-row items-center gap-2">
+        <Text className="flex-1 text-base font-semibold text-black dark:text-white">
+          Contoh: Tombol Aktifkan ditahan
+        </Text>
+        <Badge label="Edukasi" tone="info" />
+      </View>
+      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+        Saat kartu induk belum memenuhi Minimum Breakdown Rule, tombol Aktifkan akan tampil non-aktif
+        dengan indikator rasio turunan.
+      </Text>
+      <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="text-sm font-medium text-black dark:text-white">Strategy: "Tingkatkan retensi"</Text>
+          <Badge label="Draft" tone="neutral" />
+        </View>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">Initiative</Text>
+          <Text className="text-xs font-semibold text-amber-700 dark:text-amber-400">1 / 2 (50%)</Text>
+        </View>
+        <View
+          aria-disabled
+          className="min-h-[44px] items-center justify-center rounded-xl bg-brand-dark opacity-40">
+          <Text className="text-base font-semibold text-white">Aktifkan Strategy</Text>
+        </View>
+        <Text className="text-xs text-neutral-400">
+          Tap akan menampilkan dialog: <Text className="italic">"Butuh minimal 2 Initiative; saat ini 1."</Text>
+        </Text>
+      </View>
+    </SectionCard>
+  );
 }
 
 function RuleCard({
@@ -143,13 +184,17 @@ export default function SettingsMbrScreen() {
           <SkeletonList count={4} />
         ) : (
           <>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Atur jumlah minimum kartu turunan dan mode penegakannya. Perubahan berlaku prospektif —
-              kartu yang sudah ada tidak terpengaruh.
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="flex-1 text-sm text-neutral-500 dark:text-neutral-400">
+                Atur jumlah minimum kartu turunan dan mode penegakannya. Perubahan berlaku prospektif —
+                kartu yang sudah ada tidak terpengaruh.
+              </Text>
+              <CardHelpTrigger topic="mbr" />
+            </View>
             {rules.map((rule) => (
               <RuleCard key={rule.id} rule={rule} onSet={handleSet} />
             ))}
+            <MbrExampleCard />
           </>
         )}
       </View>

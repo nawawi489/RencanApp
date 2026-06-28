@@ -19,8 +19,13 @@ export function GreetingHero({
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{ borderRadius: 20, padding: 20 }}>
-      <View className="gap-1.5">
-        <Text className="text-xs font-semibold uppercase text-white/80">{dateLabel}</Text>
+      <View className="gap-2">
+        {dateLabel ? (
+          // UI-S-H05: pill tanggal (bukan caption uppercase) — match prototype.
+          <View className="self-start rounded-full bg-white/20 px-3 py-1">
+            <Text className="text-xs font-semibold text-white">{dateLabel}</Text>
+          </View>
+        ) : null}
         <Text className="text-2xl font-extrabold text-white">{greeting()}, {name}.</Text>
         {message ? <Text className="text-sm text-white/90">{message}</Text> : null}
       </View>

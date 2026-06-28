@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
+import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useProfile } from '@/hooks/use-profile';
@@ -189,6 +190,8 @@ export default function InitiativeDetailScreen() {
                 />
               )}
             </View>
+
+            <ActivityLogPanel entityType="initiative" entityId={id} />
           </>
         )}
       </View>
