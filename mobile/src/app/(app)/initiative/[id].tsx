@@ -20,6 +20,8 @@ import {
   type ActionPlanWithPeople,
 } from '@/lib/cards';
 import { personLabel } from '@/components/user-picker';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
 
 function ActionPlanRow({ item, onPress }: { item: ActionPlanWithPeople; onPress: () => void }) {
   return (
@@ -79,6 +81,15 @@ export default function InitiativeDetailScreen() {
   });
 
   const initiative = initiativeQ.data;
+  const { focus } = usePeriodFocus();
+  const initPast = initiative ? cardPeriodStatus(initiative, focus) === 'past' : false;
+  const handleAddActionPlan = () => {
+    if (initPast) {
+      showPastPeriodAlert(initiative?.name);
+      return;
+    }
+    router.push(`/action-plan/new?initiativeId=${id}` as Href);
+  };
 
   function handleActivate() {
     const blocked = guardMbrActivation(compliance, {
@@ -147,7 +158,7 @@ export default function InitiativeDetailScreen() {
                   <Button
                     label="+ Tambah"
                     variant="secondary"
-                    onPress={() => router.push(`/action-plan/new?initiativeId=${id}` as Href)}
+                    onPress={handleAddActionPlan}
                   />
                 ) : null}
               </View>

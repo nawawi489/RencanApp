@@ -23,6 +23,8 @@ import {
   getDevelopmentArea,
 } from '@/lib/development-areas';
 import type { ProblemStatement } from '@/lib/problem-statements';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
 
 function ProblemStatementRow({ item, onPress }: { item: ProblemStatement; onPress: () => void }) {
   return (
@@ -81,6 +83,15 @@ export default function DevelopmentAreaDetailScreen() {
   });
 
   const devArea = devAreaQ.data;
+  const { focus } = usePeriodFocus();
+  const devPast = devArea ? cardPeriodStatus(devArea, focus) === 'past' : false;
+  const handleAddProblem = () => {
+    if (devPast) {
+      showPastPeriodAlert(devArea?.name);
+      return;
+    }
+    router.push(`/problem-statement/new?developmentAreaId=${id}` as Href);
+  };
 
   function handleActivate() {
     const blocked = guardMbrActivation(compliance, {
@@ -141,9 +152,7 @@ export default function DevelopmentAreaDetailScreen() {
                 <Button
                   label="+ Tambah Problem Statement"
                   variant="secondary"
-                  onPress={() =>
-                    router.push(`/problem-statement/new?developmentAreaId=${id}` as Href)
-                  }
+                  onPress={handleAddProblem}
                 />
               </View>
 

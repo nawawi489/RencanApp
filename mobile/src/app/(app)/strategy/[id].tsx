@@ -11,6 +11,8 @@ import { useStrategyInitiatives } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL, type Initiative } from '@/lib/cards';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } from '@/lib/strategies';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
@@ -65,6 +67,15 @@ export default function StrategyDetailScreen() {
   });
 
   const strategy = strategyQ.data;
+  const { focus } = usePeriodFocus();
+  const strategyPast = strategy ? cardPeriodStatus(strategy, focus) === 'past' : false;
+  const handleAddInitiative = () => {
+    if (strategyPast) {
+      showPastPeriodAlert(strategy?.name);
+      return;
+    }
+    router.push(`/initiative/new?strategyId=${id}` as Href);
+  };
 
   function handleActivate() {
     const blocked = guardMbrActivation(compliance, {
@@ -133,7 +144,7 @@ export default function StrategyDetailScreen() {
                 <Button
                   label="+ Tambah Initiative"
                   variant="secondary"
-                  onPress={() => router.push(`/initiative/new?strategyId=${id}` as Href)}
+                  onPress={handleAddInitiative}
                 />
               </View>
 

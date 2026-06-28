@@ -18,6 +18,9 @@ import {
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { UserPicker } from '@/components/user-picker';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
+import { KpiAreaBreakdownPanel } from '@/components/kpi-area-breakdown-panel';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
 import {
@@ -126,6 +129,15 @@ export default function KpiAreaDetailScreen() {
   const kpiArea = kpiAreaQ.data;
   // PIC tersimpan (mis. warisan Goal Wizard) untuk prefill picker editor.
   const { person: currentPic } = usePerson(kpiArea?.pic_id);
+  const { focus } = usePeriodFocus();
+  const kpiPast = kpiArea ? cardPeriodStatus(kpiArea, focus) === 'past' : false;
+  const handleAddStrategy = () => {
+    if (kpiPast) {
+      showPastPeriodAlert(kpiArea?.name);
+      return;
+    }
+    router.push(`/strategy/new?kpiAreaId=${id}` as Href);
+  };
 
   function handleActivate() {
     const blocked = guardMbrActivation(compliance, {
@@ -194,6 +206,12 @@ export default function KpiAreaDetailScreen() {
 
             <MbrCompletionIndicator compliance={compliance} />
 
+            <KpiAreaBreakdownPanel
+              kpiAreaId={id}
+              picId={kpiArea.pic_id}
+              createdBy={kpiArea.created_by}
+            />
+
             {kpiArea.status === 'draft' ? (
               <DraftCompletion
                 initialTarget={kpiArea.target ?? ''}
@@ -211,7 +229,7 @@ export default function KpiAreaDetailScreen() {
                 <Button
                   label="+ Tambah Strategy"
                   variant="secondary"
-                  onPress={() => router.push(`/strategy/new?kpiAreaId=${id}` as Href)}
+                  onPress={handleAddStrategy}
                 />
               </View>
 
