@@ -90,6 +90,10 @@ export default function AppLayout() {
         name="settings-permission-users"
         options={{ headerShown: true, title: 'User & Permission' }}
       />
+      <Stack.Screen
+        name="settings-kpi-area-templates"
+        options={{ headerShown: true, title: 'KPI Area Template' }}
+      />
       <Stack.Screen name="search" options={{ headerShown: true, title: 'Cari' }} />
 
       {/* Fase 7 — People & Score (surface) */}

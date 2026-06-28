@@ -5,11 +5,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
+import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { Avatar, Badge, Button, EmptyState, ErrorState, SkeletonList } from '@/components/ui';
-import { usePermissionActions, useUserPermissionsAdmin } from '@/hooks/use-permissions-admin';
+import {
+  usePermissionActions,
+  useScopeActions,
+  useUserPermissionScopes,
+  useUserPermissionsAdmin,
+} from '@/hooks/use-permissions-admin';
 import { useProfile } from '@/hooks/use-profile';
 import { listOrgProfiles, type PersonRef } from '@/lib/cards';
 import type { AdminPermissionRow } from '@/lib/permissions-admin';
@@ -21,26 +27,77 @@ function personLabel(p: Person): string {
   return p.full_name?.trim() || p.email || 'Tanpa nama';
 }
 
-/** Toggle aksesibel (role=switch). Default-role → terkunci (non-interaktif). */
-function PermToggle({ row, onToggle }: { row: AdminPermissionRow; onToggle: () => void }) {
+const SCOPE_OPTIONS: { value: 'own' | 'team' | 'dept' | 'org'; label: string }[] = [
+  { value: 'own', label: 'Own' },
+  { value: 'team', label: 'Tim' },
+  { value: 'dept', label: 'Dept' },
+  { value: 'org', label: 'Org' },
+];
+
+/** Toggle aksesibel (role=switch). Default-role → terkunci (non-interaktif).
+ *  UI-S-PRM1 — scope pill selector di bawah toggle (only saat granted + not locked). */
+function PermToggle({
+  row,
+  scope,
+  onToggle,
+  onScopeChange,
+}: {
+  row: AdminPermissionRow;
+  scope: 'own' | 'team' | 'dept' | 'org';
+  onToggle: () => void;
+  onScopeChange: (next: 'own' | 'team' | 'dept' | 'org') => void;
+}) {
   const locked = row.is_default;
   return (
-    <View className="flex-row items-center justify-between gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
-      <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-semibold text-black dark:text-white">{row.label}</Text>
-        {locked ? <Badge label="Bawaan role" tone="info" /> : null}
+    <View className="gap-2 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-1 gap-0.5">
+          <Text className="text-sm font-semibold text-black dark:text-white">{row.label}</Text>
+          {locked ? <Badge label="Bawaan role" tone="info" /> : null}
+        </View>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: row.granted, disabled: locked }}
+          accessibilityLabel={row.label}
+          disabled={locked}
+          onPress={onToggle}
+          className={`h-7 w-12 justify-center rounded-full px-0.5 ${
+            row.granted ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
+          } ${locked ? 'opacity-40' : 'active:opacity-70'}`}>
+          <View className={`h-6 w-6 rounded-full bg-white ${row.granted ? 'self-end' : 'self-start'}`} />
+        </Pressable>
       </View>
-      <Pressable
-        accessibilityRole="switch"
-        accessibilityState={{ checked: row.granted, disabled: locked }}
-        accessibilityLabel={row.label}
-        disabled={locked}
-        onPress={onToggle}
-        className={`h-7 w-12 justify-center rounded-full px-0.5 ${
-          row.granted ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
-        } ${locked ? 'opacity-40' : 'active:opacity-70'}`}>
-        <View className={`h-6 w-6 rounded-full bg-white ${row.granted ? 'self-end' : 'self-start'}`} />
-      </Pressable>
+      {row.granted && !locked ? (
+        <View>
+          <Text className="px-1 pb-1 text-[10px] font-semibold uppercase text-neutral-400">Scope</Text>
+          <View
+            className="flex-row gap-1"
+            accessibilityRole="radiogroup"
+            accessibilityLabel={`Scope untuk ${row.label}`}>
+            {SCOPE_OPTIONS.map((opt) => {
+              const active = scope === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`Scope ${opt.label}`}
+                  onPress={() => !active && onScopeChange(opt.value)}
+                  className={`min-h-[32px] flex-1 items-center justify-center rounded-md px-2 ${
+                    active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
+                  } active:opacity-70`}>
+                  <Text
+                    className={`text-[10px] font-semibold ${
+                      active ? 'text-white' : 'text-black dark:text-white'
+                    }`}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -59,7 +116,9 @@ export default function SettingsPermissionUsersScreen() {
     queryFn: listOrgProfiles,
   });
   const { rows, isLoading: permsLoading, isError: permsError } = useUserPermissionsAdmin(selectedId ?? '');
+  const { scopes } = useUserPermissionScopes(selectedId ?? '');
   const { setPermission, isPending } = usePermissionActions(profile?.id ?? null);
+  const { setScope } = useScopeActions();
 
   if (profileLoading) {
     return (
@@ -196,7 +255,19 @@ export default function SettingsPermissionUsersScreen() {
             ) : (
               <View className="gap-2">
                 {rows.map((row) => (
-                  <PermToggle key={row.key} row={row} onToggle={() => openConfirm(row)} />
+                  <PermToggle
+                    key={row.key}
+                    row={row}
+                    scope={(scopes[row.key] as 'own' | 'team' | 'dept' | 'org') ?? 'org'}
+                    onToggle={() => openConfirm(row)}
+                    onScopeChange={(next) =>
+                      selectedId &&
+                      setScope({ targetUserId: selectedId, permissionKey: row.key, scope: next }).catch(
+                        (e: unknown) =>
+                          Alert.alert('Gagal scope', e instanceof Error ? e.message : 'Kesalahan.'),
+                      )
+                    }
+                  />
                 ))}
               </View>
             )}

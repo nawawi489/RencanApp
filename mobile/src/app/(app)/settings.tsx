@@ -90,6 +90,11 @@ const SECTIONS: SettingsSection[] = [
   { label: 'Organisasi', href: '/settings-org-structure' as Href, permission: 'create_department' },
   { label: 'Goal Template Library', href: '/settings-goal-templates' as Href },
   {
+    label: 'KPI Area Template',
+    href: '/settings-kpi-area-templates' as Href,
+    permission: 'manage_kpi_area_templates',
+  },
+  {
     label: 'Minimum Breakdown Rule',
     href: '/settings-mbr' as Href,
     permission: 'manage_minimum_breakdown_rule',

@@ -4,6 +4,8 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { PropsWithChildren } from 'react';
 import { createElement } from 'react';
 
+jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+
 const mockListDepartments = jest.fn();
 const mockListTeamMembers = jest.fn();
 const mockCreateDepartment = jest.fn();
@@ -16,6 +18,15 @@ jest.mock('@/lib/org-structure', () => ({
   createDepartment: (...a: unknown[]) => mockCreateDepartment(...a),
   createTeam: (...a: unknown[]) => mockCreateTeam(...a),
   assignTeamMember: (...a: unknown[]) => mockAssignTeamMember(...a),
+  listPositions: jest.fn(() => Promise.resolve([])),
+  listTeams: jest.fn(() => Promise.resolve([])),
+}));
+
+// C7 — governance-admin lib di-import transitively oleh use-org-structure (createPosition + createRoleTemplate).
+jest.mock('@/lib/governance-admin', () => ({
+  __esModule: true,
+  createPosition: jest.fn(),
+  createRoleTemplate: jest.fn(),
 }));
 
 // eslint-disable-next-line import/first

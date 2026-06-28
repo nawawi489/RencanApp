@@ -5,11 +5,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  listUserPermissionScopes,
   listUserPermissionsAdmin,
   setUserPermission,
   type AdminPermissionRow,
   type SetPermissionInput,
 } from '@/lib/permissions-admin';
+import { setUserPermissionScope } from '@/lib/governance-admin';
 
 export function useUserPermissionsAdmin(targetUserId: string) {
   const q = useQuery({
@@ -31,6 +33,7 @@ export function usePermissionActions(actorId?: string | null) {
     mutationFn: (input: SetPermissionInput) => setUserPermission(input),
     onSuccess: (_data, input) => {
       qc.invalidateQueries({ queryKey: ['user_permissions_admin', input.targetUserId] });
+      qc.invalidateQueries({ queryKey: ['user_permission_scopes', input.targetUserId] });
       if (actorId && input.targetUserId === actorId) {
         qc.invalidateQueries({ queryKey: ['current-profile', actorId] });
       }
@@ -38,6 +41,38 @@ export function usePermissionActions(actorId?: string | null) {
   });
   return {
     setPermission: (input: SetPermissionInput) => m.mutateAsync(input),
+    isPending: m.isPending,
+  };
+}
+
+// UI-S-PRM1 — fetch scope per permission_key untuk user (default 'org' jika belum ada baris).
+export function useUserPermissionScopes(targetUserId: string) {
+  const q = useQuery({
+    queryKey: ['user_permission_scopes', targetUserId],
+    queryFn: () => listUserPermissionScopes(targetUserId),
+    enabled: !!targetUserId,
+  });
+  return {
+    scopes: (q.data ?? {}) as Record<string, string>,
+    isLoading: q.isLoading,
+  };
+}
+
+export function useScopeActions() {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (input: {
+      targetUserId: string;
+      permissionKey: string;
+      scope: 'own' | 'team' | 'dept' | 'org';
+    }) => setUserPermissionScope(input),
+    onSuccess: (_data, input) => {
+      qc.invalidateQueries({ queryKey: ['user_permission_scopes', input.targetUserId] });
+      qc.invalidateQueries({ queryKey: ['user_permissions_admin', input.targetUserId] });
+    },
+  });
+  return {
+    setScope: m.mutateAsync,
     isPending: m.isPending,
   };
 }

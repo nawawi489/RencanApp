@@ -1,20 +1,72 @@
-// Fase 8 — Settings > Governance Violation (read-only). Gated view_governance_violation (SINGULAR).
-import { Stack } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native-css/components';
+// Fase 8 — Settings > Governance Violation. Gated view_governance_violation.
+// UI-S-GV1: aksi "Selesaikan" + Resolution Note (≥8 char) + "Lihat entity" link + filter
+// resolution_status. Migrasi 0022 menambahkan kolom resolution_* + RPC resolve_governance_violation.
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Stack, useRouter, type Href } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Alert, Modal, TextInput } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { Badge, EmptyState, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, SectionCard, SkeletonList } from '@/components/ui';
 import {
   GOVERNANCE_VIOLATION_SEVERITY_LABEL,
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
 } from '@/lib/activity-governance';
 import { useGovernanceViolations } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
+import { resolveGovernanceViolation } from '@/lib/governance-admin';
+
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Belum diselesaikan',
+  resolved: 'Selesai',
+  dismissed: 'Diabaikan',
+};
+
+const STATUS_CHIPS: { key: 'semua' | 'open' | 'resolved' | 'dismissed'; label: string }[] = [
+  { key: 'semua', label: 'Semua' },
+  { key: 'open', label: 'Terbuka' },
+  { key: 'resolved', label: 'Selesai' },
+  { key: 'dismissed', label: 'Diabaikan' },
+];
+
+const ENTITY_ROUTE: Record<string, string> = {
+  goal: '/goal',
+  kpi_area: '/kpi-area',
+  strategy: '/strategy',
+  initiative: '/initiative',
+  action_plan: '/action-plan',
+  development_area: '/development-area',
+  problem_statement: '/problem-statement',
+};
 
 export default function SettingsGovernanceViolationScreen() {
+  const router = useRouter();
+  const qc = useQueryClient();
   const { can } = useProfile();
   const { violations, isLoading } = useGovernanceViolations();
   const allowed = can('view_governance_violation');
+
+  const [statusChip, setStatusChip] = useState<'semua' | 'open' | 'resolved' | 'dismissed'>('open');
+  const [resolveTarget, setResolveTarget] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+
+  const resolveM = useMutation({
+    mutationFn: (args: { id: string; note: string; status: 'resolved' | 'dismissed' }) =>
+      resolveGovernanceViolation(args.id, args.note, args.status),
+    onSuccess: () => {
+      setResolveTarget(null);
+      setNote('');
+      qc.invalidateQueries({ queryKey: ['governance_violations'] });
+    },
+    onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.'),
+  });
+
+  const filtered = useMemo(() => {
+    if (statusChip === 'semua') return violations;
+    const v = violations as Array<typeof violations[number] & { resolution_status?: string | null }>;
+    return v.filter((x) => (x.resolution_status ?? 'open') === statusChip);
+  }, [violations, statusChip]);
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
@@ -24,30 +76,150 @@ export default function SettingsGovernanceViolationScreen() {
           <AccessDenied message="Governance Violation hanya untuk pemegang izin Lihat Governance Violation." />
         ) : isLoading ? (
           <SkeletonList count={5} />
-        ) : violations.length === 0 ? (
-          <EmptyState title="Tidak ada pelanggaran" description="Belum ada catatan pelanggaran governance." />
         ) : (
-          violations.map((v) => {
-            const sev = v.severity ?? 'low';
-            return (
-              <SectionCard key={v.id}>
-                <View className="flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 text-base font-semibold text-black dark:text-white">
-                    {v.violation_type}
-                  </Text>
-                  <Badge
-                    label={GOVERNANCE_VIOLATION_SEVERITY_LABEL[sev] ?? sev}
-                    tone={GOVERNANCE_VIOLATION_SEVERITY_TONE[sev] ?? 'neutral'}
-                  />
-                </View>
-                {v.entity_type ? (
-                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">{v.entity_type}</Text>
-                ) : null}
-              </SectionCard>
-            );
-          })
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Filter status pelanggaran"
+              contentContainerStyle={{ gap: 8 }}>
+              {STATUS_CHIPS.map((c) => {
+                const active = statusChip === c.key;
+                return (
+                  <Pressable
+                    key={c.key}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={`Filter ${c.label}`}
+                    onPress={() => setStatusChip(c.key)}
+                    className={`min-h-[36px] items-center justify-center rounded-full px-3 ${
+                      active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
+                    } active:opacity-70`}>
+                    <Text
+                      className={`text-xs font-semibold ${
+                        active ? 'text-white' : 'text-black dark:text-white'
+                      }`}>
+                      {c.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {filtered.length === 0 ? (
+              <EmptyState
+                title="Tidak ada pelanggaran"
+                description={statusChip === 'semua' ? 'Belum ada catatan pelanggaran.' : `Tidak ada pelanggaran berstatus ${STATUS_LABEL[statusChip]}.`}
+              />
+            ) : (
+              filtered.map((v) => {
+                const sev = v.severity ?? 'low';
+                const status = (v as typeof v & { resolution_status?: string }).resolution_status ?? 'open';
+                const isOpen = status === 'open';
+                const entityType = v.entity_type ?? '';
+                const entityRoute = ENTITY_ROUTE[entityType];
+                return (
+                  <SectionCard key={v.id}>
+                    <View className="flex-row items-center justify-between gap-2">
+                      <Text className="flex-1 text-base font-semibold text-black dark:text-white">
+                        {v.violation_type}
+                      </Text>
+                      <View className="flex-row items-center gap-1.5">
+                        <Badge
+                          label={GOVERNANCE_VIOLATION_SEVERITY_LABEL[sev] ?? sev}
+                          tone={GOVERNANCE_VIOLATION_SEVERITY_TONE[sev] ?? 'neutral'}
+                        />
+                        {!isOpen ? <Badge label={STATUS_LABEL[status] ?? status} tone="success" /> : null}
+                      </View>
+                    </View>
+                    {entityType ? (
+                      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+                        {entityType}
+                      </Text>
+                    ) : null}
+                    {(v as typeof v & { resolution_note?: string | null }).resolution_note ? (
+                      <Text className="text-xs italic text-neutral-500 dark:text-neutral-400">
+                        Catatan: {(v as typeof v & { resolution_note: string }).resolution_note}
+                      </Text>
+                    ) : null}
+                    <View className="flex-row items-center gap-2">
+                      {entityRoute && v.entity_id ? (
+                        <Button
+                          label="Lihat entity"
+                          variant="secondary"
+                          onPress={() => router.push(`${entityRoute}/${v.entity_id}` as Href)}
+                        />
+                      ) : null}
+                      {isOpen ? (
+                        <Button
+                          label="Selesaikan"
+                          onPress={() => {
+                            setResolveTarget(v.id);
+                            setNote('');
+                          }}
+                        />
+                      ) : null}
+                    </View>
+                  </SectionCard>
+                );
+              })
+            )}
+          </>
         )}
       </View>
+
+      {/* Resolution modal */}
+      <Modal
+        visible={resolveTarget !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setResolveTarget(null)}>
+        <View className="flex-1 justify-end bg-black/40">
+          <View
+            className="gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+            accessibilityLabel="Modal selesaikan pelanggaran">
+            <Text className="text-lg font-bold text-black dark:text-white">Selesaikan Pelanggaran</Text>
+            <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+              Tulis catatan penyelesaian (≥ 8 karakter). Aksi ini tercatat di Activity Log.
+            </Text>
+            <TextInput
+              accessibilityLabel="Catatan penyelesaian"
+              value={note}
+              onChangeText={setNote}
+              placeholder="mis. Sudah konfirmasi PIC + revisi target."
+              placeholderTextColor="#9ca3af"
+              multiline
+              className="min-h-[100px] rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+            />
+            <View className="flex-row gap-2">
+              <Button
+                label="Batal"
+                variant="secondary"
+                onPress={() => setResolveTarget(null)}
+              />
+              <Button
+                label="Diabaikan"
+                variant="secondary"
+                loading={resolveM.isPending}
+                onPress={() =>
+                  resolveTarget &&
+                  resolveM.mutate({ id: resolveTarget, note: note.trim(), status: 'dismissed' })
+                }
+              />
+              <Button
+                label="Tandai Selesai"
+                loading={resolveM.isPending}
+                disabled={note.trim().length < 8 || resolveM.isPending}
+                onPress={() =>
+                  resolveTarget &&
+                  resolveM.mutate({ id: resolveTarget, note: note.trim(), status: 'resolved' })
+                }
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

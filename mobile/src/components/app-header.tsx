@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native-css/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,13 +31,23 @@ export function AppHeader({ kicker }: { kicker?: string }) {
           </View>
         </View>
 
-        <Pressable
-          className="active:opacity-70"
-          onPress={() => router.push('/(app)/settings')}
-          accessibilityRole="button"
-          accessibilityLabel="Buka profil & pengaturan">
-          <Avatar name={name} seed={profile?.id ?? name} size={34} />
-        </Pressable>
+        <View className="flex-row items-center gap-2">
+          {/* UI-G-005: Search pill — entry point ke global search. Min-44px touch (DESIGN §4). */}
+          <Pressable
+            className="min-h-[44px] min-w-[44px] items-center justify-center rounded-full active:opacity-70"
+            onPress={() => router.push('/(app)/search')}
+            accessibilityRole="button"
+            accessibilityLabel="Cari">
+            <Ionicons name="search-outline" size={22} color="#1564b3" />
+          </Pressable>
+          <Pressable
+            className="active:opacity-70"
+            onPress={() => router.push('/(app)/settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Buka profil & pengaturan">
+            <Avatar name={name} seed={profile?.id ?? name} size={34} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );

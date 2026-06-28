@@ -392,3 +392,36 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 **Hasil:** **74 suite / 714 tes pass** (sebelumnya 73/701; +1 suite +13 tes); `tsc --noEmit` bersih. Tidak ada migrasi DB.
 
 **TODOS S0-S4 SELESAI.** Sisa backlog Cat-3 (UI-S-OR1/GV1/AL1/AR1/PRM1/KT1/AP7, UI-G-005, UI-S-SF2) paralel-safe — kandidat PR berikutnya.
+
+## [2026-06-28] update | Cat-3 sweep 9 backlog items (UI-G-005, UI-S-AL1/AP7/AR1/GV1/OR1/PRM1/KT1, UI-S-SF2 mark)
+
+**Yang dibangun (9 item; 1 migrasi 0022; tidak ada feature break):**
+
+### Migrasi 0022 — Cat-3 bundle DB foundations:
+- **`restore_card(entity_type, entity_id)`** RPC — kebalikan archive_card; status → 'draft' + archived_at=null. Permission PIC/manage_others. Activity log `card_restored`.
+- **`governance_violations` ALTER** — kolom `resolution_status` (open/resolved/dismissed) + `resolution_note` + `resolved_at` + `resolved_by`. Index `idx_gv_resolution_status`.
+- **`resolve_governance_violation(id, note, status='resolved')`** RPC — gate `view_governance_violation`, reason ≥ 8 char, idempotent (hanya update 'open' → throw bila sudah ditutup). Activity log `violation_resolved`.
+- **`create_position(name, dept?, desc?)`** + **`create_role_template(name, level)`** RPC — pola sama dgn create_team/department; gate `manage_positions`/`manage_settings`.
+- **`user_permissions.scope` kolom** (own/team/dept/org default 'org') + **`set_user_permission_scope(user, key, scope)`** RPC — gate `manage_users_permissions`; upsert (granted default true bila baris baru). Activity log `permission_scope_updated`.
+
+### UI per-item:
+- **UI-G-005** — Search pill di `components/app-header.tsx` (Ionicons `search-outline` 44px) → `/search`. Sebelum avatar.
+- **UI-S-AL1** — `settings-activity-log.tsx` rewrite: TextInput search (q vs action+entity_type+label), 7 filter chip kategori (Semua/Dibuat/Diubah/Arsip-Batal/Review/Periode-Skor/Permission), timestamp per row, empty-filtered state.
+- **UI-S-AP7** — `action-plan/instance/[id].tsx` tambah SectionCard "Ringkasan Hari Ini" (Badge `Hari Ini N/M` + chips Target/Selesai/Submitted/Terlewat/Grace + compliancePercent overall) + SectionCard "Panduan Hari Ini" (4 bullet kuratorial V1).
+- **UI-S-SF2** — sudah live di SF1 (LevelChips Staff/Mgmt/C-Level/CEO; Custom hidden per DEC-9). Tanpa kode baru — tandai di wiki.
+- **UI-S-AR1** — `settings-archive.tsx` rewrite: 8 filter chip per entity type (Semua/Goal/KPI/Strategy/Initiative/AP/DevArea/Problem), tombol "Pulihkan ke Draft" per row dgn confirm modal + RPC `restore_card`. Tidak ada hapus permanen.
+- **UI-S-GV1** — `settings-governance-violation.tsx` rewrite: 4 filter chip status (Semua/Terbuka/Selesai/Diabaikan), badge resolution di header card, tombol "Selesaikan" + "Lihat entity" → route detail. Modal bottom-sheet Selesaikan dgn 3 CTA: Batal / Diabaikan / Tandai Selesai (note ≥ 8 char).
+- **UI-S-OR1** — `settings-org-structure.tsx` rewrite ke 4-tab (Departemen/Posisi/Tim/Role) dgn `TabBar`. Tiap tab pakai pola DepartmentTab existing — list + form add inline. Hook `useOrgActions` ditambah `createPosition` + `createRoleTemplate`. Hook baru `usePositions`/`useTeams`/`useRoleTemplates`.
+- **UI-S-PRM1** — `settings-permission-users.tsx` PermToggle expand: scope pill row di bawah toggle (only saat granted+not locked) dgn 4 option (Own/Tim/Dept/Org). Hook `useUserPermissionScopes` (read `user_permissions.scope` + `permissions.key`) + `useScopeActions().setScope` → RPC `set_user_permission_scope`.
+- **UI-S-KT1** — Layar mandiri baru `settings-kpi-area-templates.tsx` (route `/settings-kpi-area-templates`) — read-only V1, grouping per Goal Template (proxy divisi), TextInput cari, link "Edit di Template ›" ke Goal Template Library. Row di hub Menu `settings.tsx`. Stack screen di `(app)/_layout.tsx`. Lib `listAllKpiAreaTemplates` (join `goal_templates(id,name)`).
+
+**Tests baru/disesuaikan:**
+- Test `fase8-settings-screens.test.tsx`: F8-UI-07 (activity log) + F8-UI-27 (archive) update untuk spec baru.
+- Test `use-permissions-admin.test.tsx` + `use-org-structure.test.tsx`: tambah mock `@/lib/supabase` + `@/lib/governance-admin` (lib baru di-import transitively oleh hooks).
+- Test `settings-permission-users.test.tsx`: tambah dummy mock untuk `useUserPermissionScopes` + `useScopeActions`.
+
+**Hasil:** **74 suite / 714 tes pass** (= S4 baseline, +0 tes karena Cat-3 fokus surface, bukan logic baru); `tsc --noEmit` bersih. Migrasi 0022 sudah di-apply ke remote + `database.types.ts` regen.
+
+**Advisors security check (security):** 5 WARN baru — kelima SECURITY DEFINER RPC baru (restore_card, resolve_governance_violation, create_position, create_role_template, set_user_permission_scope) — pola intentional sama dgn semua RPC fase sebelumnya.
+
+**SELURUH BACKLOG `ui-prototype-gap.md` Cat-3 SELESAI** untuk PR scope ini. Sisa P2/P3 backlog (UI-N-002 hub-card workspace, UI-N-003 tree 4-5 level, UI-G-002 log panel sistemik, dst.) tetap perlu putusan produk terpisah.

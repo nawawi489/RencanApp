@@ -12,7 +12,7 @@ import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonL
 import { SubmissionCard } from '@/components/submission-card';
 import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
-import { useInstanceActions } from '@/hooks/use-repeat-instances';
+import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
 import { getActionPlan } from '@/lib/cards';
 import {
   INSTANCE_STATUS_LABEL,
@@ -72,6 +72,18 @@ export default function ActionPlanInstanceDetailScreen() {
   );
   const submissions = inst?.action_plan_submissions ?? [];
 
+  // UI-S-AP7 — "Hari Ini N/M" + ringkasan Target/Selesai/Terlewat/Grace.
+  // Sumber: instances of THIS action plan, filtered by current local date == instance.instance_date.
+  const repeatQ = useRepeatInstances(inst?.action_plan_id ?? '', { enabled: !!inst?.action_plan_id });
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayInstances = repeatQ.instances.filter((i) => i.instance_date === todayStr);
+  const todayDone = todayInstances.filter((i) => i.status === 'done').length;
+  const todayMissed = todayInstances.filter((i) => i.status === 'missed').length;
+  const todaySubmitted = todayInstances.filter((i) => i.status === 'submitted').length;
+  const todayGrace = todayInstances.filter(
+    (i) => i.status !== 'done' && i.status !== 'missed' && i.deadline_at && new Date(i.deadline_at) < new Date(),
+  ).length;
+
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Instance' }} />
@@ -116,6 +128,66 @@ export default function ActionPlanInstanceDetailScreen() {
                 </Text>
               ) : null}
             </View>
+
+            {/* UI-S-AP7 — Ringkasan Hari Ini. Tampil hanya jika ada instance berjadwal hari ini. */}
+            {todayInstances.length > 0 ? (
+              <SectionCard>
+                <View className="flex-row items-center justify-between gap-2">
+                  <Text className="text-sm font-bold text-black dark:text-white">
+                    Ringkasan Hari Ini
+                  </Text>
+                  <Badge label={`Hari Ini ${todayDone}/${todayInstances.length}`} tone="info" />
+                </View>
+                <View className="flex-row flex-wrap gap-2 pt-1">
+                  <View className="rounded-lg bg-neutral-100 px-3 py-1 dark:bg-neutral-800">
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Target</Text>
+                    <Text className="text-sm font-semibold text-black dark:text-white">
+                      {todayInstances.length}
+                    </Text>
+                  </View>
+                  <View className="rounded-lg bg-emerald-100 px-3 py-1 dark:bg-emerald-950">
+                    <Text className="text-[10px] text-emerald-700 dark:text-emerald-300">Selesai</Text>
+                    <Text className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                      {todayDone}
+                    </Text>
+                  </View>
+                  <View className="rounded-lg bg-amber-100 px-3 py-1 dark:bg-amber-950">
+                    <Text className="text-[10px] text-amber-700 dark:text-amber-300">Submitted</Text>
+                    <Text className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                      {todaySubmitted}
+                    </Text>
+                  </View>
+                  <View className="rounded-lg bg-red-100 px-3 py-1 dark:bg-red-950">
+                    <Text className="text-[10px] text-red-700 dark:text-red-300">Terlewat</Text>
+                    <Text className="text-sm font-semibold text-red-700 dark:text-red-300">
+                      {todayMissed}
+                    </Text>
+                  </View>
+                  <View className="rounded-lg bg-orange-100 px-3 py-1 dark:bg-orange-950">
+                    <Text className="text-[10px] text-orange-700 dark:text-orange-300">Grace</Text>
+                    <Text className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                      {todayGrace}
+                    </Text>
+                  </View>
+                </View>
+                {repeatQ.compliancePercent != null ? (
+                  <Text className="text-[11px] text-neutral-400">
+                    Compliance keseluruhan: {repeatQ.compliancePercent}% on-time.
+                  </Text>
+                ) : null}
+              </SectionCard>
+            ) : null}
+
+            {/* UI-S-AP7 — Panduan Hari Ini (kuratorial; sumber card_guidance_contents nanti). */}
+            <SectionCard>
+              <Text className="text-sm font-bold text-black dark:text-white">Panduan Hari Ini</Text>
+              <Text className="text-sm text-neutral-600 dark:text-neutral-300">
+                • Cek bukti & data hasil sebelum submit.{'\n'}
+                • Pastikan format file sesuai (PDF/PNG/JPG ≤ 5 MB).{'\n'}
+                • Tulis catatan singkat bila ada perubahan dari rencana.{'\n'}
+                • Submit sebelum deadline — instance lewat masuk hitungan Terlewat.
+              </Text>
+            </SectionCard>
 
             {/* PIC: submit / submit ulang */}
             {actions.canSubmit ? (

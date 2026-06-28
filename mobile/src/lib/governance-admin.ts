@@ -172,6 +172,71 @@ export async function archiveCard(entityType: CardEntityType, entityId: string):
   if (error) throw error;
 }
 
+/** UI-S-AR1 — Pulihkan card terarsip ke status 'draft' (governance-safe). */
+export async function restoreCard(entityType: CardEntityType, entityId: string): Promise<void> {
+  const { error } = await supabase.rpc('restore_card', {
+    p_entity_type: entityType,
+    p_entity_id: entityId,
+  });
+  if (error) throw error;
+}
+
+/** UI-S-GV1 — Selesaikan / tutup pelanggaran governance dgn catatan ≥8 char. */
+export async function resolveGovernanceViolation(
+  violationId: string,
+  resolutionNote: string,
+  status: 'resolved' | 'dismissed' = 'resolved',
+): Promise<void> {
+  const { error } = await supabase.rpc('resolve_governance_violation', {
+    p_violation_id: violationId,
+    p_resolution_note: resolutionNote,
+    p_status: status,
+  });
+  if (error) throw error;
+}
+
+/** UI-S-OR1 — buat Posisi (gated manage_positions). */
+export async function createPosition(args: {
+  name: string;
+  departmentId?: string | null;
+  description?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('create_position', {
+    p_name: args.name,
+    p_department_id: args.departmentId ?? undefined,
+    p_description: args.description ?? undefined,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/** UI-S-OR1 — buat Role Template baru (gated manage_settings). */
+export async function createRoleTemplate(args: {
+  name: string;
+  level: 'ceo' | 'c_level' | 'management' | 'staff';
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('create_role_template', {
+    p_name: args.name,
+    p_level: args.level,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/** UI-S-PRM1 — set scope (own/team/dept/org) untuk permission user. */
+export async function setUserPermissionScope(args: {
+  targetUserId: string;
+  permissionKey: string;
+  scope: 'own' | 'team' | 'dept' | 'org';
+}): Promise<void> {
+  const { error } = await supabase.rpc('set_user_permission_scope', {
+    p_target_user_id: args.targetUserId,
+    p_permission_key: args.permissionKey,
+    p_scope: args.scope,
+  });
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------- Search (RLS-scoped via RPC)
 
 export async function searchCards(
