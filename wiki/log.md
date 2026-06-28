@@ -277,3 +277,151 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 - **Jest setup** — file baru `mobile/jest.setup.js` mock `@react-native-async-storage/async-storage` lewat mock resmi (`jest/async-storage-mock`). Ditambah ke `setupFiles` di `package.json`. Tanpa ini, import `theme-provider` → `AsyncStorage` null di Node test runner.
 - **Tes:** 66 suite / 614 tes hijau; typecheck bersih.
 - **DESIGN.md §12** ditambah dokumentasi mode switch + aturan: layar/komponen baru wajib sediakan varian `dark:*` untuk bg/border/text serta gunakan `effective` untuk warna non-tailwind.
+
+## [2026-06-27] update | Sinkronkan wiki ke PRD V1.8.2
+
+- **Pemicu:** `/autoplan` atas "deltas vs PRD". Temuan: bukan konflik — `PRD_EMS_V1.82_Rencanaapp.md` (root) sudah memutuskan semuanya; **wiki & kode `mobile/` yang lag di V1.8.1.** Owner menetapkan V1.8.2 sumber kebenaran.
+- **Pages updated:** [[surfaces]] (bottom nav → `Home·Notif·Workspace·Inbox·Menu`, People masuk Menu, +Period Focus Engine; warning kode lag P0), [[scope-guardrails]] (V1.8.2 §6: +Period Focus Engine +KPI Area Target Breakdown; callout **Kontribusi/Target Breakdown ≠ Bobot planning card**), [[overview]] (V1.8.2 + status implementasi), [[ui-prototype-gap]] (**UI-N-001 RESOLVED = Menu**), `index.md` (ringkasan surfaces + tanggal).
+- **Koreksi review:** flag §88 "100% split = bobot planning card" yang sempat CRITICAL **VOID** — V1.8.2 sengaja memisah Target Breakdown (diizinkan, baris pada KPI Area) dari Bobot planning card (tetap ditolak). Implementasi breakdown wajib baris `kpi_area_id+periode`, **bukan** tabel kartu anak.
+- **Belum disentuh (eksekusi berikut):** `mobile/src/app/(app)/(tabs)/_layout.tsx` masih People = tab 5 → **fix P0**. Sekuens S0–S4 + watch migrasi di `~/.gstack/projects/nawawi489-RencanApp/feat-sf1-prd-reconciliation-plan-20260627.md`.
+
+## [2026-06-28] update | S0 nav Menu — implementasi PRD V1.8.2 §7.1
+
+- **Pemicu:** TODOS.md S0 (sequencing keras S0→S4). Kode `mobile/` masih People = tab 5; PRD V1.8.2 = `Home·Notif·Workspace·Inbox·Menu`, People masuk Menu.
+- **Hasil tes:** 67 suite / **617 tes pass**; `tsc --noEmit` bersih. Tidak ada migrasi DB.
+- **Files moved:** `mobile/src/app/(app)/(tabs)/people.tsx` → `(app)/people.tsx` (jadi stack route non-tab, header lewat `<Stack.Screen name="people" title="People">` di `(app)/_layout.tsx`). Test `(tabs)/__tests__/people.test.tsx` → `(app)/__tests__/people.test.tsx` (import `'../people'` tetap valid).
+- **Files added:** `mobile/src/app/(app)/(tabs)/menu.tsx` (re-export `SettingsScreen` kanonik dari `../settings`); `mobile/src/app/(app)/(tabs)/__tests__/menu.test.tsx` (3 tes: re-export identity, row People → push `/people`, row People Ranking → push `/people-ranking`).
+- **Files edited:** `(tabs)/_layout.tsx` ganti `Tabs.Screen name="people"` → `name="menu"` (title "Menu", icon `menu-outline`, kicker "Profil, People, dan admin"). `(app)/settings.tsx` tambah 2 baris non-gate di puncak `SECTIONS`: **People** → `/people`, **People Ranking** → `/people-ranking` (sesuai PRD §31 People dipindah ke Menu). `(app)/_layout.tsx` tambah `<Stack.Screen name="people" title="People">`.
+- **Keputusan struktur:** `/settings` tetap ada sebagai alias stack-route (file `(app)/settings.tsx` adalah sumber kebenaran; tab `/menu` cuma re-export). Avatar di `AppHeader` masih `push('/(app)/settings')` → memunculkan hub yang sama tapi sebagai stack screen dengan back-button — perilaku "buka profil" prototype tetap.
+- **Closes:** ~~UI-N-001~~ ✅ di [[ui-prototype-gap]]. Backlog nav: tersisa UI-N-002 (Workspace hub-card) butuh putusan produk.
+- **Next:** S1 — Period Focus Engine (§7.6/§7.7) sebagai fondasi sebelum S2 (KPI Area Target Breakdown + Σ=100%).
+
+## [2026-06-28] update | S1 Period Focus Engine — PRD §7.6 / §7.7 / §11.2
+
+- **Pemicu:** TODOS.md S1 (gate sebelum S2 Target Breakdown). PRD V1.8.2 §7.6 menetapkan Workspace fokus pada periode aktif (Bulan default, Quarter rollup, Goal tahunan konteks) dan §7.7 mengatur kartu periode lewat (redup + lock tambah turunan).
+- **Hasil tes:** 70 suites / **665 tests pass** (+48 baru dari 617). `tsc --noEmit` bersih. Tidak ada migrasi DB (data periode dihitung client-side dari `period_start`/`period_end` yang sudah ada di setiap tabel kartu sejak Fase 4/5/6).
+- **Files added:**
+  - `mobile/src/lib/period-focus.ts` — pure helpers `PeriodMode`/`PeriodFocus`, `defaultFocus(now)`, `formatPeriodLabel`, `periodBreadcrumb`, `periodWindow`, `cardPeriodStatus(card, focus)` (past/current/future), `enumerateMonths(year, now)` / `enumerateQuarters(year, now)`, `parseFocusJson` (validator JSON persisted), `isSameFocus`, `quarterOfMonth`. Semua menerima `now: Date` eksplisit agar deterministik.
+  - `mobile/src/providers/period-focus-provider.tsx` — `PeriodFocusProvider` (state persist di AsyncStorage `rencanaapp:period-focus`, default = bulan dari `new Date()` saat mount; test inject `now`). `usePeriodFocus()` fallback-aman tanpa provider.
+  - `mobile/src/components/period-switcher.tsx` — panel kompak (label "Periode aktif" + nilai + breadcrumb "Goal 2026 · Q2 · Juni" + tombol "Ubah") + bottom-sheet `Modal` (segmented Bulan/Quarter + list 12 bulan / 4 quarter dgn pill **Aktif** / **Arsip** / **Akan datang**). Token DESIGN.md mengikat (touch ≥44 px, `bg-brand-dark` solid+teks putih, varian `dark:*`).
+  - 3 test file baru: `lib/__tests__/period-focus.test.ts` (29 unit pure), `providers/__tests__/period-focus-provider.test.tsx` (5 case: default, hydrate, persist, toggle mode, fallback no-provider), `components/__tests__/period-switcher.test.tsx` (4 case: compact panel, modal open, select baris, toggle Quarter).
+- **Files edited:**
+  - `mobile/src/app/_layout.tsx` — bungkus `<PeriodFocusProvider>` di antara ThemeProvider & AuthProvider.
+  - `mobile/src/app/(app)/(tabs)/workspace.tsx` — pasang `<PeriodSwitcher />` di header kedua pane (Performance & Development). `GoalRow` / `DevelopmentAreaRow` / `InitiativeRow` plus baris ekspan KPI Area / Problem Statement: jika `cardPeriodStatus(card, focus) === 'past'` → `opacity-50` + Badge "Periode lewat" + `accessibilityLabel` berakhiran "· Periode lewat".
+  - `mobile/src/app/(app)/(tabs)/__tests__/workspace.test.tsx` — bungkus wrapper dgn `PeriodFocusProvider now={Jun 2026}`, +3 case S1 (PeriodSwitcher visible; Goal past → label "Periode lewat"; Goal aktif → tanpa label).
+- **Closes:** ~~UI-G-010~~ ✅ + ~~UI-S-W03~~ ✅ di [[ui-prototype-gap]]. Backlog P0 nav/period tuntas; gate S2 (Target Breakdown) terbuka.
+- **DEFER ke fase berikut (sengaja):**
+  - **Filter query** by period — V1 hanya dim visual; PRD §7.6 "tidak tampil semua turunan sekaligus" dibaca sebagai panduan UX, bukan filter ketat (kartu past tetap visible & dapat dibuka). Filter ketat butuh keputusan produk + extend `useGoals/useKpiAreas/...` (parameter `periodId`/window).
+  - **PeriodSwitcher di People profil & Home** — Workspace fokus dulu, surface lain mengikuti.
+  - **Lock tombol "tambah turunan"** + popup "Periode sudah lewat" — masuk **S3** (Card Interaction Rule) yang sekaligus menyentuh tombol Detail/panah/`⋯`/+.
+- **Next:** S2 — KPI Area Target Breakdown + Σ=100% per Q/Bulan (§12), membutuhkan migrasi DB baru (baris breakdown ber-key `kpi_area_id + period_type + period_key + contribution_pct`).
+
+## [2026-06-28] update | S1 Period Focus Engine + S2 KPI Area Target Breakdown
+
+**S1 — Period Focus Engine (PRD V1.8.2 §7.6/§7.7) ✅**
+- **lib/period-focus.ts** baru — pure helpers: types (PeriodMode, PeriodFocus, CardPeriodStatus, PeriodOption), `formatPeriodLabel`, `periodBreadcrumb`, `periodWindow`, `quarterOfMonth`, `cardPeriodStatus(card, focus)`, `defaultFocus(now)`, `enumerateMonths/Quarters(year, now)`, `parseFocusJson` (validasi storage). Semua menerima `now: Date` agar deterministik (jest setup repo melarang Date.now/Math.random).
+- **providers/period-focus-provider.tsx** baru — state {mode, year, month?, quarter?} persisted di AsyncStorage (`rencanaapp:period-focus`). Default Bulan berjalan. `useMode` toggle Bulan↔Quarter mempertahankan year, pilih M/Q dari anchor `initialNow`. Fallback aman tanpa provider (pola dgn theme-provider). Di-wrap di root `_layout.tsx` sebelum AuthProvider.
+- **components/period-switcher.tsx** baru (UI-G-010 / UI-S-W03 / §11.2) — panel kompak "Periode aktif" + label + breadcrumb "Goal Y · Qx · Bulan" + tombol "Ubah". Modal bottom-sheet: segmented Bulan/Quarter + list 12 bulan / 4 quarter dgn pill Arsip/Aktif/Akan datang.
+- **Workspace integration** — PeriodSwitcher di header Performance & Development pane. `GoalRow`/`DevelopmentAreaRow`/`InitiativeRow` (+ child KPI Area & Problem Statement saat expand) menerapkan `opacity-50` + Badge "Periode lewat" bila `cardPeriodStatus` past. Filter data via period belum di-apply (PRD §7.7 hanya minta dim, bukan hide).
+- **Closes:** ~~UI-G-010~~ ✅; ~~UI-S-W03~~ ✅ (referensi UI-G-010 — sudah ter-render di Workspace). Lock "+" per-card tertunda ke S3 (Card Interaction Rule).
+
+**S2 — KPI Area Target Breakdown + Σ=100% (PRD V1.8.2 §12) ✅**
+- **Migrasi 0021_fase_s2_kpi_area_target_breakdown.sql** baru — tabel `public.kpi_area_target_breakdowns` (kolom: organization_id, kpi_area_id, period_type ∈ {quarter,month}, period_key, parent_quarter_key, contribution_pct numeric(6,3), reason, created_by, created_at, updated_at). UNIQUE (kpi_area_id, period_type, period_key). CHECK shape (Q-only vs month+parent_q). FK cascade ke kpi_areas. RLS aktif: SELECT mirror policy kpi_areas; INSERT/UPDATE/DELETE ditutup (mutasi via RPC). Append-only delete block via existing `tg_block_delete_append_only`.
+- **RPC `kpi_area_breakdown_replace(p_kpi_area_id, p_quarter jsonb, p_month jsonb, p_reason text)`** — SECURITY DEFINER. Validasi: reason ≥ 8 char, Σ Quarter = 100 (4 entri), Σ Month = 100 per parent Quarter (3 entri/Q). Permission via helper `can_edit_kpi_area_breakdown` (PIC / creator / manage_others_cards / is_goal_pic). Atomic upsert (ON CONFLICT). Snapshot old → emit `write_activity('kpi_area', id, 'target_breakdown_updated', {old, new, reason})`.
+- **lib/kpi-area-breakdown.ts** baru — types (BreakdownRow, QuarterKey, MonthKey), pure helpers (`quarterOfMonthKey`, `sumOf`, `validateQuarter100`, `validateMonth100PerQuarter`, `indexQuarterRows`, `indexMonthRowsPerQuarter`), API thin client (`listKpiAreaBreakdown`, `replaceKpiAreaBreakdown`). Catatan: client untyped lokal (cast) — `database.types.ts` belum di-regen utk migrasi 0021; server tetap penegak (RLS+RPC).
+- **hooks/use-workspace.ts** — tambah `useKpiAreaBreakdown(kpiAreaId)` (queryKey `['kpi_area_breakdown', id]`) dan `useKpiAreaBreakdownActions(kpiAreaId).replace`.
+- **components/kpi-area-breakdown-panel.tsx** baru (UI-S-K01) — panel inline di `kpi-area/[id]`. View: Quarter chips (Q1..Q4 dgn pct + Σ live, tone success bila 100%) + Bulan-per-Quarter card (opsional bila ada data). Edit modal (gated: PIC/creator/manage_others_cards): tab Quarter (4 input numerik) + tab Bulan (4 sub-section × 3 input). Bar Σ live. Field "Alasan perubahan" wajib ≥ 8 char. Save disabled bila Σ Quarter ≠ 100, atau Bulan diaktifkan tapi salah satu Q ≠ 100, atau reason kurang. Monthly opsional: jika semua nol kirim `month=null` ke RPC.
+- **Test baru:** `lib/__tests__/kpi-area-breakdown.test.ts` (9 unit pure helpers), `components/__tests__/kpi-area-breakdown-panel.test.tsx` (9 integration: gating Ubah, read state, modal prefill, Σ live, Save call RPC, monthly opsional).
+
+**Hasil:** **72 suite / 694 tes hijau** (sebelumnya 67/617); `tsc --noEmit` bersih.
+
+**Closes ui-prototype-gap:** ~~UI-G-010~~, ~~UI-S-W03~~, ~~UI-S-K01~~. DEFER (sengaja, di luar §12): UI-S-G01 (Goal Target Tahunan + Tahun) dan UI-S-S01 (Strategy Kontribusi Q% — kemungkinan view atas breakdown KPI Area parent, bukan field tulis baru) → kandidat S3/Cat-3.
+
+**Catatan migrasi 0021:** belum di-apply ke remote (perlu langkah ops: `supabase db push` atau MCP `apply_migration`). Setelah apply, jalankan `supabase gen types typescript` agar `database.types.ts` mengenali tabel `kpi_area_target_breakdowns` dan RPC `kpi_area_breakdown_replace` — saat itu cast lokal di `lib/kpi-area-breakdown.ts` dapat dihapus.
+
+**Next:** S3 — Card Interaction Rule (§7.3/§7.7) sistemik (Detail vs panah vs ⋯ vs +) lalu S4 — Completeness popups.
+
+## [2026-06-28] update | S3 Card Interaction Rule + dim past (§7.3 / §7.7)
+
+**Yang dibangun:**
+- **components/row-actions-menu.tsx** baru (UI-G-009) — bottom-sheet Modal generik. API: `<RowActionsMenu open onClose title? items=[{label,onPress,destructive?,disabled?}]/>`. Aksi otomatis tutup sheet sebelum `onPress`. Tombol Tutup eksplisit. Destructive → red-600/red-400; disabled → non-Pressable + muted color. Touch ≥44px.
+- **lib/period-focus.ts** — helper baru `showPastPeriodAlert(cardLabel?, alertImpl?)` (lazy-import `react-native` Alert; injectable utk test).
+- **Workspace `(tabs)/workspace.tsx`** refactor besar:
+  - Hapus full-row Pressable→detail dari `GoalRow`, `DevelopmentAreaRow`, `InitiativeRow` (§7.3 "Tap area non-button tidak buka detail"). Title kini plain Text.
+  - Komponen `CardActionRow` baru: baris aksi tiap tree-card berisi `[▾ Lihat …]` (toggle expand), `[Detail]` (push), `[⋯]` (RowActionsMenu), `[+]` (tambah turunan; locked-with-alert bila past period).
+  - `GoalRow` "+" → `/kpi-area/new?goalId=…` (gated `can('create_kpi_area')`). `DevelopmentAreaRow` "+" → `/problem-statement/new?developmentAreaId=…`. `InitiativeRow` (flat) tak punya "+" (anak terdalam tree).
+  - Child rows di expand (KPI Area di bawah Goal, Problem Statement di bawah DevArea) ikut pola: title plain + tombol Detail eksplisit.
+  - `defaultRowActions(cardLabel)` — set V1 placeholder: Ubah / Arsipkan / Salin (Alert "Belum tersedia"). Aksi nyata menyusul saat archive/copy/edit RPC tersedia.
+- **Detail screens "+" lock** (§7.7) — 5 layar: `goal/[id].tsx`, `kpi-area/[id].tsx`, `strategy/[id].tsx`, `initiative/[id].tsx`, `development-area/[id].tsx`, `problem-statement/[id].tsx`. Tiap tombol "+ Tambah X" sekarang panggil handler yang cek `cardPeriodStatus(parent, focus) === 'past'` → `showPastPeriodAlert(parent.name)` + return, else push route create.
+
+**Tests baru / disesuaikan:**
+- `components/__tests__/row-actions-menu.test.tsx` (3 case: render items+Tutup, urutan onClose→onPress, disabled non-Pressable).
+- `(tabs)/__tests__/workspace.test.tsx` extend (4 case S3): Detail button → push & tap title TIDAK push; "+" current → push route create; "+" past → `Alert.alert` "Periode sudah lewat" + tidak push; "⋯" → RowActionsMenu terbuka (judul sheet). Dua test S1 lama disesuaikan label baru.
+
+**Hasil:** **73 suite / 701 tes pass** (sebelumnya 72/694; +1 suite +7 tes); `tsc --noEmit` bersih. Tidak ada migrasi DB.
+
+**Closes:** ~~UI-G-009~~ ✅ di [[ui-prototype-gap]]. Card Interaction Rule §7.3 + dim past §7.7 sekarang sistemik di Workspace (top-down) + ter-apply ke 6 detail screen "+" buttons.
+
+**DEFER ke iterasi berikut:**
+- RowActionsMenu items "Ubah/Arsipkan/Salin" masih placeholder — perlu RPC sisi server (archive_*, duplicate_*, edit lifecycle) sebelum aksi nyata.
+- Hapus draft action: belum tersurat di backlog UI-G-009; akan menyusul saat RPC tersedia.
+- Period switcher di People profil (UI-G-010 expand): di luar lingkup S3.
+
+**Next:** S4 — Completeness popups (§7.4 / §7.5).
+
+## [2026-06-28] update | S4 Completeness popups (§7.4 / §7.5)
+
+**Yang dibangun:**
+- **lib/activation-check.ts** baru — pure helpers:
+  - `missingRequiredFor(cardType, card)`: kembali daftar label field kosong sesuai aturan server `activate_*` (Goal: name/PIC/periode; KPI Area: + Target; Strategy: + Alasan/Risiko Utama/Alternatif; Initiative: + Target Hasil; Development Area & Problem Statement: shared).
+  - `guardActivationFields(cardType, card, alertImpl?)`: §7.4 pre-flight popup "Lengkapi data wajib" — return `true` bila terblokir (caller berhenti). Alert injectable utk test.
+  - `confirmAddDescendantIfIncomplete({compliance, parentLabel, childLabel, onProceed, alertImpl?})`: §7.5 popup arahan saat "+ Tambah". Bila MBR sudah memenuhi atau data belum tersedia → `onProceed()` langsung. Bila belum memenuhi → Alert "Kelengkapan Perencanaan" dgn rasio "X dari Y" + CTA "Tutup" / "+ Tambah X" (CTA proceed → server tetap penegak akhir).
+- **6 detail screen** di-wire:
+  - **§7.4** (Aktifkan pre-flight): `goal/[id]`, `kpi-area/[id]`, `strategy/[id]`, `initiative/[id]`, `development-area/[id]`, `problem-statement/[id]` — setiap `handleActivate` panggil `guardActivationFields` di depan, return bila terblokir (sebelum `guardMbrActivation` + `activateM.mutate()`).
+  - **§7.5** (+ Tambah arahan): wrap existing `handleAddX` (yg sudah cek past period dari S3) dgn `confirmAddDescendantIfIncomplete` — past-period lock di depan, lalu MBR guidance, lalu `router.push(create-route)`. Goal screen tambah `useMbrCompliance('goal', id)` (lainnya sudah punya).
+
+**Catatan §7.4/§7.5 penting:**
+- Sinyal persisten (`MbrCompletionIndicator` panel) tetap tampil — keputusan owner "keep signal + popup".
+- Popup tidak menggantikan rule backend; klien hanya UX shortcut. Server tetap RAISE bila field wajib kosong saat user override popup.
+- Popup §7.5 sengaja boleh proceed (bukan blok) supaya UX tidak terlalu kaku — mode `blokir_akses_turunan` server akan tolak saat sampai ke RPC.
+
+**Tests baru/disesuaikan:**
+- `lib/__tests__/activation-check.test.ts` (13 unit: missingRequiredFor per tipe + guardActivationFields blok vs lewat + confirmAddDescendantIfIncomplete proceed/popup/CTA).
+- `strategy/__tests__/mbr-completion.test.tsx` + `initiative/__tests__/mbr-completion.test.tsx`: tambah `pic_id: 'u1'` di fixture draft (sebelumnya field optional di test, kini guard wajib).
+
+**Hasil:** **74 suite / 714 tes pass** (sebelumnya 73/701; +1 suite +13 tes); `tsc --noEmit` bersih. Tidak ada migrasi DB.
+
+**TODOS S0-S4 SELESAI.** Sisa backlog Cat-3 (UI-S-OR1/GV1/AL1/AR1/PRM1/KT1/AP7, UI-G-005, UI-S-SF2) paralel-safe — kandidat PR berikutnya.
+
+## [2026-06-28] update | Cat-3 sweep 9 backlog items (UI-G-005, UI-S-AL1/AP7/AR1/GV1/OR1/PRM1/KT1, UI-S-SF2 mark)
+
+**Yang dibangun (9 item; 1 migrasi 0022; tidak ada feature break):**
+
+### Migrasi 0022 — Cat-3 bundle DB foundations:
+- **`restore_card(entity_type, entity_id)`** RPC — kebalikan archive_card; status → 'draft' + archived_at=null. Permission PIC/manage_others. Activity log `card_restored`.
+- **`governance_violations` ALTER** — kolom `resolution_status` (open/resolved/dismissed) + `resolution_note` + `resolved_at` + `resolved_by`. Index `idx_gv_resolution_status`.
+- **`resolve_governance_violation(id, note, status='resolved')`** RPC — gate `view_governance_violation`, reason ≥ 8 char, idempotent (hanya update 'open' → throw bila sudah ditutup). Activity log `violation_resolved`.
+- **`create_position(name, dept?, desc?)`** + **`create_role_template(name, level)`** RPC — pola sama dgn create_team/department; gate `manage_positions`/`manage_settings`.
+- **`user_permissions.scope` kolom** (own/team/dept/org default 'org') + **`set_user_permission_scope(user, key, scope)`** RPC — gate `manage_users_permissions`; upsert (granted default true bila baris baru). Activity log `permission_scope_updated`.
+
+### UI per-item:
+- **UI-G-005** — Search pill di `components/app-header.tsx` (Ionicons `search-outline` 44px) → `/search`. Sebelum avatar.
+- **UI-S-AL1** — `settings-activity-log.tsx` rewrite: TextInput search (q vs action+entity_type+label), 7 filter chip kategori (Semua/Dibuat/Diubah/Arsip-Batal/Review/Periode-Skor/Permission), timestamp per row, empty-filtered state.
+- **UI-S-AP7** — `action-plan/instance/[id].tsx` tambah SectionCard "Ringkasan Hari Ini" (Badge `Hari Ini N/M` + chips Target/Selesai/Submitted/Terlewat/Grace + compliancePercent overall) + SectionCard "Panduan Hari Ini" (4 bullet kuratorial V1).
+- **UI-S-SF2** — sudah live di SF1 (LevelChips Staff/Mgmt/C-Level/CEO; Custom hidden per DEC-9). Tanpa kode baru — tandai di wiki.
+- **UI-S-AR1** — `settings-archive.tsx` rewrite: 8 filter chip per entity type (Semua/Goal/KPI/Strategy/Initiative/AP/DevArea/Problem), tombol "Pulihkan ke Draft" per row dgn confirm modal + RPC `restore_card`. Tidak ada hapus permanen.
+- **UI-S-GV1** — `settings-governance-violation.tsx` rewrite: 4 filter chip status (Semua/Terbuka/Selesai/Diabaikan), badge resolution di header card, tombol "Selesaikan" + "Lihat entity" → route detail. Modal bottom-sheet Selesaikan dgn 3 CTA: Batal / Diabaikan / Tandai Selesai (note ≥ 8 char).
+- **UI-S-OR1** — `settings-org-structure.tsx` rewrite ke 4-tab (Departemen/Posisi/Tim/Role) dgn `TabBar`. Tiap tab pakai pola DepartmentTab existing — list + form add inline. Hook `useOrgActions` ditambah `createPosition` + `createRoleTemplate`. Hook baru `usePositions`/`useTeams`/`useRoleTemplates`.
+- **UI-S-PRM1** — `settings-permission-users.tsx` PermToggle expand: scope pill row di bawah toggle (only saat granted+not locked) dgn 4 option (Own/Tim/Dept/Org). Hook `useUserPermissionScopes` (read `user_permissions.scope` + `permissions.key`) + `useScopeActions().setScope` → RPC `set_user_permission_scope`.
+- **UI-S-KT1** — Layar mandiri baru `settings-kpi-area-templates.tsx` (route `/settings-kpi-area-templates`) — read-only V1, grouping per Goal Template (proxy divisi), TextInput cari, link "Edit di Template ›" ke Goal Template Library. Row di hub Menu `settings.tsx`. Stack screen di `(app)/_layout.tsx`. Lib `listAllKpiAreaTemplates` (join `goal_templates(id,name)`).
+
+**Tests baru/disesuaikan:**
+- Test `fase8-settings-screens.test.tsx`: F8-UI-07 (activity log) + F8-UI-27 (archive) update untuk spec baru.
+- Test `use-permissions-admin.test.tsx` + `use-org-structure.test.tsx`: tambah mock `@/lib/supabase` + `@/lib/governance-admin` (lib baru di-import transitively oleh hooks).
+- Test `settings-permission-users.test.tsx`: tambah dummy mock untuk `useUserPermissionScopes` + `useScopeActions`.
+
+**Hasil:** **74 suite / 714 tes pass** (= S4 baseline, +0 tes karena Cat-3 fokus surface, bukan logic baru); `tsc --noEmit` bersih. Migrasi 0022 sudah di-apply ke remote + `database.types.ts` regen.
+
+**Advisors security check (security):** 5 WARN baru — kelima SECURITY DEFINER RPC baru (restore_card, resolve_governance_violation, create_position, create_role_template, set_user_permission_scope) — pola intentional sama dgn semua RPC fase sebelumnya.
+
+**SELURUH BACKLOG `ui-prototype-gap.md` Cat-3 SELESAI** untuk PR scope ini. Sisa P2/P3 backlog (UI-N-002 hub-card workspace, UI-N-003 tree 4-5 level, UI-G-002 log panel sistemik, dst.) tetap perlu putusan produk terpisah.

@@ -25,6 +25,9 @@ jest.mock('@/hooks/use-permissions-admin', () => ({
   __esModule: true,
   useUserPermissionsAdmin: (...a: unknown[]) => mockUseUserPerms(...a),
   usePermissionActions: () => ({ setPermission: mockSetPermission, isPending: false }),
+  // UI-S-PRM1 (C8) — scope hooks dummy untuk test layar permission.
+  useUserPermissionScopes: () => ({ scopes: {}, isLoading: false }),
+  useScopeActions: () => ({ setScope: jest.fn(), isPending: false }),
 }));
 
 jest.mock('expo-router', () => ({ __esModule: true, Stack: { Screen: () => null } }));

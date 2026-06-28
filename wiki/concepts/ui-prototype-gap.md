@@ -43,12 +43,12 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | **UI-G-002** | Tidak ada panel **"Log Aktivitas"** di layar detail | Goal/KPI/Strategy/Initiative/DevArea/Problem/AP detail | Collapsible "Log Aktivitas" memakai data `activity_log` (sudah append-only, [[audit-governance]]); reuse di semua detail |
 | **UI-G-003** | **MetaGrid 4-sel** pada header detail (saat ini 1–2 sel) | Semua layar detail | Tambah Parent reference + PIC nama + 2 metrik konteks (Target/Aktual atau Kontribusi/Periode) |
 | **UI-G-004** | **Stepper "Langkah N dari M" + footer Draft & Aktifkan** di form "baru" | Semua form `*/new.tsx` | Komponen `WizardHero` + `StickyActions`; satu screen tetap pakai single button bila form ≤4 field |
-| **UI-G-005** | **Search pill di topbar** & entry point ke global search | Semua layar utama | Tambah `TopSearchPill` di `AppHeader`; route ke `/(app)/search` |
+| **UI-G-005** | **Search pill di topbar** & entry point ke global search | Semua layar utama | Tambah `TopSearchPill` di `AppHeader`; route ke `/(app)/search` ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — Ionicons search-outline di app-header.tsx → router.push(/search). |
 | **UI-G-006** | **Tombol help "?"** per kartu/section (mengeluarkan sheet dengan glossary) | Hampir semua kartu prototype | Komponen `CardHelpTrigger` + glossary content store (per-entity) |
 | **UI-G-007** | **Sumbu warna brand** beda (`#208aef` vs `#1877f2` prototype) — fonts Inter belum dimuat | Global | Sudah dicatat di `DESIGN.md` §11; keputusan terbuka — angkat ke status `[?]` di backlog |
 | **UI-G-008** | **Radius kartu** 16px app vs 8px prototype (rasa lebih bulat vs lebih "spreadsheet-like") | Global | Putuskan radius kanonik di `DESIGN.md` lalu pilih: turunkan `rounded-2xl` → `rounded-xl`/`rounded-lg`, atau tetap. |
-| **UI-G-009** | **Per-card overflow `⋯`** untuk aksi sekunder (Arsipkan, Ubah, Salin, Hapus draft) | Semua tree-card & list row | `RowActionsMenu` (bottom sheet) konsisten lintas list |
-| **UI-G-010** | **Period switcher (Bulan/Quarter + arsip periode)** | `performance-workspace`, `development-workspace`, profil people | Komponen `PeriodSwitcher` yang membaca [[score-formula|periode aktif/closed]] |
+| **UI-G-009** | **Per-card overflow `⋯`** untuk aksi sekunder (Arsipkan, Ubah, Salin, Hapus draft) | Semua tree-card & list row | `RowActionsMenu` (bottom sheet) konsisten lintas list ✅ **IMPLEMENTED 2026-06-28 (S3)** — `components/row-actions-menu.tsx` generik (open/onClose + items[]); ter-wire ke `GoalRow`/`DevelopmentAreaRow`/`InitiativeRow` di Workspace. Item Ubah/Arsipkan/Salin masih placeholder V1 (Alert "Belum tersedia"). |
+| **UI-G-010** | **Period switcher (Bulan/Quarter + arsip periode)** | `performance-workspace`, `development-workspace`, profil people | Komponen `PeriodSwitcher` yang membaca [[score-formula|periode aktif/closed]] ✅ **IMPLEMENTED 2026-06-28 (S1)** — `components/period-switcher.tsx` + `lib/period-focus.ts` + `providers/period-focus-provider.tsx`; terpasang di Workspace (Performance & Development pane); kartu past auto-redup. People profil dipasang nanti. |
 
 ---
 
@@ -56,12 +56,12 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 | ID | Gap | Severity |
 |---|---|---|
-| **UI-N-001** | **Tab "Menu" hilang** (slot 5 dipakai People). Hub Menu (profil + template + settings + governance + logout) tersebar | MAJOR |
+| **UI-N-001** | **Tab "Menu" hilang** (slot 5 dipakai People). Hub Menu (profil + template + settings + governance + logout) tersebar | MAJOR ✅ **RESOLVED V1.8.2 §7.1: Menu menang**, People masuk Menu. ✅ **IMPLEMENTED 2026-06-28 (S0)** — `(tabs)/menu.tsx` re-export hub `(app)/settings.tsx` + baris People & People Ranking; `(tabs)/people.tsx` → `(app)/people.tsx` (stack route). |
 | **UI-N-002** | **Workspace hub-card → tab-switcher**: 2 kartu hub Performance/Development hilang (kehilangan ringkasan + entry yang sengaja "berat") | MAJOR |
 | **UI-N-003** | **Pohon hanya 2 level** (Goal→KPI; DevArea→Problem). Strategy/Initiative/Action Plan tidak ada di tree workspace | MAJOR |
 | **UI-N-004** | Beberapa layar prototype terlipat ke layar lain — bukan regresi tapi catat sebagai keputusan: `repeat-setting`, `result-value-input`, `review-flow`, `card-completeness`, `kpi-template-library` | INFO |
 
-**Rekomendasi:** UI-N-001 & UI-N-002 perlu keputusan produk dulu (apa "Menu tab" bawa nilai cukup vs ruang People tab). Catat keputusan di sini sebelum implementasi.
+**Rekomendasi:** ~~UI-N-001 & UI-N-002 perlu keputusan produk dulu~~ — **UI-N-001 ✅ DONE 2026-06-28**: bottom nav kini `Home·Notif·Workspace·Inbox·Menu`, People reachable via `/people` (stack route) dan via row di hub Menu. UI-N-002 (Workspace hub-card) masih perlu keputusan terpisah.
 
 ---
 
@@ -92,7 +92,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 |---|---|---|
 | UI-S-W01 | **2 hub-card** (Performance/Development) dengan orb + 3-stat row + "Masuk →" | MAJOR (lihat UI-N-002) |
 | UI-S-W02 | **Pohon 4–5 level** dengan expand/collapse + per-node `+ child` button (terkait UI-N-003) | MAJOR |
-| UI-S-W03 | **Period switcher** (lihat UI-G-010) | MAJOR |
+| UI-S-W03 | **Period switcher** (lihat UI-G-010) | MAJOR ✅ **IMPLEMENTED 2026-06-28 (S1)** |
 | UI-S-W04 | **Subhead kaya** per node (Aktual/Target/Gap, Kontribusi %, Risiko) | MAJOR |
 
 ### 4.4 Performance forms — Goal/KPI/Strategy/Initiative
@@ -100,7 +100,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | ID | Item | Severity |
 |---|---|---|
 | UI-S-G01 | `goal/new`: field **Target Tahunan**; field **Tahun Goal** + context-bar period otomatis | MAJOR |
-| UI-S-K01 | `kpi-area/new`: **Pecahan Target** (Q1–Q4 breakdown bulanan, total 100%) | MAJOR |
+| UI-S-K01 | `kpi-area/new`: **Pecahan Target** (Q1–Q4 breakdown bulanan, total 100%) | MAJOR ✅ **IMPLEMENTED 2026-06-28 (S2)** — panel inline `KpiAreaBreakdownPanel` di `kpi-area/[id]` (view + edit modal, Σ=100% live, monthly opsional). Migrasi 0021 + RPC `kpi_area_breakdown_replace` (audit `target_breakdown_updated`). Inline-form `kpi-area/new` ditunda — V1 atur breakdown dari halaman detail. |
 | UI-S-K02 | `kpi-area/new`: **template picker** (Pakai Template + summary card) | MAJOR |
 | UI-S-K03 | `kpi-area/new`: field **Ekspektasi Hasil** | MINOR |
 | UI-S-S01 | `strategy/new`: **Kontribusi Q%** ke parent KPI | MAJOR |
@@ -138,7 +138,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-AP4 | `action-plan/new`: **context-bar** parent Initiative; field **"Bukti yang diminta"** deskriptif (selain toggle wajib) | MINOR |
 | UI-S-AP5 | `action-plan/submit`: **file upload** (saat ini hanya text_note + link) | MAJOR |
 | UI-S-AP6 | `action-plan/submit`: pisah **Result Value Input** dengan **linkage KPI Area + nilai lama→baru** ([[execution-loop]]) | MAJOR |
-| UI-S-AP7 | `action-plan/instance/[id]`: **"Hari Ini N/M"** + ringkasan repeat (Target/Selesai/Terlewat/Grace) + **"Panduan Hari Ini"** checklist | MAJOR |
+| UI-S-AP7 | `action-plan/instance/[id]`: **"Hari Ini N/M"** + ringkasan repeat (Target/Selesai/Terlewat/Grace) + **"Panduan Hari Ini"** checklist | MAJOR ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — SectionCard Ringkasan Hari Ini + Panduan Hari Ini kuratorial V1. |
 | UI-S-EV1 | `evaluation.tsx`: checklist **"Perlu jadi SOP?" / "Perlu rollout?"** (loop balik ke Development) + field "Achievement %" | MAJOR |
 
 ### 4.8 Inbox & chat
@@ -163,19 +163,19 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-PR4 | `people-profile/[id]`: kartu **Detail People** (Dept/Atasan/Hak Akses) + **Tugas** collapsible + **Kontribusi Bulan Ini** | MAJOR |
 | UI-S-PR5 | `people-profile/[id]`: **Riwayat Score** + "Lihat Period Snapshot" | MINOR |
 | UI-S-SF1 | `settings-score-formula`: **inline editor bobot** + validasi total 100% live + draft/activate footer ([[score-formula]]) | MAJOR |
-| UI-S-SF2 | `settings-score-formula`: **role chips** (Staff/Management/C-Level/CEO/Custom) sebagai selector template | MAJOR |
+| UI-S-SF2 | `settings-score-formula`: **role chips** (Staff/Management/C-Level/CEO/Custom) sebagai selector template | MAJOR ✅ **CLOSED 2026-06-28 (Cat-3)** — SF1 sudah implement LevelChips 4-chip (Staff/Mgmt/C-Level/CEO); Custom hidden per binding DEC-9. |
 | UI-S-MO1 | `manual-score-override`: **4-tile grid** (Skor otomatis / Disesuaikan / Approval / Formula) — *opsional, kontradiksi dengan keputusan single-actor D10* | MINOR |
 
 ### 4.10 Admin & settings
 
 | ID | Item | Severity |
 |---|---|---|
-| UI-S-PRM1 | `settings-permission-users`: **Scope pill per permission** (own/team/dept/org) + **Scope selector card** (lihat [[permission-model]]) | MAJOR |
-| UI-S-OR1 | `settings-org-structure`: tambahkan **Posisi**, **Tim**, **Garis laporan**, **Role Template** (kini hanya Departemen) | MAJOR |
-| UI-S-KT1 | **Layar mandiri KPI Area Template** dengan grouping per divisi + Edit per-item | MAJOR |
-| UI-S-GV1 | `settings-governance-violation`: aksi **"Selesaikan"** + **Resolution Note** + "Lihat entity" | MAJOR |
-| UI-S-AL1 | `settings-activity-log`: **search**, **filter chips**, **timeline + timestamp + actor** | MAJOR |
-| UI-S-AR1 | `settings-archive`: **filter chip** (Goal/Initiative/AP/Repeat) + **restore button** + metadata (oleh/alasan/tanggal) | MINOR |
+| UI-S-PRM1 | `settings-permission-users`: **Scope pill per permission** (own/team/dept/org) + **Scope selector card** (lihat [[permission-model]]) | MAJOR ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — migrasi 0022 ALTER user_permissions.scope + RPC set_user_permission_scope; scope pill row di PermToggle. |
+| UI-S-OR1 | `settings-org-structure`: tambahkan **Posisi**, **Tim**, **Garis laporan**, **Role Template** (kini hanya Departemen) | MAJOR ✅ **PARTIAL 2026-06-28 (Cat-3)** — 4 tab Dept/Posisi/Tim/Role aktif (migrasi 0022 create_position/role_template RPC). Garis laporan ditunda (perlu schema graph). |
+| UI-S-KT1 | **Layar mandiri KPI Area Template** dengan grouping per divisi + Edit per-item | MAJOR ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — settings-kpi-area-templates.tsx (read-only, grouping per Goal Template); edit lewat Goal Template Library. |
+| UI-S-GV1 | `settings-governance-violation`: aksi **"Selesaikan"** + **Resolution Note** + "Lihat entity" | MAJOR ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — migrasi 0022 ALTER + RPC resolve_governance_violation; tombol Selesaikan modal + Lihat entity link + filter status. |
+| UI-S-AL1 | `settings-activity-log`: **search**, **filter chips**, **timeline + timestamp + actor** | MAJOR ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — TextInput search + 7 filter chip kategori + timestamp per row. |
+| UI-S-AR1 | `settings-archive`: **filter chip** (Goal/Initiative/AP/Repeat) + **restore button** + metadata (oleh/alasan/tanggal) | MINOR ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — migrasi 0022 RPC restore_card; 8 filter chip per entity type + tombol Pulihkan ke Draft per row. Metadata oleh/alasan ditunda (perlu join activity_log). |
 | UI-S-MBR1 | `settings-mbr`: **kartu "Contoh Tombol Ditahan"** demo visual (opsional, edukatif) | MINOR |
 | UI-S-CA1 | `settings-confidential-access`: resolve `user_id` → nama; pertimbangkan overview org-wide (selain entity-scoped) | MINOR |
 
@@ -203,7 +203,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 - UI-S-AP7 (Instance daily summary + Panduan Hari Ini).
 
 **P2 — kekayaan visual & navigasi (perlu putusan produk dulu)**
-- UI-N-001 (Menu tab vs People tab).
+- ~~UI-N-001 (Menu tab vs People tab)~~ ✅ **DONE 2026-06-28 (S0)** — `(tabs)/menu.tsx` aktif; People = stack route `/people`.
 - UI-N-002 / UI-S-W01 (Workspace hub-card).
 - UI-N-003 / UI-S-W02 (Tree 4–5 level inline).
 - UI-G-002 (Log Aktivitas panel sistemik).

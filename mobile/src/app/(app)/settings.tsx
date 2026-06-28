@@ -79,6 +79,8 @@ type SettingsSection = { label: string; href?: Href; permission?: string };
 
 // Bagian aktif bertahap (Fase 5–8). href + permission diisi saat layarnya siap.
 const SECTIONS: SettingsSection[] = [
+  { label: 'People', href: '/people' as Href },
+  { label: 'People Ranking', href: '/people-ranking' as Href },
   {
     label: 'User & Permission',
     href: '/settings-permission-users' as Href,
@@ -87,6 +89,11 @@ const SECTIONS: SettingsSection[] = [
   { label: 'Role Template' },
   { label: 'Organisasi', href: '/settings-org-structure' as Href, permission: 'create_department' },
   { label: 'Goal Template Library', href: '/settings-goal-templates' as Href },
+  {
+    label: 'KPI Area Template',
+    href: '/settings-kpi-area-templates' as Href,
+    permission: 'manage_kpi_area_templates',
+  },
   {
     label: 'Minimum Breakdown Rule',
     href: '/settings-mbr' as Href,

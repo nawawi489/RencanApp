@@ -1419,6 +1419,10 @@ export type Database = {
           entity_type: string | null
           id: string
           organization_id: string | null
+          resolution_note: string | null
+          resolution_status: string
+          resolved_at: string | null
+          resolved_by: string | null
           severity: string | null
           user_id: string | null
           violation_type: string
@@ -1430,6 +1434,10 @@ export type Database = {
           entity_type?: string | null
           id?: string
           organization_id?: string | null
+          resolution_note?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity?: string | null
           user_id?: string | null
           violation_type: string
@@ -1441,6 +1449,10 @@ export type Database = {
           entity_type?: string | null
           id?: string
           organization_id?: string | null
+          resolution_note?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity?: string | null
           user_id?: string | null
           violation_type?: string
@@ -1451,6 +1463,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_violations_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1548,6 +1567,70 @@ export type Database = {
             columns: ["strategy_id"]
             isOneToOne: false
             referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_area_target_breakdowns: {
+        Row: {
+          contribution_pct: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kpi_area_id: string
+          organization_id: string
+          parent_quarter_key: string | null
+          period_key: string
+          period_type: string
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          contribution_pct: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_area_id: string
+          organization_id: string
+          parent_quarter_key?: string | null
+          period_key: string
+          period_type: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contribution_pct?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_area_id?: string
+          organization_id?: string
+          parent_quarter_key?: string | null
+          period_key?: string
+          period_type?: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_kpi_area_id_fkey"
+            columns: ["kpi_area_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2781,6 +2864,7 @@ export type Database = {
           granted: boolean
           id: string
           permission_id: string
+          scope: string
           user_id: string
         }
         Insert: {
@@ -2788,6 +2872,7 @@ export type Database = {
           granted?: boolean
           id?: string
           permission_id: string
+          scope?: string
           user_id: string
         }
         Update: {
@@ -2795,6 +2880,7 @@ export type Database = {
           granted?: boolean
           id?: string
           permission_id?: string
+          scope?: string
           user_id?: string
         }
         Relationships: [
@@ -3073,6 +3159,10 @@ export type Database = {
       can_access_kpi_area: { Args: { p_kpi_area: string }; Returns: boolean }
       can_access_problem_statement: { Args: { p_ps: string }; Returns: boolean }
       can_access_strategy: { Args: { p_strategy: string }; Returns: boolean }
+      can_edit_kpi_area_breakdown: {
+        Args: { p_kpi_area_id: string }
+        Returns: boolean
+      }
       can_view_workspace: { Args: never; Returns: boolean }
       cancel_card: {
         Args: { p_entity_id: string; p_entity_type: string; p_reason: string }
@@ -3128,6 +3218,18 @@ export type Database = {
       }
       create_department: {
         Args: { p_description: string; p_name: string }
+        Returns: string
+      }
+      create_position: {
+        Args: {
+          p_department_id?: string
+          p_description?: string
+          p_name: string
+        }
+        Returns: string
+      }
+      create_role_template: {
+        Args: { p_level: string; p_name: string }
         Returns: string
       }
       create_score_formula_draft: {
@@ -3287,6 +3389,33 @@ export type Database = {
       is_kpi_area_pic: { Args: { p_kpi_area: string }; Returns: boolean }
       is_problem_statement_pic: { Args: { p_ps: string }; Returns: boolean }
       is_supervisor_of: { Args: { p_user: string }; Returns: boolean }
+      kpi_area_breakdown_replace: {
+        Args: {
+          p_kpi_area_id: string
+          p_month: Json
+          p_quarter: Json
+          p_reason: string
+        }
+        Returns: {
+          contribution_pct: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kpi_area_id: string
+          organization_id: string
+          parent_quarter_key: string | null
+          period_key: string
+          period_type: string
+          reason: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "kpi_area_target_breakdowns"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       kpi_area_has_my_descendant: {
         Args: { p_kpi_area: string }
         Returns: boolean
@@ -3359,6 +3488,18 @@ export type Database = {
         }
         Returns: string
       }
+      resolve_governance_violation: {
+        Args: {
+          p_resolution_note: string
+          p_status?: string
+          p_violation_id: string
+        }
+        Returns: undefined
+      }
+      restore_card: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: undefined
+      }
       restore_goal_template_items: {
         Args: { p_goal_id: string }
         Returns: number
@@ -3416,6 +3557,14 @@ export type Database = {
           p_granted: boolean
           p_permission_key: string
           p_reason: string
+          p_target_user_id: string
+        }
+        Returns: undefined
+      }
+      set_user_permission_scope: {
+        Args: {
+          p_permission_key: string
+          p_scope: string
           p_target_user_id: string
         }
         Returns: undefined

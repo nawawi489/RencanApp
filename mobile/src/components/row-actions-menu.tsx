@@ -1,0 +1,92 @@
+// RowActionsMenu (UI-G-009) — bottom-sheet Modal generik untuk aksi sekunder per-card
+// (Arsipkan, Ubah, Salin, Hapus draft, dst). Parent kontrol open via state.
+//
+// Pola DESIGN.md §4 — touch ≥44px; varian dark; destructive pakai red-600/red-400; disabled non-Pressable.
+import { Modal } from 'react-native';
+import { Pressable, Text, View } from 'react-native-css/components';
+
+export type RowAction = {
+  /** Label aksi. Juga jadi accessibilityLabel default. */
+  label: string;
+  /** Callback aksi. Menu otomatis menutup SEBELUM onPress dipanggil (parent reset state). */
+  onPress: () => void;
+  /** Tampilkan dengan warna red (untuk Hapus/Arsipkan kalau destructive). */
+  destructive?: boolean;
+  /** Disabled → row jadi non-Pressable + tone muted. */
+  disabled?: boolean;
+  /** Override accessibilityLabel (mis. menambah konteks card). */
+  accessibilityLabel?: string;
+};
+
+export function RowActionsMenu({
+  open,
+  onClose,
+  title,
+  items,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Judul sheet (opsional). Bila kosong, sheet hanya berisi action list + Tutup. */
+  title?: string;
+  items: RowAction[];
+}) {
+  return (
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <View className="flex-1 justify-end bg-black/40">
+        <View
+          className="gap-2 rounded-t-3xl bg-white p-4 dark:bg-neutral-900"
+          accessibilityLabel={title ? `Aksi: ${title}` : 'Aksi card'}>
+          {title ? (
+            <Text
+              className="px-2 pb-1 text-xs font-semibold uppercase text-neutral-400"
+              numberOfLines={2}>
+              {title}
+            </Text>
+          ) : null}
+
+          {items.map((it, i) => {
+            const labelCls = it.disabled
+              ? 'text-neutral-400 dark:text-neutral-600'
+              : it.destructive
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-black dark:text-white';
+            const border = i > 0 ? 'border-t border-neutral-100 dark:border-neutral-800' : '';
+            const row = (
+              <View className={`min-h-[44px] items-start justify-center px-4 py-3 ${border}`}>
+                <Text className={`text-base font-medium ${labelCls}`}>{it.label}</Text>
+              </View>
+            );
+            if (it.disabled) {
+              return (
+                <View key={`${it.label}-${i}`} accessibilityLabel={it.accessibilityLabel ?? it.label}>
+                  {row}
+                </View>
+              );
+            }
+            return (
+              <Pressable
+                key={`${it.label}-${i}`}
+                accessibilityRole="button"
+                accessibilityLabel={it.accessibilityLabel ?? it.label}
+                className="active:opacity-70"
+                onPress={() => {
+                  onClose();
+                  it.onPress();
+                }}>
+                {row}
+              </Pressable>
+            );
+          })}
+
+          <Pressable
+            className="mt-1 min-h-[44px] items-center justify-center rounded-xl border border-neutral-200 active:opacity-70 dark:border-neutral-800"
+            accessibilityRole="button"
+            accessibilityLabel="Tutup menu aksi"
+            onPress={onClose}>
+            <Text className="text-sm font-semibold text-brand-dark">Tutup</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}

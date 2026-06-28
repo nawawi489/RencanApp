@@ -8,6 +8,10 @@ import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import type { KpiArea } from '@/lib/kpi-areas';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { useMbrCompliance } from '@/hooks/use-mbr';
 
 function KpiAreaRow({ item, onPress }: { item: KpiArea; onPress: () => void }) {
   return (
@@ -29,6 +33,21 @@ export default function GoalDetailScreen() {
   const goalQ = useGoal(id);
   const kpiQ = useKpiAreas(id);
   const { activate, restore, activatePending, restorePending } = useGoalActions();
+  const { focus } = usePeriodFocus();
+  const { compliance } = useMbrCompliance('goal', id);
+  const goalPast = goalQ.goal ? cardPeriodStatus(goalQ.goal, focus) === 'past' : false;
+  const handleAddKpiArea = () => {
+    if (goalPast) {
+      showPastPeriodAlert(goalQ.goal?.name);
+      return;
+    }
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: goalQ.goal?.name ?? 'Goal',
+      childLabel: 'KPI Area',
+      onProceed: () => router.push(`/kpi-area/new?goalId=${id}` as Href),
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -41,6 +60,7 @@ export default function GoalDetailScreen() {
   const goal = goalQ.goal;
 
   async function onActivate() {
+    if (goalQ.goal && guardActivationFields('goal', goalQ.goal)) return;
     try {
       await activate(id);
     } catch (e) {
@@ -120,7 +140,7 @@ export default function GoalDetailScreen() {
                 <Button
                   label="+ Tambah KPI Area"
                   variant="secondary"
-                  onPress={() => router.push(`/kpi-area/new?goalId=${id}` as Href)}
+                  onPress={handleAddKpiArea}
                 />
               </View>
 

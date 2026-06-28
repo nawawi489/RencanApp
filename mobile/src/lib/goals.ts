@@ -66,6 +66,20 @@ export async function listKpiAreaTemplates(goalTemplateId: string): Promise<KpiA
   return data;
 }
 
+/** UI-S-KT1 — semua KPI Area Template join nama Goal Template (proxy "divisi"). */
+export type KpiAreaTemplateWithParent = KpiAreaTemplate & {
+  goal_templates: { id: string; name: string } | null;
+};
+
+export async function listAllKpiAreaTemplates(): Promise<KpiAreaTemplateWithParent[]> {
+  const { data, error } = await supabase
+    .from('kpi_area_templates')
+    .select('*, goal_templates(id, name)')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as KpiAreaTemplateWithParent[];
+}
+
 // ---------------------------------------------------------------- mutations (INSTANT ber-RLS)
 
 export type NewGoal = {

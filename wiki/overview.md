@@ -1,13 +1,13 @@
 ---
 type: overview
 tags: [ems, mobile]
-updated: 2026-06-22
-sources: 3
+updated: 2026-06-27
+sources: 4
 ---
 
 # RencanApp — Overview
 
-RencanApp adalah implementasi **EMS (Execution Management System) V1.8.1** — sistem yang membantu perusahaan mengubah arah besar menjadi eksekusi nyata yang bisa dipantau, direview, dan dipertanggungjawabkan. Bukan task manager biasa, chat, social media, atau aplikasi KPI formal.
+RencanApp adalah implementasi **EMS (Execution Management System) V1.8.2** (sumber kebenaran: `PRD_EMS_V1.82_Rencanaapp.md`) — sistem yang membantu perusahaan mengubah arah besar menjadi eksekusi nyata yang bisa dipantau, direview, dan dipertanggungjawabkan. Bukan task manager biasa, chat, social media, atau aplikasi KPI formal.
 
 ## What is RencanApp?
 
@@ -28,7 +28,8 @@ Mobile app (iOS + Android) di atas **Expo (React Native) + TypeScript**, dengan 
 - Action Plan One Time & Repeat (menghasilkan Instance terjadwal).
 - Loop eksekusi: Bukti → Nilai Hasil → Review (dengan submission versioning & evidence locking).
 - Permission berbasis tanggung jawab (PIC / Reviewer / akses turunan), lihat [[permission-model]].
-- Surface: Home, Notifications, Workspace, Inbox (Initiative Chat), People (skor performa).
+- Surface (bottom nav V1.8.2 §7.1): Home, Notifications, Workspace, Inbox (Initiative Chat), **Menu** (profil/People/admin/template/settings/archive/logout). People masuk ke Menu, bukan tab mandiri.
+- Period Focus Engine (§7.6): Workspace fokus periode aktif (Bulan default / Quarter), Goal tahunan konteks; KPI Area Target Breakdown total 100% (§12).
 - Audit append-only: Activity Log & Governance Violation. Score Formula berbobot per level.
 
 ## Architecture
@@ -37,4 +38,4 @@ Mobile app (iOS + Android) di atas **Expo (React Native) + TypeScript**, dengan 
 
 ## Status
 
-Tahap perencanaan. PRD dipecah jadi 3 bagian di `prd/` (konsep & fondasi, spesifikasi card, sistem & governance). Tech stack direkomendasikan 2026-06-22.
+Implementasi berjalan (Fase 0–8 + Inbox/Score/Theme). **Sumber kebenaran = `PRD_EMS_V1.82_Rencanaapp.md`** (root repo); ringkasan V1.8.1 di `prd/` (3 bagian) kini historis. Catatan: sebagian wiki & kode `mobile/` masih lag V1.8.1 dan sedang disinkronkan ke V1.8.2 (nav Menu, Period Focus Engine, KPI Area Target Breakdown).

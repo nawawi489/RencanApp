@@ -23,12 +23,15 @@ jest.mock('@/lib/kpi-areas', () => ({
   STATUS_TONE: { draft: 'neutral', active: 'info', done: 'success', archived: 'neutral' },
 }));
 
-// hooks workspace — useStrategies dipakai layar; usePerson dipakai utk picker (PIC prefill).
+// hooks workspace — useStrategies dipakai layar; usePerson dipakai utk picker (PIC prefill);
+// useKpiAreaBreakdown + useKpiAreaBreakdownActions dipakai panel Pecahan Target (S2).
 const mockRefetchStrategies = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useStrategies: () => ({ strategies: [], isLoading: false, isError: false, refetch: mockRefetchStrategies }),
   usePerson: () => ({ person: null }),
+  useKpiAreaBreakdown: () => ({ rows: [], isLoading: false, isError: false, refetch: jest.fn() }),
+  useKpiAreaBreakdownActions: () => ({ replace: jest.fn(), isPending: false }),
 }));
 
 // Hook MBR — variabel dapat di-set per test.

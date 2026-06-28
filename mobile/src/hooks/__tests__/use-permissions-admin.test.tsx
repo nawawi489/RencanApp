@@ -3,12 +3,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
 
+jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+
 const mockSet = jest.fn();
 const mockList = jest.fn();
 jest.mock('@/lib/permissions-admin', () => ({
   __esModule: true,
   setUserPermission: (...a: unknown[]) => mockSet(...a),
   listUserPermissionsAdmin: (...a: unknown[]) => mockList(...a),
+  listUserPermissionScopes: jest.fn(() => Promise.resolve({})),
+}));
+
+// C8 — governance-admin lib di-import transitively oleh use-permissions-admin (setUserPermissionScope).
+jest.mock('@/lib/governance-admin', () => ({
+  __esModule: true,
+  setUserPermissionScope: jest.fn(),
 }));
 
 // eslint-disable-next-line import/first

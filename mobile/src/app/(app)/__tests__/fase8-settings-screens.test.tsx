@@ -159,18 +159,18 @@ describe('settings-activity-log', () => {
     expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
   });
 
-  it('[F8-UI-07] read-only: tanpa tombol hapus/edit', async () => {
+  it('[F8-UI-07] read-only: tanpa tombol hapus/edit (filter chip diizinkan)', async () => {
     mockCan.mockReturnValue(true);
     mockUseActivityLog.mockReturnValue({
       logs: [{ id: 'a1', action: 'create', entity_type: 'goal', actor_id: 'u1' }],
       isLoading: false,
     });
     await render(<SettingsActivityLogScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Dibuat')).toBeTruthy();
-    // read-only: tidak ada tombol (Pressable) hapus/edit
+    // C2 UI-S-AL1 menambah filter chip "Dibuat" → cek log entry via accessibilityLabel cari.
+    expect(await screen.findByLabelText('Cari activity log')).toBeTruthy();
+    // tidak ada tombol mutasi (hapus/edit) — yang ada hanya chip filter (role=radio, bukan button).
     expect(screen.queryByLabelText(/hapus/i)).toBeNull();
     expect(screen.queryByLabelText(/edit/i)).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('[F8-UI-08] actor_id null → "Sistem"', async () => {
@@ -273,7 +273,7 @@ describe('settings-notifications-rule', () => {
 });
 
 describe('settings-archive', () => {
-  it('[F8-UI-27] daftar archived + tidak ada tombol hapus permanen', async () => {
+  it('[F8-UI-27] daftar archived + tombol Pulihkan (UI-S-AR1) tanpa hapus permanen', async () => {
     mockUseSearch.mockReturnValue({
       results: [{ id: 'g1', entity_type: 'goal', name: 'Goal Lama', status: 'archived' }],
       isLoading: false,
@@ -281,8 +281,9 @@ describe('settings-archive', () => {
     });
     await render(<SettingsArchiveScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Goal Lama')).toBeTruthy();
-    // tidak ada tombol hapus permanen (Pressable)
+    // tidak ada tombol hapus permanen — tetap absen.
     expect(screen.queryByLabelText(/hapus/i)).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull();
+    // C5 UI-S-AR1: tombol Pulihkan tampil per row (governance-safe: restore_card → status 'draft').
+    expect(screen.getByLabelText('Pulihkan ke Draft')).toBeTruthy();
   });
 });

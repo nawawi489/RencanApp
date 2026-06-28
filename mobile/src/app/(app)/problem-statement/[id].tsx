@@ -23,6 +23,9 @@ import {
   activateProblemStatement,
   getProblemStatement,
 } from '@/lib/problem-statements';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
@@ -84,8 +87,23 @@ export default function ProblemStatementDetailScreen() {
   });
 
   const ps = psQ.data;
+  const { focus } = usePeriodFocus();
+  const psPast = ps ? cardPeriodStatus(ps, focus) === 'past' : false;
+  const handleAddInitiative = () => {
+    if (psPast) {
+      showPastPeriodAlert(ps?.name);
+      return;
+    }
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: ps?.name ?? 'Problem Statement',
+      childLabel: 'Initiative',
+      onProceed: () => router.push(`/initiative/new?problemStatementId=${id}` as Href),
+    });
+  };
 
   function handleActivate() {
+    if (ps && guardActivationFields('problem_statement', ps)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Initiative',
       onAddChild: () => router.push(`/initiative/new?problemStatementId=${id}` as Href),
@@ -142,7 +160,7 @@ export default function ProblemStatementDetailScreen() {
                 <Button
                   label="+ Tambah Initiative"
                   variant="secondary"
-                  onPress={() => router.push(`/initiative/new?problemStatementId=${id}` as Href)}
+                  onPress={handleAddInitiative}
                 />
               </View>
 

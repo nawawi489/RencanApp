@@ -20,6 +20,9 @@ import {
   type ActionPlanWithPeople,
 } from '@/lib/cards';
 import { personLabel } from '@/components/user-picker';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 
 function ActionPlanRow({ item, onPress }: { item: ActionPlanWithPeople; onPress: () => void }) {
   return (
@@ -79,8 +82,23 @@ export default function InitiativeDetailScreen() {
   });
 
   const initiative = initiativeQ.data;
+  const { focus } = usePeriodFocus();
+  const initPast = initiative ? cardPeriodStatus(initiative, focus) === 'past' : false;
+  const handleAddActionPlan = () => {
+    if (initPast) {
+      showPastPeriodAlert(initiative?.name);
+      return;
+    }
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: initiative?.name ?? 'Initiative',
+      childLabel: 'Action Plan',
+      onProceed: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),
+    });
+  };
 
   function handleActivate() {
+    if (initiative && guardActivationFields('initiative', initiative)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Action Plan',
       onAddChild: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),
@@ -147,7 +165,7 @@ export default function InitiativeDetailScreen() {
                   <Button
                     label="+ Tambah"
                     variant="secondary"
-                    onPress={() => router.push(`/action-plan/new?initiativeId=${id}` as Href)}
+                    onPress={handleAddActionPlan}
                   />
                 ) : null}
               </View>

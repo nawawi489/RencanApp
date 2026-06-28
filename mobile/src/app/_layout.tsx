@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { PeriodFocusProvider } from '@/providers/period-focus-provider';
 import { ThemeProvider, useThemePreference } from '@/providers/theme-provider';
 
 const queryClient = new QueryClient();
@@ -42,9 +43,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <AuthProvider>
-              <RootNavigator />
-            </AuthProvider>
+            <PeriodFocusProvider>
+              <AuthProvider>
+                <RootNavigator />
+              </AuthProvider>
+            </PeriodFocusProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

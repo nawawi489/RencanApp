@@ -18,6 +18,10 @@ import {
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { UserPicker } from '@/components/user-picker';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
+import { KpiAreaBreakdownPanel } from '@/components/kpi-area-breakdown-panel';
+import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
 import {
@@ -126,8 +130,23 @@ export default function KpiAreaDetailScreen() {
   const kpiArea = kpiAreaQ.data;
   // PIC tersimpan (mis. warisan Goal Wizard) untuk prefill picker editor.
   const { person: currentPic } = usePerson(kpiArea?.pic_id);
+  const { focus } = usePeriodFocus();
+  const kpiPast = kpiArea ? cardPeriodStatus(kpiArea, focus) === 'past' : false;
+  const handleAddStrategy = () => {
+    if (kpiPast) {
+      showPastPeriodAlert(kpiArea?.name);
+      return;
+    }
+    confirmAddDescendantIfIncomplete({
+      compliance,
+      parentLabel: kpiArea?.name ?? 'KPI Area',
+      childLabel: 'Strategy',
+      onProceed: () => router.push(`/strategy/new?kpiAreaId=${id}` as Href),
+    });
+  };
 
   function handleActivate() {
+    if (kpiArea && guardActivationFields('kpi_area', kpiArea)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Strategy',
       onAddChild: () => router.push(`/strategy/new?kpiAreaId=${id}` as Href),
@@ -194,6 +213,12 @@ export default function KpiAreaDetailScreen() {
 
             <MbrCompletionIndicator compliance={compliance} />
 
+            <KpiAreaBreakdownPanel
+              kpiAreaId={id}
+              picId={kpiArea.pic_id}
+              createdBy={kpiArea.created_by}
+            />
+
             {kpiArea.status === 'draft' ? (
               <DraftCompletion
                 initialTarget={kpiArea.target ?? ''}
@@ -211,7 +236,7 @@ export default function KpiAreaDetailScreen() {
                 <Button
                   label="+ Tambah Strategy"
                   variant="secondary"
-                  onPress={() => router.push(`/strategy/new?kpiAreaId=${id}` as Href)}
+                  onPress={handleAddStrategy}
                 />
               </View>
 

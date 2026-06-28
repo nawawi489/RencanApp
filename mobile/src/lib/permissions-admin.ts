@@ -38,3 +38,22 @@ export async function listUserPermissionsAdmin(targetUserId: string): Promise<Ad
   if (error) throw error;
   return (data ?? []) as unknown as AdminPermissionRow[];
 }
+
+/**
+ * UI-S-PRM1 — Map permission_key → scope ('own'|'team'|'dept'|'org') untuk user.
+ * RLS user_permissions_select mengizinkan admin (manage_users_permissions) lihat org-mate.
+ * Baris tanpa entry user_permissions → tidak ada di map; UI fallback ke default 'org'.
+ */
+export async function listUserPermissionScopes(targetUserId: string): Promise<Record<string, string>> {
+  if (!targetUserId) return {};
+  const { data, error } = await supabase
+    .from('user_permissions')
+    .select('scope, permissions(key)')
+    .eq('user_id', targetUserId);
+  if (error) throw error;
+  const out: Record<string, string> = {};
+  for (const r of (data ?? []) as Array<{ scope: string | null; permissions: { key: string } | null }>) {
+    if (r.permissions?.key) out[r.permissions.key] = r.scope ?? 'org';
+  }
+  return out;
+}

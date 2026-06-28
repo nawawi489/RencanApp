@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-06-26
+updated: 2026-06-27
 ---
 
 # RencanApp Wiki — Index
@@ -19,7 +19,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[card-model]] — Hierarki card dua workspace, makna & field wajib tiap card, Kelengkapan Card
 - [[database-blueprint]] — 53 tabel Postgres, tabel yang dibuang, relationship rules
 - [[score-formula]] — Penilaian performa berbobot per level (Staff/Management/C-Level/CEO)
-- [[surfaces]] — 5 surface: Home, Notifications, Workspace, Inbox, People (+ Settings)
+- [[surfaces]] — Bottom nav V1.8.2: Home, Notifications, Workspace, Inbox, **Menu** (People + Settings di dalam Menu)
 - [[workspace]] — Performance vs Development workspace dan hierarki card masing-masing
 
 ## Concepts
