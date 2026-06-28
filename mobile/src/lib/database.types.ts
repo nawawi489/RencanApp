@@ -1552,6 +1552,70 @@ export type Database = {
           },
         ]
       }
+      kpi_area_target_breakdowns: {
+        Row: {
+          contribution_pct: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kpi_area_id: string
+          organization_id: string
+          parent_quarter_key: string | null
+          period_key: string
+          period_type: string
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          contribution_pct: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_area_id: string
+          organization_id: string
+          parent_quarter_key?: string | null
+          period_key: string
+          period_type: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contribution_pct?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_area_id?: string
+          organization_id?: string
+          parent_quarter_key?: string | null
+          period_key?: string
+          period_type?: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_kpi_area_id_fkey"
+            columns: ["kpi_area_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_area_templates: {
         Row: {
           created_at: string
@@ -3073,6 +3137,10 @@ export type Database = {
       can_access_kpi_area: { Args: { p_kpi_area: string }; Returns: boolean }
       can_access_problem_statement: { Args: { p_ps: string }; Returns: boolean }
       can_access_strategy: { Args: { p_strategy: string }; Returns: boolean }
+      can_edit_kpi_area_breakdown: {
+        Args: { p_kpi_area_id: string }
+        Returns: boolean
+      }
       can_view_workspace: { Args: never; Returns: boolean }
       cancel_card: {
         Args: { p_entity_id: string; p_entity_type: string; p_reason: string }
@@ -3287,6 +3355,33 @@ export type Database = {
       is_kpi_area_pic: { Args: { p_kpi_area: string }; Returns: boolean }
       is_problem_statement_pic: { Args: { p_ps: string }; Returns: boolean }
       is_supervisor_of: { Args: { p_user: string }; Returns: boolean }
+      kpi_area_breakdown_replace: {
+        Args: {
+          p_kpi_area_id: string
+          p_month: Json
+          p_quarter: Json
+          p_reason: string
+        }
+        Returns: {
+          contribution_pct: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kpi_area_id: string
+          organization_id: string
+          parent_quarter_key: string | null
+          period_key: string
+          period_type: string
+          reason: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "kpi_area_target_breakdowns"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       kpi_area_has_my_descendant: {
         Args: { p_kpi_area: string }
         Returns: boolean

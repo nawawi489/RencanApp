@@ -80,43 +80,16 @@ export function indexMonthRowsPerQuarter(
 
 // ---------------------------------------------------------------- queries
 
-// Catatan tipe: tabel & RPC didefinisikan di migrasi 0021 yang belum di-regenerate ke
-// `database.types.ts`. Akses lewat client untyped (cast) sampai regen jalan — server tetap
-// validator (RLS + RPC). Hindari menyentuh tipe Database global utk patch lokal.
-type UntypedClient = {
-  from: (table: string) => {
-    select: (cols: string) => {
-      eq: (col: string, val: string) => {
-        order: (
-          col: string,
-          opts: { ascending: boolean },
-        ) => Promise<{ data: BreakdownRow[] | null; error: { message: string } | null }> & {
-          order: (
-            col: string,
-            opts: { ascending: boolean },
-          ) => Promise<{ data: BreakdownRow[] | null; error: { message: string } | null }>;
-        };
-      };
-    };
-  };
-  rpc: (
-    name: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ data: BreakdownRow[] | null; error: { message: string } | null }>;
-};
-
-const sb = supabase as unknown as UntypedClient;
-
 export async function listKpiAreaBreakdown(kpiAreaId: string): Promise<BreakdownRow[]> {
   if (!kpiAreaId) return [];
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('kpi_area_target_breakdowns')
     .select('*')
     .eq('kpi_area_id', kpiAreaId)
     .order('period_type', { ascending: true })
     .order('period_key', { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  if (error) throw error;
+  return (data ?? []) as BreakdownRow[];
 }
 
 // ---------------------------------------------------------------- mutations
@@ -140,12 +113,12 @@ export type ReplaceArgs = {
  * Server validasi & emit activity_log.
  */
 export async function replaceKpiAreaBreakdown(args: ReplaceArgs): Promise<BreakdownRow[]> {
-  const { data, error } = await sb.rpc('kpi_area_breakdown_replace', {
+  const { data, error } = await supabase.rpc('kpi_area_breakdown_replace', {
     p_kpi_area_id: args.kpiAreaId,
     p_quarter: args.quarter,
     p_month: args.month,
     p_reason: args.reason,
   });
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  if (error) throw error;
+  return (data ?? []) as BreakdownRow[];
 }
