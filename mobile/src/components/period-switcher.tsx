@@ -1,0 +1,159 @@
+// PeriodSwitcher (UI-G-010 / UI-S-W03) — PRD V1.8.2 §11.2.
+//
+// Panel kompak: "Periode aktif" + nilai (Juni 2026) + breadcrumb (Goal 2026 · Q2 · Juni) + "Ubah".
+// Tap "Ubah" → bottom-sheet Modal: segmented Bulan/Quarter + list 12 bulan / 4 quarter.
+// Tiap baris berstatus pill: Arsip (past), Aktif (current), Akan datang (future).
+//
+// Touch target ≥44px, dark:* variants, brand-dark utk solid+teks putih (DESIGN.md §4/§7).
+import { useMemo, useState } from 'react';
+import { Modal } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+
+import { usePeriodFocus } from '@/providers/period-focus-provider';
+import {
+  enumerateMonths,
+  enumerateQuarters,
+  formatPeriodLabel,
+  isSameFocus,
+  periodBreadcrumb,
+  type PeriodFocus,
+  type PeriodMode,
+  type PeriodOption,
+} from '@/lib/period-focus';
+
+const MODE_LABEL: Record<PeriodMode, string> = { month: 'Bulan', quarter: 'Quarter' };
+
+function statusPill(status: PeriodOption['status']) {
+  if (status === 'current') {
+    return { label: 'Aktif', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' };
+  }
+  if (status === 'past') {
+    return { label: 'Arsip', cls: 'bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400' };
+  }
+  return { label: 'Akan datang', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' };
+}
+
+function optionToFocus(opt: PeriodOption): PeriodFocus {
+  return opt.mode === 'month'
+    ? { mode: 'month', year: opt.year, month: opt.month! }
+    : { mode: 'quarter', year: opt.year, quarter: opt.quarter! };
+}
+
+export function PeriodSwitcher({ now }: { now?: Date }) {
+  const { focus, setFocus, setMode } = usePeriodFocus();
+  const [open, setOpen] = useState(false);
+  // `now` anchor — di runtime pakai Date saat ini; di test injected agar deterministik.
+  const anchor = useMemo(() => now ?? new Date(), [now]);
+
+  const options = useMemo<PeriodOption[]>(
+    () =>
+      focus.mode === 'month'
+        ? enumerateMonths(focus.year, anchor)
+        : enumerateQuarters(focus.year, anchor),
+    [focus.mode, focus.year, anchor],
+  );
+
+  const label = formatPeriodLabel(focus);
+  const breadcrumb = periodBreadcrumb(focus);
+
+  return (
+    <View
+      className="gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
+      accessible
+      accessibilityLabel={`Periode aktif ${label}`}>
+      <Text className="text-xs font-semibold uppercase text-neutral-400">Periode aktif</Text>
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-1 gap-0.5">
+          <Text className="text-lg font-bold text-black dark:text-white">{label}</Text>
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">{breadcrumb}</Text>
+        </View>
+        <Pressable
+          className="min-h-[44px] items-center justify-center rounded-xl bg-brand-dark px-4 active:opacity-70"
+          accessibilityRole="button"
+          accessibilityLabel="Ubah periode"
+          onPress={() => setOpen(true)}>
+          <Text className="text-sm font-semibold text-white">Ubah</Text>
+        </Pressable>
+      </View>
+
+      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
+        <View className="flex-1 justify-end bg-black/40">
+          <View
+            className="max-h-[75%] gap-4 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+            accessibilityLabel="Pilih periode fokus">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-black dark:text-white">Pilih Periode</Text>
+              <Pressable
+                className="min-h-[44px] items-center justify-center px-2 active:opacity-60"
+                accessibilityRole="button"
+                accessibilityLabel="Tutup pilihan periode"
+                onPress={() => setOpen(false)}>
+                <Text className="text-base font-semibold text-brand-dark">Tutup</Text>
+              </Pressable>
+            </View>
+
+            <View
+              className="flex-row gap-2 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800"
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Mode periode">
+              {(['month', 'quarter'] as PeriodMode[]).map((m) => {
+                const active = focus.mode === m;
+                return (
+                  <Pressable
+                    key={m}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={MODE_LABEL[m]}
+                    onPress={() => setMode(m)}
+                    className={`min-h-[44px] flex-1 items-center justify-center rounded-lg px-3 ${
+                      active ? 'bg-brand-dark' : ''
+                    } active:opacity-70`}>
+                    <Text
+                      className={`text-sm font-semibold ${
+                        active ? 'text-white' : 'text-black dark:text-white'
+                      }`}>
+                      {MODE_LABEL[m]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <ScrollView className="grow-0">
+              <View className="gap-2">
+                {options.map((opt) => {
+                  const target = optionToFocus(opt);
+                  const selected = isSameFocus(focus, target);
+                  const pill = statusPill(opt.status);
+                  return (
+                    <Pressable
+                      key={`${opt.mode}-${opt.year}-${opt.month ?? opt.quarter}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={`${opt.label} ${opt.year} — ${pill.label}`}
+                      onPress={() => {
+                        setFocus(target);
+                        setOpen(false);
+                      }}
+                      className={`min-h-[44px] flex-row items-center justify-between gap-3 rounded-xl border px-4 py-3 active:opacity-70 ${
+                        selected
+                          ? 'border-brand-dark bg-blue-50 dark:bg-blue-950/40'
+                          : 'border-neutral-200 dark:border-neutral-800'
+                      }`}>
+                      <Text className="flex-1 text-base font-semibold text-black dark:text-white">
+                        {opt.label} {opt.year}
+                      </Text>
+                      <View className={`rounded-full px-2 py-0.5 ${pill.cls}`}>
+                        <Text className={`text-xs font-semibold ${pill.cls}`}>{pill.label}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
