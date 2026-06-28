@@ -79,6 +79,8 @@ type SettingsSection = { label: string; href?: Href; permission?: string };
 
 // Bagian aktif bertahap (Fase 5–8). href + permission diisi saat layarnya siap.
 const SECTIONS: SettingsSection[] = [
+  { label: 'People', href: '/people' as Href },
+  { label: 'People Ranking', href: '/people-ranking' as Href },
   {
     label: 'User & Permission',
     href: '/settings-permission-users' as Href,

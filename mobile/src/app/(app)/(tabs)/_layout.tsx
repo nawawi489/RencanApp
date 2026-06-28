@@ -49,11 +49,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="people"
+        name="menu"
         options={{
-          title: 'People',
-          header: () => <AppHeader kicker="Ranking dan profil pencapaian" />,
-          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} />,
+          title: 'Menu',
+          header: () => <AppHeader kicker="Profil, People, dan admin" />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="menu-outline" color={color} size={size} />,
         }}
       />
     </Tabs>
