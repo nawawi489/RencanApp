@@ -127,6 +127,13 @@ export default function StrategyDetailScreen() {
                     label: 'Periode',
                     value: `${strategy.period_start ?? '—'} → ${strategy.period_end ?? '—'}`,
                   },
+                  {
+                    label: 'Kontribusi Q',
+                    value:
+                      strategy.contribution_pct != null
+                        ? `${strategy.contribution_pct}%`
+                        : '—',
+                  },
                 ]}
               />
             </View>

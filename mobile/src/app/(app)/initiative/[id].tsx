@@ -23,6 +23,7 @@ import {
 import { personLabel } from '@/components/user-picker';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { listTeams } from '@/lib/org-structure';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 
 // ---------- UI-S-ID2 — Ruang Eksekusi & Tim/Akses Otomatis ----------
@@ -226,6 +227,8 @@ export default function InitiativeDetailScreen() {
 
   const initiativeQ = useQuery({ queryKey: ['initiative', id], queryFn: () => getInitiative(id) });
   const plansQ = useQuery({ queryKey: ['action-plans', id], queryFn: () => listActionPlans(id) });
+  // UI-S-I01 display: nama tim — query teams sekali, resolve via team_id.
+  const teamsQ = useQuery({ queryKey: ['teams', { activeOnly: false }], queryFn: () => listTeams() });
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('initiative', id);
 
   useFocusEffect(
@@ -305,6 +308,11 @@ export default function InitiativeDetailScreen() {
                   {
                     label: 'Periode',
                     value: `${initiative.period_start ?? '—'} → ${initiative.period_end ?? '—'}`,
+                  },
+                  {
+                    label: 'Tim',
+                    value:
+                      teamsQ.data?.find((t) => t.id === initiative.team_id)?.name ?? '—',
                   },
                 ]}
               />

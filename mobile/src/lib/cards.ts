@@ -317,6 +317,8 @@ export type NewInitiative = {
   strategy_id?: string | null;
   /** Fase 6: induk Problem Statement (jalur Development). Mutually exclusive dgn strategy_id (CHECK initiatives_single_parent). */
   problem_statement_id?: string | null;
+  /** UI-S-I01 — PRD §21 "Tim" wajib. NULL diizinkan saat Draft. */
+  team_id?: string | null;
 };
 
 export async function createInitiative(input: NewInitiative): Promise<Initiative> {
@@ -347,11 +349,15 @@ export type NewActionPlan = {
   reviewer_id: string | null;
   start_date: string | null;
   deadline: string | null;
+  /** PRD §22.9 "Jam Deadline" — wajib semua AP (HH:MM 24h). */
+  deadline_time?: string | null;
   expected_output: string | null;
   definition_of_done: string | null;
   priority: string | null;
   evidence_required: boolean;
   result_value_required: boolean;
+  /** PRD §22.5 "Bukti yang diminta" — deskripsi apa bukti yang diharapkan PIC sertakan. */
+  evidence_description?: string | null;
   description?: string | null;
 };
 

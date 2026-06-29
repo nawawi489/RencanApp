@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Switch } from 'react-native';
@@ -7,7 +7,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
-import { PRIORITY_LABEL, createActionPlan, type PersonRef } from '@/lib/cards';
+import { PRIORITY_LABEL, createActionPlan, getInitiative, type PersonRef } from '@/lib/cards';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
 
 type Person = NonNullable<PersonRef>;
@@ -107,14 +107,24 @@ export default function NewActionPlanScreen() {
   const { initiativeId } = useLocalSearchParams<{ initiativeId: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  // UI-S-AP4 context-bar — tampilkan parent Initiative supaya PIC tahu "AP ini di bawah apa".
+  const parentInitiativeQ = useQuery({
+    queryKey: ['initiative', initiativeId],
+    queryFn: () => getInitiative(initiativeId),
+    enabled: !!initiativeId,
+  });
 
   const [name, setName] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
   const [reviewer, setReviewer] = useState<Person | null>(null);
   const [startDate, setStartDate] = useState('');
   const [deadline, setDeadline] = useState('');
+  // PRD §22.9 — "Jam Deadline" wajib semua AP (HH:MM, 24h).
+  const [deadlineTime, setDeadlineTime] = useState('');
   const [output, setOutput] = useState('');
   const [dod, setDod] = useState('');
+  // PRD §22.5 "Bukti yang diminta" — deskripsi (bukan hanya toggle wajib).
+  const [evidenceDescription, setEvidenceDescription] = useState('');
   const [priority, setPriority] = useState<string | null>('medium');
   const [evidenceRequired, setEvidenceRequired] = useState(true);
   const [resultRequired, setResultRequired] = useState(false);
@@ -127,7 +137,8 @@ export default function NewActionPlanScreen() {
   const [customDates, setCustomDates] = useState('');
   const [repeatStart, setRepeatStart] = useState('');
   const [repeatEnd, setRepeatEnd] = useState('');
-  const [timeOfDay, setTimeOfDay] = useState('');
+  // Jam deadline tunggal di top-level (PRD §22.9); state repeat-specific "timeOfDay" dihapus —
+  // pakai deadlineTime yang sama agar Jam tetap konsisten antara one-time & repeat.
   const [missedRule, setMissedRule] = useState<string>('strict');
   const [gracePeriod, setGracePeriod] = useState('');
 
@@ -144,8 +155,10 @@ export default function NewActionPlanScreen() {
         reviewer_id: reviewer?.id ?? null,
         start_date: startDate || null,
         deadline: deadline || null,
+        deadline_time: deadlineTime || null,
         expected_output: output.trim() || null,
         definition_of_done: dod.trim() || null,
+        evidence_description: evidenceDescription.trim() || null,
         priority,
         evidence_required: evidenceRequired,
         result_value_required: resultRequired,
@@ -170,7 +183,7 @@ export default function NewActionPlanScreen() {
               : null,
           repeatStartDate: repeatStart,
           repeatEndDate: repeatEnd,
-          timeOfDay,
+          timeOfDay: deadlineTime,
           missedRule,
           gracePeriodMinutes: missedRule === 'grace_period' ? parseInt(gracePeriod, 10) || null : null,
         });
@@ -197,13 +210,14 @@ export default function NewActionPlanScreen() {
       Alert.alert('Tanggal tidak valid', DATE_HINT);
       return;
     }
+    // PRD §22.9 — Jam Deadline wajib semua AP.
+    if (!TIME_RE.test(deadlineTime)) {
+      Alert.alert('Jam Deadline tidak valid', 'Format jam: HH:MM (mis. 23:00).');
+      return;
+    }
     if (repeat) {
       if (!DATE_RE.test(repeatStart) || !DATE_RE.test(repeatEnd)) {
         Alert.alert('Periode repeat tidak valid', `Tanggal mulai & selesai wajib. ${DATE_HINT}`);
-        return;
-      }
-      if (!TIME_RE.test(timeOfDay)) {
-        Alert.alert('Jam deadline tidak valid', 'Format jam: HH:MM (mis. 23:00).');
         return;
       }
       if (frequency === 'weekly' && weekdays.length === 0) {
@@ -221,6 +235,20 @@ export default function NewActionPlanScreen() {
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
+        {parentInitiativeQ.data ? (
+          <View
+            accessible
+            accessibilityLabel={`Action Plan di bawah Initiative ${parentInitiativeQ.data.name}`}
+            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-900">
+            <Text className="text-[11px] font-semibold uppercase text-neutral-500 dark:text-neutral-400">
+              Initiative induk
+            </Text>
+            <Text className="text-sm font-semibold text-black dark:text-white">
+              {parentInitiativeQ.data.name}
+            </Text>
+          </View>
+        ) : null}
+
         <GuidanceNote
           title="Action Plan — Siapa melakukan apa & kapan"
           body="Unit eksekusi paling konkret. PIC (eksekutor) & Reviewer wajib dan harus berbeda. Card disimpan Draft; aktifkan setelah semua field wajib terisi."
@@ -233,8 +261,23 @@ export default function NewActionPlanScreen() {
           <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />
           <DateField label="Tanggal Mulai" value={startDate} onChange={setStartDate} />
           <DateField label="Deadline" value={deadline} onChange={setDeadline} />
+          <LabeledInput
+            label="Jam Deadline"
+            value={deadlineTime}
+            onChangeText={setDeadlineTime}
+            required
+            placeholder="HH:MM (mis. 23:00)"
+            keyboardType="numeric"
+          />
           <LabeledInput label="Output yang Diharapkan" value={output} onChangeText={setOutput} multiline placeholder="Hasil konkret yang diharapkan" />
           <LabeledInput label="Definition of Done" value={dod} onChangeText={setDod} multiline placeholder="Kriteria pekerjaan dianggap selesai" />
+          <LabeledInput
+            label="Bukti yang Diminta"
+            value={evidenceDescription}
+            onChangeText={setEvidenceDescription}
+            multiline
+            placeholder="mis. screenshot dashboard, link rekaman, file PDF laporan"
+          />
           <PrioritySelector value={priority} onChange={setPriority} />
         </SectionCard>
 
@@ -318,14 +361,7 @@ export default function NewActionPlanScreen() {
 
               <DateField label="Mulai Repeat" value={repeatStart} onChange={setRepeatStart} required />
               <DateField label="Selesai Repeat" value={repeatEnd} onChange={setRepeatEnd} required />
-              <LabeledInput
-                label="Jam Deadline"
-                value={timeOfDay}
-                onChangeText={setTimeOfDay}
-                required
-                placeholder="HH:MM (mis. 23:00)"
-                keyboardType="numeric"
-              />
+              {/* Jam Deadline diambil dari field top-level (PRD §22.9 — tunggal). */}
 
               <ChipSelector
                 label="Aturan Terlewat"

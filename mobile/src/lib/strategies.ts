@@ -43,6 +43,8 @@ export type NewStrategy = {
   pic_id: string | null;
   period_start: string | null;
   period_end: string | null;
+  /** UI-S-S01 — PRD §20 "Kontribusi Quarter" (% ke parent KPI Area); NULL diizinkan saat Draft. */
+  contribution_pct?: number | null;
 };
 
 export async function createStrategy(input: NewStrategy): Promise<Strategy> {

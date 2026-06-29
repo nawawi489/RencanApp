@@ -406,7 +406,12 @@ export default function ActionPlanDetailScreen() {
                 items={[
                   { label: 'PIC', value: ap.pic ? personLabel(ap.pic) : '—' },
                   { label: 'Reviewer', value: ap.reviewer ? personLabel(ap.reviewer) : '—' },
-                  { label: 'Deadline', value: ap.deadline ?? '—' },
+                  {
+                    label: 'Deadline',
+                    value: ap.deadline
+                      ? `${ap.deadline}${ap.deadline_time ? ` · ${ap.deadline_time}` : ''}`
+                      : '—',
+                  },
                   { label: 'Mode', value: ap.repeat_setting === 'repeat' ? 'Repeat' : 'One Time' },
                 ]}
               />
@@ -427,6 +432,9 @@ export default function ActionPlanDetailScreen() {
               {ap.priority ? <Field label="Prioritas" value={PRIORITY_LABEL[ap.priority] ?? ap.priority} /> : null}
               {ap.expected_output ? <Field label="Output yang Diharapkan" value={ap.expected_output} /> : null}
               {ap.definition_of_done ? <Field label="Definition of Done" value={ap.definition_of_done} /> : null}
+              {ap.evidence_description ? (
+                <Field label="Bukti yang Diminta" value={ap.evidence_description} />
+              ) : null}
               <Field
                 label="Aturan Submit"
                 value={`Bukti ${ap.evidence_required ? 'wajib' : 'opsional'} · Nilai Hasil ${ap.result_value_required ? 'wajib' : 'opsional'}`}

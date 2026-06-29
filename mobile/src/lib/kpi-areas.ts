@@ -38,6 +38,8 @@ export type NewKpiArea = {
   name: string;
   description?: string | null;
   target: string | null;
+  /** UI-S-K03 — PRD §18 wajib "Ekspektasi Hasil". */
+  expected_outcome?: string | null;
   pic_id: string | null;
   period_start: string | null;
   period_end: string | null;
@@ -67,7 +69,10 @@ export async function createKpiArea(input: NewKpiArea): Promise<KpiArea> {
  * Update ber-RLS (policy kpi_areas_update: creator/PIC/manage_others). Server tetap penegak akhir.
  */
 export type KpiAreaPatch = Partial<
-  Pick<NewKpiArea, 'name' | 'description' | 'target' | 'pic_id' | 'period_start' | 'period_end'>
+  Pick<
+    NewKpiArea,
+    'name' | 'description' | 'target' | 'expected_outcome' | 'pic_id' | 'period_start' | 'period_end'
+  >
 >;
 
 export async function updateKpiArea(id: string, patch: KpiAreaPatch): Promise<KpiArea> {

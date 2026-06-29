@@ -2,18 +2,74 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { ScrollView, View } from 'react-native-css/components';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { usePerson } from '@/hooks/use-workspace';
 import { createInitiative, type PersonRef } from '@/lib/cards';
-import { DATE_HINT, periodError } from '@/lib/date';
+import { periodError } from '@/lib/date';
 import { getStrategy } from '@/lib/strategies';
 import { getProblemStatement } from '@/lib/problem-statements';
+import { listTeams } from '@/lib/org-structure';
 
 type Person = NonNullable<PersonRef>;
+
+function TeamChipSelector({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const teamsQ = useQuery({
+    queryKey: ['teams', { activeOnly: true }],
+    queryFn: () => listTeams({ activeOnly: true }),
+  });
+  const teams = teamsQ.data ?? [];
+  return (
+    <View className="gap-1.5">
+      <Text className="text-sm font-medium text-black dark:text-white">
+        Tim<Text className="text-red-500"> *</Text>
+      </Text>
+      {teamsQ.isLoading ? (
+        <Text className="text-xs text-neutral-400">Memuat daftar tim…</Text>
+      ) : teams.length === 0 ? (
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+          Belum ada tim. Admin dapat menambah tim di Menu → Org Structure → Tim.
+        </Text>
+      ) : (
+        <View className="flex-row flex-wrap gap-2">
+          {teams.map((t) => {
+            const active = value === t.id;
+            return (
+              <Pressable
+                key={t.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Tim ${t.name}`}
+                accessibilityState={{ selected: active }}
+                onPress={() => onChange(active ? null : t.id)}
+                style={{ minHeight: 44 }}
+                className={`min-h-[44px] items-center justify-center rounded-full border px-3 py-2 active:opacity-70 ${
+                  active
+                    ? 'border-brand-dark bg-brand-dark'
+                    : 'border-neutral-300 dark:border-neutral-700'
+                }`}>
+                <Text
+                  className={`text-xs font-semibold ${
+                    active ? 'text-white' : 'text-black dark:text-white'
+                  }`}>
+                  {t.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function NewInitiativeScreen() {
   const router = useRouter();
@@ -47,6 +103,8 @@ export default function NewInitiativeScreen() {
   const [periodEnd, setPeriodEnd] = useState('');
   const [description, setDescription] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
+  // UI-S-I01 — PRD §21 "Tim" wajib.
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: createInitiative,
@@ -76,6 +134,7 @@ export default function NewInitiativeScreen() {
       pic_id: (pic ?? inheritedPic)?.id ?? null,
       strategy_id: strategyId ?? null,
       problem_statement_id: problemStatementId ?? null,
+      team_id: teamId,
     });
   }
 
@@ -97,6 +156,7 @@ export default function NewInitiativeScreen() {
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
+          <TeamChipSelector value={teamId} onChange={setTeamId} />
           <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
           <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
