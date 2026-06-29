@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { ActivityLogPanel } from '@/components/activity-log-panel';
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useProfile } from '@/hooks/use-profile';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
@@ -24,6 +24,169 @@ import { personLabel } from '@/components/user-picker';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+
+// ---------- UI-S-ID2 — Ruang Eksekusi & Tim/Akses Otomatis ----------
+type ExecCounts = {
+  draft: number;
+  active: number;
+  submitted: number;
+  done: number;
+  revision: number;
+  total: number;
+};
+
+function computeExecCounts(plans: ActionPlanWithPeople[]): ExecCounts {
+  const c: ExecCounts = { draft: 0, active: 0, submitted: 0, done: 0, revision: 0, total: plans.length };
+  for (const p of plans) {
+    if (p.status === 'draft') c.draft++;
+    else if (p.status === 'assigned' || p.status === 'in_progress') c.active++;
+    else if (p.status === 'submitted') c.submitted++;
+    else if (p.status === 'done') c.done++;
+    else if (p.status === 'revision') c.revision++;
+  }
+  return c;
+}
+
+function ExecTile({
+  label,
+  value,
+  containerCls,
+  textCls,
+}: {
+  label: string;
+  value: number;
+  containerCls: string;
+  textCls: string;
+}) {
+  return (
+    <View className={`rounded-lg px-3 py-1.5 ${containerCls}`}>
+      <Text className={`text-[10px] ${textCls}`}>{label}</Text>
+      <Text className={`text-sm font-semibold ${textCls}`}>{value}</Text>
+    </View>
+  );
+}
+
+function ExecSpaceCard({
+  counts,
+  onOpenChat,
+}: {
+  counts: ExecCounts;
+  onOpenChat: () => void;
+}) {
+  return (
+    <SectionCard>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-sm font-bold text-black dark:text-white">Ruang Eksekusi</Text>
+        <Badge label={`${counts.total} Action Plan`} tone="info" />
+      </View>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        Status pekerjaan di bawah Initiative ini.
+      </Text>
+      <View className="flex-row flex-wrap gap-2 pt-1">
+        <ExecTile
+          label="Aktif"
+          value={counts.active}
+          containerCls="bg-blue-100 dark:bg-blue-950"
+          textCls="text-blue-700 dark:text-blue-300"
+        />
+        <ExecTile
+          label="Review"
+          value={counts.submitted}
+          containerCls="bg-amber-100 dark:bg-amber-950"
+          textCls="text-amber-700 dark:text-amber-300"
+        />
+        <ExecTile
+          label="Selesai"
+          value={counts.done}
+          containerCls="bg-emerald-100 dark:bg-emerald-950"
+          textCls="text-emerald-700 dark:text-emerald-300"
+        />
+        <ExecTile
+          label="Revisi"
+          value={counts.revision}
+          containerCls="bg-red-100 dark:bg-red-950"
+          textCls="text-red-700 dark:text-red-300"
+        />
+        <ExecTile
+          label="Draft"
+          value={counts.draft}
+          containerCls="bg-neutral-100 dark:bg-neutral-800"
+          textCls="text-neutral-700 dark:text-neutral-300"
+        />
+      </View>
+      <View className="pt-2">
+        <Button label="Buka Chat Initiative" variant="secondary" onPress={onOpenChat} />
+      </View>
+    </SectionCard>
+  );
+}
+
+type RosterEntry = { id: string; full_name: string | null; email: string | null; roles: Set<string> };
+
+function collectRoster(plans: ActionPlanWithPeople[], initiativePicId: string | null): RosterEntry[] {
+  const map = new Map<string, RosterEntry>();
+  const add = (p: PersonRefLike, role: string) => {
+    if (!p) return;
+    const existing = map.get(p.id);
+    if (existing) existing.roles.add(role);
+    else map.set(p.id, { id: p.id, full_name: p.full_name, email: p.email, roles: new Set([role]) });
+  };
+  if (initiativePicId) {
+    const initPic = plans.find((p) => p.pic?.id === initiativePicId)?.pic
+      ?? plans.find((p) => p.reviewer?.id === initiativePicId)?.reviewer
+      ?? null;
+    if (initPic) add(initPic, 'Initiative PIC');
+    else map.set(initiativePicId, { id: initiativePicId, full_name: null, email: null, roles: new Set(['Initiative PIC']) });
+  }
+  for (const p of plans) {
+    add(p.pic, 'PIC AP');
+    add(p.reviewer, 'Reviewer');
+  }
+  return Array.from(map.values());
+}
+
+type PersonRefLike = { id: string; full_name: string | null; email: string | null } | null;
+
+function rosterLabel(r: RosterEntry): string {
+  return (r.full_name && r.full_name.trim()) || r.email || 'Tanpa nama';
+}
+
+function RosterCard({ entries }: { entries: RosterEntry[] }) {
+  return (
+    <SectionCard>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-sm font-bold text-black dark:text-white">Tim & Akses Otomatis</Text>
+        <Badge label={`${entries.length} orang`} tone="neutral" />
+      </View>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        Hak akses Initiative ini terbentuk otomatis dari PIC & Reviewer Action Plan di bawahnya.
+      </Text>
+      {entries.length === 0 ? (
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400 pt-1">
+          Belum ada anggota — tambahkan Action Plan dengan PIC/Reviewer.
+        </Text>
+      ) : (
+        <View className="gap-2 pt-1">
+          {entries.map((r) => (
+            <View key={r.id} className="flex-row items-center gap-3">
+              <Avatar name={rosterLabel(r)} seed={r.id} />
+              <View className="flex-1 gap-0.5">
+                <Text className="text-sm font-semibold text-black dark:text-white" numberOfLines={1}>
+                  {rosterLabel(r)}
+                </Text>
+                <View className="flex-row flex-wrap gap-1">
+                  {Array.from(r.roles).map((role) => (
+                    <Badge key={role} label={role} tone={role === 'Initiative PIC' ? 'info' : 'neutral'} />
+                  ))}
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </SectionCard>
+  );
+}
 
 function ActionPlanRow({ item, onPress }: { item: ActionPlanWithPeople; onPress: () => void }) {
   return (
@@ -83,6 +246,11 @@ export default function InitiativeDetailScreen() {
   });
 
   const initiative = initiativeQ.data;
+  const execCounts = useMemo(() => computeExecCounts(plansQ.data ?? []), [plansQ.data]);
+  const roster = useMemo(
+    () => collectRoster(plansQ.data ?? [], initiative?.pic_id ?? null),
+    [plansQ.data, initiative?.pic_id],
+  );
   const { focus } = usePeriodFocus();
   const initPast = initiative ? cardPeriodStatus(initiative, focus) === 'past' : false;
   const handleAddActionPlan = () => {
@@ -148,6 +316,13 @@ export default function InitiativeDetailScreen() {
                 <Text className="text-base text-black dark:text-white">{initiative.description}</Text>
               </SectionCard>
             ) : null}
+
+            {/* UI-S-ID2 — Ruang Eksekusi + Tim & Akses Otomatis */}
+            <ExecSpaceCard
+              counts={execCounts}
+              onOpenChat={() => router.push('/(tabs)/inbox' as Href)}
+            />
+            <RosterCard entries={roster} />
 
             <MbrCompletionIndicator compliance={compliance} />
 

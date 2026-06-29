@@ -83,8 +83,8 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 | ID | Item | Severity |
 |---|---|---|
-| UI-S-N01 | **Tombol aksi inline** per row (Review / Lihat Bukti / Buka Request) | MAJOR |
-| UI-S-N02 | **Grup "Baru" / "Sebelumnya"** (date divider) | MINOR |
+| UI-S-N01 | **Tombol aksi inline** per row (Review / Lihat Bukti / Buka Request) | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `inlineAction(item)` derive dari (type, entity_type); tombol secondary di NotificationRow → tap = mark read + push route. Review→Review Sekarang (disambiguate vs tab). |
+| UI-S-N02 | **Grup "Baru" / "Sebelumnya"** (date divider) | MINOR ✅ **IMPLEMENTED 2026-06-28** — `groupByRecency` (≤24 jam=Baru) + SectionList + SectionHeader uppercase. |
 
 ### 4.3 Workspace — `(tabs)/workspace.tsx`
 
@@ -105,7 +105,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-K03 | `kpi-area/new`: field **Ekspektasi Hasil** | MINOR |
 | UI-S-S01 | `strategy/new`: **Kontribusi Q%** ke parent KPI | MAJOR |
 | UI-S-I01 | `initiative/new`: field **Tim** | MINOR |
-| UI-S-I02 | Date picker native untuk semua form (saat ini text `YYYY-MM-DD`) | MINOR |
+| UI-S-I02 | Date picker native untuk semua form (saat ini text `YYYY-MM-DD`) | MINOR ✅ **IMPLEMENTED 2026-06-28** — `components/date-field.tsx` (iOS: Modal+inline @expo/ui calendar; Android: dialog presentation; web/test: TextInput fallback). Wired ke 7 form: goal/kpi-area/strategy/initiative/problem-statement/development-area/action-plan new (4 date fields). |
 
 ### 4.5 Performance detail
 
@@ -116,7 +116,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-KD2 | `kpi-area/[id]`: kartu **"Nilai Hasil"** (current vs proposed) + "Input Nilai Hasil" + "Buka Review" actions | MAJOR |
 | UI-S-KD3 | `kpi-area/[id]`: **Pecahan Target** panel + **Sumber Nilai Hasil** | MAJOR |
 | UI-S-ID1 | `initiative/[id]`: **"Buka Chat"** action menuju Inbox room | MAJOR |
-| UI-S-ID2 | `initiative/[id]`: kartu **"Ruang Eksekusi"** (Action Plan/Bukti/Keputusan counts) + **"Tim & Akses Otomatis"** roster | MAJOR |
+| UI-S-ID2 | `initiative/[id]`: kartu **"Ruang Eksekusi"** (Action Plan/Bukti/Keputusan counts) + **"Tim & Akses Otomatis"** roster | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `ExecSpaceCard` 5-tile (Aktif/Review/Selesai/Revisi/Draft) + "Buka Chat Initiative" CTA (V1 route ke /(tabs)/inbox; per-initiative room ditunda); `RosterCard` unique PIC+Reviewer dari AP turunannya + Initiative PIC badge. Bukti/Keputusan counts ditunda (perlu query submissions per initiative). |
 | UI-S-PD1 | **Kelengkapan Card** checklist per-field (Konteks/PIC/Target/Bukti rule) — bukan sekadar rasio MBR | MAJOR |
 
 ### 4.6 Development Workspace
@@ -132,8 +132,8 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 | ID | Item | Severity |
 |---|---|---|
-| UI-S-AP1 | `action-plan/[id]`: panel **"Panduan Selesai"** checklist | MAJOR |
-| UI-S-AP2 | `action-plan/[id]`: panel **"Gate & kendala"** | MAJOR |
+| UI-S-AP1 | `action-plan/[id]`: panel **"Panduan Selesai"** checklist | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `GuidanceChecklist` 5-langkah PIC journey (Pelajari brief → Aktifkan → Mulai kerja → Submit bukti → Tunggu approval); centang otomatis dari `ap.status`+lastSubmission; ratio badge `N/5` + note "Revisi" saat status=revision. |
+| UI-S-AP2 | `action-plan/[id]`: panel **"Gate & kendala"** | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `GateAndConstraints` 6-row derivasi field (PIC, Reviewer≠PIC, Deadline, Output, DoD, Bukti) + row Repeat rule saat repeat=true. Summary badge "N blokir"/"N perhatian"/"Tidak ada kendala" tone otomatis. |
 | UI-S-AP3 | `action-plan/[id]`: tombol **"Buka Chat"** + shortcut "Ubah deadline" inline di Brief | MINOR |
 | UI-S-AP4 | `action-plan/new`: **context-bar** parent Initiative; field **"Bukti yang diminta"** deskriptif (selain toggle wajib) | MINOR |
 | UI-S-AP5 | `action-plan/submit`: **file upload** (saat ini hanya text_note + link) | MAJOR |
@@ -154,8 +154,8 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 | ID | Item | Severity |
 |---|---|---|
-| UI-S-PP1 | `(tabs)/people.tsx`: **search**, **tabs** (Ranking/Bulan/Quarter/Admin), **"+ User"** primary button | MAJOR |
-| UI-S-PP2 | `(tabs)/people.tsx`: subhead row = **role/dept** (bukan email) | MINOR |
+| UI-S-PP1 | `(tabs)/people.tsx`: **search**, **tabs** (Ranking/Bulan/Quarter/Admin), **"+ User"** primary button | MAJOR ✅ **PARTIAL 2026-06-28** — TextInput search (filter name/email/position/role case-insensitive) + 3-chip tabs (Ranking/Bulan/Quarter; Bulan & Quarter beri Badge "V1: filter periode menyusul"). Counter "N/total user". Tab "Admin" + "+ User" ditunda (lihat UI-S-PP3 — perlu putusan admin scope). |
+| UI-S-PP2 | `(tabs)/people.tsx`: subhead row = **role/dept** (bukan email) | MINOR ✅ **IMPLEMENTED 2026-06-28** — `listOrgProfilesWithRoles` join role_templates; `personSubhead(p)` = position_title + role_name (fallback email kalau dua-duanya kosong). |
 | UI-S-PP3 | `(tabs)/people.tsx`: panel admin **"Kelola User"** (invite, Import CSV, Salin Undangan, manage rows) — *blokir UI-N-001 yang relevan* | MAJOR |
 | UI-S-PR1 | `people-profile/[id]`: **header cover + status pill + verified dot + role/join date** | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `lib/cards.ts::getOrgProfileDetail` join `role_templates`; header sekarang tampilkan Aktif/Nonaktif pill, role+level, position_title, email, join date. Cover image ditunda. |
 | UI-S-PR2 | `people-profile/[id]`: **action row** (Chat / Tugaskan / ⋯) | MAJOR ✅ **IMPLEMENTED 2026-06-28** — tombol "Chat" + overflow `⋯` (keduanya route ke `/(tabs)/inbox`); hidden saat profil milik diri sendiri. "Tugaskan" diskip (AP butuh konteks Initiative — bukan dari context profile). |

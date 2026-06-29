@@ -171,6 +171,40 @@ export async function listOrgProfiles(): Promise<NonNullable<PersonRef>[]> {
   return data as NonNullable<PersonRef>[];
 }
 
+/**
+ * UI-S-PP2 — anggota org dengan role/position (subhead People list).
+ * Sibling listOrgProfiles agar tidak memecah callers picker yang hanya butuh id/name/email.
+ */
+export type OrgProfileWithRole = NonNullable<PersonRef> & {
+  position_title: string | null;
+  role_name: string | null;
+  role_level: string | null;
+};
+
+export async function listOrgProfilesWithRoles(): Promise<OrgProfileWithRole[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, position_title, role_templates(name, level)')
+    .eq('is_active', true)
+    .order('full_name', { ascending: true });
+  if (error) throw error;
+  type Row = {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    position_title: string | null;
+    role_templates: { name: string; level: string } | null;
+  };
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    id: r.id,
+    full_name: r.full_name,
+    email: r.email,
+    position_title: r.position_title,
+    role_name: r.role_templates?.name ?? null,
+    role_level: r.role_templates?.level ?? null,
+  }));
+}
+
 /** UI-S-PR1 — Detail profil satu user (untuk header rich chrome di people-profile). */
 export type OrgProfileDetail = {
   id: string;
