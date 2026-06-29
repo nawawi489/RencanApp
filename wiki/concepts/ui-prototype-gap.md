@@ -2,7 +2,7 @@
 type: concept
 tags: [ui, design, prototype, backlog, gap-analysis]
 updated: 2026-06-28
-sources: 2
+sources: 3
 ---
 
 # UI Prototype Gap — Backlog Visual & Struktural
@@ -99,12 +99,12 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 | ID | Item | Severity |
 |---|---|---|
-| UI-S-G01 | `goal/new`: field **Target Tahunan**; field **Tahun Goal** + context-bar period otomatis | MAJOR |
+| UI-S-G01 | `goal/new`: field **Target Tahunan**; field **Tahun Goal** + context-bar period otomatis | MAJOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0023 ALTER goals.target_value text; form ganti `period_start/end` jadi `Tahun Goal` (4-digit) → derive `YYYY-01-01`/`YYYY-12-31`; `Target Tahunan` free-form. |
 | UI-S-K01 | `kpi-area/new`: **Pecahan Target** (Q1–Q4 breakdown bulanan, total 100%) | MAJOR ✅ **IMPLEMENTED 2026-06-28 (S2)** — panel inline `KpiAreaBreakdownPanel` di `kpi-area/[id]` (view + edit modal, Σ=100% live, monthly opsional). Migrasi 0021 + RPC `kpi_area_breakdown_replace` (audit `target_breakdown_updated`). Inline-form `kpi-area/new` ditunda — V1 atur breakdown dari halaman detail. |
-| UI-S-K02 | `kpi-area/new`: **template picker** (Pakai Template + summary card) | MAJOR |
-| UI-S-K03 | `kpi-area/new`: field **Ekspektasi Hasil** | MINOR |
-| UI-S-S01 | `strategy/new`: **Kontribusi Q%** ke parent KPI | MAJOR |
-| UI-S-I01 | `initiative/new`: field **Tim** | MINOR |
+| UI-S-K02 | `kpi-area/new`: **template picker** (Pakai Template + summary card) | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `KpiAreaTemplatePicker` (bottom-sheet Modal) filter `goal_template_id` parent Goal, grouped per `division_label`. **Prefill lengkap PRD §18** pasca-migrasi 0027 (`target_hint` + `expected_outcome_hint`): tap template = isi Nama + Target + Ekspektasi Hasil. PIC rekomendasi belum (perlu kolom `recommended_pic_role` follow-up). |
+| UI-S-K03 | `kpi-area/new`: field **Ekspektasi Hasil** | MINOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0025 `kpi_areas.expected_outcome text`; form input wajib (PRD §18). |
+| UI-S-S01 | `strategy/new`: **Kontribusi Q%** ke parent KPI | MAJOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0023 ALTER strategies.contribution_pct numeric(6,3) CHECK [0..100]; form input numeric (0–100, koma/titik), null saat Draft. **Σ=100% sibling enforce DONE via migrasi 0024** patch `activate_strategy` (NULL = reject; Σ aktif+ini ≠ 100 = reject). |
+| UI-S-I01 | `initiative/new`: field **Tim** | MINOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0025 `initiatives.team_id uuid FK teams ON DELETE SET NULL`; form `TeamChipSelector` query `listTeams({activeOnly:true})` (PRD §21). |
 | UI-S-I02 | Date picker native untuk semua form (saat ini text `YYYY-MM-DD`) | MINOR ✅ **IMPLEMENTED 2026-06-28** — `components/date-field.tsx` (iOS: Modal+inline @expo/ui calendar; Android: dialog presentation; web/test: TextInput fallback). Wired ke 7 form: goal/kpi-area/strategy/initiative/problem-statement/development-area/action-plan new (4 date fields). |
 
 ### 4.5 Performance detail
@@ -125,7 +125,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 |---|---|---|
 | UI-S-DA1 | `development-area/new`: field **Visibilitas** | MINOR |
 | UI-S-DA2 | `development-area/[id]`: **summary-strip** (Progress/Problem/Initiative counts) | MAJOR |
-| UI-S-PR1 | `problem-statement/new`: field **Dampak** (High/Med/Low) + **Bukti awal** + context-bar parent | MAJOR |
+| UI-S-PR1 | `problem-statement/new`: field **Dampak** (High/Med/Low) + **Bukti awal** + context-bar parent | MAJOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0030 `problem_statements.impact text CHECK ('high','medium','low')` + `initial_evidence text`. Form: `ImpactSelector` chip 3-pilihan (wajib) + multiline "Bukti Awal" + context-bar "Development Area induk: ..." (PRD §15 metadata). |
 | UI-S-PR2 | `problem-statement/[id]`: **summary-strip** + kartu "Bukti Problem Statement" | MAJOR |
 
 ### 4.7 Action Plan & eksekusi loop
@@ -135,7 +135,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-AP1 | `action-plan/[id]`: panel **"Panduan Selesai"** checklist | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `GuidanceChecklist` 5-langkah PIC journey (Pelajari brief → Aktifkan → Mulai kerja → Submit bukti → Tunggu approval); centang otomatis dari `ap.status`+lastSubmission; ratio badge `N/5` + note "Revisi" saat status=revision. |
 | UI-S-AP2 | `action-plan/[id]`: panel **"Gate & kendala"** | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `GateAndConstraints` 6-row derivasi field (PIC, Reviewer≠PIC, Deadline, Output, DoD, Bukti) + row Repeat rule saat repeat=true. Summary badge "N blokir"/"N perhatian"/"Tidak ada kendala" tone otomatis. |
 | UI-S-AP3 | `action-plan/[id]`: tombol **"Buka Chat"** + shortcut "Ubah deadline" inline di Brief | MINOR |
-| UI-S-AP4 | `action-plan/new`: **context-bar** parent Initiative; field **"Bukti yang diminta"** deskriptif (selain toggle wajib) | MINOR |
+| UI-S-AP4 | `action-plan/new`: **context-bar** parent Initiative; field **"Bukti yang diminta"** deskriptif (selain toggle wajib) | MINOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0027 `action_plans.evidence_description text` + form input multiline; context-bar parent Initiative (query `getInitiative(initiativeId)` + header strip "Initiative induk: ..."); gate aktivasi (0028) Bukti yang Diminta wajib bila `evidence_required=true` (PRD §22.5). |
 | UI-S-AP5 | `action-plan/submit`: **file upload** (saat ini hanya text_note + link) | MAJOR |
 | UI-S-AP6 | `action-plan/submit`: pisah **Result Value Input** dengan **linkage KPI Area + nilai lama→baru** ([[execution-loop]]) | MAJOR |
 | UI-S-AP7 | `action-plan/instance/[id]`: **"Hari Ini N/M"** + ringkasan repeat (Target/Selesai/Terlewat/Grace) + **"Panduan Hari Ini"** checklist | MAJOR ✅ **IMPLEMENTED 2026-06-28 (Cat-3)** — SectionCard Ringkasan Hari Ini + Panduan Hari Ini kuratorial V1. |
@@ -162,7 +162,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-PR3 | `people-profile/[id]`: kartu **Ranking** (rank besar + periode) | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `SectionCard` dgn tile `#N` brand-dark 64×64 + nama periode tertutup; tampil hanya bila ada `ranking_snapshots` entry (D9). |
 | UI-S-PR4 | `people-profile/[id]`: kartu **Detail People** (Dept/Atasan/Hak Akses) + **Tugas** collapsible + **Kontribusi Bulan Ini** | MAJOR ✅ **PARTIAL 2026-06-28** — "Detail People" row Status/Hak akses/Posisi/Email dari `getOrgProfileDetail`; "Tugas aktif" collapsible (lazy fetch saat expand) via `listActionPlansByPic(userId)` + RLS. "Kontribusi Bulan Ini" + "Atasan" ditunda (perlu schema reporting graph). |
 | UI-S-PR5 | `people-profile/[id]`: **Riwayat Score** + "Lihat Period Snapshot" | MINOR |
-| UI-S-SF1 | `settings-score-formula`: **inline editor bobot** + validasi total 100% live + draft/activate footer ([[score-formula]]) | MAJOR |
+| UI-S-SF1 | `settings-score-formula`: **inline editor bobot** + validasi total 100% live + draft/activate footer ([[score-formula]]) | MAJOR ✅ **DONE** — editor inline (commit 50f3f59); versioning/effective-date/audit display di card versi read-only ditambah 2026-06-28 (effective_date label, change_reason quote, activated_at). |
 | UI-S-SF2 | `settings-score-formula`: **role chips** (Staff/Management/C-Level/CEO/Custom) sebagai selector template | MAJOR ✅ **CLOSED 2026-06-28 (Cat-3)** — SF1 sudah implement LevelChips 4-chip (Staff/Mgmt/C-Level/CEO); Custom hidden per binding DEC-9. |
 | UI-S-MO1 | `manual-score-override`: **4-tile grid** (Skor otomatis / Disesuaikan / Approval / Formula) — *opsional, kontradiksi dengan keputusan single-actor D10* | MINOR |
 
@@ -192,8 +192,8 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 **P1 — gap fungsional yang nyata**
 - UI-S-K01 (Pecahan Target Q/M). ✅ done.
-- UI-S-S01 (Kontribusi Q% strategy).
-- UI-S-G01 (Target Tahunan goal).
+- UI-S-S01 (Kontribusi Q% strategy). ✅ done 2026-06-28.
+- UI-S-G01 (Target Tahunan goal). ✅ done 2026-06-28.
 - UI-S-PR1 (Dampak + Bukti awal di Problem Statement).
 - UI-S-GV1 (Governance: aksi "Selesaikan"). ✅ done.
 - UI-S-OR1 (Org: Posisi/Tim/Garis laporan/Role Template). ✅ partial.

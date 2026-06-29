@@ -46,9 +46,22 @@ function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; c
             {items.map((k) => (
               <View
                 key={k.id}
-                className="flex-row items-center justify-between gap-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
-                <Text className="flex-1 text-sm font-medium text-black dark:text-white">{k.name}</Text>
-                <Badge label={k.division_label} tone="info" />
+                className="gap-1.5 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+                <View className="flex-row items-center justify-between gap-3">
+                  <Text className="flex-1 text-sm font-medium text-black dark:text-white">{k.name}</Text>
+                  <Badge label={k.division_label} tone="info" />
+                </View>
+                {/* PRD §18 step 5 prefill — tampil bila admin sudah isi hint (kolom 0027). */}
+                {k.target_hint ? (
+                  <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Target awal: {k.target_hint}
+                  </Text>
+                ) : null}
+                {k.expected_outcome_hint ? (
+                  <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Ekspektasi Hasil: {k.expected_outcome_hint}
+                  </Text>
+                ) : null}
               </View>
             ))}
           </View>

@@ -42,6 +42,10 @@ export type NewProblemStatement = {
   pic_id: string | null;
   period_start: string | null;
   period_end: string | null;
+  /** UI-S-PR1 — Dampak (PRD §15 metadata). 'high' | 'medium' | 'low'. */
+  impact?: string | null;
+  /** UI-S-PR1 — Bukti awal (deskripsi/link bukti problem ini nyata). */
+  initial_evidence?: string | null;
 };
 
 export async function createProblemStatement(input: NewProblemStatement): Promise<ProblemStatement> {

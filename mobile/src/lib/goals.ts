@@ -88,6 +88,8 @@ export type NewGoal = {
   pic_id: string | null;
   period_start: string | null;
   period_end: string | null;
+  /** UI-S-G01 — PRD §17 "Target Tahunan" wajib (free-form, satuan tak dipaksa). */
+  target_value?: string | null;
 };
 
 export async function createGoal(input: NewGoal): Promise<Goal> {

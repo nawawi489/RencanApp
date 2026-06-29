@@ -139,11 +139,25 @@ export default function ProblemStatementDetailScreen() {
                     label: 'Periode',
                     value: `${ps.period_start ?? '—'} → ${ps.period_end ?? '—'}`,
                   },
+                  {
+                    label: 'Dampak',
+                    value:
+                      ps.impact === 'high'
+                        ? 'High'
+                        : ps.impact === 'medium'
+                          ? 'Medium'
+                          : ps.impact === 'low'
+                            ? 'Low'
+                            : '—',
+                  },
                 ]}
               />
             </View>
 
             {ps.description ? <DetailField label="Deskripsi" value={ps.description} /> : null}
+            {ps.initial_evidence ? (
+              <DetailField label="Bukti Awal" value={ps.initial_evidence} />
+            ) : null}
 
             <MbrCompletionIndicator compliance={compliance} />
 

@@ -127,8 +127,9 @@ declare
   goal uuid; kpi uuid; strat uuid; fails text := '';
 begin
   insert into auth.users (id) values (pic),(other);
-  insert into public.goals (organization_id,name,pic_id,period_start,period_end,created_by,status)
-    values (v_org,'G act',pic,current_date,current_date+30,v_ceo,'draft') returning id into goal;
+  -- Pasca-migrasi 0031: target_value wajib pada activate_goal (PRD §17 Target Tahunan).
+  insert into public.goals (organization_id,name,pic_id,period_start,period_end,target_value,created_by,status)
+    values (v_org,'G act',pic,current_date,current_date+30,'Target Tahunan',v_ceo,'draft') returning id into goal;
 
   -- activate_goal tanpa KPI Area → tolak (K2)
   perform set_config('request.jwt.claims', json_build_object('sub',pic,'role','authenticated')::text, true);
@@ -153,8 +154,10 @@ begin
   insert into public.kpi_areas (organization_id,goal_id,name,pic_id,period_start,period_end,created_by,status)
     values (v_org,goal,'K no target',pic,current_date,current_date+30,v_ceo,'draft') returning id into kpi;
   perform set_config('request.jwt.claims', json_build_object('sub',pic,'role','authenticated')::text, true);
+  -- Pasca-migrasi 0026: pesan mencakup Target + Ekspektasi Hasil wajib (PRD §18). Pakai pattern
+  -- yang stabil lintas-migrasi: judul kalimat "Kelengkapan KPI Area".
   begin perform public.activate_kpi_area(kpi); fails:=fails||'kpi_notarget_allowed; ';
-  exception when others then if sqlerrm not like '%Target wajib%' then fails:=fails||'kpi_notarget:'||sqlerrm||'; '; end if; end;
+  exception when others then if sqlerrm not like '%Kelengkapan KPI Area%' then fails:=fails||'kpi_notarget:'||sqlerrm||'; '; end if; end;
 
   -- activate_strategy depth kosong
   insert into public.strategies (organization_id,kpi_area_id,name,pic_id,period_start,period_end,created_by,status)
@@ -162,7 +165,8 @@ begin
   begin perform public.activate_strategy(strat); fails:=fails||'strat_shallow_allowed; ';
   exception when others then if sqlerrm not like '%Alasan, Risiko Utama, dan Alternatif%' then fails:=fails||'strat_shallow:'||sqlerrm||'; '; end if; end;
   -- isi depth (privileged) → activate positif
-  update public.strategies set reason='r', main_risk='m', alternative='a' where id=strat;
+  -- Pasca-migrasi 0024: contribution_pct wajib + Σ=100 per sibling KPI Area (PRD §20).
+  update public.strategies set reason='r', main_risk='m', alternative='a', contribution_pct=100 where id=strat;
   begin perform public.activate_strategy(strat); exception when others then fails:=fails||'strat_activate_pos:'||sqlerrm||'; '; end;
 
   if fails <> '' then raise exception 'TEST3 activate FAIL: %', fails; end if;

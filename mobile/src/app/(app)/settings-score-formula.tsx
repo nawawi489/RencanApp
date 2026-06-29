@@ -205,6 +205,17 @@ function FormulaVersionCardReadOnly({ version }: { version: ScoreFormulaVersion 
   const cats = categoriesFromRaw(version.categories);
   const sum = cats.reduce((acc, c) => acc + Number(c.weight || 0), 0);
   const tone = version.status === 'active' ? 'success' : 'neutral';
+  // Versioning/audit metadata (SF UI follow-up): effective_date + change_reason + tanggal aktivasi.
+  // Field-field ini sudah ada di DB (migrasi 0020); di sini dirender supaya audit trail kelihatan.
+  const effectiveLabel =
+    version.status === 'active' && version.effective_date
+      ? `Aktif sejak ${version.effective_date}`
+      : version.status === 'archived' && version.effective_date
+        ? `Pernah aktif sejak ${version.effective_date}`
+        : null;
+  const activatedLabel = version.activated_at
+    ? `Diaktifkan ${version.activated_at.slice(0, 10)}`
+    : null;
   return (
     <View
       className="gap-2 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800"
@@ -216,6 +227,9 @@ function FormulaVersionCardReadOnly({ version }: { version: ScoreFormulaVersion 
         </Text>
         <Badge label={FORMULA_STATUS_LABEL[version.status] ?? version.status} tone={tone} />
       </View>
+      {effectiveLabel ? (
+        <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">{effectiveLabel}</Text>
+      ) : null}
       {cats.length ? (
         <View className="gap-1">
           {cats.map((c) => (
@@ -235,6 +249,14 @@ function FormulaVersionCardReadOnly({ version }: { version: ScoreFormulaVersion 
       ) : (
         <Text className="text-xs text-neutral-400">Belum ada kategori.</Text>
       )}
+      {version.change_reason ? (
+        <Text className="text-[11px] italic text-neutral-500 dark:text-neutral-400">
+          “{version.change_reason}”
+        </Text>
+      ) : null}
+      {activatedLabel ? (
+        <Text className="text-[11px] text-neutral-400 dark:text-neutral-500">{activatedLabel}</Text>
+      ) : null}
     </View>
   );
 }

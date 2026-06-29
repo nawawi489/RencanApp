@@ -30,6 +30,8 @@ export default function NewStrategyScreen() {
   const [periodEnd, setPeriodEnd] = useState('');
   const [description, setDescription] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
+  // UI-S-S01 — Kontribusi Q% (PRD §20). Free decimal, 0–100; NULL diizinkan saat Draft.
+  const [contributionPct, setContributionPct] = useState('');
 
   async function submit() {
     if (!name.trim()) {
@@ -40,6 +42,15 @@ export default function NewStrategyScreen() {
     if (dateErr) {
       Alert.alert('Tanggal tidak valid', dateErr);
       return;
+    }
+    let contribution: number | null = null;
+    if (contributionPct.trim()) {
+      const parsed = Number(contributionPct.replace(',', '.'));
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+        Alert.alert('Kontribusi tidak valid', 'Isi 0–100 (persen, mis. 25 atau 12.5).');
+        return;
+      }
+      contribution = Math.round(parsed * 1000) / 1000; // selaras numeric(6,3)
     }
     try {
       const created = await create({
@@ -52,6 +63,7 @@ export default function NewStrategyScreen() {
         pic_id: (pic ?? inheritedPic)?.id ?? null,
         period_start: periodStart || null,
         period_end: periodEnd || null,
+        contribution_pct: contribution,
       });
       router.replace(`/strategy/${created.id}` as Href);
     } catch (e) {
@@ -97,6 +109,13 @@ export default function NewStrategyScreen() {
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
+          <LabeledInput
+            label="Kontribusi Quarter (%)"
+            value={contributionPct}
+            onChangeText={setContributionPct}
+            keyboardType="numeric"
+            placeholder="mis. 25 (Σ siblings = 100%, divalidasi saat aktivasi)"
+          />
           <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
           <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />

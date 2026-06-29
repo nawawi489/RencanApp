@@ -112,6 +112,7 @@ export default function GoalDetailScreen() {
                     value: `${goal.period_start ?? '—'} → ${goal.period_end ?? '—'}`,
                   },
                   { label: 'PIC', value: goal.pic_id ? 'Ditetapkan' : '—' },
+                  { label: 'Target Tahunan', value: goal.target_value ?? '—' },
                 ]}
               />
             </View>

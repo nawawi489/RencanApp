@@ -198,6 +198,7 @@ export default function KpiAreaDetailScreen() {
               <MetaGrid
                 items={[
                   { label: 'Target', value: kpiArea.target || '—' },
+                  { label: 'Ekspektasi Hasil', value: kpiArea.expected_outcome || '—' },
                   {
                     label: 'Periode',
                     value: `${kpiArea.period_start ?? '—'} → ${kpiArea.period_end ?? '—'}`,

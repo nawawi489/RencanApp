@@ -414,8 +414,9 @@ begin
   -- CEO buat DA dgn pic=da_pic; PS dgn pic=ceo (PIC PS ≠ PIC DA).
   insert into public.development_areas (organization_id, name, pic_id, period_start, period_end, status, created_by)
     values (v_org, 'D-actps', da_pic, current_date, current_date+30, 'active', v_ceo) returning id into d;
-  insert into public.problem_statements (organization_id, development_area_id, name, pic_id, period_start, period_end, status, created_by)
-    values (v_org, d, 'P-actps', v_ceo, current_date, current_date+30, 'draft', v_ceo) returning id into p;
+  -- Pasca-migrasi 0031: impact wajib pada activate_problem_statement (PRD §15 metadata Dampak).
+  insert into public.problem_statements (organization_id, development_area_id, name, pic_id, period_start, period_end, impact, status, created_by)
+    values (v_org, d, 'P-actps', v_ceo, current_date, current_date+30, 'medium', 'draft', v_ceo) returning id into p;
 
   -- da_pic (BUKAN PIC PS) bisa aktifkan via jalur is_development_area_pic.
   perform set_config('request.jwt.claims', json_build_object('sub',da_pic,'role','authenticated')::text, true);

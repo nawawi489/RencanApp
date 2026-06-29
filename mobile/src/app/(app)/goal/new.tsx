@@ -4,23 +4,23 @@ import { Alert } from 'react-native';
 import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
-import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { useGoalActions } from '@/hooks/use-workspace';
 import { type PersonRef } from '@/lib/goals';
 
 type Person = NonNullable<PersonRef>;
 
-const DATE_HINT = 'Format: YYYY-MM-DD (mis. 2026-07-01)';
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const YEAR_RE = /^\d{4}$/;
+const CURRENT_YEAR = new Date().getFullYear();
 
 export default function NewGoalScreen() {
   const router = useRouter();
   const { create, isPending } = useGoalActions();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [periodStart, setPeriodStart] = useState('');
-  const [periodEnd, setPeriodEnd] = useState('');
+  // PRD §17: "Periode Goal otomatis 1 Jan - 31 Des tahun aktif. Tidak ada rentang tanggal manual untuk Goal."
+  const [goalYear, setGoalYear] = useState(String(CURRENT_YEAR));
+  const [targetValue, setTargetValue] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
 
   async function submit() {
@@ -28,21 +28,20 @@ export default function NewGoalScreen() {
       Alert.alert('Belum lengkap', 'Nama Goal wajib diisi.');
       return;
     }
-    if ((periodStart && !DATE_RE.test(periodStart)) || (periodEnd && !DATE_RE.test(periodEnd))) {
-      Alert.alert('Tanggal tidak valid', DATE_HINT);
+    if (!YEAR_RE.test(goalYear)) {
+      Alert.alert('Tahun tidak valid', 'Isi tahun Goal 4 digit (mis. 2026).');
       return;
     }
-    if (periodStart && periodEnd && periodEnd < periodStart) {
-      Alert.alert('Tanggal tidak valid', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
-      return;
-    }
+    const periodStart = `${goalYear}-01-01`;
+    const periodEnd = `${goalYear}-12-31`;
     try {
       const created = await create({
         name: name.trim(),
         description: description.trim() || null,
         pic_id: pic?.id ?? null,
-        period_start: periodStart || null,
-        period_end: periodEnd || null,
+        period_start: periodStart,
+        period_end: periodEnd,
+        target_value: targetValue.trim() || null,
       });
       router.replace(`/goal/${created.id}` as Href);
     } catch (e) {
@@ -55,15 +54,38 @@ export default function NewGoalScreen() {
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal — Sasaran strategis"
-          body="Goal adalah sasaran tingkat tinggi untuk satu periode. Pecah jadi KPI Area, lalu Strategy dan Initiative. Card disimpan sebagai Draft dulu; aktifkan setelah minimal satu KPI Area dibuat."
+          body="Goal adalah sasaran tahunan tingkat tinggi. Periode otomatis mengikuti tahun Goal (1 Jan – 31 Des). Pecah jadi KPI Area, lalu Strategy dan Initiative. Card disimpan sebagai Draft dulu."
         />
 
         <SectionCard>
-          <LabeledInput label="Nama Goal" value={name} onChangeText={setName} required placeholder="mis. Tumbuhkan pendapatan 2026" />
+          <LabeledInput
+            label="Nama Goal"
+            value={name}
+            onChangeText={setName}
+            required
+            placeholder="mis. Tumbuhkan pendapatan"
+          />
+          <LabeledInput
+            label="Tahun Goal"
+            value={goalYear}
+            onChangeText={setGoalYear}
+            required
+            keyboardType="numeric"
+            placeholder={String(CURRENT_YEAR)}
+          />
+          <LabeledInput
+            label="Target Tahunan"
+            value={targetValue}
+            onChangeText={setTargetValue}
+            placeholder="mis. Rp 50 miliar / 1.000 customer baru"
+          />
           <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
-          <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
-          <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
-          <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
+          <LabeledInput
+            label="Keterangan / Target (opsional)"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
         </SectionCard>
 
         <Button label="Simpan sebagai Draft" onPress={submit} loading={isPending} />

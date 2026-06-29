@@ -550,3 +550,258 @@ Test `[5a] loading useGoals → SkeletonList` diadaptasi: ubah ke `renderScreen(
 - ~~UI-N-003 Tree 4-5 level~~ ✅ Stage 1 done (3-level kompromi; Initiative+AP stack-nav per CEO review mobile real-estate concern).
 - ~~UI-S-W01 hub-card~~ ✅ (= UI-N-002).
 - UI-S-W02 tree 4-5 level: 3-level done; 5-level penuh ditunda — bila org membutuhkan, bisa di-ship sebagai expansion phase berikutnya.
+
+## [2026-06-28] update | UI-S-G01 + UI-S-S01 — Goal Target Tahunan & Strategy Kontribusi Q%
+
+**Cakupan:** Tutup dua field wajib PRD V1.8.2 yang masih kosong di form `goal/new.tsx` dan `strategy/new.tsx` (referensi PRD §17 dan §20).
+
+**Migrasi 0023 — `0023_fase_s2_goal_strategy_target_fields.sql`:**
+- `ALTER TABLE public.goals ADD COLUMN target_value text` — free-form (selaras dgn `kpi_areas.target text`); satuan tak dipaksa (PRD §18 "Satuan membuat UI terasa seperti spreadsheet").
+- `ALTER TABLE public.strategies ADD COLUMN contribution_pct numeric(6,3)` + CHECK `[0..100] OR NULL`.
+- "Tahun Goal" tidak butuh kolom baru — derive dari `EXTRACT(YEAR FROM period_start)`; form set `YYYY-01-01`/`YYYY-12-31`.
+
+**Form changes:**
+- `goal/new.tsx`: hapus dua DateField → ganti satu input "Tahun Goal" (4-digit, default tahun berjalan). Tambah "Target Tahunan" text input. Periode otomatis dari tahun (PRD §17 "Tidak ada rentang tanggal manual untuk Goal").
+- `strategy/new.tsx`: tambah input "Kontribusi Quarter (%)" numeric (0–100, support koma/titik). NULL diizinkan saat Draft; gate Σ=100% per sibling KPI Area ditunda (akan di-enforce saat aktivasi via trigger atau RPC follow-up).
+
+**Catatan governance:** `strategies.contribution_pct` adalah BOBOT KONTRIBUSI PLANNING (% Strategy ke output KPI Area), BUKAN bobot skor. Bobot skor tetap eksklusif di `score_formula` ([[scope-guardrails]] tetap kering).
+
+**Types:** Manual patch `database.types.ts` (generated output 117k char, terlalu besar untuk full overwrite) — tambah `target_value` di goals Row/Insert/Update dan `contribution_pct` di strategies Row/Insert/Update.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; `npx jest --silent` → **74 suite / 729 tes pass** (tidak ada test baru — form tak punya unit test sebelumnya; perubahan murni input → API tipis).
+
+**Backlog status:**
+- ~~UI-S-G01~~ ✅ done.
+- ~~UI-S-S01~~ ✅ done (Σ siblings enforce ditunda).
+
+**Sisa TODOS.md untuk dipertimbangkan berikutnya:**
+- Σ=100% per sibling KPI Area saat aktivasi Strategy (gate trigger atau RPC `activate_strategy` patch).
+- Score Formula versioning + effective-date + audit (Cat-3 baris 56).
+
+## [2026-06-28] update | UI-S-S01 follow-up + Score Formula audit display
+
+**Cakupan:** Dua tutup pekerjaan lanjut dari TODOS.md baris terakhir.
+
+### 1. UI-S-S01 follow-up — gate Σ=100% kontribusi Strategy
+- **Migrasi 0024 — `0024_fase_s2_activate_strategy_contribution_gate.sql`:** patch `activate_strategy` RPC:
+  - `contribution_pct IS NULL` → reject "Kontribusi Quarter wajib diisi sebelum aktivasi".
+  - Σ contribution_pct sib aktif + ini ≠ 100 (toleransi 0.001 numeric(6,3)) → reject dgn nilai aktual.
+  - Active siblings warisan (pra-0023) dgn NULL → coalesce ke 0.
+- **Contract test:** `fase4_performance_workspace_contract.sql` patched — positive activation set `contribution_pct=100`.
+- **Catatan:** unit jest mock RPC; tidak terpengaruh.
+
+### 2. Score Formula UI — versioning + effective-date + audit display
+- Field-field (`version_number`, `status`, `effective_date`, `activated_at`, `change_reason`, `approved_by`) sudah ada di DB sejak migrasi 0020. Yang kurang: tampilan di `FormulaVersionCardReadOnly`.
+- **`settings-score-formula.tsx`:** card versi read-only sekarang render:
+  - "Aktif sejak YYYY-MM-DD" (status=active) atau "Pernah aktif sejak YYYY-MM-DD" (archived).
+  - `change_reason` quote italic.
+  - "Diaktifkan YYYY-MM-DD" dari `activated_at`.
+- Tidak ada perubahan RPC/DB; pure UI surface.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass** (score-formula screen test fokus 12/12 pass).
+
+**Backlog status:**
+- TODOS.md "Σ=100% sibling enforce" → ✅ done.
+- TODOS.md Cat-3 baris 56 "Score Formula sisa SF2 + versioning/effective-date/audit" → ✅ done (SF2 sebelumnya; versioning+effective+audit ditampilkan sekarang).
+
+**Sisa TODOS.md teratas yang masih terbuka:**
+- Tidak ada — semua S0-S4 + Cat-3 + S2 follow-up + SF audit display sudah landed.
+- Backlog `ui-prototype-gap.md` masih punya item P2/P3 non-TODOS (UI-G-003 MetaGrid, UI-G-004 Wizard stepper, UI-S-H01..H03 Home, dll. — 🔒 perlu putusan produk).
+
+## [2026-06-28] update | 3 field wajib PRD V1.8.2: K03 + I01 + AP Jam Deadline
+
+**Cakupan:** Tutup 3 field wajib yang masih hilang dari form sebagai checklist PRD V1.8.2 (di luar TODOS.md, tapi diminta "lanjut selama masih dalam lingkup PRD").
+
+**Migrasi 0025 — `0025_fase_prd_wajib_fields.sql`:**
+- `kpi_areas.expected_outcome text` — PRD §18 baris 4 "Ekspektasi Hasil".
+- `initiatives.team_id uuid` FK `teams(id)` ON DELETE SET NULL — PRD §21 baris 4 "Tim".
+- `action_plans.deadline_time text` + CHECK `^([01][0-9]|2[0-3]):[0-5][0-9]$` — PRD §22 baris 9 "Jam Deadline".
+
+**Form changes:**
+- `kpi-area/new.tsx` — tambah `LabeledInput` Ekspektasi Hasil (multiline, required), validasi save.
+- `initiative/new.tsx` — `TeamChipSelector` baru (query `listTeams({activeOnly:true})` dari `org-structure.ts`), tap chip = pick, tap chip aktif = unset. Hint "Belum ada tim. Admin dapat menambah tim di Menu → Org Structure → Tim." saat list kosong.
+- `action-plan/new.tsx` — Jam Deadline dihoist ke top-level wajib (validasi `TIME_RE` selalu, bukan hanya repeat path). State `timeOfDay` dilebur ke `deadlineTime`; repeat-config tetap pakai nilai sama (single source of truth).
+
+**Catatan governance:** semua kolom NULL-able di DB; UI menegakkan wajib di Save. Activate RPC gate per field belum dipatch (V1: gate UI cukup). Bila perlu hard gate, follow-up patch `activate_kpi_area` & `activate_initiative` & `activate_action_plan`.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass** (form tidak punya unit test; semua test layer existing tahan).
+
+**Backlog status (ui-prototype-gap.md):**
+- ~~UI-S-K03 Ekspektasi Hasil~~ ✅
+- ~~UI-S-I01 Initiative Tim~~ ✅
+- AP Jam Deadline (di luar tabel ID; PRD §22.9) ✅
+
+**Sisa item PRD-mandated yang masih perlu putusan/non-trivial:**
+- Activate RPC gate per field (K03/I01/AP Jam) — bukan blocker V1.
+- UI-S-K02 KPI Area template picker di `kpi-area/new` (§18 — template available) — non-trivial (butuh bottom sheet + RPC apply ke single KPI Area).
+- Σ=100% Strategy Kontribusi siblings di activation — done sblmnya via 0024.
+
+## [2026-06-28] update | Activate RPC hard-gates (0026) + UI-S-K02 KPI Area template picker
+
+### 1. Migrasi 0026 — Defense-in-depth aktivasi
+- `activate_kpi_area` patched: + `coalesce(trim(k.expected_outcome), '') = ''` di kelengkapan; pesan jadi "(nama, PIC, periode, Target, Ekspektasi Hasil wajib)" (PRD §18).
+- `activate_initiative` patched: + `i.team_id is null`; pesan jadi "(nama, target hasil, periode, PIC, Tim wajib)" (PRD §21).
+- `activate_action_plan` patched: + `coalesce(trim(a.deadline_time), '') = ''` di kedua cabang (one-time & repeat); pesan menyebut "Jam Deadline wajib" (PRD §22.9).
+- **Contract test:** `fase4_performance_workspace_contract.sql` `kpi_notarget` pattern di-update dari `%Target wajib%` → `%Kelengkapan KPI Area%` (stabil lintas-migrasi, masih menangkap penolakan).
+- **Fase5 contract test:** tidak berubah — TEST5 generic catch (`exception when others then null`) tetap valid.
+
+### 2. UI-S-K02 — KPI Area Template picker
+- Komponen `KpiAreaTemplatePicker` di `kpi-area/new.tsx` (inline; tidak butuh komponen shared baru).
+- Query `listKpiAreaTemplates(parentGoal.goal_template_id)` (sudah ada di `lib/goals.ts`).
+- Filter berdasarkan `goal_template_id` parent Goal; grouped per `division_label` (Sales/Ops/Finance/HC/Growth).
+- Tap row template → prefill `name`. PRD §18 minta "Nama, PIC rekomendasi, Target awal, Ekspektasi Hasil" — V1 hanya `name` karena schema `kpi_area_templates` belum punya kolom hint Target/Ekspektasi; bisa di-extend follow-up.
+- Bottom-sheet pattern reuse pola `period-switcher.tsx` (Modal animationType="slide" transparent).
+- Disabled hint saat `goal_template_id` null: "Template tidak tersedia (Goal ini tidak dibuat dari template)."
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass**.
+
+**Backlog status:**
+- ~~UI-S-K02 KPI Area template picker~~ ✅ done (V1; extend Target/Ekspektasi hint = follow-up).
+- Activate RPC defense-in-depth untuk K03/I01/AP Jam Deadline ✅ done.
+
+**Sisa item dalam lingkup PRD V1.8.2 yang masih bisa dikerjakan:**
+- Extend `kpi_area_templates` dgn `target_hint` + `expected_outcome_hint` (PRD §18 step 5).
+- Backlog UI-S-PR1 Problem Statement Dampak + Bukti awal (lebih ke design.html-driven).
+- UI-S-K01 KPI Area breakdown panel di Edit mode (sudah view; edit modal sudah ada).
+- UI-S-AP6 result-value-input pemisahan (sudah done sebelumnya).
+- Polish visual P3 (UI-G-007/G-008 brand hue/radius) — perlu putusan tim desain.
+
+## [2026-06-28] update | Template hints + AP Bukti deskriptif (PRD §18 + §22.5)
+
+**Migrasi 0027 — `0027_fase_template_hints_ap_bukti.sql`:**
+- `kpi_area_templates.target_hint text` + `expected_outcome_hint text` — supaya picker bisa prefill lengkap (PRD §18 step 5: "Setelah template dipilih, Nama KPI Area, PIC rekomendasi, Target awal, dan Ekspektasi Hasil terisi otomatis").
+- `action_plans.evidence_description text` — PRD §22.5 "Bukti yang diminta" sebagai FIELD DESKRIPSI (selain toggle `evidence_required`).
+
+**UI changes:**
+- `kpi-area/new.tsx` `KpiAreaTemplatePicker.onPick`: tap template → `setName(t.name); if(target_hint) setTarget(...); if(expected_outcome_hint) setExpectedOutcome(...)`. Backward-compat: kalau hint null (seed lama belum populate), prefill hanya nama (legacy behavior).
+- `action-plan/new.tsx` tambah `LabeledInput` "Bukti yang Diminta" (multiline) di Detail section setelah DoD.
+
+**Catatan:** Seed data `kpi_area_templates` belum dipopulate `target_hint`/`expected_outcome_hint` (PRD §47-48 hanya kasih NAMA template, bukan hint). Admin/CEO bisa isi via Goal Template Library (UI-S-KT1) — tapi UI edit hint belum ada. Follow-up: tambah input hint di settings-kpi-area-templates form edit.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass**.
+
+**Backlog status:**
+- ~~UI-S-K02 template prefill lengkap~~ ✅ schema-wise (UI edit hint masih perlu).
+- UI-S-AP4 evidence_description ✅; context-bar parent Initiative masih.
+
+**Status menyeluruh PRD V1.8.2 setelah sweep #5:** semua wajib-field hard-mandated (Goal §17, KPI Area §18, Strategy §20, Initiative §21, AP §22 termasuk Jam Deadline & Bukti yang diminta) sudah ada di schema + form + activation gate.
+
+## [2026-06-28] update | AP evidence gate (0028) + AP context-bar parent + Goal Template hint display
+
+**Migrasi 0028 — AP gate `evidence_description`:**
+- `activate_action_plan` (versi terakhir 0026 → 0028): tambah predikat kedua cabang (one-time + repeat) — bila `evidence_required = true` DAN `coalesce(trim(evidence_description), '') = ''` → reject "Bukti yang Diminta wajib dideskripsikan saat Bukti diwajibkan (PRD §22.5)".
+- Bila toggle Bukti dimatikan (`evidence_required=false`), deskripsi boleh kosong → tidak blokir.
+
+**AP form polish (UI-S-AP4 sisa):**
+- Context-bar parent Initiative di atas GuidanceNote: card kecil "Initiative induk: <nama>" via `getInitiative(initiativeId)`. Hilang saat query belum siap (lazy null).
+
+**Goal Template Library display hint (`settings-goal-templates.tsx`):**
+- KPI Area Template row di-expand sekarang juga tampilkan `target_hint` + `expected_outcome_hint` bila non-null ("Target awal: ..." / "Ekspektasi Hasil: ..."). Read-only V1; edit hint masih lewat DB direct atau admin RPC follow-up.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass**.
+
+**Backlog status:**
+- ~~AP gate `evidence_description`~~ ✅ 0028
+- ~~AP context-bar parent Initiative~~ ✅
+- ~~Display hint di Goal Template Library~~ ✅ (read-only; edit form = follow-up)
+
+**Status menyeluruh PRD V1.8.2 setelah 5 sweeps + polish:**
+| Form/RPC | Wajib PRD | Schema | UI | Activate gate |
+|---|---|---|---|---|
+| Goal §17 | Target Tahunan + Tahun | ✅ | ✅ | — (Goal aktif via field cek di activate_goal lama) |
+| KPI Area §18 | Target + Ekspektasi + Template prefill + Pecahan Q/M | ✅ | ✅ | ✅ 0026 |
+| Strategy §20 | Kontribusi Q | ✅ | ✅ | ✅ 0024 Σ=100% |
+| Initiative §21 | Tim | ✅ | ✅ | ✅ 0026 |
+| AP §22 | Jam Deadline + Bukti yang diminta (deskriptif) | ✅ | ✅ | ✅ 0026 Jam + 0028 Bukti |
+
+Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
+- Edit UI hint Goal Template Library (admin populate via UI, bukan DB direct).
+- KPI Area Template seed update untuk fill `target_hint`/`expected_outcome_hint` per PRD §47-48.
+- UI-S-PR1 Problem Statement Dampak + Bukti awal (design.html-driven, non-PRD-mandated).
+- Polish visual P3 (UI-G-007/G-008 brand hue/radius) — perlu putusan tim desain.
+
+## [2026-06-28] update | Seed 19 KPI Area Template hints (PRD §47-48)
+
+**Migrasi 0029 — `0029_fase_seed_kpi_area_template_hints.sql`:**
+- UPDATE 19 baris `kpi_area_templates` dgn `target_hint` + `expected_outcome_hint` idiomatic Indonesia.
+- Idempotent (`WHERE target_hint IS NULL AND expected_outcome_hint IS NULL`).
+- Verifikasi `select count(*) filter (where target_hint is null) from public.kpi_area_templates` → 0 missing dari 19 baris total.
+
+**Style guideline yg dipakai:**
+- Tidak prescribe angka konkret (pakai placeholder X/Y/Z/Rp X) — admin/CEO tinggal sesuaikan ke konteks org.
+- Target = aksi terukur (Naikkan/Turunkan/Buka/Jaga ...).
+- Ekspektasi Hasil = signal observable (laporan bulanan, dashboard, naik konsisten 3 bulan, dll.).
+
+**Dampak fitur:**
+- Picker di `kpi-area/new` (UI-S-K02) sekarang prefill 3 field per PRD §18 step 5: Nama + Target awal + Ekspektasi Hasil.
+- `settings-goal-templates` browse view sekarang juga tampilkan dua label "Target awal: ..." dan "Ekspektasi Hasil: ..." per row KPI Area Template.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass**.
+
+**Status backlog dalam lingkup PRD V1.8.2:**
+- ~~Seed update template hints~~ ✅
+- Sisa dalam lingkup: Edit UI hint admin (CRUD form di `settings-goal-templates`) — non-blocking, V1 seed cukup. Polish visual P3 yang masih perlu putusan desain.
+
+## [2026-06-28] update | UI-S-PR1 Problem Statement Dampak + Bukti awal (PRD §15)
+
+**Migrasi 0030 — `0030_fase_problem_statement_impact_evidence.sql`:**
+- `problem_statements.impact text` + CHECK `impact IS NULL OR impact IN ('high','medium','low')`.
+- `problem_statements.initial_evidence text` (deskripsi/link bukti awal).
+- NULL-able V1; gate aktivasi belum (follow-up bila perlu).
+
+**Form `problem-statement/new.tsx`:**
+- Komponen `ImpactSelector` inline (3 chip High/Medium/Low, tap aktif = unset, brand-dark solid saat selected).
+- "Bukti Awal" multiline input (placeholder: "mis. screenshot dashboard, link laporan, atau ringkasan observasi").
+- Context-bar "Development Area induk: <nama>" di atas GuidanceNote (selaras pola AP/Initiative parent context-bar).
+- Validasi save: Dampak wajib dipilih (Alert "Belum lengkap").
+
+**PRD alignment:** §15 metadata Problem Statement contoh: "Dampak follow up hilang - Butuh 1 flow review resmi." — Dampak adalah metadata mandatory di tree row. Design.html prototype 9 mendukung pilihan High/Med/Low.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass**.
+
+**Status backlog:**
+- ~~UI-S-PR1 Dampak + Bukti awal + context-bar parent~~ ✅
+
+## [2026-06-28] update | Activate gates Goal target_value + Problem Statement impact (0031)
+
+**Migrasi 0031 — defense-in-depth aktivasi:**
+- `activate_goal` patched: tambah `coalesce(trim(g.target_value), '') = ''` di kelengkapan; pesan jadi "(nama, PIC, periode, Target Tahunan wajib)" (PRD §17).
+- `activate_problem_statement` patched: tambah `p.impact is null` di kelengkapan; pesan jadi "(nama, PIC, periode, Dampak wajib)" (PRD §15 metadata). MBR gate `problem_statement→initiative` blokir_aktivasi tetap utuh.
+
+**Contract test patches:**
+- `fase4_performance_workspace_contract.sql` seed Goal di TEST3 dapat `target_value='Target Tahunan'` agar test "goal_nokpi" tetap mencapai cek minimum KPI Area (bukan ke-stall di kelengkapan).
+- `fase6_development_workspace_contract.sql` seed Problem Statement di TEST9 dapat `impact='medium'` agar PIC DA bisa aktifkan PS via jalur is_development_area_pic.
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass**.
+
+**Status menyeluruh defense-in-depth PRD V1.8.2 (semua activate gate per card):**
+| Card | Wajib PRD | Activate gate | Migrasi |
+|---|---|---|---|
+| Goal §17 | Target Tahunan | ✅ | 0031 |
+| KPI Area §18 | Ekspektasi Hasil | ✅ | 0026 |
+| Strategy §20 | Kontribusi Q (Σ=100%) | ✅ | 0024 |
+| Initiative §21 | Tim | ✅ | 0026 |
+| Action Plan §22 | Jam Deadline + Bukti deskripsi | ✅ | 0026 + 0028 |
+| Problem Statement §15 | Dampak | ✅ | 0031 |
+
+**Sisa item dalam lingkup PRD V1.8.2:**
+- Polish visual P3 (UI-G-007/G-008) — butuh putusan tim desain.
+- UI-S-DA1 Development Area Visibilitas (PRD tidak mandatkan; design.html driven; MINOR).
+- Admin edit UI hint template via form (non-blocking).
+
+## [2026-06-28] update | Display PRD wajib fields di header layar detail
+
+**Cakupan:** Field-field yang ditambah lewat 0023/0025/0027/0030 tidak terlihat di layar Detail — user input tapi nggak yakin tersimpan. Patch ini menampilkan semuanya di MetaGrid header / DetailField:
+
+- `goal/[id].tsx` MetaGrid + "Target Tahunan" (PRD §17).
+- `kpi-area/[id].tsx` MetaGrid + "Ekspektasi Hasil" (PRD §18).
+- `strategy/[id].tsx` MetaGrid + "Kontribusi Q" formatted "X%" (PRD §20).
+- `initiative/[id].tsx` MetaGrid + "Tim" — resolve via `listTeams()` query + `.find(t => t.id === initiative.team_id)?.name` (PRD §21).
+- `problem-statement/[id].tsx` MetaGrid + "Dampak" (High/Medium/Low labels) + `DetailField` "Bukti Awal" (PRD §15 + UI-S-PR1).
+- `action-plan/[id].tsx` MetaGrid Deadline jadi "YYYY-MM-DD · HH:MM" (gabung `deadline` + `deadline_time`, PRD §22.9) + `Field` "Bukti yang Diminta" (PRD §22.5).
+
+**Verifikasi:** `npx tsc --noEmit` bersih; jest **74 suite / 729 tes pass**.
+
+**Status sweep #10 / total 10 sweep hari ini:**
+- 9 migrasi (0023-0031) + display polish di 6 layar detail.
+- End-to-end loop tertutup: form input → DB persist → activate gate → detail display.
