@@ -25,6 +25,8 @@ import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { listTeams } from '@/lib/org-structure';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeInitiativeDetailScreen from '@/prototype/screens/initiative-detail';
 
 // ---------- UI-S-ID2 — Ruang Eksekusi & Tim/Akses Otomatis ----------
 type ExecCounts = {
@@ -219,7 +221,7 @@ function ActionPlanRow({ item, onPress }: { item: ActionPlanWithPeople; onPress:
   );
 }
 
-export default function InitiativeDetailScreen() {
+export function LiveInitiativeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -342,6 +344,26 @@ export default function InitiativeDetailScreen() {
               />
             ) : null}
 
+            {/* PRD §26 — Evaluation muncul saat Initiative mendekati selesai atau selesai. */}
+            {/* Anti-self gating ditangani oleh layar evaluation (picId dibandingkan dgn profile). */}
+            {initiative.status === 'active' || initiative.status === 'done' ? (
+              <SectionCard>
+                <Text className="text-sm font-bold text-black dark:text-white">Evaluasi Initiative</Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Catat pencapaian, lesson learned, dan apakah perlu jadi SOP atau rollout.
+                </Text>
+                <Button
+                  label={initiative.status === 'done' ? 'Buka Evaluasi' : 'Mulai Evaluasi'}
+                  variant="secondary"
+                  onPress={() =>
+                    router.push(
+                      `/evaluation?initiativeId=${id}&picId=${initiative.pic_id ?? ''}&status=${initiative.status}` as Href,
+                    )
+                  }
+                />
+              </SectionCard>
+            ) : null}
+
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
@@ -380,4 +402,8 @@ export default function InitiativeDetailScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function InitiativeDetailRoute() {
+  return <StackScreenAdapter live={LiveInitiativeDetailScreen} prototype={PrototypeInitiativeDetailScreen} />;
 }

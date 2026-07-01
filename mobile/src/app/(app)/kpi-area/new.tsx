@@ -11,6 +11,8 @@ import { useKpiAreaActions, usePerson } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
 import { getGoal, listKpiAreaTemplates, type KpiAreaTemplate } from '@/lib/goals';
 import type { PersonRef } from '@/lib/kpi-areas';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeKpiAreaFormScreen from '@/prototype/screens/kpi-area-form';
 
 type Person = NonNullable<PersonRef>;
 
@@ -124,7 +126,7 @@ function KpiAreaTemplatePicker({
   );
 }
 
-export default function NewKpiAreaScreen() {
+export function LiveNewKpiAreaScreen() {
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
   const router = useRouter();
   const { create, isPending } = useKpiAreaActions(goalId);
@@ -134,6 +136,9 @@ export default function NewKpiAreaScreen() {
 
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
+  // 0032 (override PRD §18) — target numerik + satuan OPSIONAL, buka "% gap" presisi.
+  const [targetNumeric, setTargetNumeric] = useState('');
+  const [targetUnit, setTargetUnit] = useState('');
   // UI-S-K03 — PRD §18 wajib "Ekspektasi Hasil".
   const [expectedOutcome, setExpectedOutcome] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -159,12 +164,23 @@ export default function NewKpiAreaScreen() {
       Alert.alert('Tanggal tidak valid', dateErr);
       return;
     }
+    let targetNumericVal: number | null = null;
+    if (targetNumeric.trim()) {
+      const n = Number(targetNumeric.trim());
+      if (!Number.isFinite(n) || n < 0) {
+        Alert.alert('Target angka tidak valid', 'Isi angka ≥ 0, atau kosongkan untuk KPI kualitatif.');
+        return;
+      }
+      targetNumericVal = n;
+    }
     try {
       const created = await create({
         goal_id: goalId,
         name: name.trim(),
         description: description.trim() || null,
         target: target.trim(),
+        target_numeric: targetNumericVal,
+        target_unit: targetUnit.trim() || null,
         expected_outcome: expectedOutcome.trim(),
         pic_id: (pic ?? inheritedPic)?.id ?? null,
         period_start: periodStart || null,
@@ -211,6 +227,20 @@ export default function NewKpiAreaScreen() {
             multiline
           />
           <LabeledInput
+            label="Target angka (opsional)"
+            value={targetNumeric}
+            onChangeText={setTargetNumeric}
+            keyboardType="numeric"
+            placeholder="mis. 5000 — buka % capaian vs target"
+          />
+          <LabeledInput
+            label="Satuan (opsional)"
+            value={targetUnit}
+            onChangeText={setTargetUnit}
+            autoCapitalize="none"
+            placeholder="mis. customer, Rp, %"
+          />
+          <LabeledInput
             label="Ekspektasi Hasil"
             value={expectedOutcome}
             onChangeText={setExpectedOutcome}
@@ -228,4 +258,8 @@ export default function NewKpiAreaScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function NewKpiAreaRoute() {
+  return <StackScreenAdapter live={LiveNewKpiAreaScreen} prototype={PrototypeKpiAreaFormScreen} />;
 }

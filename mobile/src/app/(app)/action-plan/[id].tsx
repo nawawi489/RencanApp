@@ -28,6 +28,8 @@ import {
   INSTANCE_STATUS_TONE,
   type InstanceWithSubmissions,
 } from '@/lib/repeat';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeActionPlanDetailScreen from '@/prototype/screens/action-plan-detail';
 
 // ---------- UI-S-AP1 — Panduan Selesai (checklist 5-langkah PIC journey) ----------
 // Centang otomatis: Draft→0/5, Aktif/Assigned→1/5, In Progress→2/5, Submitted→3/5,
@@ -319,7 +321,7 @@ function RepeatSection({
   );
 }
 
-export default function ActionPlanDetailScreen() {
+export function LiveActionPlanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -439,6 +441,24 @@ export default function ActionPlanDetailScreen() {
                 label="Aturan Submit"
                 value={`Bukti ${ap.evidence_required ? 'wajib' : 'opsional'} · Nilai Hasil ${ap.result_value_required ? 'wajib' : 'opsional'}`}
               />
+              {/* PRD §25 — PIC dapat mengajukan ubah deadline jika pekerjaan terhambat. */}
+              {/* Tidak relevan untuk repeat (deadline ada di tiap instance) / draft / done. */}
+              {ap.deadline &&
+              isPic &&
+              ap.repeat_setting !== 'repeat' &&
+              (ap.status === 'assigned' ||
+                ap.status === 'in_progress' ||
+                ap.status === 'revision') ? (
+                <Button
+                  label="Ajukan Ubah Deadline"
+                  variant="secondary"
+                  onPress={() =>
+                    router.push(
+                      `/deadline-change-request?actionPlanId=${id}&oldDeadline=${ap.deadline}` as Href,
+                    )
+                  }
+                />
+              ) : null}
             </SectionCard>
 
             {/* ---- Aksi sesuai peran & status ---- */}
@@ -560,4 +580,8 @@ export default function ActionPlanDetailScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function ActionPlanDetailRoute() {
+  return <StackScreenAdapter live={LiveActionPlanDetailScreen} prototype={PrototypeActionPlanDetailScreen} />;
 }

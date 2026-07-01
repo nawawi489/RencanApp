@@ -11,10 +11,12 @@ import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
 import type { PersonRef } from '@/lib/cards';
 import { getKpiArea } from '@/lib/kpi-areas';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeStrategyFormScreen from '@/prototype/screens/strategy-form';
 
 type Person = NonNullable<PersonRef>;
 
-export default function NewStrategyScreen() {
+export function LiveNewStrategyScreen() {
   const { kpiAreaId } = useLocalSearchParams<{ kpiAreaId: string }>();
   const router = useRouter();
   const { create, isPending } = useStrategyActions(kpiAreaId);
@@ -125,4 +127,8 @@ export default function NewStrategyScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function NewStrategyRoute() {
+  return <StackScreenAdapter live={LiveNewStrategyScreen} prototype={PrototypeStrategyFormScreen} />;
 }

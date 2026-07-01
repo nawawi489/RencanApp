@@ -11,6 +11,8 @@ import { Screen } from '@/components/screen';
 import { Avatar, Badge, EmptyState, ErrorState, SectionCard, SkeletonList } from '@/components/ui';
 import { useInboxRooms } from '@/hooks/use-inbox';
 import type { ChatRoom } from '@/lib/inbox';
+import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
+import PrototypeInboxScreen from '@/prototype/screens/inbox';
 
 type Filter = 'all' | 'unread';
 
@@ -98,7 +100,7 @@ function InboxHeader({
   );
 }
 
-export default function InboxScreen() {
+export function LiveInboxScreen() {
   const router = useRouter();
   const { rooms, isLoading, isError, refetch } = useInboxRooms();
   const [q, setQ] = useState('');
@@ -191,4 +193,8 @@ export default function InboxScreen() {
       />
     </View>
   );
+}
+
+export default function InboxRoute() {
+  return <TabScreenAdapter live={LiveInboxScreen} prototype={PrototypeInboxScreen} />;
 }

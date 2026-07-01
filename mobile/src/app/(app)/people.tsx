@@ -21,6 +21,8 @@ import {
 import { listOrgProfilesWithRoles, type OrgProfileWithRole } from '@/lib/cards';
 import { METRIC_LABEL, effectiveScore } from '@/lib/people-score';
 import { useActivePeriod, useLatestClosedPeriod, useMyScore, useMyScoreHistory, useRanking } from '@/hooks/use-people-score';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypePeopleScreen from '@/prototype/screens/people';
 
 type Person = OrgProfileWithRole & { score?: number | null };
 
@@ -58,7 +60,7 @@ function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
   return items;
 }
 
-export default function PeopleScreen() {
+export function LivePeopleScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<PeopleTab>('ranking');
@@ -308,4 +310,8 @@ export default function PeopleScreen() {
       />
     </View>
   );
+}
+
+export default function PeopleRoute() {
+  return <StackScreenAdapter live={LivePeopleScreen} prototype={PrototypePeopleScreen} />;
 }

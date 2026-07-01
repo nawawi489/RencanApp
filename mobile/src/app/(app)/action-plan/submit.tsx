@@ -29,6 +29,8 @@ import {
 import { pickEvidenceFiles } from '@/lib/file-picker';
 import { getInstance, submitInstance } from '@/lib/repeat';
 import { classifyKind, type LocalFile } from '@/lib/storage';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeActionPlanSubmitScreen from '@/prototype/screens/action-plan-submit';
 
 const EVIDENCE_KINDS = ['text_note', 'report', 'link_doc', 'link_gdrive', 'link_generic'] as const;
 const VALUE_TYPES = ['number', 'currency', 'percentage', 'boolean', 'text', 'link'] as const;
@@ -158,7 +160,7 @@ function KpiResultRow({
   );
 }
 
-export default function SubmitScreen() {
+export function LiveActionPlanSubmitScreen() {
   const { id, instanceId } = useLocalSearchParams<{ id?: string; instanceId?: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -439,4 +441,8 @@ export default function SubmitScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function ActionPlanSubmitRoute() {
+  return <StackScreenAdapter live={LiveActionPlanSubmitScreen} prototype={PrototypeActionPlanSubmitScreen} />;
 }

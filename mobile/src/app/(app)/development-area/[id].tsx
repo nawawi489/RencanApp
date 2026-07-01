@@ -27,6 +27,8 @@ import type { ProblemStatement } from '@/lib/problem-statements';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeDevelopmentAreaDetailScreen from '@/prototype/screens/development-area-detail';
 
 function ProblemStatementRow({ item, onPress }: { item: ProblemStatement; onPress: () => void }) {
   return (
@@ -48,7 +50,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function DevelopmentAreaDetailScreen() {
+export function LiveDevelopmentAreaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -190,5 +192,14 @@ export default function DevelopmentAreaDetailScreen() {
         )}
       </View>
     </ScrollView>
+  );
+}
+
+export default function DevelopmentAreaDetailRoute() {
+  return (
+    <StackScreenAdapter
+      live={LiveDevelopmentAreaDetailScreen}
+      prototype={PrototypeDevelopmentAreaDetailScreen}
+    />
   );
 }

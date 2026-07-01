@@ -9,6 +9,8 @@ import { useCallback, useState } from 'react';
 import { Alert, FlatList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
+import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
+import PrototypeWorkspaceScreen from '@/prototype/screens/workspace';
 import {
   Badge,
   Button,
@@ -856,7 +858,7 @@ function DevelopmentPane({
   );
 }
 
-export default function WorkspaceScreen() {
+export function LiveWorkspaceScreen() {
   // UI-N-002 Stage 2: default `hub` agar user lihat lobby dulu sebelum dive in.
   const [tab, setTab] = useState<Tab>('hub');
   const backToHub = () => setTab('hub');
@@ -867,4 +869,8 @@ export default function WorkspaceScreen() {
   ) : (
     <DevelopmentPane tab={tab} onTabChange={setTab} onBackToHub={backToHub} />
   );
+}
+
+export default function WorkspaceRoute() {
+  return <TabScreenAdapter live={LiveWorkspaceScreen} prototype={PrototypeWorkspaceScreen} />;
 }

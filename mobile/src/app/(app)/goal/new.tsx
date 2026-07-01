@@ -7,13 +7,15 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { UserPicker } from '@/components/user-picker';
 import { useGoalActions } from '@/hooks/use-workspace';
 import { type PersonRef } from '@/lib/goals';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeGoalFormScreen from '@/prototype/screens/goal-form';
 
 type Person = NonNullable<PersonRef>;
 
 const YEAR_RE = /^\d{4}$/;
 const CURRENT_YEAR = new Date().getFullYear();
 
-export default function NewGoalScreen() {
+export function LiveNewGoalScreen() {
   const router = useRouter();
   const { create, isPending } = useGoalActions();
   const [name, setName] = useState('');
@@ -92,4 +94,8 @@ export default function NewGoalScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function NewGoalRoute() {
+  return <StackScreenAdapter live={LiveNewGoalScreen} prototype={PrototypeGoalFormScreen} />;
 }

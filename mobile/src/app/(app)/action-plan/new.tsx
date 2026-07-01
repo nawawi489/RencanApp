@@ -9,6 +9,8 @@ import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createActionPlan, getInitiative, type PersonRef } from '@/lib/cards';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeActionPlanFormScreen from '@/prototype/screens/action-plan-form';
 
 type Person = NonNullable<PersonRef>;
 
@@ -103,7 +105,7 @@ function ToggleRow({
   );
 }
 
-export default function NewActionPlanScreen() {
+export function LiveNewActionPlanScreen() {
   const { initiativeId } = useLocalSearchParams<{ initiativeId: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -391,4 +393,8 @@ export default function NewActionPlanScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function NewActionPlanRoute() {
+  return <StackScreenAdapter live={LiveNewActionPlanScreen} prototype={PrototypeActionPlanFormScreen} />;
 }

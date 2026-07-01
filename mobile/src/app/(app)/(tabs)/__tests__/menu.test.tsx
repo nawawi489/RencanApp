@@ -1,5 +1,5 @@
-// Tab Menu (V1.8.2 §7.1) — re-export hub /settings, plus baris People & People Ranking.
-// Validasi 2 hal: (1) komponen tab Menu = SettingsScreen kanonik; (2) row People → push '/people',
+// Tab Menu (V1.8.2 §7.1) — adapter ke hub /settings, plus baris People & People Ranking.
+// Validasi 2 hal: (1) surface live Menu tetap memunculkan SettingsScreen kanonik; (2) row People → push '/people',
 // row People Ranking → push '/people-ranking' (tak ber-permission gate).
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
@@ -34,9 +34,6 @@ jest.mock('@/providers/auth-provider', () => ({
 
 // eslint-disable-next-line import/first
 import MenuScreen from '../menu';
-// eslint-disable-next-line import/first
-import SettingsScreen from '../../settings';
-
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const W = ({ children }: PropsWithChildren) => createElement(QueryClientProvider, { client }, children);
@@ -52,8 +49,9 @@ beforeEach(() => {
 });
 
 describe('Tab Menu (S0 nav)', () => {
-  it('re-export SettingsScreen kanonik dari (tabs)/menu', () => {
-    expect(MenuScreen).toBe(SettingsScreen);
+  it('merender surface Settings melalui adapter tab', async () => {
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText('People')).toBeTruthy();
   });
 
   it('row People (tak ber-gate) → push /people', async () => {

@@ -7,6 +7,8 @@ import { useMemo, useState } from 'react';
 import { SectionList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
+import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
+import PrototypeNotificationsScreen from '@/prototype/screens/notifications';
 import { Screen } from '@/components/screen';
 import {
   Badge,
@@ -127,7 +129,7 @@ function SectionHeader({ title }: { title: string }) {
 
 // ---------------------------------------------------------------- screen
 
-export default function NotificationsScreen() {
+export function LiveNotificationsScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<NotificationTab>('semua');
   const { notifications, isLoading, isError, refetch } = useNotifications(tab);
@@ -249,4 +251,8 @@ export default function NotificationsScreen() {
       />
     </View>
   );
+}
+
+export default function NotificationsRoute() {
+  return <TabScreenAdapter live={LiveNotificationsScreen} prototype={PrototypeNotificationsScreen} />;
 }

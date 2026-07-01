@@ -15,6 +15,8 @@ import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } fro
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeStrategyDetailScreen from '@/prototype/screens/strategy-detail';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
@@ -36,7 +38,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function StrategyDetailScreen() {
+export function LiveStrategyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -189,4 +191,8 @@ export default function StrategyDetailScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function StrategyDetailRoute() {
+  return <StackScreenAdapter live={LiveStrategyDetailScreen} prototype={PrototypeStrategyDetailScreen} />;
 }
