@@ -10,6 +10,8 @@
 @theme {
   --color-brand: #208aef;
   --color-brand-dark: #1564b3;
+  --color-prototype-bg: #f3f5f8;
+  --color-prototype-line: #dde3eb;
 }
 
 @media ios {

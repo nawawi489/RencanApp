@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
 
+import { getPrototypeMode } from '@/prototype/utils/fidelity-mode';
+
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 const STORAGE_KEY = 'rencanaapp:theme';
@@ -44,8 +46,15 @@ function apply(mode: ThemeMode) {
 export function ThemeProvider({ children }: PropsWithChildren) {
   const [mode, setModeState] = useState<ThemeMode>('system');
   const system = useColorScheme();
+  const prototypeMode = getPrototypeMode();
 
   useEffect(() => {
+    if (prototypeMode) {
+      apply('light');
+      setModeState('light');
+      return;
+    }
+
     let cancelled = false;
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
@@ -60,7 +69,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [prototypeMode]);
 
   const setMode = (next: ThemeMode) => {
     setModeState(next);
@@ -69,7 +78,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   };
 
   const effective: 'light' | 'dark' =
-    mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode;
+    prototypeMode ? 'light' : mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode;
 
   return (
     <ThemeContext.Provider value={{ mode, effective, setMode }}>{children}</ThemeContext.Provider>
