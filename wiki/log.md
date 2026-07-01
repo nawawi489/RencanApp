@@ -218,6 +218,12 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 - Critic verdict **perlu-perbaikan** → addendum mengikat (§8) ditambahkan: (1) contract FR-DATA.1 WAJIB set jwt claims + seed-as-owner (tanpa ini false-green); (2) assertion anti-bypass search salah semantik → ganti ke output terfilter; (3) useAuth mock TDZ footgun; (4) ≥44dp testability pakai inline style + accessibilityState eksplisit; (5) tambahan case off-by-one clamp, null author, tie created_at, room kosong, anti double-submit.
 - Siap dieksekusi (kode test-first). Belum ada kode ditulis — menunggu owner lanjut implementasi.
 
+## [2026-07-01] update | prototype fidelity mode
+
+- Completed batches: shell, tabs, people, detail, forms
+- Verification: route smoke tests + side-by-side visual QA against `design.html`
+- Remaining gaps: none blocking
+
 ## [2026-06-26] update | Eksekusi TDD Inbox & Chat (P0 UI-S-IN1..IN4)
 
 - **Hasil:** Jest **540/540 pass** (sebelumnya 512 → +28). TSC bersih. Lint: 0 issue baru dari fase ini (3 error pre-existing di `settings-permission-users.tsx`). Advisor security: 0.
