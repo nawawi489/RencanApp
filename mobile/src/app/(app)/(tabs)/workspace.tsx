@@ -185,9 +185,9 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
             <StatusBadge status={strategy.status} />
           </View>
         </View>
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] flex-1 items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${strategy.name}`}
             onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
@@ -388,9 +388,9 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
             <StatusBadge status={item.status} />
           </View>
         </View>
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] flex-1 items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${item.name}`}
             onPress={() => router.push(`/initiative/${item.id}` as Href)}>
