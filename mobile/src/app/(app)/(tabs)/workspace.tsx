@@ -172,7 +172,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
 
   return (
     <View className={past ? 'opacity-50' : undefined}>
-      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-start justify-between gap-2">
           <Text
             className="flex-1 text-sm font-medium text-black dark:text-white"
@@ -375,7 +375,7 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
 
   return (
     <View className={past ? 'opacity-50' : undefined}>
-      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-start justify-between gap-2">
           <Text
             className="flex-1 text-sm font-medium text-black dark:text-white"

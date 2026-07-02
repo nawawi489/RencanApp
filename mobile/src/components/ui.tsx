@@ -144,7 +144,10 @@ export function SectionCard({
   children,
   onPress,
 }: PropsWithChildren<{ onPress?: () => void }>) {
-  const className = 'gap-2 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800';
+  // Surface token DESIGN §2: kartu = putih di atas latar layar neutral-50 (level-2 inset
+  // bg-neutral-50 baru terbaca bila kartunya sendiri tidak transparan).
+  const className =
+    'gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950';
   if (onPress) {
     return (
       <Pressable className={`${className} active:opacity-70`} onPress={onPress}>
