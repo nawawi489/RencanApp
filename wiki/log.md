@@ -949,3 +949,13 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Ditunda ke backlog: [[ui-prototype-gap]] **UI-S-W05** (glyph unicode → Ionicons; string terkunci test) + **UI-S-W06** (chrome pane menumpuk — keputusan struktur). Polish kecil (p-2.5, max-width web desktop) dicatat di laporan.
 - Verifikasi: jest **87 suite / 777 tes pass**; live re-scan touch target <44px = 0; tanpa console error. Laporan lengkap + screenshot before/after: `~/.gstack/projects/nawawi489-RencanApp/designs/design-audit-20260702/`.
 - Commits: 12 commit `style(design): FINDING-0NN — …` di `feat/sf1-score-formula-editor`.
+
+## [2026-07-02] update | Design consultation tab Workspace (analisa + 2 fix UI-S-W07/W08)
+
+- `/design-consultation` scoped ke tab Workspace: analisa kode vs `DESIGN.md` + backlog [[ui-prototype-gap]]; 2 temuan baru langsung dieksekusi.
+- **UI-S-W07:** expand level-1 (`GoalRow`/`DevelopmentAreaRow`) tanpa state loading/kosong/error — tap "Lihat KPI Area" pada Goal kosong terasa seperti tombol mati. Fix: paritas level-2 (`SkeletonList` + `ErrorState` retry + hint kosong); +4 tes [W07·1..4].
+- **UI-S-W08:** dim "periode lewat" `opacity-50` bertumpuk multiplikatif di tree bersarang (0.5³ = 0.125 di level-3 → gagal kontras AA, DESIGN §4). Fix: `PastDim` single-layer (hanya node past teratas; `ancestorPast` threading; inline style agar flatten deterministik di jest); badge teks per node tetap tampil; +2 tes [W08·1..2].
+- Feedback lain dicatat tanpa eksekusi (butuh putusan owner): **UI-S-W04** subhead gap % per node (prioritas berikut — infrastruktur `target_numeric` 0032 sudah ada), **UI-S-W06** struktur chrome (usulan: gabung back-link+H1, H1 = nama ruang, demosi CTA "+ Goal Baru"), menu ⋯ berisi placeholder semua, gate izin "+" pakai proxy permission yang salah objek.
+- Pages updated: [[ui-prototype-gap]] (§4.3 + baris UI-S-W07/W08 ✅ implemented).
+- Verifikasi: `tsc --noEmit` bersih; jest **87 suite / 783 tes pass** (+6); live Expo web (login CEO seed, fokus Desember 2026): 5 badge "Periode lewat" tampil, 2 node dim, opacity efektif tiap node dim = tepat 0.5 (tanpa penumpukan); console error 0.
+- Commits: `99d739b` (UI-S-W07), `fe46e18` (UI-S-W08) di `feat/sf1-score-formula-editor`.

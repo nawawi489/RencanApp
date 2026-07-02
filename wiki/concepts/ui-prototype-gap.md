@@ -97,6 +97,8 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-W04 | **Subhead kaya** per node (Aktual/Target/Gap, Kontribusi %, Risiko) | MAJOR |
 | UI-S-W05 | **Ikon glyph unicode → Ionicons** di tree Workspace (`▾ ▸ ⋯ + › ←`) — web fallback ke Times New Roman, Android bervariasi per OEM font; melanggar DESIGN §10 (library = Ionicons). String terkunci test di `workspace-copy.ts` → butuh pass khusus + update test. Temuan design-review 2026-07-02 (FINDING-013). | MINOR |
 | UI-S-W06 | **Chrome pane menumpuk sebelum konten**: back-link + H1 + segmented + kartu periode + deskripsi + CTA full-width ≈ 580px sebelum Goal pertama; "Workspace" tampil 3×; 3 elemen solid brand-dark bersaing di atas fold. Butuh keputusan struktur (mis. gabung back-link+H1, demosi CTA), bukan patch CSS. Temuan design-review 2026-07-02 (FINDING-014). | MINOR |
+| UI-S-W07 | **Expand level-1 tanpa state loading/kosong/error**: `GoalRow`/`DevelopmentAreaRow` hanya me-map children — tap "Lihat KPI Area" pada Goal kosong tidak menampilkan apa pun (terasa tombol mati). Temuan design-consultation 2026-07-02. | MINOR ✅ **IMPLEMENTED 2026-07-02** — paritas level-2: `SkeletonList` + `ErrorState` + hint kosong; +4 tes [W07·1..4]. |
+| UI-S-W08 | **Dim "periode lewat" bertumpuk multiplikatif**: wrapper `opacity-50` per level bersarang → level-3 past dalam ancestor past dirender 0.125 (gagal kontras AA, DESIGN §4). Temuan design-consultation 2026-07-02. | MINOR ✅ **IMPLEMENTED 2026-07-02** — `PastDim` single-layer (hanya node past teratas; `ancestorPast` threading); +2 tes [W08·1..2]. |
 
 ### 4.4 Performance forms — Goal/KPI/Strategy/Initiative
 
