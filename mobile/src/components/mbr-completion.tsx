@@ -13,7 +13,7 @@ export function MbrCompletionIndicator({ compliance }: { compliance: MbrComplian
   return (
     <View
       accessibilityLabel="Kelengkapan Perencanaan"
-      className="flex-row items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
+      className="flex-row items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950"
     >
       <Text className="text-sm font-semibold text-black dark:text-white">Kelengkapan Perencanaan</Text>
       <Badge

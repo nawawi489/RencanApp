@@ -267,7 +267,7 @@ export function LiveKpiAreaDetailScreen() {
           )
         ) : (
           <>
-            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
               <View className="flex-row items-start gap-3">
                 <View className="flex-1 gap-1">
                   <Badge

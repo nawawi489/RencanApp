@@ -40,7 +40,7 @@ export default function SettingsStatusPriorityScreen() {
           <SectionCard>
             <LabeledInput label="Label Status (pisahkan koma)" value={statusLabels} onChangeText={setStatusLabels} />
             <LabeledInput label="Label Prioritas (pisahkan koma)" value={priorityLabels} onChangeText={setPriorityLabels} />
-            {error ? <Text className="text-sm text-red-600">{error}</Text> : null}
+            {error ? <Text className="text-sm text-red-700 dark:text-red-400">{error}</Text> : null}
             <Button label="Simpan" onPress={handleSave} loading={saving} />
           </SectionCard>
         )}

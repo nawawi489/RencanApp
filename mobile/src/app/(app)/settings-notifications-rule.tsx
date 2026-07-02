@@ -45,7 +45,7 @@ export default function SettingsNotificationsRuleScreen() {
               keyboardType="numeric"
             />
             {error ? (
-              <Text className="text-sm text-red-600" accessibilityRole="alert">
+              <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
                 {error}
               </Text>
             ) : null}

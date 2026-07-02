@@ -17,7 +17,8 @@ const BUTTON_CLASS: Record<ButtonVariant, string> = {
   secondary:
     'border border-neutral-300 active:opacity-70 dark:border-neutral-700',
   danger: 'border border-red-300 active:opacity-70 dark:border-red-900',
-  success: 'bg-green-600 active:opacity-80',
+  // green-700 (#15803d, 4.57:1) bukan green-600 (~3.3:1): teks putih lulus WCAG AA (DESIGN §2/§4).
+  success: 'bg-green-700 active:opacity-80',
 };
 
 const BUTTON_TEXT_CLASS: Record<ButtonVariant, string> = {
@@ -150,7 +151,10 @@ export function SectionCard({
     'gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950';
   if (onPress) {
     return (
-      <Pressable className={`${className} active:opacity-70`} onPress={onPress}>
+      <Pressable
+        className={`${className} active:opacity-70`}
+        onPress={onPress}
+        accessibilityRole="button">
         {children}
       </Pressable>
     );
@@ -196,9 +200,9 @@ export function LabeledInput({
 }) {
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-black dark:text-white">
+      <Text className="text-sm font-semibold text-black dark:text-white">
         {label}
-        {required ? <Text className="text-red-500"> *</Text> : null}
+        {required ? <Text className="text-red-600 dark:text-red-400"> *</Text> : null}
       </Text>
       <TextInput
         className={`rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white ${multiline ? 'h-24' : ''}`}
@@ -463,9 +467,9 @@ export function ScoreSparkline({ points, label }: { points: number[]; label?: st
     delta == null
       ? 'text-neutral-400'
       : delta > 0
-        ? 'text-green-600 dark:text-green-400'
+        ? 'text-green-700 dark:text-green-400'
         : delta < 0
-          ? 'text-amber-600 dark:text-amber-400'
+          ? 'text-amber-700 dark:text-amber-400'
           : 'text-neutral-500';
   const deltaLabel =
     delta == null ? '—' : delta > 0 ? `↑ +${delta}` : delta < 0 ? `↓ ${delta}` : '→ 0';
@@ -741,7 +745,7 @@ export function TabBar<T extends string>({
                 {t.label}
               </Text>
               {t.badge ? (
-                <View className={`min-w-[18px] items-center rounded-full px-1.5 ${on ? 'bg-white/25' : 'bg-red-500'}`}>
+                <View className={`min-w-[18px] items-center rounded-full px-1.5 ${on ? 'bg-white/25' : 'bg-red-700'}`}>
                   <Text className="text-xs font-bold text-white">{t.badge > 99 ? '99+' : t.badge}</Text>
                 </View>
               ) : null}
@@ -976,7 +980,7 @@ export function StatPill({ label, value, tone = 'neutral' }: { label: string; va
   return (
     <View className={`min-w-[28%] flex-1 items-center gap-0.5 rounded-xl px-3 py-2.5 ${BADGE_CLASS[tone]}`}>
       <Text className={`text-lg font-extrabold ${BADGE_TEXT_CLASS[tone]}`}>{value}</Text>
-      <Text className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{label}</Text>
+      <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{label}</Text>
     </View>
   );
 }

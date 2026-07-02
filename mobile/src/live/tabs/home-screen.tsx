@@ -40,7 +40,7 @@ const ONBOARDING_DAYS = 7;
 function TypeBadge({ repeat }: { repeat: boolean }) {
   return (
     <View
-      className={`h-9 w-9 items-center justify-center rounded-xl ${repeat ? 'bg-emerald-600' : 'bg-brand-dark'}`}
+      className={`h-9 w-9 items-center justify-center rounded-xl ${repeat ? 'bg-green-700' : 'bg-brand-dark'}`}
       importantForAccessibility="no-hide-descendants">
       <Text className="text-xs font-bold text-white">{repeat ? 'RP' : 'AP'}</Text>
     </View>

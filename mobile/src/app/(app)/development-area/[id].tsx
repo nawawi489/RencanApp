@@ -181,7 +181,7 @@ export function LiveDevelopmentAreaDetailScreen() {
           )
         ) : (
           <>
-            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
               <View className="gap-1">
                 <Badge
                   label={PLANNING_STATUS_LABEL[devArea.status] ?? devArea.status}

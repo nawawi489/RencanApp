@@ -81,7 +81,7 @@ export default function DeadlineChangeRequestScreen() {
           <LabeledInput label="Alasan" value={reason} onChangeText={setReason} required multiline />
           <LabeledInput label="Dampak jika ditolak" value={impact} onChangeText={setImpact} multiline />
           {error ? (
-            <Text className="text-sm text-red-600" accessibilityRole="alert">
+            <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
               {error}
             </Text>
           ) : null}
@@ -108,14 +108,14 @@ export default function DeadlineChangeRequestScreen() {
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Setujui permintaan ${r.id}`}
-                        className="min-h-[44px] flex-1 items-center justify-center rounded-xl bg-green-600 active:opacity-70"
+                        className="min-h-[44px] flex-1 items-center justify-center rounded-xl bg-green-700 active:opacity-70"
                         onPress={() => reviewRequest({ requestId: r.id, decision: 'approved', entityId: actionPlanId })}>
                         <Text className="text-base font-semibold text-white">Setujui</Text>
                       </Pressable>
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Tolak permintaan ${r.id}`}
-                        className="min-h-[44px] flex-1 items-center justify-center rounded-xl bg-red-600 active:opacity-70"
+                        className="min-h-[44px] flex-1 items-center justify-center rounded-xl bg-red-700 active:opacity-70"
                         onPress={() =>
                           reviewRequest({ requestId: r.id, decision: 'rejected', reason: 'Ditolak', entityId: actionPlanId })
                         }>

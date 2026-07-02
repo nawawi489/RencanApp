@@ -135,7 +135,7 @@ export default function ManualScoreOverrideScreen() {
             required
           />
           {inlineError ? (
-            <Text accessibilityRole="alert" className="text-sm font-semibold text-red-600 dark:text-red-400">
+            <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
               {inlineError}
             </Text>
           ) : null}

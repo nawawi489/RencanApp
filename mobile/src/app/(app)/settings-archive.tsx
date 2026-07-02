@@ -93,7 +93,7 @@ export default function SettingsArchiveScreen() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={`Filter ${c.label}`}
                 onPress={() => setChip(c.key)}
-                className={`min-h-[36px] items-center justify-center rounded-full px-3 ${
+                className={`min-h-[44px] items-center justify-center rounded-full px-3 ${
                   active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
                 } active:opacity-70`}>
                 <Text

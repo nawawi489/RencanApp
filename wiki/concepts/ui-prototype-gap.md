@@ -53,6 +53,27 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 ---
 
+## 2.1 Audit kepatuhan DESIGN.md (review UI/UX 2026-07-02)
+
+Sweep menyeluruh `mobile/src/` terhadap [[architecture#a11y|DESIGN.md §2/§3/§4/§12]] (kontras AA, aksesibilitas mengikat, dark mode, konsistensi token). Fondasi sehat — `SectionCard` dipakai 196× di 38 layar, tidak ada `bg-brand` polos + teks putih, dark mode konsisten. **Batch fix diterapkan (jest 783/783, tsc bersih):**
+
+- **AA contrast (di sumber → menjalar):** `Button` success `green-600→700`, badge unread `Tabs` `red-500→700`, `ScoreSparkline` delta `-600→700` (`ui.tsx`); tombol Setujui/Tolak custom (`deadline-change-request.tsx`) + `TypeBadge` `emerald-600→green-700` (`home-screen.tsx`); sweep teks error/alert `text-red-600` polos → `text-red-700 dark:text-red-400` (~14 file).
+- **A11y §4:** `SectionCard` press dapat `accessibilityRole`; chip Priority/Chip/weekday di `action-plan/new` ekspos `tab`/`checkbox` + state selected/checked; `user-picker` trigger/close/opsi dapat role+label+44px; `hitSlop` di `card-help-trigger` & eye-toggle login; 2 segmented control (`settings-permission-users`, `settings-org-structure`) 32/36px→44px + `rounded-full`; 3 baris filter-chip settings 36px→44px.
+- **Dark mode §12:** splash `dark:bg-black`; ikon search header via `useColorScheme`; **10 kartu hero detail** `dark:bg-neutral-900→950` selaras `SectionCard`.
+- **Tipografi §3:** `font-medium→font-semibold` di sumber (`LabeledInput`, `StatPill`) + turunannya.
+- **Housekeeping:** hapus 10 file mati template Expo (themed-text/view, web-badge, animated-icon ×3, ui/collapsible, constants/theme, hooks/use-theme, prototype/tokens/theme) — nol importer live; daftarkan token `placeholder` + samakan wordmark login `text-green-700` di `DESIGN.md`.
+
+**Residual (sengaja ditunda — kosmetik/palette, bukan kegagalan AA):**
+
+| ID | Residual | Lokasi | Acceptance criteria ringkas |
+|---|---|---|---|
+| **UI-G-012** | **Palette drift `emerald`** — tone "done/verified" pakai `emerald-100/950` alih-alih `green` kanonik | `action-plan/instance/[id].tsx`, `development-area/[id].tsx`, `initiative/[id].tsx` (containerCls badge success) | Putuskan: emerald = sub-tone resmi (daftarkan di DESIGN §2) atau normalisasi ke `green`. Lulus 3:1 (bg terang) jadi bukan blocker AA. |
+| **UI-G-013** | **Mikro-tipografi `text-[10px]/[11px]`** di bawah skala §3 (min caption 11–12) | 14 file (terbanyak `action-plan/instance/[id].tsx`, stat-chip) | Naikkan ke `text-xs` atau daftarkan tier caption terkecil di DESIGN §3. |
+| **UI-G-014** | **Fill grafis `green-600`** (bukan teks) pada `ProgressBar` success + `LEGEND_DOT` | `ui.tsx` | Putuskan 600 vs 700 untuk elemen grafis non-teks (lulus 3:1 sekarang; keputusan konsistensi palet, bukan a11y). |
+| **UI-G-015** | **Hex dekoratif login belum terdaftar** — gradien `#0b1220`/`#eef4fb`, eye/placeholder `#94a3b8`/`#6b7280` | `(auth)/login.tsx` (layar display khusus) | Daftarkan di DESIGN §2 sebagai token layar login, atau petakan ke token neutral terdekat. |
+
+---
+
 ## 3. Gap navigasi (struktural)
 
 | ID | Gap | Severity |

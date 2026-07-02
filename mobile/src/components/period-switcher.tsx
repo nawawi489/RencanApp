@@ -58,7 +58,7 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
 
   return (
     <View
-      className="gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
+      className="gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950"
       accessible
       accessibilityLabel={`Periode aktif ${label}`}>
       <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Periode aktif</Text>

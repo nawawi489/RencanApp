@@ -51,7 +51,7 @@ export default function CancellationScreen() {
           </Text>
           <LabeledInput label="Alasan pembatalan" value={reason} onChangeText={setReason} required multiline />
           {error ? (
-            <Text className="text-sm text-red-600" accessibilityRole="alert">
+            <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
               {error}
             </Text>
           ) : null}

@@ -61,6 +61,7 @@ function PermToggle({
           accessibilityLabel={row.label}
           disabled={locked}
           onPress={onToggle}
+          hitSlop={10}
           className={`h-7 w-12 justify-center rounded-full px-0.5 ${
             row.granted ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
           } ${locked ? 'opacity-40' : 'active:opacity-70'}`}>
@@ -83,11 +84,11 @@ function PermToggle({
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={`Scope ${opt.label}`}
                   onPress={() => !active && onScopeChange(opt.value)}
-                  className={`min-h-[32px] flex-1 items-center justify-center rounded-md px-2 ${
+                  className={`min-h-[44px] flex-1 items-center justify-center rounded-full px-2 ${
                     active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
                   } active:opacity-70`}>
                   <Text
-                    className={`text-[10px] font-semibold ${
+                    className={`text-xs font-semibold ${
                       active ? 'text-white' : 'text-black dark:text-white'
                     }`}>
                     {opt.label}
@@ -307,7 +308,7 @@ export default function SettingsPermissionUsersScreen() {
               </Text>
             </View>
             {modalError ? (
-              <Text accessibilityRole="alert" className="text-sm font-semibold text-red-600 dark:text-red-400">
+              <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
                 {modalError}
               </Text>
             ) : null}

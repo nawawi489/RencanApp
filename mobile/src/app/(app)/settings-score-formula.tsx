@@ -163,7 +163,7 @@ function DraftEditor({
       ) : null}
 
       {saveError ? (
-        <Text accessibilityRole="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">
+        <Text accessibilityRole="alert" className="text-xs font-semibold text-red-700 dark:text-red-400">
           {saveError}
         </Text>
       ) : null}
@@ -427,7 +427,7 @@ function FormulaTemplateSection({
       )}
 
       {error ? (
-        <Text accessibilityRole="alert" className="text-sm font-semibold text-red-600 dark:text-red-400">
+        <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
           {error}
         </Text>
       ) : null}
@@ -581,7 +581,7 @@ export default function SettingsScoreFormulaScreen() {
                 multiline
               />
               {inlineError ? (
-                <Text accessibilityRole="alert" className="text-sm font-semibold text-red-600 dark:text-red-400">
+                <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
                   {inlineError}
                 </Text>
               ) : null}

@@ -98,7 +98,7 @@ export default function ActionPlanInstanceDetailScreen() {
           />
         ) : (
           <>
-            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
               <View className="gap-1">
                 <Badge
                   label={INSTANCE_STATUS_LABEL[inst.status] ?? inst.status}
@@ -123,7 +123,7 @@ export default function ActionPlanInstanceDetailScreen() {
                 ]}
               />
               {inst.status === 'missed' ? (
-                <Text className="text-xs font-semibold text-red-600 dark:text-red-400">
+                <Text className="text-xs font-semibold text-red-700 dark:text-red-400">
                   Terlewat — deadline terlewati tanpa submit.
                 </Text>
               ) : null}

@@ -959,3 +959,15 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Pages updated: [[ui-prototype-gap]] (§4.3 + baris UI-S-W07/W08 ✅ implemented).
 - Verifikasi: `tsc --noEmit` bersih; jest **87 suite / 783 tes pass** (+6); live Expo web (login CEO seed, fokus Desember 2026): 5 badge "Periode lewat" tampil, 2 node dim, opacity efektif tiap node dim = tepat 0.5 (tanpa penumpukan); console error 0.
 - Commits: `99d739b` (UI-S-W07), `fe46e18` (UI-S-W08) di `feat/sf1-score-formula-editor`.
+
+## [2026-07-02] update | Review UI/UX — audit kepatuhan DESIGN.md + batch fix
+
+- Sweep `mobile/src/` terhadap `DESIGN.md` §2/§3/§4/§12 (kontras AA, a11y mengikat, dark mode, konsistensi token) via 3 agen audit paralel (warna/kontras, aksesibilitas, konsistensi komponen). Fondasi sehat: `SectionCard` 196×/38 layar, tidak ada `bg-brand` polos + teks putih, dark mode konsisten, ikon = Ionicons saja.
+- **AA contrast (fix di sumber → menjalar):** `Button` success `green-600→700`, badge unread `Tabs` `red-500→700`, `ScoreSparkline` delta `-600→700` (`ui.tsx`); tombol Setujui/Tolak custom (`deadline-change-request.tsx`) + `TypeBadge` `emerald-600→green-700` (`home-screen.tsx`); sweep teks error/alert `text-red-600` polos → `text-red-700 dark:text-red-400` (~14 file).
+- **A11y §4:** `SectionCard` press `accessibilityRole`; chip Priority/Chip/weekday `action-plan/new` ekspos `tab`/`checkbox` + selected/checked; `user-picker` trigger/close/opsi role+label+44px + `text-brand`→`brand-dark`; `hitSlop` `card-help-trigger` & eye-toggle login; 2 segmented control (`settings-permission-users`, `settings-org-structure`) 32/36→44px + `rounded-full`; 3 filter-chip settings 36→44px.
+- **Dark mode §12:** splash `dark:bg-black`; ikon search header via `useColorScheme`; 10 kartu hero detail `dark:bg-neutral-900→950` selaras `SectionCard`.
+- **Tipografi §3:** `font-medium→font-semibold` di sumber (`LabeledInput`, `StatPill`) + turunan.
+- **Housekeeping:** hapus 10 file mati template Expo (themed-text/view, web-badge, animated-icon ×3, ui/collapsible, constants/theme, hooks/use-theme, prototype/tokens/theme) — nol importer live (verified); register token `placeholder` + wordmark login `text-green-700` di `DESIGN.md`.
+- Residual sengaja ditunda sebagai backlog baru [[ui-prototype-gap]] §2.1: **UI-G-012** (palette drift emerald→green), **UI-G-013** (mikro-tipografi text-[10px]/[11px]), **UI-G-014** (fill grafis green-600 ProgressBar/legend), **UI-G-015** (hex dekoratif login belum terdaftar). Semua kosmetik/palet, lulus 3:1 — bukan kegagalan AA.
+- Pages updated: [[ui-prototype-gap]] (§2.1 baru + UI-G-012..015), `DESIGN.md` (token placeholder §2), `MEMORY.md` n/a.
+- Verifikasi: `tsc --noEmit` bersih; jest **87 suite / 783 tes pass** (clean serial run — kegagalan pada run paralel `--ci` = flake timeout kontensi CPU, bukan regresi); ~39 file diedit, 10 file mati dihapus (614 deletions). Belum di-commit (working tree `feat/sf1-score-formula-editor`).
