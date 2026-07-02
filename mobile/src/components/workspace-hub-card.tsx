@@ -52,10 +52,10 @@ export function WorkspaceHubCard({
   const orbValue = stats.orbPercent;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${a11yEnter}: ${stats.parentCount} ${parentStatLabel}, ${stats.childCount} ${childStatLabel}`}
-      onPress={onEnter}
+    // Kartu = View (bukan Pressable) agar `?` dan `Masuk` tidak jadi button-di-dalam-button
+    // (invalid HTML + a11y buruk). Spec §4.4: yang WAJIB adalah tombol `Masuk`; tap seluruh
+    // kartu bersifat opsional dan sengaja tidak dipakai di sini.
+    <View
       style={{
         minHeight: 172,
         borderRadius: 16,
@@ -70,8 +70,7 @@ export function WorkspaceHubCard({
         backgroundColor: identity.bg,
         padding: 16,
         gap: 12,
-      }}
-      className="active:opacity-80">
+      }}>
       <View className="flex-row items-start gap-3">
         <View className="flex-1 gap-1.5">
           <View className="flex-row items-center justify-between gap-2">
@@ -116,15 +115,20 @@ export function WorkspaceHubCard({
       <View style={{ height: 3, borderRadius: 999, backgroundColor: identity.kickerBg, marginTop: 4 }}>
         <View style={{ height: 3, borderRadius: 999, width: `${Math.max(6, orbValue ?? 0)}%`, backgroundColor: identity.border }} />
       </View>
-      <View style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, borderRadius: 999, backgroundColor: identity.border, paddingHorizontal: 14 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${a11yEnter}: ${stats.parentCount} ${parentStatLabel}, ${stats.childCount} ${childStatLabel}`}
+        onPress={onEnter}
+        style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, height: 44, borderRadius: 999, backgroundColor: identity.border, paddingHorizontal: 16 }}
+        className="active:opacity-70">
         <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '900' }}>{enterLabel}</Text>
         <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '900' }}>›</Text>
-      </View>
+      </Pressable>
 
       {help ? (
         <WorkspaceHelpModal visible={helpOpen} content={help} onClose={() => setHelpOpen(false)} />
       ) : null}
-    </Pressable>
+    </View>
   );
 }
 

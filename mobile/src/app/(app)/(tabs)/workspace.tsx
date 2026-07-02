@@ -25,17 +25,19 @@ import {
   useDevelopmentAreas,
   useFlatInitiatives,
   useGoals,
+  useInitiativeActionPlans,
   useKpiAreas,
   useProblemStatements,
   useProblemStatementInitiatives,
   useStrategies,
+  useStrategyInitiatives,
 } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { mbrBreakdownGuardMessage } from '@/lib/activation-check';
 import type { MbrCompliance } from '@/lib/settings-mbr';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
-import { type Initiative } from '@/lib/cards';
+import { type ActionPlanWithPeople, type Initiative } from '@/lib/cards';
 import type { KpiArea } from '@/lib/kpi-areas';
 import type { Strategy } from '@/lib/strategies';
 import type { ProblemStatement } from '@/lib/problem-statements';
@@ -104,6 +106,8 @@ function CardActionRow({
   onMore,
   past,
   onAdd,
+  onAddPress,
+  addDimmed,
   addLabel,
   addButtonLabel,
 }: {
@@ -117,6 +121,10 @@ function CardActionRow({
   onMore: () => void;
   past: boolean;
   onAdd?: () => void;
+  /** Override penuh handler tekan "+" (caller urus past + guard MBR). Menang atas `onAdd`. */
+  onAddPress?: () => void;
+  /** Redup visual "+" (past ATAU ter-guard MBR). */
+  addDimmed?: boolean;
   addLabel?: string;
   /** WSA-17 — teks TERLIHAT tombol tambah, mis. "+ KPI Area" (spec §11). */
   addButtonLabel?: string;
@@ -154,7 +162,7 @@ function CardActionRow({
         onPress={onMore}>
         <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
       </Pressable>
-      {onAdd ? (
+      {onAdd || onAddPress ? (
         <Pressable
           hitSlop={hit}
           style={{
@@ -164,14 +172,16 @@ function CardActionRow({
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1,
-            borderColor: past ? '#e2e8f0' : '#cce2ff',
-            backgroundColor: past ? '#f1f5f9' : '#eef6ff',
+            borderColor: (addDimmed ?? past) ? '#e2e8f0' : '#cce2ff',
+            backgroundColor: (addDimmed ?? past) ? '#f1f5f9' : '#eef6ff',
           }}
           accessibilityRole="button"
           accessibilityLabel={addLabel ?? 'Tambah turunan'}
-          accessibilityState={{ disabled: past }}
-          onPress={() => (past ? showPastPeriodAlert(cardLabel) : onAdd())}>
-          <Text style={{ color: past ? '#94a3b8' : '#145ebc', fontSize: 12, fontWeight: '900' }}>
+          accessibilityState={{ disabled: addDimmed ?? past }}
+          onPress={() =>
+            onAddPress ? onAddPress() : past ? showPastPeriodAlert(cardLabel) : onAdd?.()
+          }>
+          <Text style={{ color: (addDimmed ?? past) ? '#94a3b8' : '#145ebc', fontSize: 12, fontWeight: '900' }}>
             {addButtonLabel ?? '+'}
           </Text>
         </Pressable>
@@ -192,9 +202,8 @@ function defaultRowActions(cardLabel: string): { label: string; onPress: () => v
 }
 
 /**
- * Sub-row level 3: Strategy di bawah satu KPI Area. Per UI-N-003 (Stage 1 B′).
- * Tidak punya tree expand sendiri (Initiative tetap stack-nav via Strategy detail).
- * Punya RowActionsMenu + tombol "+ Initiative" (gated `create_initiative`, past-period lock).
+ * Sub-row level 3: Strategy di bawah satu KPI Area. WSA-01: expandable → Initiative (level 4).
+ * "+ Initiative" gated `create_initiative`, past-period lock, guard MBR kpi_area→strategy.
  */
 function StrategySubRow({
   strategy,
@@ -209,6 +218,8 @@ function StrategySubRow({
   const router = useRouter();
   const { can } = useProfile();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const { initiatives, isLoading, isError, refetch } = useStrategyInitiatives(strategy.id, expanded);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(strategy, focus) === 'past';
   const canAddInit = can('create_initiative');
@@ -248,47 +259,39 @@ function StrategySubRow({
             <StatusBadge status={strategy.status} />
           </View>
         </View>
-        {/* Spec §11 pill geometry — pixel-identik dgn CardActionRow. */}
-        <View className="flex-row items-center justify-end gap-2">
-          <Pressable
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
-            accessibilityRole="button"
-            accessibilityLabel={`Buka detail ${strategy.name}`}
-            onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
-            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
-          </Pressable>
-          <Pressable
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
-            accessibilityRole="button"
-            accessibilityLabel={`Aksi lain ${strategy.name}`}
-            onPress={() => setMenuOpen(true)}>
-            <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
-          </Pressable>
-          {canAddInit ? (
-            <Pressable
-              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-              style={{
-                height: 30,
-                borderRadius: 999,
-                paddingHorizontal: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: addDimmed ? '#e2e8f0' : '#cce2ff',
-                backgroundColor: addDimmed ? '#f1f5f9' : '#eef6ff',
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`Tambah Initiative ke ${strategy.name}`}
-              accessibilityState={{ disabled: addDimmed }}
-              onPress={onAddInitiative}>
-              <Text style={{ color: addDimmed ? '#94a3b8' : '#145ebc', fontSize: 12, fontWeight: '900' }}>
-                + Initiative
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
+        <CardActionRow
+          cardLabel={strategy.name}
+          expanded={expanded}
+          onToggleExpand={() => setExpanded((v) => !v)}
+          expandLabel="Lihat Initiative"
+          collapseLabel="Tutup"
+          onDetail={() => router.push(`/strategy/${strategy.id}` as Href)}
+          detailLabel={`Buka detail ${strategy.name}`}
+          onMore={() => setMenuOpen(true)}
+          past={past}
+          onAddPress={canAddInit ? onAddInitiative : undefined}
+          addDimmed={addDimmed}
+          addLabel={`Tambah Initiative ke ${strategy.name}`}
+          addButtonLabel="+ Initiative"
+        />
+
+        {expanded ? (
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : initiatives.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada Initiative. Tambah Initiative untuk eksekusi Strategy ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {initiatives.map((i) => (
+                <InitiativeSubRow key={i.id} item={i} ancestorPast={ancestorPast || past} />
+              ))}
+            </View>
+          )
+        ) : null}
       </View>
       <RowActionsMenu
         open={menuOpen}
@@ -461,15 +464,17 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
 }
 
 /**
- * Sub-row level 3: Initiative di bawah satu Problem Statement (Development pane).
- * Action Plan tetap stack-nav via Initiative detail (4-level penuh ditunda — lihat ADR Stage 1).
+ * Sub-row Action Plan — level TERBAWAH (spec §6.8/§7.5): tanpa panah, tanpa tombol tambah.
+ * Hanya Detail + ⋯. `level` menentukan indent (5 di Performance, 4 di Development).
  */
-function InitiativeSubRow({
+function ActionPlanSubRow({
   item,
   ancestorPast = false,
+  level,
 }: {
-  item: Initiative;
+  item: ActionPlanWithPeople;
   ancestorPast?: boolean;
+  level: 4 | 5;
 }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -478,10 +483,83 @@ function InitiativeSubRow({
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      {/* Spec §6.7/§7.5 + §8: level-3 di Dev pane, border kiri 5px warna Initiative (#14845c). */}
       <View
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
-        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative, marginLeft: TREE_LEVEL_INDENT[3] }}>
+        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan, marginLeft: TREE_LEVEL_INDENT[level] }}>
+        <WorkspaceKindPill kind="action_plan" />
+        <View className="flex-row items-start justify-between gap-2">
+          <Text
+            className="flex-1 text-sm font-medium text-black dark:text-white"
+            numberOfLines={2}
+            accessibilityLabel={`Action Plan ${item.name}`}>
+            {item.name}
+          </Text>
+          <View className="flex-row items-center gap-1">
+            {past ? <PastPeriodBadge /> : null}
+            <StatusBadge status={item.status} />
+          </View>
+        </View>
+        {/* Action Plan = leaf: tanpa panah/+ (spec §6.8). Hanya Detail + ⋯. */}
+        <View className="flex-row items-center justify-end gap-2">
+          <Pressable
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel={`Buka detail ${item.name}`}
+            onPress={() => router.push(`/action-plan/${item.id}` as Href)}>
+            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
+          </Pressable>
+          <Pressable
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel={`Aksi lain ${item.name}`}
+            onPress={() => setMenuOpen(true)}>
+            <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
+          </Pressable>
+        </View>
+      </View>
+      <RowActionsMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={item.name}
+        items={defaultRowActions(item.name)}
+      />
+    </PastDim>
+  );
+}
+
+/**
+ * Sub-row Initiative. WSA-01: expandable → Action Plan (level terbawah). Dipakai di Performance
+ * (di bawah Strategy, level 4) dan Development (di bawah Problem Statement, level 3).
+ * "+ Plan" gated `create_action_plan`, past-period lock.
+ */
+function InitiativeSubRow({
+  item,
+  ancestorPast = false,
+  level = 4,
+}: {
+  item: Initiative;
+  ancestorPast?: boolean;
+  /** Level tree Initiative: 4 di Performance (bawah Strategy), 3 di Development (bawah PS). */
+  level?: 3 | 4;
+}) {
+  const router = useRouter();
+  const { can } = useProfile();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const { actionPlans, isLoading, isError, refetch } = useInitiativeActionPlans(item.id, expanded);
+  const { focus } = usePeriodFocus();
+  const past = cardPeriodStatus(item, focus) === 'past';
+  const canAddPlan = can('create_action_plan');
+  const childLevel = (level + 1) as 4 | 5;
+
+  return (
+    <PastDim past={past} ancestorPast={ancestorPast}>
+      {/* Spec §6.7/§7.5 + §8: border kiri 5px warna Initiative (#14845c). */}
+      <View
+        className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
+        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative, marginLeft: TREE_LEVEL_INDENT[level] }}>
         <WorkspaceKindPill kind="initiative" />
         <View className="flex-row items-start justify-between gap-2">
           <Text
@@ -495,24 +573,42 @@ function InitiativeSubRow({
             <StatusBadge status={item.status} />
           </View>
         </View>
-        <View className="flex-row items-center justify-end gap-2">
-          <Pressable
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
-            accessibilityRole="button"
-            accessibilityLabel={`Buka detail ${item.name}`}
-            onPress={() => router.push(`/initiative/${item.id}` as Href)}>
-            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
-          </Pressable>
-          <Pressable
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
-            accessibilityRole="button"
-            accessibilityLabel={`Aksi lain ${item.name}`}
-            onPress={() => setMenuOpen(true)}>
-            <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
-          </Pressable>
-        </View>
+        <CardActionRow
+          cardLabel={item.name}
+          expanded={expanded}
+          onToggleExpand={() => setExpanded((v) => !v)}
+          expandLabel="Lihat Action Plan"
+          collapseLabel="Tutup"
+          onDetail={() => router.push(`/initiative/${item.id}` as Href)}
+          detailLabel={`Buka detail ${item.name}`}
+          onMore={() => setMenuOpen(true)}
+          past={past}
+          onAdd={
+            canAddPlan
+              ? () => router.push(`/action-plan/new?initiativeId=${item.id}` as Href)
+              : undefined
+          }
+          addLabel={`Tambah Action Plan ke ${item.name}`}
+          addButtonLabel="+ Plan"
+        />
+
+        {expanded ? (
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : actionPlans.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada Action Plan. Tambah Action Plan untuk eksekusi Initiative ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {actionPlans.map((ap) => (
+                <ActionPlanSubRow key={ap.id} item={ap} ancestorPast={ancestorPast || past} level={childLevel} />
+              ))}
+            </View>
+          )
+        ) : null}
       </View>
       <RowActionsMenu
         open={menuOpen}
@@ -589,7 +685,7 @@ function ProblemStatementSubRow({
           ) : (
             <View className="gap-2">
               {initiatives.map((i) => (
-                <InitiativeSubRow key={i.id} item={i} ancestorPast={ancestorPast || past} />
+                <InitiativeSubRow key={i.id} item={i} ancestorPast={ancestorPast || past} level={3} />
               ))}
             </View>
           )

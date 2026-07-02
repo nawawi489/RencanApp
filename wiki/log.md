@@ -1026,3 +1026,12 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - WSA-10 (Sprint 4): `PeriodSwitcher` diubah jadi collapsed pill min-h 48 radius 999 (Performance `#eef4fb`/`#d9e3ef`, Development `#eefaf8`/`#cceee8`); tombol `Ubah` warna ruang.
 - WSA-07 (Sprint 4): `PaneTopHeader` refactor — button row paling atas: `Kembali` pill + spacer + optional `Edit` (secondary) + primary (`+ Goal` / `+ Development Area`, h42 r8 biru). Tombol `+ Goal` lama di bawah PeriodSwitcher dihapus.
 - Verifikasi: `tsc --noEmit` bersih; jest **90 suite / 815 tes pass**. Yang belum: nilai orb tree per-card (butuh data progress anak yang belum di-fetch di tree row), tree connector L-shape 10×32 `#cfd8e5` (butuh positioning absolute + calc yang lebih hati-hati — lebih aman diverifikasi di simulator dulu), Sprint 5 struktural (WSA-01/02/14/16/19/20).
+
+## [2026-07-03] update | Sprint 5 WSA-01 — tree 4–5 level lengkap (verified live)
+
+- WSA-01: tree Workspace kini render penuh 5 level. Performance: Goal → KPI Area → Strategy → Initiative → Action Plan. Development: Development Area → Problem Statement → Initiative → Action Plan.
+- `StrategySubRow` + `InitiativeSubRow` di-refactor pakai `CardActionRow` (expand toggle terpadu); `InitiativeSubRow` dapat prop `level` (4 di Performance, 3 di Development) + expand → Action Plan; komponen baru `ActionPlanSubRow` (leaf: Detail + ⋯, tanpa panah/tambah, spec §6.8).
+- Hooks baru/diperluas di `use-workspace.ts`: `useStrategyInitiatives(id, enabled)` (lazy), `useInitiativeActionPlans(id, enabled)`. `CardActionRow` diperluas: `onAddPress` (override handler tekan, utk guard MBR) + `addDimmed`.
+- Fix nested-button (ditemukan via QA Expo web): `WorkspaceHubCard` sebelumnya `Pressable` membungkus tombol `?` + `Masuk` → `<button>` di dalam `<button>` (invalid HTML, a11y buruk). Kartu diubah jadi `View`; `Masuk` jadi satu-satunya tombol pembawa `onEnter` (spec §4.4: card-tap opsional). 0 nested button di DOM.
+- QA live (Expo web, viewport 390px, akun ceo@rencan.local): hub 2-card + `?` modal + search + period pill + header row + tree 5-level dikonfirmasi render benar (warna kategori, letter pill, indent, Action Plan leaf).
+- Verifikasi: `tsc --noEmit` bersih; jest **90 suite / 818 tes pass**.

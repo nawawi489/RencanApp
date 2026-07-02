@@ -4,7 +4,14 @@
 // ['goal_templates']. Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getPersonRef, listInitiatives, type Initiative, type PersonRef } from '@/lib/cards';
+import {
+  getPersonRef,
+  listActionPlans,
+  listInitiatives,
+  type ActionPlanWithPeople,
+  type Initiative,
+  type PersonRef,
+} from '@/lib/cards';
 import {
   activateGoal,
   applyGoalTemplate,
@@ -144,16 +151,35 @@ export function useFlatInitiatives() {
   };
 }
 
-/** Initiative di bawah satu Strategy. Hanya fetch saat strategyId terisi. */
-export function useStrategyInitiatives(strategyId: string) {
+/**
+ * Initiative di bawah satu Strategy. `enabled` opsional untuk lazy-fetch di tree
+ * (default true agar detail page yang memanggil tanpa arg tetap fetch begitu strategyId ada).
+ */
+export function useStrategyInitiatives(strategyId: string, enabled = true) {
   const q = useQuery({
     queryKey: ['initiatives', 'strategy', strategyId],
     queryFn: () => listInitiatives({ strategyId }),
-    enabled: !!strategyId,
+    enabled: !!strategyId && enabled,
   });
 
   return {
     initiatives: (q.data ?? []) as Initiative[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Action Plan di bawah satu Initiative. Lazy-fetch di tree (WSA-01, level terbawah). */
+export function useInitiativeActionPlans(initiativeId: string, enabled = true) {
+  const q = useQuery({
+    queryKey: ['action_plans', 'initiative', initiativeId],
+    queryFn: () => listActionPlans(initiativeId),
+    enabled: !!initiativeId && enabled,
+  });
+
+  return {
+    actionPlans: (q.data ?? []) as ActionPlanWithPeople[],
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,
