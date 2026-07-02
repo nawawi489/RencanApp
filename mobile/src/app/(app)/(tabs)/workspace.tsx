@@ -110,14 +110,14 @@ function CardActionRow({
         <Text className="text-sm text-brand-dark dark:text-brand">{expanded ? '▾' : '▸'}</Text>
       </Pressable>
       <Pressable
-        className="min-h-[44px] items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+        className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
         accessibilityRole="button"
         accessibilityLabel={detailLabel}
         onPress={onDetail}>
         <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
       </Pressable>
       <Pressable
-        className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+        className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
         accessibilityRole="button"
         accessibilityLabel={`Aksi lain ${cardLabel}`}
         onPress={onMore}>
@@ -125,7 +125,7 @@ function CardActionRow({
       </Pressable>
       {onAdd ? (
         <Pressable
-          className={`min-h-[44px] w-11 items-center justify-center rounded-lg active:opacity-70 ${
+          className={`min-h-[44px] w-11 items-center justify-center rounded-xl active:opacity-70 ${
             past
               ? 'border border-neutral-300 dark:border-neutral-700'
               : 'bg-brand-dark'
@@ -187,14 +187,14 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
         </View>
         <View className="flex-row items-center gap-2">
           <Pressable
-            className="min-h-[44px] flex-1 items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] flex-1 items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${strategy.name}`}
             onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
             <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${strategy.name}`}
             onPress={() => setMenuOpen(true)}>
@@ -202,7 +202,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
           </Pressable>
           {canAddInit ? (
             <Pressable
-              className={`min-h-[44px] w-11 items-center justify-center rounded-lg active:opacity-70 ${
+              className={`min-h-[44px] w-11 items-center justify-center rounded-xl active:opacity-70 ${
                 past ? 'border border-neutral-300 dark:border-neutral-700' : 'bg-brand-dark'
               }`}
               accessibilityRole="button"
@@ -390,14 +390,14 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
         </View>
         <View className="flex-row items-center gap-2">
           <Pressable
-            className="min-h-[44px] flex-1 items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] flex-1 items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${item.name}`}
             onPress={() => router.push(`/initiative/${item.id}` as Href)}>
             <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${item.name}`}
             onPress={() => setMenuOpen(true)}>
@@ -566,14 +566,14 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
         </View>
         <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${item.name}`}
             onPress={onPress}>
             <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${item.name}`}
             onPress={() => setMenuOpen(true)}>
