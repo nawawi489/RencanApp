@@ -607,7 +607,7 @@ function PaneTopHeader({
           accessibilityRole="button"
           accessibilityLabel="Kembali ke Workspace"
           onPress={onBackToHub}
-          className="min-h-[36px] self-start active:opacity-70">
+          className="min-h-[44px] justify-center self-start active:opacity-70">
           <Text className="text-sm font-semibold text-brand-dark">{WS_HUB_COPY.backToHub}</Text>
         </Pressable>
         <Text className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
