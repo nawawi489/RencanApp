@@ -7,6 +7,8 @@ import { Text, TextInput, View } from 'react-native-css/components';
 import { EmptyState, SectionCard, SkeletonList } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import type { SearchResult } from '@/lib/governance-admin';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeGlobalSearchScreen from '@/prototype/screens/global-search';
 
 const ENTITY_LABEL: Record<string, string> = {
   goal: 'Goal',
@@ -18,7 +20,7 @@ const ENTITY_LABEL: Record<string, string> = {
   problem_statement: 'Problem Statement',
 };
 
-export default function SearchScreen() {
+export function LiveSearchScreen() {
   const [query, setQuery] = useState('');
   const { results, isLoading, enabled } = useSearchCards({ query });
 
@@ -79,4 +81,8 @@ export default function SearchScreen() {
       />
     </View>
   );
+}
+
+export default function SearchRoute() {
+  return <StackScreenAdapter live={LiveSearchScreen} prototype={PrototypeGlobalSearchScreen} />;
 }

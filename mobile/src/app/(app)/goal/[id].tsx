@@ -14,6 +14,8 @@ import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeGoalDetailScreen from '@/prototype/screens/goal-detail';
 
 function KpiAreaRow({ item, onPress }: { item: KpiArea; onPress: () => void }) {
   return (
@@ -29,7 +31,7 @@ function KpiAreaRow({ item, onPress }: { item: KpiArea; onPress: () => void }) {
   );
 }
 
-export default function GoalDetailScreen() {
+export function LiveGoalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const goalQ = useGoal(id);
@@ -176,4 +178,8 @@ export default function GoalDetailScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function GoalDetailRoute() {
+  return <StackScreenAdapter live={LiveGoalDetailScreen} prototype={PrototypeGoalDetailScreen} />;
 }

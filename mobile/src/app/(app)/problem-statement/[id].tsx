@@ -27,6 +27,8 @@ import {
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeProblemStatementDetailScreen from '@/prototype/screens/problem-statement-detail';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
@@ -51,7 +53,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function ProblemStatementDetailScreen() {
+export function LiveProblemStatementDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -204,5 +206,14 @@ export default function ProblemStatementDetailScreen() {
         )}
       </View>
     </ScrollView>
+  );
+}
+
+export default function ProblemStatementDetailRoute() {
+  return (
+    <StackScreenAdapter
+      live={LiveProblemStatementDetailScreen}
+      prototype={PrototypeProblemStatementDetailScreen}
+    />
   );
 }

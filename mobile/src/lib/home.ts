@@ -1,6 +1,7 @@
 // Data layer Fase 3 — Home (Today Command Center). Per-section (retry granular AC-H11), tanggal
 // "hari ini" dihitung di SERVER (org timezone) via RPC; klien tak pernah menghitung tanggal (CF-3).
 // getOrgToday() hanya untuk label/orkestrasi UI — nilainya TIDAK dikirim balik ke RPC.
+import { computeKpiGap } from './kpi-gap';
 import { supabase } from './supabase';
 
 /** Baris seragam section Home (one-time Action Plan + Repeat Instance disatukan). */
@@ -44,4 +45,53 @@ export function listOverdueItems(): Promise<HomeItem[]> {
 /** Deadline mendekat (≤3 hari). */
 export function listNearDeadline(): Promise<HomeItem[]> {
   return callSection('get_near_deadline_items');
+}
+
+/** KPI Area aktif yang perlu dipantau di Home (snapshot tim). */
+export type KpiAttentionItem = {
+  id: string;
+  name: string;
+  /** % capaian vs target (null = KPI kualitatif tanpa target numerik). */
+  percent: number | null;
+  /** Sisa menuju target (null = kualitatif). */
+  remaining: number | null;
+  /** Satuan tampilan (null = kualitatif / tak diisi). */
+  unit: string | null;
+};
+
+/**
+ * KPI Area aktif yang perlu dipantau (0032, override PRD §18):
+ *   - Bertarget numerik (`target_numeric > 0`): masuk bila capaian < target (current/target via
+ *     VIEW kpi_area_current_values.numeric_total). Membawa percent + remaining untuk "% gap" prototype.
+ *   - Kualitatif (tanpa target numerik): masuk bila BELUM ada progres approved (absen dari view) —
+ *     sinyal state-based lama, tanpa klasifikasi tanggal (CF-3).
+ * RLS men-scope kedua query (org + visibility). supabase-js mengembalikan `numeric` sebagai string →
+ * dikoersi `Number()` sebelum dihitung.
+ */
+export async function listKpiNeedsAttention(): Promise<KpiAttentionItem[]> {
+  const [areas, values] = await Promise.all([
+    supabase.from('kpi_areas').select('id, name, target_numeric, target_unit').eq('status', 'active'),
+    supabase.from('kpi_area_current_values').select('kpi_area_id, numeric_total'),
+  ]);
+  if (areas.error) throw areas.error;
+  if (values.error) throw values.error;
+  const currentById = new Map<string, number>();
+  for (const v of values.data ?? []) {
+    if (v.kpi_area_id) currentById.set(v.kpi_area_id, Number(v.numeric_total) || 0);
+  }
+
+  const out: KpiAttentionItem[] = [];
+  for (const a of areas.data ?? []) {
+    const current = currentById.get(a.id) ?? 0;
+    const targetNumeric = a.target_numeric == null ? null : Number(a.target_numeric);
+    const gap = computeKpiGap({ targetNumeric, current });
+    if (gap.hasTarget) {
+      if (!gap.reached) {
+        out.push({ id: a.id, name: a.name, percent: gap.percent, remaining: gap.remaining, unit: a.target_unit });
+      }
+    } else if (!currentById.has(a.id)) {
+      out.push({ id: a.id, name: a.name, percent: null, remaining: null, unit: null });
+    }
+  }
+  return out;
 }

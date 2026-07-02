@@ -10,6 +10,8 @@ import { Pressable, Text, View } from 'react-native-css/components';
 import { Avatar, EmptyState, ErrorState, ScoreBadge, ScoreLegend, SkeletonList } from '@/components/ui';
 import { listOrgProfiles, type PersonRef } from '@/lib/cards';
 import { useLatestClosedPeriod, useRanking } from '@/hooks/use-people-score';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypePeopleRankingScreen from '@/prototype/screens/people-ranking';
 
 type Person = NonNullable<PersonRef>;
 
@@ -17,7 +19,7 @@ function personLabel(p: Person | undefined, fallback: string): string {
   return p?.full_name?.trim() || p?.email || fallback;
 }
 
-export default function PeopleRankingScreen() {
+export function LivePeopleRankingScreen() {
   const router = useRouter();
   const { period: closed, isLoading: periodLoading, isError: periodError } = useLatestClosedPeriod();
   const { ranking, isLoading: rankingLoading, isError: rankingError, refetch } = useRanking(closed?.id ?? '');
@@ -119,4 +121,8 @@ export default function PeopleRankingScreen() {
       />
     </View>
   );
+}
+
+export default function PeopleRankingRoute() {
+  return <StackScreenAdapter live={LivePeopleRankingScreen} prototype={PrototypePeopleRankingScreen} />;
 }

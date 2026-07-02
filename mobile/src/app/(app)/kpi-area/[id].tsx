@@ -13,11 +13,14 @@ import {
   ErrorState,
   LabeledInput,
   MetaGrid,
+  ProgressBar,
   ProgressOrb,
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
+import { getKpiAreaCurrentValue } from '@/lib/cards';
+import { computeKpiGap, formatRemaining, groupThousands } from '@/lib/kpi-gap';
 import { UserPicker } from '@/components/user-picker';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { KpiAreaBreakdownPanel } from '@/components/kpi-area-breakdown-panel';
@@ -26,6 +29,8 @@ import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeKpiAreaDetailScreen from '@/prototype/screens/kpi-area-detail';
 import {
   PLANNING_STATUS_LABEL,
   STATUS_TONE,
@@ -97,12 +102,17 @@ function DraftCompletion({
   );
 }
 
-export default function KpiAreaDetailScreen() {
+export function LiveKpiAreaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
 
   const kpiAreaQ = useQuery({ queryKey: ['kpi_area', id], queryFn: () => getKpiArea(id) });
+  // 0032 — nilai agregat approved untuk "% capaian vs target" (hanya relevan bila target_numeric diisi).
+  const currentValueQ = useQuery({
+    queryKey: ['kpi_area_current_value', id],
+    queryFn: () => getKpiAreaCurrentValue(id),
+  });
   const { strategies, isLoading: strategiesLoading, isError: strategiesError, refetch: refetchStrategies } =
     useStrategies(id);
 
@@ -113,6 +123,7 @@ export default function KpiAreaDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       kpiAreaQ.refetch();
+      currentValueQ.refetch();
       refetchStrategies();
       refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Strategy
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,6 +218,37 @@ export default function KpiAreaDetailScreen() {
               />
             </View>
 
+            {/* 0032 — Capaian vs Target (hanya bila target numerik diisi). */}
+            {kpiArea.target_numeric != null
+              ? (() => {
+                  const target = Number(kpiArea.target_numeric);
+                  const current = Number(currentValueQ.data?.numeric_total ?? 0);
+                  const unit = kpiArea.target_unit;
+                  const gap = computeKpiGap({ targetNumeric: target, current });
+                  const unitSuffix = unit ? ` ${unit}` : '';
+                  return (
+                    <SectionCard>
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-sm font-bold text-black dark:text-white">Capaian vs Target</Text>
+                        {gap.percent != null ? (
+                          <Badge
+                            label={`${gap.percent}%`}
+                            tone={gap.reached ? 'success' : gap.percent >= 70 ? 'info' : 'warn'}
+                          />
+                        ) : null}
+                      </View>
+                      <ProgressBar value={gap.percent ?? 0} showLabel tone={gap.reached ? 'success' : 'brand'} />
+                      <Text className="text-sm text-neutral-600 dark:text-neutral-400">
+                        {groupThousands(current)}
+                        {unitSuffix} dari target {groupThousands(target)}
+                        {unitSuffix}
+                        {gap.reached ? ' · Target tercapai' : ` · ${formatRemaining(gap.remaining ?? 0, unit)}`}
+                      </Text>
+                    </SectionCard>
+                  );
+                })()
+              : null}
+
             {kpiArea.description ? (
               <SectionCard>
                 <Text className="text-sm font-bold text-black dark:text-white">Deskripsi</Text>
@@ -272,4 +314,8 @@ export default function KpiAreaDetailScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function KpiAreaDetailRoute() {
+  return <StackScreenAdapter live={LiveKpiAreaDetailScreen} prototype={PrototypeKpiAreaDetailScreen} />;
 }

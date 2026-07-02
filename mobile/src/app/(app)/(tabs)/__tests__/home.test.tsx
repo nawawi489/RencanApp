@@ -20,12 +20,14 @@ const mockToday = jest.fn();
 const mockTodayRepeat = jest.fn();
 const mockOverdue = jest.fn();
 const mockNear = jest.fn();
+const mockKpiAttn = jest.fn();
 jest.mock('@/lib/home', () => ({
   __esModule: true,
   getOrgToday: () => mockToday(),
   listTodayRepeatInstances: () => mockTodayRepeat(),
   listOverdueItems: () => mockOverdue(),
   listNearDeadline: () => mockNear(),
+  listKpiNeedsAttention: () => mockKpiAttn(),
 }));
 
 const profileMock = { profile: { full_name: 'Rina Jaya', id: 'u1', created_at: '2020-01-01T00:00:00Z' } };
@@ -58,6 +60,7 @@ function primeEmpty() {
   mockTodayRepeat.mockResolvedValue([]);
   mockOverdue.mockResolvedValue([]);
   mockNear.mockResolvedValue([]);
+  mockKpiAttn.mockResolvedValue([]);
 }
 
 beforeEach(() => {
@@ -67,6 +70,7 @@ beforeEach(() => {
   mockTodayRepeat.mockReset();
   mockOverdue.mockReset();
   mockNear.mockReset();
+  mockKpiAttn.mockReset();
   profileMock.profile = { full_name: 'Rina Jaya', id: 'u1', created_at: '2020-01-01T00:00:00Z' };
 });
 
@@ -78,6 +82,7 @@ describe('HomeScreen', () => {
     mockTodayRepeat.mockReturnValue(new Promise(() => {}));
     mockOverdue.mockReturnValue(new Promise(() => {}));
     mockNear.mockReturnValue(new Promise(() => {}));
+    mockKpiAttn.mockReturnValue(new Promise(() => {}));
     await render(<HomeScreen />, { wrapper: wrapper() });
     expect(screen.getAllByLabelText('Memuat…').length).toBeGreaterThan(0);
   });
@@ -96,12 +101,18 @@ describe('HomeScreen', () => {
       { kind: 'action_plan', id: 'ap2', action_plan_id: 'ap2', name: 'Desain banner', due: '2026-06-20', status: 'in_progress' },
     ]);
     mockNear.mockResolvedValue([]);
+    mockKpiAttn.mockResolvedValue([
+      { id: 'k1', name: 'Customer Baru', percent: 79, remaining: 1060, unit: 'customer' },
+    ]);
     await render(<HomeScreen />, { wrapper: wrapper() });
 
     expect(await screen.findByText('Upload 5 konten')).toBeTruthy();
     expect(screen.getByText(/Selamat (pagi|siang|sore|malam), Rina\./)).toBeTruthy();
     expect(screen.getByText('Daily Finance Closing')).toBeTruthy(); // repeat hari ini
     expect(screen.getByText('2 item lewat deadline.')).toBeTruthy(); // priority Terlewat dari listOverdueItems
+    expect(screen.getByText('1 KPI perlu dipantau.')).toBeTruthy(); // priority Gap KPI Area
+    expect(screen.getByText('Customer Baru')).toBeTruthy(); // Snapshot Tim row
+    expect(screen.getByText('kurang 1.060 customer')).toBeTruthy(); // "% gap" prototype
   });
 
   it('kosong → empty states tiap section', async () => {
@@ -109,6 +120,8 @@ describe('HomeScreen', () => {
     await render(<HomeScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Tidak ada tugas aktif')).toBeTruthy();
     expect(screen.getByText('Tidak ada yang telat.')).toBeTruthy(); // priority subtitle
+    expect(screen.getByText('Semua KPI sesuai target.')).toBeTruthy(); // priority Gap KPI subtitle (kosong)
+    expect(screen.getByText('Semua KPI Area terpantau')).toBeTruthy(); // Snapshot Tim empty
     expect(screen.getByText('Tidak ada tugas rutin hari ini')).toBeTruthy();
     expect(screen.getByText('Tidak ada deadline mendekat')).toBeTruthy();
   });

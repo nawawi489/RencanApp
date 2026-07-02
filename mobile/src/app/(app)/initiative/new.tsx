@@ -13,6 +13,8 @@ import { periodError } from '@/lib/date';
 import { getStrategy } from '@/lib/strategies';
 import { getProblemStatement } from '@/lib/problem-statements';
 import { listTeams } from '@/lib/org-structure';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeInitiativeFormScreen from '@/prototype/screens/initiative-form';
 
 type Person = NonNullable<PersonRef>;
 
@@ -71,7 +73,7 @@ function TeamChipSelector({
   );
 }
 
-export default function NewInitiativeScreen() {
+export function LiveNewInitiativeScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   // Fase 4 (strategyId) / Fase 6 (problemStatementId) — Initiative ditautkan ke salah satu induk
@@ -166,4 +168,8 @@ export default function NewInitiativeScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function NewInitiativeRoute() {
+  return <StackScreenAdapter live={LiveNewInitiativeScreen} prototype={PrototypeInitiativeFormScreen} />;
 }

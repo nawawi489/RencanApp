@@ -9,6 +9,8 @@ import { Button, LabeledInput, SectionCard } from '@/components/ui';
 import { EVALUATION_TARGET_LABEL } from '@/lib/governance-admin';
 import { useEvaluation, useEvaluationActions } from '@/hooks/use-governance-admin';
 import { useProfile } from '@/hooks/use-profile';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypeEvaluationFlowScreen from '@/prototype/screens/evaluation-flow';
 
 const TARGETS = ['ya', 'sebagian', 'tidak'] as const;
 
@@ -47,7 +49,7 @@ function CheckboxRow({
   );
 }
 
-export default function EvaluationScreen() {
+export function LiveEvaluationScreen() {
   const { profile } = useProfile();
   const params = useLocalSearchParams<{ initiativeId?: string; picId?: string; status?: string }>();
   const initiativeId = params.initiativeId ?? '';
@@ -179,4 +181,8 @@ export default function EvaluationScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function EvaluationRoute() {
+  return <StackScreenAdapter live={LiveEvaluationScreen} prototype={PrototypeEvaluationFlowScreen} />;
 }

@@ -37,6 +37,8 @@ import {
   useUserScore,
 } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
+import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
+import PrototypePeopleProfileScreen from '@/prototype/screens/people-profile';
 
 type Person = NonNullable<PersonRef>;
 
@@ -66,7 +68,7 @@ function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
   return out;
 }
 
-export default function PeopleProfileScreen() {
+export function LivePeopleProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { profile, can } = useProfile();
@@ -362,4 +364,8 @@ export default function PeopleProfileScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function PeopleProfileRoute() {
+  return <StackScreenAdapter live={LivePeopleProfileScreen} prototype={PrototypePeopleProfileScreen} />;
 }

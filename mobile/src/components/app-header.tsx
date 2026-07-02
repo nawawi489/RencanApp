@@ -32,13 +32,15 @@ export function AppHeader({ kicker }: { kicker?: string }) {
         </View>
 
         <View className="flex-row items-center gap-2">
-          {/* UI-G-005: Search pill — entry point ke global search. Min-44px touch (DESIGN §4). */}
+          {/* UI-G-005: Search pill berlabel "Cari" — afordans eksplisit (prototype; mobile tanpa hover).
+              Min-44px touch (DESIGN §4). */}
           <Pressable
-            className="min-h-[44px] min-w-[44px] items-center justify-center rounded-full active:opacity-70"
+            className="min-h-[44px] flex-row items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-900"
             onPress={() => router.push('/(app)/search')}
             accessibilityRole="button"
             accessibilityLabel="Cari">
-            <Ionicons name="search-outline" size={22} color="#1564b3" />
+            <Ionicons name="search-outline" size={18} color="#1564b3" />
+            <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Cari</Text>
           </Pressable>
           <Pressable
             className="active:opacity-70"

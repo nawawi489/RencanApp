@@ -84,6 +84,7 @@ export default function AppLayout() {
       <Stack.Screen name="settings-card-guidance" options={{ headerShown: true, title: 'Keterangan Card' }} />
       <Stack.Screen name="settings-status-priority" options={{ headerShown: true, title: 'Status & Prioritas' }} />
       <Stack.Screen name="settings-notifications-rule" options={{ headerShown: true, title: 'Notifications Rule' }} />
+      <Stack.Screen name="settings-repeat-rules" options={{ headerShown: true, title: 'Repeat Setting' }} />
       <Stack.Screen name="settings-archive" options={{ headerShown: true, title: 'Arsip' }} />
       <Stack.Screen name="settings-goal-templates" options={{ headerShown: true, title: 'Goal Template' }} />
       <Stack.Screen

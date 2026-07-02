@@ -218,6 +218,12 @@ Format: `## [YYYY-MM-DD] <type> | <title>`
 - Critic verdict **perlu-perbaikan** → addendum mengikat (§8) ditambahkan: (1) contract FR-DATA.1 WAJIB set jwt claims + seed-as-owner (tanpa ini false-green); (2) assertion anti-bypass search salah semantik → ganti ke output terfilter; (3) useAuth mock TDZ footgun; (4) ≥44dp testability pakai inline style + accessibilityState eksplisit; (5) tambahan case off-by-one clamp, null author, tie created_at, room kosong, anti double-submit.
 - Siap dieksekusi (kode test-first). Belum ada kode ditulis — menunggu owner lanjut implementasi.
 
+## [2026-07-01] update | prototype fidelity mode
+
+- Completed batches: shell, tabs, people, detail, forms
+- Verification: route smoke tests + side-by-side visual QA against `design.html`
+- Remaining gaps: none blocking
+
 ## [2026-06-26] update | Eksekusi TDD Inbox & Chat (P0 UI-S-IN1..IN4)
 
 - **Hasil:** Jest **540/540 pass** (sebelumnya 512 → +28). TSC bersih. Lint: 0 issue baru dari fase ini (3 error pre-existing di `settings-permission-users.tsx`). Advisor security: 0.
@@ -805,3 +811,119 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 **Status sweep #10 / total 10 sweep hari ini:**
 - 9 migrasi (0023-0031) + display polish di 6 layar detail.
 - End-to-end loop tertutup: form input → DB persist → activate gate → detail display.
+
+## [2026-06-29] update | Design fidelity audit + Home/header/login gap closure
+
+- Pages created: [[design-fidelity-audit]] (scorecard 7 dimensi app vs prototype tim desain).
+- Pages updated: index.md (Concepts + tanggal).
+- Perubahan kode `mobile/`:
+  - Home `(tabs)/index.tsx`: `TaskRow` kaya (badge tipe + `ProgressBar` + %); kartu prioritas ke-3 "Gap KPI Area" + section "Snapshot Tim" via `listKpiNeedsAttention()` (sinyal "belum ada progres approved", state-based, tanpa migrasi).
+  - `app-header.tsx`: search pill berlabel "Cari".
+  - `(auth)/login.tsx`: "Lupa password?" fungsional (`resetPasswordForEmail`).
+- Verifikasi: `tsc --noEmit` bersih; jest **74 suite / 731 tes pass** (+4 tes baru).
+- Keputusan owner terbuka: brand hue `#208aef` vs `#1877f2`, muat Inter, model auth (self-signup vs admin-only). KPI "% gap" presisi diblok skema target numerik (target masih teks bebas).
+- Key takeaway: detail/People/Workspace fidelity tinggi; gap sisa adalah token identity + auth model, bukan layout.
+
+## [2026-06-29] update | KPI Area target numerik + unit (override PRD §18) → "% gap" presisi
+
+- Override owner: PRD §18 semula melarang Satuan ("UI terasa seperti spreadsheet"); ditambah `target_numeric` + `target_unit` **opsional** agar "% gap" prototype ("65% / kurang 1.060 customer") bisa dihitung.
+- Migrasi: `0032_fase_kpi_area_numeric_target.sql` (kolom + CHECK ≥0; kolom teks `target` dipertahankan).
+- Kode: `lib/kpi-gap.ts` (pure `computeKpiGap`/`formatRemaining`/`groupThousands`); `lib/home.ts` `listKpiNeedsAttention` gap-aware (koersi `numeric`→`Number`); `kpi-areas.ts` NewKpiArea/Patch; layar `kpi-area/new.tsx` (input opsional), `kpi-area/[id].tsx` (kartu "Capaian vs Target"), Home Snapshot rows + kartu Gap-KPI.
+- Docs: PRD §18 diperbarui (catatan override); [[design-fidelity-audit]] bagian KPI gap.
+- Verifikasi: `tsc --noEmit` bersih; jest **75 suite / 741 tes pass** (+10: 9 `kpi-gap` + assertion Home).
+- Catatan: migrasi 0032 perlu di-apply ke DB (belum di-push dari sesi ini).
+
+## [2026-06-29] query | Prototype design.html vs PRD V1.82
+
+- Pages created: [[prototype-prd-conformance]].
+- Pages updated: index.md (Concepts).
+- Analisis: `design.html` (8.069 baris) dibandingkan baris-demi-baris dengan PRD V1.82 (§1–§45).
+- Key takeaways:
+  - 46/46 screen wajib (§42) hadir; `people-ranking` sebagai sub-view (diizinkan §42).
+  - 28/28 Acceptance Criteria (§44) terpenuhi; item terlarang (§5/§6) bersih (no Feed/Announcement/Watcher/Routine/Area Goal/Bobot planning).
+  - Penyimpangan kecil: (1) header global tanpa icon Notifications (§7.2), (2) tab People "Q3 2026" saat periode aktif Q2 (cocok teks PRD tapi PRD inkonsisten), (3) kata "bobot" di Score Formula (sah, bukan bobot planning terlarang).
+  - PRD diturunkan dari prototype (§1) → keselarasan tinggi memang diharapkan; gap nyata ada di sisi `mobile/`.
+
+## [2026-06-29] update | Wire orphan screens: Deadline Change Request + Evaluation
+
+- Pages updated: (none — implementation only)
+- Audit `mobile/` vs prototype menemukan 2 layar yatim (route + test ada, tapi tanpa entry point dari layar induk):
+  - **Deadline Change Request** (PRD §25) — sekarang dipicu dari `action-plan/[id].tsx` lewat tombol "Ajukan Ubah Deadline" di dalam SectionCard Brief Kerja. Tampil hanya untuk PIC, status `assigned|in_progress|revision`, dan one-time (repeat pakai instance).
+  - **Evaluation** (PRD §26) — sekarang dipicu dari `initiative/[id].tsx` lewat SectionCard "Evaluasi Initiative" + tombol. Tampil saat initiative `active|done`. Anti-self gating tetap ditangani layar evaluation (banding `picId` vs profile).
+- Verifikasi: `tsc --noEmit` bersih; jest **75 suite / 741 tes pass** (38 tes di suite terdampak: initiative, action-plan, fase8-lifecycle).
+- Sisa gap dari audit prototype↔mobile: Repeat Rule Settings global (belum ada layar; per-AP repeat sudah berfungsi), Menu grid berkategori (kosmetik), Role Template label tanpa href.
+
+## [2026-06-29] update | Menu categorization per PRD §31 + drop orphan Role Template
+
+- Pages updated: (none — implementation only)
+- `settings.tsx` (di-export oleh tab Menu) sebelumnya = daftar datar 18 entri tanpa kategori. PRD §31 mewajibkan 4 kategori:
+  - **Akses Cepat**: People, People Ranking, Activity Log, Arsip, Cari
+  - **Template**: Goal Template Library, KPI Area Template
+  - **Pengaturan**: Organisasi, User & Permission, MBR, Card Completion Rule, Keterangan Card, Status & Prioritas, Notifications Rule, Score Formula
+  - **Admin Lanjutan**: Governance Violation, Confidential Access
+- "Role Template" dihapus dari menu — dikelola di dalam layar Organisasi (`settings-org-structure.tsx`) sehingga label di Menu hanya jadi item mati.
+- "Manual Score Override" tidak ditambahkan ke Menu — butuh `userId`+`periodId` per orang, entry point tetap dari People Profile.
+- Refactor: `SECTIONS: SettingsSection[]` → `SETTINGS_GROUPS: SettingsGroup[]`; render loop sekarang nested (group header → list items). Semua `accessibilityLabel` + `href` dipertahankan agar tes existing (menu.test, settings-permission-link, settings-score-link, settings-goal-templates) tetap hijau.
+- Verifikasi: `tsc --noEmit` bersih; jest **75 suite / 741 tes pass** (66 di 10 suite settings/menu terdampak).
+- Sisa gap audit: Repeat Rule Settings global (layar belum dibuat; per-AP repeat sudah jalan).
+
+## [2026-06-29] update | Repeat Setting global (Menu > Pengaturan) — gap audit terakhir ditutup
+
+- Pages updated: (none — implementation only)
+- Layar baru `settings-repeat-rules.tsx` — inventory read-only seluruh `action_plan_repeat_rules` yang user boleh lihat (RLS). Tiap row tappable → buka Action Plan induk.
+- Lib baru: `listAllRepeatRules()` di `mobile/src/lib/repeat.ts` — query `*, action_plan:action_plans(id, name, status)` order by `updated_at desc`.
+- Route registration: `Stack.Screen name="settings-repeat-rules"` di `(app)/_layout.tsx` (header title "Repeat Setting").
+- Menu entry baru di `settings.tsx` grup **Pengaturan** — label "Repeat Setting" → `/settings-repeat-rules` (tanpa permission gate; RLS yang membatasi data).
+- Filosofi: PRD §23 — "Repeat Setting adalah setting pada Action Plan". Layar global ini sengaja read-only/inventory, edit jadwal tetap per-AP (form `new-action-plan` & navigasi balik via row).
+- Tes baru `__tests__/settings-repeat-rules.test.tsx` (3 case: empty state, render row, tap → push). Pakai pola `await render(...)` (mandatory di codebase ini).
+- Verifikasi: `tsc --noEmit` bersih; jest **76 suite / 744 tes pass** (+3 tes baru).
+- **Status audit mobile vs prototype: 100% screen tercakup** — DCR + Evaluation wired, Role Template orphan dihapus, Menu kategorisasi §31, Repeat Setting global hadir. Sisa = polish kosmetik (Menu grid berkategori, Help sub-section, Snapshot Tim → real data).
+
+## [2026-06-29] update | Menu profile-card polish: Score badge + tappable
+
+- Pages updated: (none — implementation only)
+- `settings.tsx` profile card sebelumnya = Avatar + nama + email + role/org (statis, tidak bisa di-tap). Prototype Menu (PRD §31) menampilkan **Score badge + "Lihat profil kamu"** + tappable ke People Profile.
+- Perubahan:
+  - Import `Badge`, `ScoreBadge` dari `components/ui`, `useMyScore` dari `hooks/use-people-score`, `effectiveScore` dari `lib/people-score`.
+  - Profile card sekarang `Pressable` dengan `accessibilityLabel="Buka profil saya"` → push `/people-profile/<userId>`.
+  - Baris email dihapus (sudah ditampilkan di People Profile); baris role berubah jadi "Lihat profil kamu" sebagai default ramah pengguna.
+  - Right slot: `ScoreBadge` saat skor tersedia, `Badge "Belum" neutral` saat belum.
+- Verifikasi: `tsc --noEmit` bersih; jest **76 suite / 744 tes pass** (6 suite settings/menu terdampak — 18 tes — semua hijau; query score yang gagal di test environment di-handle react-query dengan `retry:false` → fallback ke "Belum").
+- Penutup audit: gap struktural prototype↔mobile sudah ditutup. Sisa polish opsional = ikon per-row menu, grid 2-kolom kategori (Akses Cepat), Help sub-section.
+
+## [2026-06-29] update | Menu polish: Akses Cepat grid 2-col + group count
+
+- Pages updated: (none — implementation only)
+- `SettingsGroup` ditambah optional `layout?: 'list' | 'grid'` (default list) dan `SettingsSection` ditambah optional `description?` (sublabel di tile grid).
+- Group "Akses Cepat" sekarang render sebagai **2-col grid of cards** (5 item: People, People Ranking, Activity Log, Arsip, Cari) dengan label + description (mis. "Ranking & profil", "Riwayat sistem"). Matches prototype Menu yang menjadikan Akses Cepat surface utama (full visibility, bukan accordion).
+- Group lain (Template, Pengaturan, Admin Lanjutan) tetap **list dengan chevron** — sesuai prototype yang menjadikannya accordion (secondary).
+- Header tiap group sekarang punya count item di kanan (mis. "5 item") — fidelity prototype.
+- Tile non-aktif (no permission) tampil `opacity-60` + warna teks abu — feedback visual jelas tanpa menghilangkan label.
+- Verifikasi: `tsc --noEmit` bersih; jest **76 suite / 744 tes pass** (11 suite menu/settings — 69 tes — semua hijau; accessibilityLabel dipertahankan).
+
+## [2026-06-29] update | Menu accordion: secondary groups collapsible (PRD §31)
+
+- Pages updated: (none — implementation only)
+- PRD §31 menyebut "Template accordion / Pengaturan accordion / Admin Lanjutan accordion". Sebelumnya semua grup di mobile = always-expanded list.
+- Perubahan `settings.tsx`:
+  - State `collapsed: Record<string, boolean>` + helper `toggleGroup(title)`.
+  - Header grup non-grid sekarang `Pressable` dengan `accessibilityLabel="Group <title>"`, `accessibilityState={{ expanded }}`, chevron `▾`/`▸` di kanan.
+  - Default **open** (tidak collapse) untuk mempertahankan ergonomi mobile-app convention + menghindari refactor 3 tes settings yang langsung `findByLabelText('User & Permission' | 'Score Formula' | ...)`. User dapat collapse manual saat ingin compact view.
+  - Akses Cepat (`layout='grid'`) selalu tampil — tidak punya toggle.
+- Verifikasi: `tsc --noEmit` bersih; jest **76 suite / 744 tes pass** (semua tetap hijau karena default open).
+- Polish lengkap untuk PRD §31 spec Menu: profile card (Score+tap), grup terkategori, Akses Cepat grid, count item per grup, accordion behavior pada grup secondary.
+
+## [2026-07-02] query | Audit live vs design.html + gap ikon kartu
+
+- Verifikasi live app (Expo web @430px, akun seed lokal `ceo@rencan.local`) terhadap `design.html`: struktur & copy layar utama (Login, Home, Notif, Workspace, Inbox, Menu, People, KPI Area detail) sejajar prototype; token brand hue + Inter masih keputusan terbuka (UI-G-007).
+- Temuan baru dari owner: prototype memakai tile ikon SVG berwarna di setiap `menu-card` + `icon-button` di hero row, sedangkan app hanya punya ikon di login/app-header/tab bar — kartu Menu polos.
+- Pages updated: [[ui-prototype-gap]] (item baru **UI-G-011** tile ikon per kartu, masuk P3; ikon library `@expo/vector-icons` sudah tersedia).
+- Catatan akses: kredensial demo remote tidak dikenali Supabase lokal (mobile/.env → 127.0.0.1:54321); audit memakai user seed.
+
+## [2026-07-02] update | UI-G-011 tile ikon per kartu Menu
+
+- Komponen baru `IconTile` di `mobile/src/components/ui.tsx` (Ionicons `@expo/vector-icons`, 6 tone bg-soft + warna ikon selaras palet app DESIGN §8, dark-mode via `useColorScheme`, disembunyikan dari a11y — label teks tetap sumber makna DESIGN §4).
+- `settings.tsx`: field `icon`+`tone` per item `SETTINGS_GROUPS` (18 item, 5 tone) + render tile di grid (40px) & list row (36px). Inactive → tone neutral.
+- Token didaftarkan lebih dulu di `DESIGN.md` §7 (baris `IconTile`) + §10 (library Ionicons + aturan ikon≠satu-satunya sinyal), sesuai aturan CLAUDE.md.
+- Verifikasi: `tsc --noEmit` bersih; jest `ui-feedback` 20/20 (termasuk test IconTile baru) + `settings-repeat-rules` 3/3 + `settings-score-link` 2/2. Live DOM (Expo web @430px): 19 tile render, 19 glyph unik, 5 tone warna ikon tepat (#1564b3/#6d28d9/#15803d/#b91c1c/#b45309).
+- Ditunda: icon-button bulat di hero Inbox/People (dampak kecil).
