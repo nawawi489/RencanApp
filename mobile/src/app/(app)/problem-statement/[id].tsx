@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
@@ -27,6 +26,8 @@ import {
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeProblemStatementDetailScreen from '@/prototype/screens/problem-statement-detail';
 
@@ -69,6 +70,8 @@ export function LiveProblemStatementDetailScreen() {
     refetch: refetchInitiatives,
   } = useProblemStatementInitiatives(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('problem_statement', id);
+  const { can } = useProfile();
+  const canAddInitiative = can('create_initiative'); // WSA-08 — gate CTA tambah turunan
 
   useFocusEffect(
     useCallback(() => {
@@ -86,7 +89,7 @@ export function LiveProblemStatementDetailScreen() {
       qc.invalidateQueries({ queryKey: ['problem_statements'] });
     },
     onError: (e) =>
-      Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Problem Statement belum bisa diaktifkan. Coba lagi.'),
   });
 
   const ps = psQ.data;
@@ -174,11 +177,13 @@ export function LiveProblemStatementDetailScreen() {
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
-                <Button
-                  label="+ Tambah Initiative"
-                  variant="secondary"
-                  onPress={handleAddInitiative}
-                />
+                {canAddInitiative ? (
+                  <Button
+                    label="+ Tambah Initiative"
+                    variant="secondary"
+                    onPress={handleAddInitiative}
+                  />
+                ) : null}
               </View>
 
               {initiativesLoading ? (

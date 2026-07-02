@@ -4,6 +4,8 @@
 // butuh "sekarang" menerima `now: Date` agar deterministik di test (sesuai aturan
 // jest setup repo). State + persistence tinggal di providers/period-focus-provider.
 
+import { WS_COPY } from './workspace-copy';
+
 export type PeriodMode = 'month' | 'quarter';
 
 export type PeriodFocus =
@@ -54,13 +56,29 @@ export function formatPeriodLabel(focus: PeriodFocus): string {
   return `${QUARTER_LABELS_ID[focus.quarter]} ${focus.year}`;
 }
 
-/** Breadcrumb PRD §11.2: "Goal 2026 · Q2 · Juni" (month mode) / "Goal 2026 · Q2" (quarter mode). */
-export function periodBreadcrumb(focus: PeriodFocus): string {
+/** Ruang Workspace — menentukan prefix breadcrumb (WSA-09, spec §6.2/§7.2). */
+export type WorkspaceSpace = 'performance' | 'development';
+
+const SPACE_BREADCRUMB_PREFIX: Record<WorkspaceSpace, string> = {
+  performance: 'Goal',
+  development: 'Development',
+};
+
+/**
+ * Breadcrumb periode per ruang (spec §6.2 Performance / §7.2 Development):
+ * "Goal 2026 · Q2 · Juni" (Performance, month) / "Development 2026 · Q2" (Development, quarter).
+ * Default `performance` menjaga kompatibilitas pemanggil lama.
+ */
+export function periodBreadcrumb(
+  focus: PeriodFocus,
+  space: WorkspaceSpace = 'performance',
+): string {
+  const prefix = SPACE_BREADCRUMB_PREFIX[space];
   if (focus.mode === 'month') {
     const q = quarterOfMonth(focus.month);
-    return `Goal ${focus.year} · ${QUARTER_LABELS_ID[q]} · ${MONTH_LABELS_ID[focus.month]}`;
+    return `${prefix} ${focus.year} · ${QUARTER_LABELS_ID[q]} · ${MONTH_LABELS_ID[focus.month]}`;
   }
-  return `Goal ${focus.year} · ${QUARTER_LABELS_ID[focus.quarter]}`;
+  return `${prefix} ${focus.year} · ${QUARTER_LABELS_ID[focus.quarter]}`;
 }
 
 /** Inclusive window [start..end]. End = last millisecond of the period. */
@@ -154,7 +172,7 @@ export function enumerateQuarters(year: number, now: Date): PeriodOption[] {
 }
 
 /**
- * Tampilkan Alert "Periode sudah lewat" (PRD §7.7) saat user menekan "+" tambah turunan
+ * Tampilkan Alert Archive (spec §12.4 / PRD §7.7) saat user menekan "+" tambah turunan
  * pada card yang periode-nya past relatif fokus.
  *
  * `alertImpl` injectable agar pure di test — default `react-native` Alert.alert.
@@ -165,10 +183,11 @@ export function showPastPeriodAlert(
   cardLabel?: string,
   alertImpl?: AlertFn,
 ): void {
-  const title = 'Periode sudah lewat';
-  const msg = cardLabel
-    ? `Card "${cardLabel}" berada di periode yang sudah lewat. Tambah turunan baru dikunci.`
-    : 'Periode card ini sudah lewat. Tambah turunan baru dikunci.';
+  // WSA-12 — copy terkunci spec §12.4. `cardLabel` dibiarkan sebagai parameter agar
+  // pemanggil lama tak berubah, tapi pesan tidak lagi menyisipkan label (sesuai spec).
+  void cardLabel;
+  const title = WS_COPY.archivePeriodTitle;
+  const msg = WS_COPY.archivePeriodMsg;
   if (alertImpl) {
     alertImpl(title, msg);
     return;

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
@@ -29,6 +28,8 @@ import { ratioDoneOfChildren } from '@/lib/progress';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeDevelopmentAreaDetailScreen from '@/prototype/screens/development-area-detail';
 
@@ -115,6 +116,8 @@ export function LiveDevelopmentAreaDetailScreen() {
     refetch: refetchPs,
   } = useProblemStatements(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('development_area', id);
+  const { can } = useProfile();
+  const canAddProblem = can('create_problem_statement'); // WSA-08/WSA-13 — gate CTA + key presisi
 
   const psIds = useMemo(() => problemStatements.map((p) => p.id), [problemStatements]);
   const initiativesQ = useQuery({
@@ -139,7 +142,7 @@ export function LiveDevelopmentAreaDetailScreen() {
       qc.invalidateQueries({ queryKey: ['development_areas'] });
     },
     onError: (e) =>
-      Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Development Area belum bisa diaktifkan. Coba lagi.'),
   });
 
   const devArea = devAreaQ.data;
@@ -220,11 +223,13 @@ export function LiveDevelopmentAreaDetailScreen() {
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-bold text-black dark:text-white">Problem Statement</Text>
-                <Button
-                  label="+ Tambah Problem Statement"
-                  variant="secondary"
-                  onPress={handleAddProblem}
-                />
+                {canAddProblem ? (
+                  <Button
+                    label="+ Tambah Problem Statement"
+                    variant="secondary"
+                    onPress={handleAddProblem}
+                  />
+                ) : null}
               </View>
 
               {psLoading ? (

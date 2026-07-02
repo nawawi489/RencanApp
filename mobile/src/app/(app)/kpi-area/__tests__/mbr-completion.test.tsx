@@ -41,9 +41,10 @@ jest.mock('@/hooks/use-mbr', () => ({
   useMbrCompliance: (...a: unknown[]) => mockUseMbrCompliance(...a),
 }));
 
+const mockCan = jest.fn();
 jest.mock('@/hooks/use-profile', () => ({
   __esModule: true,
-  useProfile: () => ({ profile: { id: 'u1', full_name: 'Rina' }, isLoading: false, can: () => true }),
+  useProfile: () => ({ profile: { id: 'u1', full_name: 'Rina' }, isLoading: false, can: mockCan }),
 }));
 
 jest.mock('expo-router', () => ({
@@ -84,6 +85,8 @@ beforeEach(() => {
   mockRefetchStrategies.mockReset();
   mockGetKpiArea.mockResolvedValue(DRAFT_KPI);
   mockActivateKpiArea.mockResolvedValue(undefined);
+  mockCan.mockReset();
+  mockCan.mockReturnValue(true);
   jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 });
 
@@ -167,6 +170,22 @@ describe('KpiAreaDetailScreen — indikator Kelengkapan & gating MBR', () => {
       (c) => c[0] === 'Tidak Dapat Melanjutkan',
     );
     expect(popupCalls).toHaveLength(0);
+  });
+
+  // WSA-08 — CTA "+ Tambah Strategy" digate can('create_strategy').
+  it('[WSA-08] can(create_strategy) false → "+ Tambah Strategy" tidak dirender', async () => {
+    mockCan.mockImplementation((key: string) => key !== 'create_strategy');
+    mockUseMbrCompliance.mockReturnValue({ compliance: undefined, isLoading: false, isCompliant: true });
+    await render(<KpiAreaDetailScreen />, { wrapper: wrapper() });
+    await screen.findByText('Strategy');
+    expect(screen.queryByText('+ Tambah Strategy')).toBeNull();
+  });
+
+  it('[WSA-08b] can(create_strategy) true → "+ Tambah Strategy" tampil', async () => {
+    mockCan.mockReturnValue(true);
+    mockUseMbrCompliance.mockReturnValue({ compliance: undefined, isLoading: false, isCompliant: true });
+    await render(<KpiAreaDetailScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('+ Tambah Strategy')).toBeTruthy();
   });
 
   it('[5] compliance undefined (loading) → fail-open: Aktifkan tetap memanggil activateKpiArea (server otoritatif)', async () => {

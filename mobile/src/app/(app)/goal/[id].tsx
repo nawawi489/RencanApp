@@ -14,6 +14,8 @@ import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
+import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeGoalDetailScreen from '@/prototype/screens/goal-detail';
 
@@ -39,6 +41,8 @@ export function LiveGoalDetailScreen() {
   const { activate, restore, activatePending, restorePending } = useGoalActions();
   const { focus } = usePeriodFocus();
   const { compliance } = useMbrCompliance('goal', id);
+  const { can } = useProfile();
+  const canAddKpi = can('create_kpi_area'); // WSA-08 — gate CTA tambah turunan di detail page
   const goalPast = goalQ.goal ? cardPeriodStatus(goalQ.goal, focus) === 'past' : false;
   const handleAddKpiArea = () => {
     if (goalPast) {
@@ -68,7 +72,7 @@ export function LiveGoalDetailScreen() {
     try {
       await activate(id);
     } catch (e) {
-      Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Goal butuh minimal 1 KPI Area sebelum diaktifkan.');
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Goal butuh minimal 1 KPI Area sebelum diaktifkan.');
     }
   }
 
@@ -78,7 +82,7 @@ export function LiveGoalDetailScreen() {
       const added = await restore(id);
       Alert.alert('Pulihkan dari template', added > 0 ? `${added} KPI Area ditambahkan.` : 'Semua item template sudah ada.');
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan. Coba lagi.');
     }
   }
 
@@ -169,11 +173,13 @@ export function LiveGoalDetailScreen() {
                   <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
                   <CardHelpTrigger topic="kpi_area" />
                 </View>
-                <Button
-                  label="+ Tambah KPI Area"
-                  variant="secondary"
-                  onPress={handleAddKpiArea}
-                />
+                {canAddKpi ? (
+                  <Button
+                    label="+ Tambah KPI Area"
+                    variant="secondary"
+                    onPress={handleAddKpiArea}
+                  />
+                ) : null}
               </View>
 
               {kpiQ.isLoading ? (

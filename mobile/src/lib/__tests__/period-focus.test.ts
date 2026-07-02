@@ -47,6 +47,19 @@ describe('formatPeriodLabel + periodBreadcrumb', () => {
     expect(formatPeriodLabel(f)).toBe('Q3 2026');
     expect(periodBreadcrumb(f)).toBe('Goal 2026 · Q3');
   });
+  // WSA-09 — prefix breadcrumb ikut ruang: Performance→"Goal", Development→"Development".
+  it('space Development → prefix "Development" (month)', () => {
+    const f: PeriodFocus = { mode: 'month', year: 2026, month: 6 };
+    expect(periodBreadcrumb(f, 'development')).toBe('Development 2026 · Q2 · Juni');
+  });
+  it('space Development → prefix "Development" (quarter)', () => {
+    const f: PeriodFocus = { mode: 'quarter', year: 2026, quarter: 3 };
+    expect(periodBreadcrumb(f, 'development')).toBe('Development 2026 · Q3');
+  });
+  it('space Performance eksplisit sama dgn default "Goal"', () => {
+    const f: PeriodFocus = { mode: 'month', year: 2026, month: 6 };
+    expect(periodBreadcrumb(f, 'performance')).toBe('Goal 2026 · Q2 · Juni');
+  });
 });
 
 describe('periodWindow', () => {

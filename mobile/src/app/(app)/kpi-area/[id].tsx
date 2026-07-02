@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
@@ -29,6 +28,8 @@ import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
+import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeKpiAreaDetailScreen from '@/prototype/screens/kpi-area-detail';
@@ -194,6 +195,8 @@ export function LiveKpiAreaDetailScreen() {
   // Fase 5 — Kelengkapan Perencanaan (MBR). Fail-open di klien: bila data belum tersedia,
   // tombol aktivasi tetap berjalan; server (RPC activate_kpi_area) penegak akhir.
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('kpi_area', id);
+  const { can } = useProfile();
+  const canAddStrategy = can('create_strategy'); // WSA-08/WSA-13 — gate CTA + key presisi
 
   useFocusEffect(
     useCallback(() => {
@@ -213,7 +216,7 @@ export function LiveKpiAreaDetailScreen() {
       qc.invalidateQueries({ queryKey: ['kpi_areas'] });
       qc.invalidateQueries({ queryKey: ['goals'] });
     },
-    onError: (e) => Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'KPI Area belum bisa diaktifkan. Periksa kelengkapan lalu coba lagi.'),
   });
 
   const kpiArea = kpiAreaQ.data;
@@ -252,7 +255,7 @@ export function LiveKpiAreaDetailScreen() {
       qc.invalidateQueries({ queryKey: ['kpi_area', id] });
       qc.invalidateQueries({ queryKey: ['kpi_areas'] });
     },
-    onError: (e) => Alert.alert('Gagal menyimpan', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal menyimpan', e, 'Perubahan belum tersimpan. Coba lagi.'),
   });
 
   return (
@@ -376,11 +379,13 @@ export function LiveKpiAreaDetailScreen() {
                   <Text className="text-lg font-bold text-black dark:text-white">Strategy</Text>
                   <CardHelpTrigger topic="strategy" />
                 </View>
-                <Button
-                  label="+ Tambah Strategy"
-                  variant="secondary"
-                  onPress={handleAddStrategy}
-                />
+                {canAddStrategy ? (
+                  <Button
+                    label="+ Tambah Strategy"
+                    variant="secondary"
+                    onPress={handleAddStrategy}
+                  />
+                ) : null}
               </View>
 
               {strategiesLoading ? (

@@ -971,3 +971,58 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Residual sengaja ditunda sebagai backlog baru [[ui-prototype-gap]] §2.1: **UI-G-012** (palette drift emerald→green), **UI-G-013** (mikro-tipografi text-[10px]/[11px]), **UI-G-014** (fill grafis green-600 ProgressBar/legend), **UI-G-015** (hex dekoratif login belum terdaftar). Semua kosmetik/palet, lulus 3:1 — bukan kegagalan AA.
 - Pages updated: [[ui-prototype-gap]] (§2.1 baru + UI-G-012..015), `DESIGN.md` (token placeholder §2), `MEMORY.md` n/a.
 - Verifikasi: `tsc --noEmit` bersih; jest **87 suite / 783 tes pass** (clean serial run — kegagalan pada run paralel `--ci` = flake timeout kontensi CPU, bukan regresi); ~39 file diedit, 10 file mati dihapus (614 deletions). Belum di-commit (working tree `feat/sf1-score-formula-editor`).
+
+## [2026-07-02] update | Audit Workspace vs Lock Spec V1.82 + sprint plan eksekusi
+
+- Audit `mobile/` terhadap `WORKSPACE_UI_LOCK_SPEC_V1.82.md` (root repo) via 4 agen paralel: overview/nav (§2/§4/§5), Performance tree (§6/§8–§11), Development tree + interaksi (§7/§12), detail pages + states (§13–§16).
+- Skor AC §18: **20 PASS · 7 PARTIAL · 8 FAIL** dari 35. Perilaku inti patuh (tree collapsed, Detail vs panah, past-period dim, §13 bersih penuh); lapisan visual lock hampir seluruhnya absen.
+- Temuan kritis: WSA-01 tree baru 3 level (Initiative/Action Plan tak dirender), WSA-02 bottom nav hilang di screen turunan (route di Stack root), WSA-03 anatomi tree card (pill letter-badge/orb/border/indentasi/connector) belum ada, WSA-04 guard MBR absen di tree.
+- Temuan tinggi: WSA-05 help modal `?` absen, WSA-06 search overview absen, WSA-07 header row tanpa `Edit`, WSA-08 CTA tambah turunan di detail page tanpa gating (5/6 tanpa `can()`), WSA-09 breadcrumb Development pakai prefix `Goal`.
+- Pages created: [[workspace-lock-audit]] (temuan WSA-01..20 + scorecard), [[workspace-lock-sprint-plan]] (5 sprint: copy lock → guard/permission → anatomi tree card → overview/header/switcher → route & tree lengkap).
+- Pages updated: [[index]].
+- Keputusan owner tertunda: nasib section "Initiative Tanpa Goal" (WSA-16), sumber data stat `Notif` hub Performance, pembalikan ADR Stage 1 (tree 4–5 level).
+
+## [2026-07-02] update | Sprint 1 Copy Lock selesai (WSA-09, WSA-12)
+
+- Eksekusi Sprint 1 [[workspace-lock-sprint-plan]] test-first (TDD red-green).
+- WSA-09: `periodBreadcrumb(focus, space)` — prefix `Development` untuk pane Development (`period-focus.ts`), diteruskan via prop `space` di `PeriodSwitcher`.
+- WSA-12 copy batch (`workspace-copy.ts`): `+ Goal Baru`→`+ Goal`; `+ Development Area Baru`→`+ Development Area`; empty state `Belum ada Goal/Development Area aktif di periode ini.`; tombol hub `Masuk` (a11y label tetap membedakan ruang via `enterA11y`); stat hub kolom-3 `Aktif`→`Notif`, Development `Dev Area`→`Area`, `Problem`→`Problem Statement`; section title overview kiri `Workspace`/kanan `2 ruang`; toast archive spec §12.4 di `showPastPeriodAlert`.
+- Deviasi tercatat (keputusan owner): nilai stat `Notif` sementara memakai `activeCount` sampai sumber data notifikasi diputuskan (relabel-only).
+- Verifikasi: `tsc --noEmit` bersih; jest **87 suite / 787 tes pass**. Screenshot 390px ditunda (tak ada simulator di sesi ini).
+
+## [2026-07-03] update | Sprint 2 Guard & Permission selesai (WSA-04, WSA-08, WSA-13, WSA-18)
+
+- Eksekusi Sprint 2 [[workspace-lock-sprint-plan]] test-first.
+- WSA-04 guard MBR: (a) tree — `StrategySubRow` "+ Initiative" ter-guard oleh kepatuhan `kpi_area→strategy` parent (di-fetch `KpiAreaSubRow` lewat `useMbrCompliance(expanded ? 'kpi_area' : '', id)`), tap → Alert kalimat spec §12.3 (`mbrBreakdownGuardMessage`), tombol redup, tidak push; (b) detail — `confirmAddDescendantIfIncomplete` diubah: pesan spec §12.3, hapus CTA proceed (hanya "Tutup"), fail-open→fail-closed saat compliance undefined.
+- WSA-08 gating: CTA `+ Tambah <turunan>` di 5 detail page dibungkus `can()` (goal→create_kpi_area, kpi-area→create_strategy, strategy/problem-statement→create_initiative, development-area→create_problem_statement).
+- WSA-13 key presisi: tree `+ Strategy`→`create_strategy`, `+ Problem Statement`→`create_problem_statement` (bukan proxy).
+- WSA-18 sanitasi error: helper baru `lib/errors.ts` `alertFriendlyError()` (copy ramah ke user + `console.error` detail teknis); dipakai di 6 detail page menggantikan `Alert.alert(..., e.message)`.
+- Deviasi: guard MBR tree fail-OPEN saat data compliance masih loading (hindari false-block; server tetap penegak akhir), berbeda dari detail-page yang fail-closed.
+- Verifikasi: `tsc --noEmit` bersih; jest **88 suite / 797 tes pass**.
+
+## [2026-07-03] update | Sprint 3 Visual — bagian testable selesai (WSA-03, WSA-17)
+
+- Eksekusi Sprint 3 [[workspace-lock-sprint-plan]] test-first untuk bagian yang bisa diverifikasi via jest (lingkungan ini tak punya simulator RN untuk QA visual/screenshot).
+- WSA-17 (label tombol tambah terlihat): `CardActionRow` dapat prop `addButtonLabel`; tree kini render teks `+ KPI Area` / `+ Strategy` / `+ Initiative` / `+ Problem Statement` (bukan hanya `+` icon dgn accessibilityLabel). Menutup AC 33 secara nyata.
+- WSA-03 (letter-badge pill §9): komponen baru `components/workspace-kind-pill.tsx` (`WorkspaceKindPill` + map `WORKSPACE_KIND` warna terkunci spec) diintegrasikan ke semua card tree (Goal/KPI/Strategy/Initiative/Development Area/Problem Statement). Warna kategori didaftarkan di `DESIGN.md §2` (Workspace category).
+- Verifikasi: `tsc --noEmit` bersih; jest **89 suite / 804 tes pass**.
+- BELUM (butuh QA device/simulator, bukan hanya jest): ProgressOrb varian tree (conic-fill + label Capaian/Progress, WSA-15), border-kiri 5px warna kategori, indentasi `tree-level-1..5` + connector L (§8), geometri tombol persis (Detail pill biru h30 / `⋯` 34×30 / `+` blue-soft border `#cce2ff`), desaturasi archived (§12.4). Direkomendasikan dikerjakan di sesi dengan simulator agar bisa screenshot 390px.
+
+## [2026-07-03] update | Sprint 3/4 lanjut — orb, help modal, search, back pill
+
+- Lanjutan eksekusi [[workspace-lock-sprint-plan]] test-first (bagian yang bisa diverifikasi via jest; QA pixel 390px tetap butuh simulator).
+- WSA-15 (Sprint 3): komponen `TreeProgressOrb` + `treeOrbColor` di `ui.tsx` (50px, angka + `%`, label bawah Capaian/Progress, warna good `#14845c`/risk `#b76b00`/bad `#c93434` spec §10). Building block siap; integrasi nilai live per-card tree ditunda (butuh data progress anak yang belum di-fetch di baris tree).
+- WSA-05 (Sprint 4): `WorkspaceHelpModal` + `WS_HELP_COPY` (copy §5 terkunci); tombol `?` 26×26 di kedua hub card, buka modal, TIDAK menavigasi. 
+- WSA-06 (Sprint 4): search launcher di HubView (placeholder `Cari Goal, KPI Area, Initiative, Action Plan`) → route `/search`.
+- WSA-07 (Sprint 4, sebagian): back jadi pill `← Kembali` (min-w 92, border) — a11y label "Kembali ke Workspace" tetap. `Edit` button + reposisi `+ Goal` ke button row atas ditunda (gate admin + wiring Sprint 5).
+- Verifikasi: `tsc --noEmit` bersih; jest **90 suite / 813 tes pass**.
+
+## [2026-07-03] update | Sprint 3/4 visual lock lengkap — untuk QA simulator
+
+- Lanjutan [[workspace-lock-sprint-plan]]: geometri pixel-spec dilay-down; verifikasi visual final butuh simulator 390px (out of session tools).
+- WSA-03/17 (Sprint 3): action row lock spec §11 — `CardActionRow` + Strategy/Initiative inline pill diseragamkan: Detail solid biru `#1877f2` teks putih h30 r999; `⋯` 34×30 r999 bg `#f8fafc` border `#e2e8f0`; `+` h30 blue-soft bg `#eef6ff` border `#cce2ff` teks `#145ebc`. hitSlop menjaga touch target ≥44px (DESIGN §4).
+- WSA-03 (§6.4–6.8 + §8): tree card di-wrap border kiri 5px warna kategori + indent `TREE_LEVEL_INDENT` (Goal/DevArea level-0=0, KPI/PS level-2=16, Strategy/Initiative level-3=20). Konstanta terkunci di `components/workspace-kind-pill.tsx` (`WORKSPACE_KIND_BORDER`, `TREE_LEVEL_INDENT`) + tes.
+- WSA-11 (Sprint 4): `WorkspaceHubCard` dapat prop `space`; border kiri 4px (`#1877f2`/`#0f766e`), bg tint spec (`#f8fbff`/`#f7fffd`), min-h 172, kicker jadi pill dgn tint kategori, progress line bawah, tombol `Masuk` sebagai tombol biru/teal nyata (bukan teks link).
+- WSA-10 (Sprint 4): `PeriodSwitcher` diubah jadi collapsed pill min-h 48 radius 999 (Performance `#eef4fb`/`#d9e3ef`, Development `#eefaf8`/`#cceee8`); tombol `Ubah` warna ruang.
+- WSA-07 (Sprint 4): `PaneTopHeader` refactor — button row paling atas: `Kembali` pill + spacer + optional `Edit` (secondary) + primary (`+ Goal` / `+ Development Area`, h42 r8 biru). Tombol `+ Goal` lama di bawah PeriodSwitcher dihapus.
+- Verifikasi: `tsc --noEmit` bersih; jest **90 suite / 815 tes pass**. Yang belum: nilai orb tree per-card (butuh data progress anak yang belum di-fetch di tree row), tree connector L-shape 10×32 `#cfd8e5` (butuh positioning absolute + calc yang lebih hati-hati — lebih aman diverifikasi di simulator dulu), Sprint 5 struktural (WSA-01/02/14/16/19/20).

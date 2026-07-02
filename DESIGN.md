@@ -53,6 +53,22 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 
 Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), `ui.tsx`.
 
+### Workspace category (letter-badge pill §9 lock spec V1.82)
+
+Warna kategori kartu Workspace **terkunci** oleh `WORKSPACE_UI_LOCK_SPEC_V1.82.md` §9 (menang atas brand kanonik untuk area Workspace, §19.6). Dipakai inline (bukan class Tailwind) agar hex persis spec — sumber tunggal di [`workspace-kind-pill.tsx`](mobile/src/components/workspace-kind-pill.tsx).
+
+| Kategori | Huruf | Teks | Latar | Border | Lingkaran |
+|---|---|---|---|---|---|
+| Goal | `G` | `#145ebc` | `#e8f2ff` | `#cce2ff` | `#1877f2` |
+| KPI Area | `K` | `#b76b00` | `#fff3d7` | `#ffe1a1` | `#b76b00` |
+| Strategy | `S` | `#6941c6` | `#f1ebff` | `#dfd1ff` | `#6941c6` |
+| Initiative | `I` | `#14845c` | `#e7f7ef` | `#c9ebda` | `#14845c` |
+| Action Plan | `AP` | `#145ebc` | `#eef6ff` | `#cce2ff` | `#145ebc` (font 8px) |
+| Development Area | `D` | `#0f766e` | `#e6fffb` | `#99f6e4` | `#0f766e` |
+| Problem Statement | `P` | `#c2410c` | `#fff7ed` | `#fed7aa` | `#c2410c` |
+
+Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line border `#d9e2ec`. Connector L-shape `#cfd8e5`.
+
 ---
 
 ## 3. Typography

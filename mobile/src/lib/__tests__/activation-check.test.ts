@@ -4,6 +4,7 @@ jest.mock('../supabase', () => ({ supabase: {} }));
 import {
   confirmAddDescendantIfIncomplete,
   guardActivationFields,
+  mbrBreakdownGuardMessage,
   missingRequiredFor,
 } from '../activation-check';
 import type { MbrCompliance } from '../settings-mbr';
@@ -83,6 +84,25 @@ describe('guardActivationFields', () => {
   });
 });
 
+// WSA-04 — pesan guard tree §12.3: pola persis spec, mengacu type parent + next button.
+describe('mbrBreakdownGuardMessage', () => {
+  const kpiToStrategy: MbrCompliance = {
+    child_card_type: 'strategy',
+    child_count: 2,
+    min_count: 3,
+    enforcement_mode: 'blokir_akses_turunan',
+    is_compliant: false,
+  };
+
+  it('KPI Area 2/3 Strategy → kalimat §12.3 persis (next button Initiative)', () => {
+    const { title, message } = mbrBreakdownGuardMessage('KPI Area', kpiToStrategy, 'Initiative');
+    expect(title).toBe('Kelengkapan Perencanaan');
+    expect(message).toBe(
+      'KPI Area ini baru punya 2 dari 3 Strategy. Tambahkan 1 Strategy lagi dulu, baru tombol + Initiative aktif.',
+    );
+  });
+});
+
 describe('confirmAddDescendantIfIncomplete', () => {
   const compliantMbr: MbrCompliance = {
     child_card_type: 'kpi_area',
@@ -113,7 +133,9 @@ describe('confirmAddDescendantIfIncomplete', () => {
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
-  it('compliance undefined (fail-open) → onProceed langsung', () => {
+  // WSA-04 — fail-CLOSED: data compliance belum ada → JANGAN buka form; tampilkan
+  // pesan tunggu, onProceed tidak dipanggil (spec §12.3: klik tidak membuka form).
+  it('compliance undefined (fail-closed) → onProceed TIDAK dipanggil + popup tunggu', () => {
     const onProceed = jest.fn();
     const alertSpy = jest.fn();
     confirmAddDescendantIfIncomplete({
@@ -123,11 +145,13 @@ describe('confirmAddDescendantIfIncomplete', () => {
       onProceed,
       alertImpl: alertSpy,
     });
-    expect(onProceed).toHaveBeenCalledTimes(1);
-    expect(alertSpy).not.toHaveBeenCalled();
+    expect(onProceed).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('non-compliant → popup arahan + CTA "+ Tambah X" panggil onProceed', () => {
+  // WSA-04 — non-compliant: pesan spec §12.3, TANPA CTA proceed (hanya "Tutup"),
+  // onProceed tidak pernah dipanggil.
+  it('non-compliant → popup spec §12.3, hanya "Tutup", onProceed tak pernah dipanggil', () => {
     const onProceed = jest.fn();
     const alertSpy = jest.fn();
     confirmAddDescendantIfIncomplete({
@@ -138,17 +162,12 @@ describe('confirmAddDescendantIfIncomplete', () => {
       alertImpl: alertSpy,
     });
     expect(alertSpy).toHaveBeenCalledTimes(1);
-    const [title, msg, buttons] = alertSpy.mock.calls[0];
-    expect(title).toBe('Kelengkapan Perencanaan');
+    const [, msg, buttons] = alertSpy.mock.calls[0];
     expect(msg).toContain('Goal A ini baru punya 2 dari 3 KPI Area');
-    expect(msg).toContain('Tambahkan 1 KPI Area lagi');
-    // 2 buttons: Tutup + "+ Tambah KPI Area"
-    expect(buttons).toHaveLength(2);
+    expect(msg).toContain('Tambahkan 1 KPI Area lagi dulu');
+    // Hanya 1 tombol "Tutup"; tidak ada CTA yang membuka form.
+    expect(buttons).toHaveLength(1);
     expect(buttons[0].text).toBe('Tutup');
-    expect(buttons[1].text).toBe('+ Tambah KPI Area');
-    // CTA proceed
     expect(onProceed).not.toHaveBeenCalled();
-    buttons[1].onPress();
-    expect(onProceed).toHaveBeenCalledTimes(1);
   });
 });

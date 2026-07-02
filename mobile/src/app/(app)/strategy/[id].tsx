@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
@@ -15,6 +14,8 @@ import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } fro
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeStrategyDetailScreen from '@/prototype/screens/strategy-detail';
 
@@ -51,6 +52,8 @@ export function LiveStrategyDetailScreen() {
     refetch: refetchInitiatives,
   } = useStrategyInitiatives(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('strategy', id);
+  const { can } = useProfile();
+  const canAddInitiative = can('create_initiative'); // WSA-08 — gate CTA tambah turunan
 
   useFocusEffect(
     useCallback(() => {
@@ -67,7 +70,7 @@ export function LiveStrategyDetailScreen() {
       qc.invalidateQueries({ queryKey: ['strategy', id] });
       qc.invalidateQueries({ queryKey: ['strategies'] });
     },
-    onError: (e) => Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Strategy belum bisa diaktifkan. Periksa kelengkapan lalu coba lagi.'),
   });
 
   const strategy = strategyQ.data;
@@ -158,11 +161,13 @@ export function LiveStrategyDetailScreen() {
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
-                <Button
-                  label="+ Tambah Initiative"
-                  variant="secondary"
-                  onPress={handleAddInitiative}
-                />
+                {canAddInitiative ? (
+                  <Button
+                    label="+ Tambah Initiative"
+                    variant="secondary"
+                    onPress={handleAddInitiative}
+                  />
+                ) : null}
               </View>
 
               {initiativesLoading ? (

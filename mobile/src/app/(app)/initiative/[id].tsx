@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
@@ -9,6 +8,7 @@ import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -247,7 +247,7 @@ export function LiveInitiativeDetailScreen() {
       qc.invalidateQueries({ queryKey: ['initiative', id] });
       qc.invalidateQueries({ queryKey: ['initiatives'] });
     },
-    onError: (e) => Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Initiative belum bisa diaktifkan. Coba lagi.'),
   });
 
   const initiative = initiativeQ.data;

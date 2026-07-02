@@ -31,6 +31,9 @@ import {
   useStrategies,
 } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
+import { useMbrCompliance } from '@/hooks/use-mbr';
+import { mbrBreakdownGuardMessage } from '@/lib/activation-check';
+import type { MbrCompliance } from '@/lib/settings-mbr';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
 import { type Initiative } from '@/lib/cards';
 import type { KpiArea } from '@/lib/kpi-areas';
@@ -44,11 +47,12 @@ import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { RowActionsMenu } from '@/components/row-actions-menu';
 import { WorkspaceHubCard } from '@/components/workspace-hub-card';
+import { TREE_LEVEL_INDENT, WORKSPACE_KIND_BORDER, WorkspaceKindPill } from '@/components/workspace-kind-pill';
 import {
   derivePerformanceHubStats,
   deriveDevelopmentHubStats,
 } from '@/lib/workspace-hub-stats';
-import { WS_COPY, WS_DEV_COPY, WS_HUB_COPY, WS_TABS } from '@/lib/workspace-copy';
+import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY, WS_TABS } from '@/lib/workspace-copy';
 
 /**
  * Tab Workspace + state lobby. `'hub'` = HubView (2 hub-card pilih ruang); `'performance'`/
@@ -101,6 +105,7 @@ function CardActionRow({
   past,
   onAdd,
   addLabel,
+  addButtonLabel,
 }: {
   cardLabel: string;
   expanded: boolean;
@@ -113,7 +118,13 @@ function CardActionRow({
   past: boolean;
   onAdd?: () => void;
   addLabel?: string;
+  /** WSA-17 — teks TERLIHAT tombol tambah, mis. "+ KPI Area" (spec §11). */
+  addButtonLabel?: string;
 }) {
+  // Spec §11: Detail solid biru #1877f2 teks putih h30 r999; ⋯ 34×30 r999 bg #f8fafc;
+  // + blue-soft #eef6ff border #cce2ff teks #145ebc. hitSlop menjaga touch target ≥44px
+  // meski tinggi visual 30px (DESIGN §4).
+  const hit = { top: 8, bottom: 8, left: 6, right: 6 };
   return (
     <View className="flex-row items-center gap-2">
       <Pressable
@@ -128,35 +139,40 @@ function CardActionRow({
         <Text className="text-sm text-brand-dark dark:text-brand">{expanded ? '▾' : '▸'}</Text>
       </Pressable>
       <Pressable
-        className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+        hitSlop={hit}
+        style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
         accessibilityRole="button"
         accessibilityLabel={detailLabel}
         onPress={onDetail}>
-        <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
+        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
       </Pressable>
       <Pressable
-        className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+        hitSlop={hit}
+        style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
         accessibilityRole="button"
         accessibilityLabel={`Aksi lain ${cardLabel}`}
         onPress={onMore}>
-        <Text className="text-base font-bold text-black dark:text-white">⋯</Text>
+        <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
       </Pressable>
       {onAdd ? (
         <Pressable
-          className={`min-h-[44px] w-11 items-center justify-center rounded-xl active:opacity-70 ${
-            past
-              ? 'border border-neutral-300 dark:border-neutral-700'
-              : 'bg-brand-dark'
-          }`}
+          hitSlop={hit}
+          style={{
+            height: 30,
+            borderRadius: 999,
+            paddingHorizontal: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: past ? '#e2e8f0' : '#cce2ff',
+            backgroundColor: past ? '#f1f5f9' : '#eef6ff',
+          }}
           accessibilityRole="button"
           accessibilityLabel={addLabel ?? 'Tambah turunan'}
           accessibilityState={{ disabled: past }}
           onPress={() => (past ? showPastPeriodAlert(cardLabel) : onAdd())}>
-          <Text
-            className={`text-lg font-bold ${
-              past ? 'text-neutral-400 dark:text-neutral-500' : 'text-white'
-            }`}>
-            +
+          <Text style={{ color: past ? '#94a3b8' : '#145ebc', fontSize: 12, fontWeight: '900' }}>
+            {addButtonLabel ?? '+'}
           </Text>
         </Pressable>
       ) : null}
@@ -183,9 +199,12 @@ function defaultRowActions(cardLabel: string): { label: string; onPress: () => v
 function StrategySubRow({
   strategy,
   ancestorPast = false,
+  parentCompliance,
 }: {
   strategy: Strategy;
   ancestorPast?: boolean;
+  /** Kepatuhan MBR kpi_area→strategy (parent). Non-compliant → "+ Initiative" ter-guard (WSA-04). */
+  parentCompliance?: MbrCompliance;
 }) {
   const router = useRouter();
   const { can } = useProfile();
@@ -193,10 +212,30 @@ function StrategySubRow({
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(strategy, focus) === 'past';
   const canAddInit = can('create_initiative');
+  // WSA-04 — guard MBR: fail-open saat data belum ada (undefined); guard hanya saat tahu non-compliant.
+  const mbrGuarded = !!parentCompliance && !parentCompliance.is_compliant;
+  const onAddInitiative = () => {
+    if (mbrGuarded && parentCompliance) {
+      const { title, message } = mbrBreakdownGuardMessage('KPI Area', parentCompliance, 'Initiative');
+      Alert.alert(title, message);
+      return;
+    }
+    if (past) {
+      showPastPeriodAlert(strategy.name);
+      return;
+    }
+    router.push(`/initiative/new?strategyId=${strategy.id}` as Href);
+  };
+  // Tombol redup bila past ATAU ter-guard MBR (spec §11: tetap terlihat, tapi redup).
+  const addDimmed = past || mbrGuarded;
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
+      {/* Spec §6.6 + §8: level-3 (indent 20px), border kiri 5px warna Strategy (#6941c6). */}
+      <View
+        className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
+        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy, marginLeft: TREE_LEVEL_INDENT[3] }}>
+        <WorkspaceKindPill kind="strategy" />
         <View className="flex-row items-start justify-between gap-2">
           <Text
             className="flex-1 text-sm font-medium text-black dark:text-white"
@@ -209,39 +248,43 @@ function StrategySubRow({
             <StatusBadge status={strategy.status} />
           </View>
         </View>
+        {/* Spec §11 pill geometry — pixel-identik dgn CardActionRow. */}
         <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${strategy.name}`}
             onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
-            <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
+            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${strategy.name}`}
             onPress={() => setMenuOpen(true)}>
-            <Text className="text-base font-bold text-black dark:text-white">⋯</Text>
+            <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
           </Pressable>
           {canAddInit ? (
             <Pressable
-              className={`min-h-[44px] w-11 items-center justify-center rounded-xl active:opacity-70 ${
-                past ? 'border border-neutral-300 dark:border-neutral-700' : 'bg-brand-dark'
-              }`}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+              style={{
+                height: 30,
+                borderRadius: 999,
+                paddingHorizontal: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: addDimmed ? '#e2e8f0' : '#cce2ff',
+                backgroundColor: addDimmed ? '#f1f5f9' : '#eef6ff',
+              }}
               accessibilityRole="button"
               accessibilityLabel={`Tambah Initiative ke ${strategy.name}`}
-              accessibilityState={{ disabled: past }}
-              onPress={() =>
-                past
-                  ? showPastPeriodAlert(strategy.name)
-                  : router.push(`/initiative/new?strategyId=${strategy.id}` as Href)
-              }>
-              <Text
-                className={`text-lg font-bold ${
-                  past ? 'text-neutral-400 dark:text-neutral-500' : 'text-white'
-                }`}>
-                +
+              accessibilityState={{ disabled: addDimmed }}
+              onPress={onAddInitiative}>
+              <Text style={{ color: addDimmed ? '#94a3b8' : '#145ebc', fontSize: 12, fontWeight: '900' }}>
+                + Initiative
               </Text>
             </Pressable>
           ) : null}
@@ -267,13 +310,20 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { strategies, isLoading, isError, refetch } = useStrategies(kpi.id, expanded);
+  // WSA-04 — guard MBR: fetch kepatuhan kpi_area→strategy hanya saat expanded (parentType ''
+  // menonaktifkan query di useMbrCompliance). Diteruskan ke StrategySubRow untuk guard "+ Initiative".
+  const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'kpi_area' : '', kpi.id);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(kpi, focus) === 'past';
-  const canAddStrategy = can('create_kpi_area'); // proxy izin tambah turunan (existing pattern)
+  const canAddStrategy = can('create_strategy'); // WSA-13 — key presisi (bukan proxy create_kpi_area)
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+      {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna KPI Area (#b76b00). */}
+      <View
+        className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
+        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area, marginLeft: TREE_LEVEL_INDENT[2] }}>
+        <WorkspaceKindPill kind="kpi_area" />
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-sm font-medium text-black dark:text-white">
             {kpi.name}
@@ -299,6 +349,7 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
               : undefined
           }
           addLabel={`Tambah Strategy ke ${kpi.name}`}
+          addButtonLabel="+ Strategy"
         />
 
         {expanded ? (
@@ -313,7 +364,12 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
           ) : (
             <View className="gap-2">
               {strategies.map((s) => (
-                <StrategySubRow key={s.id} strategy={s} ancestorPast={ancestorPast || past} />
+                <StrategySubRow
+                  key={s.id}
+                  strategy={s}
+                  ancestorPast={ancestorPast || past}
+                  parentCompliance={mbrCompliance}
+                />
               ))}
             </View>
           )
@@ -346,7 +402,10 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
 
   return (
     <PastDim past={past}>
+      {/* Spec §6.4 + §8: level-0 (indent 0), border kiri 5px warna kategori Goal. */}
+      <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
+        <WorkspaceKindPill kind="goal" />
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">{goal.name}</Text>
           <View className="flex-row items-center gap-1.5">
@@ -369,6 +428,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
           past={past}
           onAdd={canAddKpi ? () => router.push(`/kpi-area/new?goalId=${goal.id}` as Href) : undefined}
           addLabel={`Tambah KPI Area ke ${goal.name}`}
+          addButtonLabel="+ KPI Area"
         />
 
         {expanded ? (
@@ -389,6 +449,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
           )
         ) : null}
       </SectionCard>
+      </View>
       <RowActionsMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -417,7 +478,11 @@ function InitiativeSubRow({
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
+      {/* Spec §6.7/§7.5 + §8: level-3 di Dev pane, border kiri 5px warna Initiative (#14845c). */}
+      <View
+        className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
+        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative, marginLeft: TREE_LEVEL_INDENT[3] }}>
+        <WorkspaceKindPill kind="initiative" />
         <View className="flex-row items-start justify-between gap-2">
           <Text
             className="flex-1 text-sm font-medium text-black dark:text-white"
@@ -432,18 +497,20 @@ function InitiativeSubRow({
         </View>
         <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${item.name}`}
             onPress={() => router.push(`/initiative/${item.id}` as Href)}>
-            <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
+            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${item.name}`}
             onPress={() => setMenuOpen(true)}>
-            <Text className="text-base font-bold text-black dark:text-white">⋯</Text>
+            <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
           </Pressable>
         </View>
       </View>
@@ -479,7 +546,11 @@ function ProblemStatementSubRow({
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+      {/* Spec §7.4 + §8: level-2 Dev pane, border kiri 5px warna Problem Statement (#c2410c). */}
+      <View
+        className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
+        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement, marginLeft: TREE_LEVEL_INDENT[2] }}>
+        <WorkspaceKindPill kind="problem_statement" />
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-sm font-medium text-black dark:text-white">{ps.name}</Text>
           <View className="flex-row items-center gap-1.5">
@@ -503,6 +574,7 @@ function ProblemStatementSubRow({
               : undefined
           }
           addLabel={`Tambah Initiative ke ${ps.name}`}
+          addButtonLabel="+ Initiative"
         />
 
         {expanded ? (
@@ -549,11 +621,14 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
   const countLabel =
     count == null ? WS_DEV_COPY.problemCountUnknown : WS_DEV_COPY.problemCount(count);
   const past = cardPeriodStatus(devArea, focus) === 'past';
-  const canAddProblem = can('create_development_area'); // proxy izin tambah turunan DevArea
+  const canAddProblem = can('create_problem_statement'); // WSA-13 — key presisi (bukan proxy create_development_area)
 
   return (
     <PastDim past={past}>
+      {/* Spec §7.3 + §8: level-0 Dev pane, border kiri 5px warna Development Area (#0f766e). */}
+      <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
+        <WorkspaceKindPill kind="development_area" />
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">
             {devArea.name}
@@ -582,6 +657,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
               : undefined
           }
           addLabel={`Tambah Problem Statement ke ${devArea.name}`}
+          addButtonLabel="+ Problem Statement"
         />
 
         {expanded ? (
@@ -603,6 +679,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
           )
         ) : null}
       </SectionCard>
+      </View>
       <RowActionsMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -658,23 +735,57 @@ function PaneTopHeader({
   tab,
   onTabChange,
   onBackToHub,
+  primaryLabel,
+  onPrimary,
+  canEdit,
+  onEdit,
 }: {
   tab: Tab;
   onTabChange: (t: Tab) => void;
   onBackToHub: () => void;
+  /** WSA-07 — tombol utama pane, mis. "+ Goal" / "+ Development Area". */
+  primaryLabel?: string;
+  onPrimary?: () => void;
+  /** WSA-07 — tombol `Edit` di-gate izin admin. */
+  canEdit?: boolean;
+  onEdit?: () => void;
 }) {
   return (
     <View className="gap-5 pb-5">
-      <View className="gap-2">
+      {/* WSA-07 — button row paling atas: Kembali · [Edit (gated)] · + Turunan (primary). */}
+      <View className="flex-row items-center gap-2">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Kembali ke Workspace"
           onPress={onBackToHub}
-          className="min-h-[44px] justify-center self-start active:opacity-70">
-          <Text className="text-sm font-semibold text-brand-dark dark:text-brand">{WS_HUB_COPY.backToHub}</Text>
+          style={{ minHeight: 38, minWidth: 92, borderRadius: 999, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#ffffff', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          className="active:opacity-70">
+          <Text style={{ color: '#145ebc', fontSize: 16 }}>←</Text>
+          <Text style={{ color: '#145ebc', fontSize: 13, fontWeight: '900' }}>Kembali</Text>
         </Pressable>
-        <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
+        <View style={{ flex: 1 }} />
+        {canEdit && onEdit ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit Workspace"
+            onPress={onEdit}
+            style={{ height: 42, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#ffffff', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+            className="active:opacity-70">
+            <Text style={{ color: '#0f172a', fontSize: 13, fontWeight: '900' }}>Edit</Text>
+          </Pressable>
+        ) : null}
+        {primaryLabel && onPrimary ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={primaryLabel}
+            onPress={onPrimary}
+            style={{ height: 42, borderRadius: 8, backgroundColor: '#1877f2', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+            className="active:opacity-70">
+            <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '900' }}>{primaryLabel}</Text>
+          </Pressable>
+        ) : null}
       </View>
+      <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
       <TabBar<'performance' | 'development'>
         tabs={[
           { key: 'performance', label: WS_TABS.performance },
@@ -692,6 +803,7 @@ function PaneTopHeader({
  * (zero query baru). Tap hub → masuk pane dgn back button.
  */
 function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') => void }) {
+  const router = useRouter();
   const goalsQ = useGoals();
   const devQ = useDevelopmentAreas();
 
@@ -711,12 +823,23 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
     // ScrollView (bukan View) — hub harus selamat saat Dynamic Type besar / layar pendek (DESIGN §4.5).
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <View className="gap-5 p-5">
-        <View className="gap-1">
+        <View className="flex-row items-center justify-between gap-3">
           <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{WS_HUB_COPY.title}</Text>
-          <Text className="text-base text-neutral-500 dark:text-neutral-400">
-            {WS_HUB_COPY.subtitle}
+          <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">
+            {WS_HUB_COPY.sectionCount}
           </Text>
         </View>
+        {/* WSA-06 — search launcher overview (spec §4.1). Tap → route /search global. */}
+        <Pressable
+          accessibilityRole="search"
+          accessibilityLabel="Cari Workspace"
+          onPress={() => router.push('/search' as Href)}
+          className="min-h-[44px] flex-row items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-950">
+          <Text className="text-base text-neutral-400 dark:text-neutral-500">⌕</Text>
+          <Text className="text-sm text-neutral-400 dark:text-neutral-500">
+            Cari Goal, KPI Area, Initiative, Action Plan
+          </Text>
+        </Pressable>
         {loading ? (
           <SkeletonList count={2} />
         ) : (
@@ -727,9 +850,13 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
               meta={WS_HUB_COPY.perf.meta}
               stats={perfStats}
               enterLabel={WS_HUB_COPY.perf.enter}
+              enterAccessibilityLabel={WS_HUB_COPY.perf.enterA11y}
               parentStatLabel="Goal"
               childStatLabel="KPI Area"
-              activeStatLabel="Aktif"
+              activeStatLabel="Notif"
+              help={WS_HELP_COPY.performance}
+              helpAccessibilityLabel="Bantuan Performance"
+              space="performance"
               onEnter={() => onSelect('performance')}
             />
             <WorkspaceHubCard
@@ -738,9 +865,13 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
               meta={WS_HUB_COPY.dev.meta}
               stats={devStats}
               enterLabel={WS_HUB_COPY.dev.enter}
-              parentStatLabel="Dev Area"
-              childStatLabel="Problem"
-              activeStatLabel="Aktif"
+              enterAccessibilityLabel={WS_HUB_COPY.dev.enterA11y}
+              parentStatLabel="Area"
+              childStatLabel="Problem Statement"
+              activeStatLabel="Notif"
+              help={WS_HELP_COPY.development}
+              helpAccessibilityLabel="Bantuan Development"
+              space="development"
               onEnter={() => onSelect('development')}
             />
           </View>
@@ -775,12 +906,15 @@ function PerformancePane({
 
   const header = (
     <View className="gap-5 pb-3">
-      <PaneTopHeader tab={tab} onTabChange={onTabChange} onBackToHub={onBackToHub} />
+      <PaneTopHeader
+        tab={tab}
+        onTabChange={onTabChange}
+        onBackToHub={onBackToHub}
+        primaryLabel={canCreate ? WS_COPY.btnGoalBaru : undefined}
+        onPrimary={canCreate ? () => router.push('/goal-wizard' as Href) : undefined}
+      />
       <PeriodSwitcher />
       <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_COPY.subtitle}</Text>
-      {canCreate ? (
-        <Button label={WS_COPY.btnGoalBaru} onPress={() => router.push('/goal-wizard' as Href)} />
-      ) : null}
       <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
       {goalsQ.isLoading ? <SkeletonList count={3} /> : null}
       {goalsQ.isError ? <ErrorState onRetry={() => goalsQ.refetch()} /> : null}
@@ -867,15 +1001,15 @@ function DevelopmentPane({
 
   const header = (
     <View className="gap-5 pb-3">
-      <PaneTopHeader tab={tab} onTabChange={onTabChange} onBackToHub={onBackToHub} />
-      <PeriodSwitcher />
+      <PaneTopHeader
+        tab={tab}
+        onTabChange={onTabChange}
+        onBackToHub={onBackToHub}
+        primaryLabel={canCreate ? WS_DEV_COPY.btnDevAreaBaru : undefined}
+        onPrimary={canCreate ? () => router.push('/development-area/new' as Href) : undefined}
+      />
+      <PeriodSwitcher space="development" />
       <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_DEV_COPY.subtitle}</Text>
-      {canCreate ? (
-        <Button
-          label={WS_DEV_COPY.btnDevAreaBaru}
-          onPress={() => router.push('/development-area/new' as Href)}
-        />
-      ) : null}
       <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">
         {WS_DEV_COPY.sectionDevAreas}
       </Text>

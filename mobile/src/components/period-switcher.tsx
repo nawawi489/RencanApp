@@ -19,6 +19,7 @@ import {
   type PeriodFocus,
   type PeriodMode,
   type PeriodOption,
+  type WorkspaceSpace,
 } from '@/lib/period-focus';
 
 const MODE_LABEL: Record<PeriodMode, string> = { month: 'Bulan', quarter: 'Quarter' };
@@ -39,7 +40,7 @@ function optionToFocus(opt: PeriodOption): PeriodFocus {
     : { mode: 'quarter', year: opt.year, quarter: opt.quarter! };
 }
 
-export function PeriodSwitcher({ now }: { now?: Date }) {
+export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSpace }) {
   const { focus, setFocus, setMode } = usePeriodFocus();
   const [open, setOpen] = useState(false);
   // `now` anchor — di runtime pakai Date saat ini; di test injected agar deterministik.
@@ -54,27 +55,48 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
   );
 
   const label = formatPeriodLabel(focus);
-  const breadcrumb = periodBreadcrumb(focus);
+  const breadcrumb = periodBreadcrumb(focus, space);
+  // WSA-10 — collapsed pill (spec §6.2/§7.2): bg #eef4fb border #d9e3ef (Performance);
+  // varian Development #eefaf8/#cceee8.
+  const pillTheme =
+    space === 'development'
+      ? { bg: '#eefaf8', border: '#cceee8', changeBg: '#0f766e' }
+      : { bg: '#eef4fb', border: '#d9e3ef', changeBg: '#1877f2' };
 
   return (
+    <>
     <View
-      className="gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950"
+      style={{
+        minHeight: 48,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: pillTheme.border,
+        backgroundColor: pillTheme.bg,
+        paddingLeft: 14,
+        paddingRight: 6,
+        paddingVertical: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+      }}
       accessible
       accessibilityLabel={`Periode aktif ${label}`}>
-      <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Periode aktif</Text>
-      <View className="flex-row items-center justify-between gap-3">
-        <View className="flex-1 gap-0.5">
-          <Text className="text-xl font-bold text-black dark:text-white">{label}</Text>
-          <Text className="text-xs text-neutral-500 dark:text-neutral-400">{breadcrumb}</Text>
+      <View style={{ flex: 1, gap: 0 }}>
+        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.4, color: '#64748b', textTransform: 'uppercase' }}>Periode aktif</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+          <Text style={{ fontSize: 14, fontWeight: '900', color: '#0f172a' }}>{label}</Text>
+          <Text style={{ fontSize: 11, color: '#64748b' }} numberOfLines={1}>{breadcrumb}</Text>
         </View>
-        <Pressable
-          className="min-h-[44px] items-center justify-center rounded-xl bg-brand-dark px-4 active:opacity-70"
-          accessibilityRole="button"
-          accessibilityLabel="Ubah periode"
-          onPress={() => setOpen(true)}>
-          <Text className="text-sm font-semibold text-white">Ubah</Text>
-        </Pressable>
       </View>
+      <Pressable
+        style={{ height: 36, borderRadius: 999, backgroundColor: pillTheme.changeBg, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+        className="active:opacity-70"
+        accessibilityRole="button"
+        accessibilityLabel="Ubah periode"
+        onPress={() => setOpen(true)}>
+        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Ubah</Text>
+      </Pressable>
+    </View>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <View className="flex-1 justify-end bg-black/40">
@@ -154,6 +176,6 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
           </View>
         </View>
       </Modal>
-    </View>
+    </>
   );
 }
