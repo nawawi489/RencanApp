@@ -7,7 +7,7 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList } from 'react-native';
-import { Pressable, Text, View } from 'react-native-css/components';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
 import PrototypeWorkspaceScreen from '@/prototype/screens/workspace';
@@ -645,7 +645,8 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
   const loading = goalsQ.isLoading || devQ.isLoading;
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-black">
+    // ScrollView (bukan View) — hub harus selamat saat Dynamic Type besar / layar pendek (DESIGN §4.5).
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <View className="gap-5 p-5">
         <View className="gap-1">
           <Text className="text-2xl font-bold text-black dark:text-white">{WS_HUB_COPY.title}</Text>
@@ -682,7 +683,7 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
           </View>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
