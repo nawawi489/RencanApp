@@ -43,7 +43,7 @@ export function AppHeader({ kicker }: { kicker?: string }) {
             <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Cari</Text>
           </Pressable>
           <Pressable
-            className="active:opacity-70"
+            className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
             onPress={() => router.push('/(app)/settings')}
             accessibilityRole="button"
             accessibilityLabel="Buka profil & pengaturan">
