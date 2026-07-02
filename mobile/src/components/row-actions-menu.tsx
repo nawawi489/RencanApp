@@ -83,7 +83,7 @@ export function RowActionsMenu({
             accessibilityRole="button"
             accessibilityLabel="Tutup menu aksi"
             onPress={onClose}>
-            <Text className="text-sm font-semibold text-brand-dark">Tutup</Text>
+            <Text className="text-sm font-semibold text-brand-dark dark:text-brand">Tutup</Text>
           </Pressable>
         </View>
       </View>

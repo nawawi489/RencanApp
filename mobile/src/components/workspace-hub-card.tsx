@@ -60,8 +60,8 @@ export function WorkspaceHubCard({
       </View>
 
       <View className="flex-row items-center justify-end gap-1">
-        <Text className="text-sm font-semibold text-brand-dark">{enterLabel}</Text>
-        <Text className="text-sm text-brand-dark">›</Text>
+        <Text className="text-sm font-semibold text-brand-dark dark:text-brand">{enterLabel}</Text>
+        <Text className="text-sm text-brand-dark dark:text-brand">›</Text>
       </View>
     </Pressable>
   );

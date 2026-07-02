@@ -88,7 +88,7 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
                 accessibilityRole="button"
                 accessibilityLabel="Tutup pilihan periode"
                 onPress={() => setOpen(false)}>
-                <Text className="text-base font-semibold text-brand-dark">Tutup</Text>
+                <Text className="text-base font-semibold text-brand-dark dark:text-brand">Tutup</Text>
               </Pressable>
             </View>
 

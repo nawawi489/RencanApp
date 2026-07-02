@@ -104,10 +104,10 @@ function CardActionRow({
         accessibilityLabel={expanded ? collapseLabel : expandLabel}
         accessibilityState={{ expanded }}
         onPress={onToggleExpand}>
-        <Text className="text-sm font-semibold text-brand-dark">
+        <Text className="text-sm font-semibold text-brand-dark dark:text-brand">
           {expanded ? collapseLabel : expandLabel}
         </Text>
-        <Text className="text-sm text-brand-dark">{expanded ? '▾' : '▸'}</Text>
+        <Text className="text-sm text-brand-dark dark:text-brand">{expanded ? '▾' : '▸'}</Text>
       </Pressable>
       <Pressable
         className="min-h-[44px] items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
@@ -608,7 +608,7 @@ function PaneTopHeader({
           accessibilityLabel="Kembali ke Workspace"
           onPress={onBackToHub}
           className="min-h-[44px] justify-center self-start active:opacity-70">
-          <Text className="text-sm font-semibold text-brand-dark">{WS_HUB_COPY.backToHub}</Text>
+          <Text className="text-sm font-semibold text-brand-dark dark:text-brand">{WS_HUB_COPY.backToHub}</Text>
         </Pressable>
         <Text className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
       </View>
