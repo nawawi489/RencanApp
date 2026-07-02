@@ -1,9 +1,18 @@
 // Komponen fondasi: EmptyState v2, ErrorState, SkeletonList, ScoreBadge, Avatar.
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
 import { render, screen } from '@testing-library/react-native';
-import { Avatar, EmptyState, ErrorState, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SkeletonList, orbToneFor } from '../ui';
+import { Avatar, EmptyState, ErrorState, IconTile, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SkeletonList, orbToneFor } from '../ui';
 
 jest.setTimeout(30000);
+
+describe('IconTile (UI-G-011)', () => {
+  it('me-render ikon dan disembunyikan dari a11y (label teks pendamping = sumber makna, DESIGN §4)', async () => {
+    await render(<IconTile icon="people-outline" tone="info" />);
+    // Ikon Ionicons ter-render (satu node) tapi tile tidak mengekspos label a11y sendiri.
+    expect(screen.queryByLabelText('people-outline')).toBeNull();
+    expect(screen.root).toBeTruthy();
+  });
+});
 
 describe('EmptyState', () => {
   it('menampilkan title, description, dan aksi opsional', async () => {

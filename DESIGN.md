@@ -143,6 +143,7 @@ Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), 
 | `WeightTotalBadge` (DA-SF1-3) | chip `self-start rounded-full px-2.5 py-1 text-xs font-semibold`; valid (sum==100) `bg-green-100 text-green-700`; invalid `bg-amber-100 text-amber-700`; `accessibilityLabel` selalu menyebut total + status eksplisit ("Total bobot 95%, harus 100% untuk aktivasi") — DESIGN §4 warna ≠ satu-satunya sinyal | `mobile/src/app/(app)/settings-score-formula.tsx` |
 | `FormulaStickyFooter` (DA-SF1-4) | container `flex-row gap-2 border-t border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-black`; isi 2 tombol: `Simpan Draft` (secondary, disabled saat tidak dirty), `Aktifkan` (primary, disabled saat sum!=100 OR dirty OR isActivating); `accessibilityState={{disabled}}` EKSPLISIT | `mobile/src/app/(app)/settings-score-formula.tsx` |
 | `VersionStatusBadge` (DA-SF1-5) | reuse `Badge` dengan tone: `draft`→warn (kuning), `active`→success (hijau), `archived`→neutral (abu); label dari `FORMULA_STATUS_LABEL` konstanta yg sudah ada di `lib/people-score.ts` | `mobile/src/app/(app)/settings-score-formula.tsx` |
+| `IconTile` (UI-G-011) | tile ikon per kartu/baris Menu — prototype `.menu-icon` 40×40 radius 8, ikon 22px stroke. App: `View` `rounded-xl` (radius md) ukuran default 40 (`items-center justify-center`) + `Ionicons` size ≈55% tile. Latar soft + warna ikon per **tone** selaras palet app (DESIGN §8), BUKAN hex prototype: `info` bg-blue-50/dark blue-950/40 ikon `#1564b3`→dark `#93c5fd`; `success` bg-green-50 ikon `#15803d`→`#86efac`; `warn` bg-amber-50 ikon `#b45309`→`#fcd34d`; `danger` bg-red-50 ikon `#b91c1c`→`#fca5a5`; `violet` bg-violet-50 ikon `#6d28d9`→`#c4b5fd`; `neutral` bg-neutral-100/800 ikon `#525252`→`#a3a3a3`. Warna ikon dipilih via `useColorScheme()` (pola `Badge` `dark:text-*-300`). Ikon = dekorasi (label teks tetap sumber makna — DESIGN §4), jadi tile `accessibilityElementsHidden`/tanpa label sendiri. | `mobile/src/components/ui.tsx`, grid & list Menu `settings.tsx` |
 | `ProgressOrb` (UI-G-001) | SVG ring 2 lapis (`Circle` track `#e2e8f0` + `Circle` value rotate `-90`, `strokeLinecap='round'`); size diskrit **56** (stroke 6) atau **72** (stroke 8); angka persen di tengah (`font-extrabold`, 16/20px). Tone otomatis dari nilai: `<35 danger` (red-700 `#b91c1c`), `35–69 warn` (amber-700 `#b45309`), `70–99 brand` (brand-dark `#1564b3`), `100 success` (green-700 `#15803d`); override via prop `tone` jika perlu. **A11y mengikat** (DESIGN §4: warna ≠ satu-satunya sinyal): `accessibilityRole='progressbar'` + `accessibilityLabel` selalu menyebut persen + label tone eksplisit (mis. "Capaian 68 persen, Berjalan"); angka tetap tampil di tengah orb | `mobile/src/components/ui.tsx`, header detail Goal/KPI Area/Strategy/Initiative/Action Plan |
 
 ---
@@ -173,6 +174,8 @@ Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), 
 
 - Garis (stroke) 2px, ujung membulat (`stroke-linecap="round"`), 24×24 viewBox — konsisten dengan nav bawah & ikon prototype.
 - Search = kaca pembesar, back = chevron kiri, lebih (`⋯`) = aksi sekunder.
+- **Library ikon: `Ionicons` dari `@expo/vector-icons`** (dipakai `app-header`, tab bar, `IconTile`). Varian `-outline` untuk kartu/baris (stroke, konsisten prototype); filled untuk state aktif nav.
+- **Ikon = penguat, bukan satu-satunya sinyal** (DESIGN §4): setiap `IconTile` selalu ditemani label teks; jangan pernah pakai ikon sendirian untuk membedakan makna/status.
 
 ---
 
@@ -180,10 +183,11 @@ Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), 
 
 **Implementasi tokens** → `mobile/src/global.css` `@theme` (brand) + class NativeWind (neutrals/status pakai palet Tailwind bawaan).
 
-**Keputusan terbuka (perlu konfirmasi):**
-1. **Brand hue** — `#208aef` (kode) vs `#1877f2` (prototype). Default: pertahankan `#208aef`.
-2. **Inter** — muat font asli vs tetap `system-ui`. Default: system (lebih ringan).
+**Keputusan (sudah final — owner 2026-06-29):**
+1. ~~**Brand hue** — `#208aef` (kode) vs `#1877f2` (prototype).~~ ✅ **Pertahankan `#208aef`** (kanonik, sudah shipping). Tidak migrasi ke `#1877f2`.
+2. ~~**Inter** — muat font asli vs tetap `system-ui`.~~ ✅ **Tetap `system-ui`** (lebih ringan, tanpa dependensi). Inter tidak dimuat.
 3. ~~**Button contrast** — ganti fill primary ke `brand-dark` `#1564b3` agar teks putih lulus AA.~~ ✅ **Selesai** — `Button` primary kini `bg-brand-dark` (5.99:1).
+4. ~~**Model auth** — self-signup vs admin-only.~~ ✅ **Admin-only** (PRD V1.8.2): Login tanpa toggle Daftar; ada "Hubungi Admin" + "Lupa password?". Akun dibuat administrator perusahaan.
 
 ---
 
@@ -196,6 +200,10 @@ Mode tampilan dapat dipilih oleh pengguna di **Settings → Tampilan** dengan 3 
 - Memanggil `Appearance.setColorScheme()` agar NativeWind v5 (lewat `react-native-css`) ikut mengganti varian `dark:*` realtime.
 - `expo-router` `ThemeProvider` + `StatusBar` ikut nilai `effective` (`'light' | 'dark'`).
 - Hook `useThemePreference()` mengembalikan `{ mode, effective, setMode }`. Fallback aman tanpa provider (test-friendly: default `'system'` + `effective: 'light'`).
+
+**Override fidelity mode:**
+- Saat `EXPO_PUBLIC_UI_MODE=prototype`, tampilan dipaksa ke `light` agar audit visual bisa dibandingkan langsung dengan `design.html`.
+- Token web tambahan untuk mode ini dideklarasikan di `global.css`: `--color-prototype-bg` `#f3f5f8` dan `--color-prototype-line` `#dde3eb`.
 
 **Kontrol UI:** segmented 3 chip (Sistem/Terang/Gelap) di Settings, `accessibilityRole='radiogroup'` + tiap chip `radio` dengan `accessibilityState.selected`. Touch target ≥44px sesuai §4.
 

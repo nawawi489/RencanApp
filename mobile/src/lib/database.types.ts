@@ -1707,6 +1707,8 @@ export type Database = {
           pic_id: string | null
           status: string
           target: string | null
+          target_numeric: number | null
+          target_unit: string | null
           updated_at: string
         }
         Insert: {
@@ -1724,6 +1726,8 @@ export type Database = {
           pic_id?: string | null
           status?: string
           target?: string | null
+          target_numeric?: number | null
+          target_unit?: string | null
           updated_at?: string
         }
         Update: {
@@ -1741,6 +1745,8 @@ export type Database = {
           pic_id?: string | null
           status?: string
           target?: string | null
+          target_numeric?: number | null
+          target_unit?: string | null
           updated_at?: string
         }
         Relationships: [

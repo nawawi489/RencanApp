@@ -783,15 +783,24 @@ Field wajib:
 5. Pecahan Target Quarter total 100%.
 6. Pecahan Target Bulanan dalam quarter total 100%.
 
+Field opsional (override 2026-06-29, migrasi 0032):
+
+1. Target angka (`target_numeric`) — basis "% capaian vs target" presisi.
+2. Satuan (`target_unit`) — mis. "customer", "Rp". OPSIONAL; KPI kualitatif tetap pakai Target Tahunan teks.
+
 Tidak ada field:
 
-1. Satuan.
-2. Masa berlaku KPI Area.
+1. Masa berlaku KPI Area.
 
 Alasan:
 
-1. Satuan membuat UI terasa seperti spreadsheet.
-2. Masa berlaku KPI Area otomatis mengikuti Goal tahunan.
+1. Masa berlaku KPI Area otomatis mengikuti Goal tahunan.
+
+> Catatan override (2026-06-29): §18 semula melarang Satuan dengan alasan "Satuan membuat UI
+> terasa seperti spreadsheet". Owner meng-override untuk membuka "% gap" presisi seperti prototype
+> design ("65% / kurang 1.060 customer"). Target angka + Satuan kini **opsional** (bukan wajib) —
+> KPI kualitatif tetap bebas-satuan, jadi UI tidak dipaksa seperti spreadsheet. Implementasi:
+> migrasi 0032 + `lib/kpi-gap.ts` + layar KPI form/detail + kartu Home "Gap KPI Area".
 
 Template behavior:
 

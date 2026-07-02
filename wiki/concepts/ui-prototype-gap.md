@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [ui, design, prototype, backlog, gap-analysis]
-updated: 2026-06-28
+updated: 2026-07-02
 sources: 3
 ---
 
@@ -49,6 +49,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | **UI-G-008** | **Radius kartu** 16px app vs 8px prototype (rasa lebih bulat vs lebih "spreadsheet-like") | Global | Putuskan radius kanonik di `DESIGN.md` lalu pilih: turunkan `rounded-2xl` → `rounded-xl`/`rounded-lg`, atau tetap. |
 | **UI-G-009** | **Per-card overflow `⋯`** untuk aksi sekunder (Arsipkan, Ubah, Salin, Hapus draft) | Semua tree-card & list row | `RowActionsMenu` (bottom sheet) konsisten lintas list ✅ **IMPLEMENTED 2026-06-28 (S3)** — `components/row-actions-menu.tsx` generik (open/onClose + items[]); ter-wire ke `GoalRow`/`DevelopmentAreaRow`/`InitiativeRow` di Workspace. Item Ubah/Arsipkan/Salin masih placeholder V1 (Alert "Belum tersedia"). |
 | **UI-G-010** | **Period switcher (Bulan/Quarter + arsip periode)** | `performance-workspace`, `development-workspace`, profil people | Komponen `PeriodSwitcher` yang membaca [[score-formula|periode aktif/closed]] ✅ **IMPLEMENTED 2026-06-28 (S1)** — `components/period-switcher.tsx` + `lib/period-focus.ts` + `providers/period-focus-provider.tsx`; terpasang di Workspace (Performance & Development pane); kartu past auto-redup. People profil dipasang nanti. |
+| **UI-G-011** | **Tile ikon per kartu tidak ada** — prototype memberi setiap `menu-card` tile ikon SVG berwarna (`menu-icon`, varian default/green/amber/red/violet) dan `icon-button` di hero row (Inbox search/+, Menu gear); app hanya punya ikon di login, `app-header`, dan tab bar — kartu Menu polos (teks + chevron) | `menu` (semua grid + list), `inbox` hero, `people` hero | ✅ **IMPLEMENTED 2026-07-02 (Menu)** — komponen `IconTile` di `ui.tsx` (Ionicons `@expo/vector-icons`, ukuran 40 grid / 36 list, `rounded-xl`, 6 tone bg-soft + warna ikon selaras palet app DESIGN §8, dark via `useColorScheme`, disembunyikan dari a11y karena label teks = sumber makna §4). Mapping `icon`+`tone` per item `SETTINGS_GROUPS` di `settings.tsx`; render di grid tile & list row. Verifikasi live: 19 tile, 19 glyph unik, 5 tone warna tepat; tsc bersih; jest ui-feedback 20/20 + settings 5/5. Token didaftarkan di `DESIGN.md` §7+§10. **Sisa (icon-button hero Inbox/People)** ditunda — dampak kecil, layar hero belum terstruktur ulang. |
 
 ---
 
@@ -216,6 +217,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 - UI-S-H01–H03 (Home rail + Snapshot Tim + Fokus kaya). Ditunda (perlu data Snapshot Tim).
 
 **P3 — token visual & polish**
+- UI-G-011 (tile ikon per kartu Menu). ✅ **done 2026-07-02** — `IconTile` (6 tone) di grid + list Menu. icon-button hero Inbox/People ditunda.
 - UI-G-005 (search pill di topbar). ✅ done.
 - UI-G-007 / UI-G-008 (hue brand, radius kartu). 🔒 perlu putusan tim desain.
 - UI-S-AL1 (Activity Log timeline polish). ✅ done.

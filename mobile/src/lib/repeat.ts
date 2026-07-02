@@ -96,6 +96,21 @@ export async function getRepeatRule(actionPlanId: string): Promise<RepeatRule | 
   return data;
 }
 
+// Inventory layar Settings > Repeat Setting (PRD §31). Read-only daftar seluruh repeat-rule
+// yang user boleh lihat (RLS). Dipakai untuk navigasi cepat ke Action Plan induk.
+export type RepeatRuleWithContext = RepeatRule & {
+  action_plan: { id: string; name: string; status: string } | null;
+};
+
+export async function listAllRepeatRules(): Promise<RepeatRuleWithContext[]> {
+  const { data, error } = await supabase
+    .from('action_plan_repeat_rules')
+    .select('*, action_plan:action_plans(id, name, status)')
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as RepeatRuleWithContext[];
+}
+
 // ---------------------------------------------------------------- mutations (RPC)
 
 export type RepeatRuleInput = {

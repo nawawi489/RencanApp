@@ -8,7 +8,6 @@ import { Button } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { useThemePreference } from '@/providers/theme-provider';
 
-type Mode = 'masuk' | 'daftar';
 type Feedback = { kind: 'error' | 'success'; message: string };
 
 // Pesan Supabase di-Indonesiakan agar selaras dengan bahasa UI.
@@ -28,9 +27,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<Mode>('masuk');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
+  // Akun dibuat oleh admin perusahaan (PRD V1.8.2) — login-only, tanpa self-signup.
   async function submit() {
     setFeedback(null);
     if (!email.trim() || !password) {
@@ -39,22 +38,39 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      if (mode === 'masuk') {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: { data: { full_name: email.trim().split('@')[0] } },
-        });
-        if (error) throw error;
-        setFeedback({
-          kind: 'success',
-          message:
-            'Pendaftaran berhasil. Jika verifikasi email aktif, periksa email Anda sebelum masuk.',
-        });
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) throw error;
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : 'Terjadi kesalahan.';
+      setFeedback({ kind: 'error', message: translateAuthError(raw) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function contactAdmin() {
+    setFeedback({
+      kind: 'success',
+      message:
+        'Akun dibuat oleh administrator perusahaan. Minta admin Anda membuat/mengaktifkan akun, lalu masuk dengan email kerja Anda.',
+    });
+  }
+
+  async function resetPassword() {
+    setFeedback(null);
+    if (!email.trim()) {
+      setFeedback({ kind: 'error', message: 'Isi email dulu untuk reset kata sandi.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      if (error) throw error;
+      // Pesan netral (tak membocorkan apakah email terdaftar).
+      setFeedback({
+        kind: 'success',
+        message: 'Jika email terdaftar, link reset kata sandi sudah dikirim. Periksa kotak masuk Anda.',
+      });
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'Terjadi kesalahan.';
       setFeedback({ kind: 'error', message: translateAuthError(raw) });
@@ -78,10 +94,10 @@ export default function LoginScreen() {
           <View className="rounded-3xl bg-white p-4 shadow-sm dark:bg-neutral-900">
             <BrandLogo size={56} />
           </View>
-          <Text className="text-3xl font-extrabold text-black dark:text-white">
-            Rencana<Text className="text-green-700 dark:text-green-400">app</Text>
+          <Text className="text-3xl font-extrabold text-[#092753] dark:text-white">
+            Rencana<Text className="text-[#12a66a] dark:text-green-400">app</Text>
           </Text>
-          <Text className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{BRAND_TAGLINE}</Text>
+          <Text className="text-sm font-semibold text-[#667085] dark:text-neutral-300">{BRAND_TAGLINE}</Text>
           <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">
             Masuk ke pusat eksekusi target, Action Plan, dan review kerja tim.
           </Text>
@@ -135,20 +151,24 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <Button label={mode === 'masuk' ? 'Masuk' : 'Daftar'} onPress={submit} loading={loading} />
+          <Button label="Masuk" onPress={submit} loading={loading} />
 
           <Pressable
-            className="items-center py-1"
-            onPress={() => setMode(mode === 'masuk' ? 'daftar' : 'masuk')}>
-            <Text className="text-sm font-semibold text-brand-dark dark:text-brand">
-              {mode === 'masuk' ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
-            </Text>
+            className="min-h-[44px] items-center justify-center py-1 active:opacity-60"
+            onPress={resetPassword}
+            accessibilityRole="button"
+            accessibilityLabel="Lupa kata sandi, kirim link reset">
+            <Text className="text-sm font-semibold text-brand-dark dark:text-brand">Lupa password?</Text>
           </Pressable>
         </View>
 
         <Text className="mt-6 text-center text-xs text-neutral-500 dark:text-neutral-400">
           Akun dibuat oleh admin perusahaan. Gunakan email kerja yang sudah diberi akses.
         </Text>
+
+        <View className="mt-3">
+          <Button label="Hubungi Admin" variant="secondary" onPress={contactAdmin} />
+        </View>
       </ScrollView>
     </LinearGradient>
   );

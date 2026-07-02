@@ -38,6 +38,10 @@ export type NewKpiArea = {
   name: string;
   description?: string | null;
   target: string | null;
+  /** Override PRD §18 (0032): basis angka untuk "% gap"; NULL = KPI kualitatif (teks `target` saja). */
+  target_numeric?: number | null;
+  /** Satuan tampilan, mis. "customer", "Rp" (0032). */
+  target_unit?: string | null;
   /** UI-S-K03 — PRD §18 wajib "Ekspektasi Hasil". */
   expected_outcome?: string | null;
   pic_id: string | null;
@@ -71,7 +75,15 @@ export async function createKpiArea(input: NewKpiArea): Promise<KpiArea> {
 export type KpiAreaPatch = Partial<
   Pick<
     NewKpiArea,
-    'name' | 'description' | 'target' | 'expected_outcome' | 'pic_id' | 'period_start' | 'period_end'
+    | 'name'
+    | 'description'
+    | 'target'
+    | 'target_numeric'
+    | 'target_unit'
+    | 'expected_outcome'
+    | 'pic_id'
+    | 'period_start'
+    | 'period_end'
   >
 >;
 

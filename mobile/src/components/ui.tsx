@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Animated, useColorScheme } from 'react-native';
@@ -82,6 +83,57 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone 
   return (
     <View className={`self-start rounded-full px-2.5 py-1 ${BADGE_CLASS[tone]}`}>
       <Text className={`text-xs font-semibold ${BADGE_TEXT_CLASS[tone]}`}>{label}</Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- IconTile (UI-G-011)
+
+// Tone tile ikon — superset `Tone` + `violet` (prototype `.menu-icon` punya varian violet).
+export type IconTileTone = Tone | 'violet';
+
+const ICON_TILE_BG: Record<IconTileTone, string> = {
+  neutral: 'bg-neutral-100 dark:bg-neutral-800',
+  info: 'bg-blue-50 dark:bg-blue-950/40',
+  warn: 'bg-amber-50 dark:bg-amber-950/40',
+  success: 'bg-green-50 dark:bg-green-950/40',
+  danger: 'bg-red-50 dark:bg-red-950/40',
+  violet: 'bg-violet-50 dark:bg-violet-950/40',
+};
+
+// [light, dark] warna ikon per tone — dark lebih terang agar kontras di bg-*-950/40 (pola Badge).
+const ICON_TILE_COLOR: Record<IconTileTone, [string, string]> = {
+  neutral: ['#525252', '#a3a3a3'],
+  info: ['#1564b3', '#93c5fd'],
+  warn: ['#b45309', '#fcd34d'],
+  success: ['#15803d', '#86efac'],
+  danger: ['#b91c1c', '#fca5a5'],
+  violet: ['#6d28d9', '#c4b5fd'],
+};
+
+/**
+ * Tile ikon berwarna untuk kartu/baris Menu (prototype `.menu-icon`). Ikon = dekorasi
+ * penguat; label teks di sebelahnya tetap sumber makna (DESIGN §4), jadi tile disembunyikan
+ * dari a11y tree. `icon` = nama Ionicons (mis. 'people-outline').
+ */
+export function IconTile({
+  icon,
+  tone = 'info',
+  size = 40,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  tone?: IconTileTone;
+  size?: number;
+}) {
+  const scheme = useColorScheme();
+  const color = ICON_TILE_COLOR[tone][scheme === 'dark' ? 1 : 0];
+  return (
+    <View
+      style={{ width: size, height: size }}
+      className={`items-center justify-center rounded-xl ${ICON_TILE_BG[tone]}`}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
+      <Ionicons name={icon} size={Math.round(size * 0.55)} color={color} />
     </View>
   );
 }
