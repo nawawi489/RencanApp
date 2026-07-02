@@ -77,7 +77,7 @@ export default function SettingsCardCompletionRuleScreen() {
               <Text className="text-base text-black dark:text-white">Wajib bukti</Text>
               <Text className="text-base font-semibold text-brand-dark">{requireEvidence ? 'Ya' : 'Tidak'}</Text>
             </Pressable>
-            {error ? <Text className="text-sm text-red-600">{error}</Text> : null}
+            {error ? <Text className="text-sm text-red-700 dark:text-red-400">{error}</Text> : null}
             <Button label="Simpan Aturan" onPress={handleSave} loading={saving} />
           </SectionCard>
         )}

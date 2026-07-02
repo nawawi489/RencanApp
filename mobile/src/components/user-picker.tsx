@@ -31,13 +31,15 @@ export function UserPicker({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-black dark:text-white">
+      <Text className="text-sm font-semibold text-black dark:text-white">
         {label}
-        {required ? <Text className="text-red-500"> *</Text> : null}
+        {required ? <Text className="text-red-600 dark:text-red-400"> *</Text> : null}
       </Text>
       <Pressable
         className="flex-row items-center justify-between rounded-xl border border-neutral-300 px-4 py-3 active:opacity-70 dark:border-neutral-700"
-        onPress={() => setOpen(true)}>
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value ? personLabel(value) : 'belum dipilih'}`}>
         <Text className={value ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
           {value ? personLabel(value) : 'Pilih orang…'}
         </Text>
@@ -46,11 +48,16 @@ export function UserPicker({
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <View className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[70%] gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
+          <View className="max-h-[70%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900">
             <View className="flex-row items-center justify-between">
               <Text className="text-lg font-bold text-black dark:text-white">{label}</Text>
-              <Pressable className="active:opacity-60" onPress={() => setOpen(false)}>
-                <Text className="text-base text-brand">Tutup</Text>
+              <Pressable
+                className="min-h-[44px] justify-center px-2 active:opacity-60"
+                onPress={() => setOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Tutup pemilih"
+                hitSlop={8}>
+                <Text className="text-base font-semibold text-brand-dark dark:text-brand">Tutup</Text>
               </Pressable>
             </View>
 
@@ -60,12 +67,14 @@ export function UserPicker({
               <ScrollView className="grow-0">
                 {value ? (
                   <Pressable
-                    className="border-b border-neutral-100 py-3 active:opacity-60 dark:border-neutral-800"
+                    className="min-h-[44px] justify-center border-b border-neutral-100 py-3 active:opacity-60 dark:border-neutral-800"
                     onPress={() => {
                       onChange(null);
                       setOpen(false);
-                    }}>
-                    <Text className="text-base text-red-500">Kosongkan pilihan</Text>
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Kosongkan pilihan">
+                    <Text className="text-base text-red-600 dark:text-red-400">Kosongkan pilihan</Text>
                   </Pressable>
                 ) : null}
                 {options.map((p) => {
@@ -73,13 +82,16 @@ export function UserPicker({
                   return (
                     <Pressable
                       key={p.id}
-                      className="border-b border-neutral-100 py-3 active:opacity-60 dark:border-neutral-800"
+                      className="min-h-[44px] justify-center border-b border-neutral-100 py-3 active:opacity-60 dark:border-neutral-800"
                       onPress={() => {
                         onChange(p);
                         setOpen(false);
-                      }}>
+                      }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={personLabel(p)}>
                       <Text
-                        className={`text-base ${selected ? 'font-semibold text-brand' : 'text-black dark:text-white'}`}>
+                        className={`text-base ${selected ? 'font-semibold text-brand-dark dark:text-brand' : 'text-black dark:text-white'}`}>
                         {personLabel(p)}
                       </Text>
                       {p.email ? <Text className="text-xs text-neutral-400">{p.email}</Text> : null}

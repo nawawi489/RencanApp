@@ -86,6 +86,22 @@ function psInitResult(over: Record<string, unknown> = {}) {
   return { initiatives: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
 
+/**
+ * UI-S-W08 — hitung node dgn style `opacity: 0.5` (inline, dari PastDim) di JSON tree.
+ * Dipakai untuk memastikan dim "periode lewat" TIDAK bertumpuk di tree bersarang.
+ */
+function countOpacityHalf(node: unknown): number {
+  if (node == null || typeof node !== 'object') return 0;
+  if (Array.isArray(node)) return node.reduce((acc: number, n) => acc + countOpacityHalf(n), 0);
+  const el = node as { props?: { style?: unknown }; children?: unknown };
+  const styles = Array.isArray(el.props?.style) ? el.props!.style : [el.props?.style];
+  let count = 0;
+  for (const s of styles as unknown[]) {
+    if (s && typeof s === 'object' && (s as { opacity?: number }).opacity === 0.5) count += 1;
+  }
+  return count + countOpacityHalf(el.children ?? null);
+}
+
 const GOAL = { id: 'g1', name: 'Tumbuhkan Revenue', status: 'active' };
 const FLAT = { id: 'fi1', name: 'Initiative Lepas', status: 'draft' };
 
@@ -570,6 +586,109 @@ describe('WorkspaceScreen', () => {
       // Orb fallback "—" tampak di ke-2 hub.
       const dashes = await screen.findAllByText('—');
       expect(dashes.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  // UI-S-W07 (design-consultation 2026-07-02) — expand level-1 (Goal/Dev Area) wajib punya
+  // state loading/kosong/error, paritas dgn level-2 (KpiAreaSubRow/ProblemStatementSubRow).
+  describe('[UI-S-W07] expand level-1: loading/kosong/error', () => {
+    const GOAL_NOW = {
+      id: 'g1',
+      name: 'Goal Aktif',
+      status: 'active',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+    };
+    const DEV_NOW = {
+      id: 'd1',
+      name: 'Development Area Ops',
+      status: 'active',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+    };
+
+    it('[W07·1] expand Goal saat KPI loading → SkeletonList tampil', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ isLoading: true }));
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      expect((await screen.findAllByLabelText('Memuat…')).length).toBeGreaterThan(0);
+    });
+
+    it('[W07·2] expand Goal tanpa KPI Area → hint "Belum ada KPI Area"', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [] }));
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      expect(await screen.findByText(/Belum ada KPI Area/)).toBeTruthy();
+    });
+
+    it('[W07·3] expand Goal error fetch KPI → ErrorState', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ isError: true }));
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      expect(await screen.findByText('Gagal memuat')).toBeTruthy();
+    });
+
+    it('[W07·4] expand Dev Area tanpa Problem Statement → hint "Belum ada Problem Statement"', async () => {
+      mockUseDevelopmentAreas.mockReturnValue(devResult({ developmentAreas: [DEV_NOW] }));
+      mockUseProblemStatements.mockReturnValue(psResult({ problemStatements: [] }));
+      await renderScreen('development');
+      fireEvent.press(await screen.findByLabelText('Lihat Problem Statement'));
+      expect(await screen.findByText(/Belum ada Problem Statement/)).toBeTruthy();
+    });
+  });
+
+  // UI-S-W08 (design-consultation 2026-07-02) — dim "periode lewat" tidak boleh bertumpuk:
+  // opacity 0.5 per level bersarang = 0.125 efektif di level-3 → teks tak terbaca (DESIGN §4).
+  describe('[UI-S-W08] dim periode-lewat single-layer', () => {
+    const PAST_PERIOD = { period_start: '2025-01-01', period_end: '2025-12-31' };
+    const NOW_PERIOD = { period_start: '2026-01-01', period_end: '2026-12-31' };
+
+    it('[W08·1] Goal+KPI+Strategy semuanya past → tepat 1 lapis opacity 0.5, badge tetap 3×', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(
+        goalsResult({ goals: [{ id: 'g', name: 'Goal Past', status: 'active', ...PAST_PERIOD }] }),
+      );
+      mockUseKpiAreas.mockReturnValue(
+        kpiResult({ kpiAreas: [{ id: 'k', name: 'KPI Past', status: 'active', ...PAST_PERIOD }] }),
+      );
+      mockUseStrategies.mockReturnValue(
+        strategiesResult({
+          strategies: [{ id: 's', name: 'Strategy Past', status: 'active', ...PAST_PERIOD }],
+        }),
+      );
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      await screen.findByText('KPI Past');
+      fireEvent.press(screen.getByLabelText('Lihat Strategy'));
+      await screen.findByText('Strategy Past');
+      expect(countOpacityHalf(screen.toJSON())).toBe(1);
+      // Sinyal teks per-node tetap utuh (warna ≠ satu-satunya sinyal, DESIGN §4).
+      expect(screen.getAllByText('Periode lewat').length).toBe(3);
+    });
+
+    it('[W08·2] hanya Strategy yang past → dim 1 lapis di level-3', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(
+        goalsResult({ goals: [{ id: 'g', name: 'Goal Aktif', status: 'active', ...NOW_PERIOD }] }),
+      );
+      mockUseKpiAreas.mockReturnValue(
+        kpiResult({ kpiAreas: [{ id: 'k', name: 'KPI Aktif', status: 'active', ...NOW_PERIOD }] }),
+      );
+      mockUseStrategies.mockReturnValue(
+        strategiesResult({
+          strategies: [{ id: 's', name: 'Strategy Past', status: 'active', ...PAST_PERIOD }],
+        }),
+      );
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      await screen.findByText('KPI Aktif');
+      fireEvent.press(screen.getByLabelText('Lihat Strategy'));
+      await screen.findByText('Strategy Past');
+      expect(countOpacityHalf(screen.toJSON())).toBe(1);
+      expect(screen.getAllByText('Periode lewat').length).toBe(1);
     });
   });
 

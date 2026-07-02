@@ -307,7 +307,7 @@ export function LivePeopleProfileScreen() {
             tasksQ.isLoading ? (
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat tugas…</Text>
             ) : tasksQ.isError ? (
-              <Text className="text-sm text-red-600" accessibilityRole="alert">
+              <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
                 Gagal memuat tugas.
               </Text>
             ) : tasks.length === 0 ? (

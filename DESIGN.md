@@ -29,6 +29,7 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 | `surface` | `#ffffff` | `bg-white` / `dark:bg-black` | Permukaan kartu |
 | `surface-soft` | `#f8fafc` | `bg-neutral-50` | Field/inset |
 | `bg` | `#f3f5f8` | (latar layar) | Latar app |
+| `placeholder` | `#9ca3af` (terang) / `#6b7280` (gelap) | — (`placeholderTextColor` prop) | Teks placeholder `TextInput` — RN tak menerima class untuk `placeholderTextColor`, jadi hex eksplisit; pilih via `useThemePreference().effective`/`useColorScheme()` di layar bertema. |
 
 ### Brand
 | Token | Hex | `@theme` | Pakai |

@@ -25,8 +25,8 @@ const WEEKDAY_LABEL = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 function PrioritySelector({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-black dark:text-white">
-        Prioritas<Text className="text-red-500"> *</Text>
+      <Text className="text-sm font-semibold text-black dark:text-white">
+        Prioritas<Text className="text-red-600 dark:text-red-400"> *</Text>
       </Text>
       <View className="flex-row flex-wrap gap-2">
         {PRIORITIES.map((p) => {
@@ -35,7 +35,10 @@ function PrioritySelector({ value, onChange }: { value: string | null; onChange:
             <Pressable
               key={p}
               className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
-              onPress={() => onChange(p)}>
+              onPress={() => onChange(p)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`Prioritas ${PRIORITY_LABEL[p]}`}>
               <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
                 {PRIORITY_LABEL[p]}
               </Text>
@@ -62,7 +65,7 @@ function ChipSelector({
 }) {
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-black dark:text-white">{label}</Text>
+      <Text className="text-sm font-semibold text-black dark:text-white">{label}</Text>
       <View className="flex-row flex-wrap gap-2">
         {options.map((o) => {
           const active = value === o.key;
@@ -71,7 +74,10 @@ function ChipSelector({
               key={o.key}
               testID={testIDPrefix ? `${testIDPrefix}-${o.key}` : undefined}
               className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
-              onPress={() => onChange(o.key)}>
+              onPress={() => onChange(o.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${label}: ${o.label}`}>
               <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
                 {o.label}
               </Text>
@@ -97,10 +103,10 @@ function ToggleRow({
   return (
     <View className="flex-row items-center justify-between gap-3">
       <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-medium text-black dark:text-white">{label}</Text>
+        <Text className="text-sm font-semibold text-black dark:text-white">{label}</Text>
         <Text className="text-xs text-neutral-500 dark:text-neutral-400">{description}</Text>
       </View>
-      <Switch value={value} onValueChange={onValueChange} />
+      <Switch value={value} onValueChange={onValueChange} accessibilityLabel={label} />
     </View>
   );
 }
@@ -283,7 +289,7 @@ export function LiveNewActionPlanScreen() {
           <PrioritySelector value={priority} onChange={setPriority} />
         </SectionCard>
 
-        <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
           <ToggleRow
             label="Wajib lampirkan Bukti"
             description="PIC tidak bisa submit tanpa bukti."
@@ -299,7 +305,7 @@ export function LiveNewActionPlanScreen() {
         </View>
 
         {/* ---- Repeat (Action Plan berulang) ---- */}
-        <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
           <View className="flex-row items-center justify-between gap-3">
             <View className="flex-1 gap-0.5">
               <Text className="text-sm font-medium text-black dark:text-white">Jadikan Repeat (berulang)</Text>
@@ -322,7 +328,7 @@ export function LiveNewActionPlanScreen() {
 
               {frequency === 'weekly' ? (
                 <View className="gap-1.5">
-                  <Text className="text-sm font-medium text-black dark:text-white">Hari (mingguan)</Text>
+                  <Text className="text-sm font-semibold text-black dark:text-white">Hari (mingguan)</Text>
                   <View className="flex-row flex-wrap gap-2">
                     {WEEKDAY_LABEL.map((lbl, d) => {
                       const active = weekdays.includes(d);
@@ -331,7 +337,10 @@ export function LiveNewActionPlanScreen() {
                           key={d}
                           testID={`weekday-${d}`}
                           className={`min-h-[44px] justify-center rounded-full border px-3 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
-                          onPress={() => toggleWeekday(d)}>
+                          onPress={() => toggleWeekday(d)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: active }}
+                          accessibilityLabel={`Hari ${lbl}`}>
                           <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
                             {lbl}
                           </Text>

@@ -95,7 +95,7 @@ export default function LoginScreen() {
             <BrandLogo size={56} />
           </View>
           <Text className="text-3xl font-extrabold text-[#092753] dark:text-white">
-            Rencana<Text className="text-[#12a66a] dark:text-green-400">app</Text>
+            Rencana<Text className="text-green-700 dark:text-green-400">app</Text>
           </Text>
           <Text className="text-sm font-semibold text-[#667085] dark:text-neutral-300">{BRAND_TAGLINE}</Text>
           <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">
@@ -145,6 +145,7 @@ export default function LoginScreen() {
             <Pressable
               className="p-2 active:opacity-60"
               onPress={() => setShowPassword((s) => !s)}
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>
               <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={eyeColor} />

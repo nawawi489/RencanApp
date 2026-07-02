@@ -27,7 +27,8 @@ export function WorkspaceHubCard({
   onEnter: () => void;
 }) {
   // Orb null (belum ada data) → tampilkan "—" tanpa angka misleading.
-  const orbValue = stats.orbPercent == null ? null : stats.orbPercent / 100;
+  // orbPercent sudah 0–100 (workspace-hub-stats), ProgressOrb juga 0–100 — jangan dibagi lagi.
+  const orbValue = stats.orbPercent;
 
   return (
     <Pressable
@@ -37,7 +38,7 @@ export function WorkspaceHubCard({
       className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-950">
       <View className="flex-row items-start gap-3">
         <View className="flex-1 gap-1">
-          <Text className="text-xs font-semibold uppercase text-neutral-400">{kicker}</Text>
+          <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{kicker}</Text>
           <Text className="text-xl font-bold text-black dark:text-white">{title}</Text>
           <Text className="text-xs text-neutral-500 dark:text-neutral-400" numberOfLines={2}>
             {meta}
@@ -45,7 +46,7 @@ export function WorkspaceHubCard({
         </View>
         {orbValue == null ? (
           <View className="h-[72px] w-[72px] items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800">
-            <Text className="text-sm font-semibold text-neutral-400">—</Text>
+            <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">—</Text>
           </View>
         ) : (
           <ProgressOrb size={72} value={orbValue} sublabel="aktif" />
@@ -59,8 +60,8 @@ export function WorkspaceHubCard({
       </View>
 
       <View className="flex-row items-center justify-end gap-1">
-        <Text className="text-sm font-semibold text-brand-dark">{enterLabel}</Text>
-        <Text className="text-sm text-brand-dark">›</Text>
+        <Text className="text-sm font-semibold text-brand-dark dark:text-brand">{enterLabel}</Text>
+        <Text className="text-sm text-brand-dark dark:text-brand">›</Text>
       </View>
     </Pressable>
   );

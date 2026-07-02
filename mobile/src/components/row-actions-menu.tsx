@@ -38,7 +38,7 @@ export function RowActionsMenu({
           accessibilityLabel={title ? `Aksi: ${title}` : 'Aksi card'}>
           {title ? (
             <Text
-              className="px-2 pb-1 text-xs font-semibold uppercase text-neutral-400"
+              className="px-2 pb-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400"
               numberOfLines={2}>
               {title}
             </Text>
@@ -83,7 +83,7 @@ export function RowActionsMenu({
             accessibilityRole="button"
             accessibilityLabel="Tutup menu aksi"
             onPress={onClose}>
-            <Text className="text-sm font-semibold text-brand-dark">Tutup</Text>
+            <Text className="text-sm font-semibold text-brand-dark dark:text-brand">Tutup</Text>
           </Pressable>
         </View>
       </View>

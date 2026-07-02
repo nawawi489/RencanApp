@@ -229,7 +229,7 @@ export default function ChatRoomScreen() {
           <SendButton disabled={composerDisabled} onPress={handleSend} />
         </View>
         {sendError ? (
-          <Text className="text-sm text-red-600" accessibilityRole="alert">
+          <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
             {sendError}
           </Text>
         ) : null}

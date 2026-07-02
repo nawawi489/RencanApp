@@ -2,6 +2,7 @@
 import {
   childrenSublabel,
   computeActionPlanProgress,
+  ratioActiveOfChildren,
   ratioDoneOfChildren,
 } from '../progress';
 
@@ -49,6 +50,26 @@ describe('childrenSublabel', () => {
         { status: 'done' },
       ]),
     ).toBe('2/3 selesai');
+  });
+});
+
+describe('ratioActiveOfChildren', () => {
+  it('total 0 → 0%', () => {
+    expect(ratioActiveOfChildren([])).toBe(0);
+  });
+
+  it('archived dikecualikan dari pembilang & penyebut', () => {
+    expect(
+      ratioActiveOfChildren([{ status: 'draft' }, { status: 'archived' }, { status: 'active' }]),
+    ).toBe(50); // 1 non-draft / 2 non-archived
+  });
+
+  it('semua draft → 0%', () => {
+    expect(ratioActiveOfChildren([{ status: 'draft' }, { status: 'draft' }])).toBe(0);
+  });
+
+  it('semua sudah bergerak dari draft (active/done) → 100%', () => {
+    expect(ratioActiveOfChildren([{ status: 'active' }, { status: 'done' }])).toBe(100);
   });
 });
 

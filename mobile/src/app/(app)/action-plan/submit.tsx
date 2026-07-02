@@ -154,7 +154,7 @@ function KpiResultRow({
         accessibilityLabel="Hapus nilai hasil"
         className="min-h-[44px] items-center justify-center self-end px-3 active:opacity-60"
         onPress={onRemove}>
-        <Text className="text-sm text-red-500">Hapus</Text>
+        <Text className="text-sm text-red-600 dark:text-red-400">Hapus</Text>
       </Pressable>
     </View>
   );
@@ -389,7 +389,7 @@ export function LiveActionPlanSubmitScreen() {
                   accessibilityLabel="Hapus bukti"
                   className="min-h-[44px] items-center justify-center self-end px-3 active:opacity-60"
                   onPress={() => setEvidence((prev) => prev.filter((_, idx) => idx !== i))}>
-                  <Text className="text-sm text-red-500">Hapus</Text>
+                  <Text className="text-sm text-red-600 dark:text-red-400">Hapus</Text>
                 </Pressable>
               ) : null}
             </View>

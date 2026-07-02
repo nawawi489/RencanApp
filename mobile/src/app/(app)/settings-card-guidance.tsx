@@ -59,7 +59,7 @@ export default function SettingsCardGuidanceScreen() {
               })}
             </View>
             <LabeledInput label="Keterangan" value={body} onChangeText={setBody} multiline placeholder="Panduan singkat untuk jenis card ini" />
-            {error ? <Text className="text-sm text-red-600">{error}</Text> : null}
+            {error ? <Text className="text-sm text-red-700 dark:text-red-400">{error}</Text> : null}
             <Button label="Simpan Keterangan" onPress={handleSave} loading={saving} />
           </SectionCard>
         )}

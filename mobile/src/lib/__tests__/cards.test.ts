@@ -18,6 +18,8 @@ import {
   createInitiative,
   getPersonRef,
   listInitiatives,
+  listInitiativesByProblemStatementIds,
+  listKpiAreaResultValueSources,
   type NewInitiative,
 } from '../cards';
 
@@ -177,6 +179,52 @@ describe('createInitiative — passthrough strategy_id (Fase 4)', () => {
     await createInitiative(base);
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
     expect('problem_statement_id' in payload).toBe(false);
+  });
+});
+
+describe('listInitiativesByProblemStatementIds (UI-S-DA2)', () => {
+  it('[14] ids kosong → [] tanpa query', async () => {
+    expect(await listInitiativesByProblemStatementIds([])).toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('[15] ids → .in(problem_statement_id, ids)', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [{ id: 'i1' }], error: null });
+    mockFrom.mockReturnValue(builder);
+    const rows = await listInitiativesByProblemStatementIds(['p1', 'p2']);
+    expect(mockFrom).toHaveBeenCalledWith('initiatives');
+    expect(calls.in).toEqual(['problem_statement_id', ['p1', 'p2']]);
+    expect(rows).toEqual([{ id: 'i1' }]);
+  });
+
+  it('[16] propagasi error', async () => {
+    const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
+    mockFrom.mockReturnValue(builder);
+    await expect(listInitiativesByProblemStatementIds(['p1'])).rejects.toEqual({ message: 'boom' });
+  });
+});
+
+describe('listKpiAreaResultValueSources (UI-S-KD2/KD3)', () => {
+  it('[17] filter kpi_area_id, order terbaru dahulu', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [{ id: 'rv1' }], error: null });
+    mockFrom.mockReturnValue(builder);
+    const rows = await listKpiAreaResultValueSources('k1');
+    expect(mockFrom).toHaveBeenCalledWith('action_plan_result_values');
+    expect(calls.eq).toEqual(['kpi_area_id', 'k1']);
+    expect(calls.order).toEqual(['created_at', { ascending: false }]);
+    expect(rows).toEqual([{ id: 'rv1' }]);
+  });
+
+  it('[18] data null → []', async () => {
+    const { builder } = makeQueryThenable({ data: null, error: null });
+    mockFrom.mockReturnValue(builder);
+    expect(await listKpiAreaResultValueSources('k1')).toEqual([]);
+  });
+
+  it('[19] propagasi error', async () => {
+    const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
+    mockFrom.mockReturnValue(builder);
+    await expect(listKpiAreaResultValueSources('k1')).rejects.toEqual({ message: 'boom' });
   });
 });
 

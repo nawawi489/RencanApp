@@ -30,7 +30,7 @@ function statusPill(status: PeriodOption['status']) {
   if (status === 'past') {
     return { label: 'Arsip', cls: 'bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400' };
   }
-  return { label: 'Akan datang', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' };
+  return { label: 'Akan datang', cls: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' };
 }
 
 function optionToFocus(opt: PeriodOption): PeriodFocus {
@@ -58,13 +58,13 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
 
   return (
     <View
-      className="gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
+      className="gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950"
       accessible
       accessibilityLabel={`Periode aktif ${label}`}>
-      <Text className="text-xs font-semibold uppercase text-neutral-400">Periode aktif</Text>
+      <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Periode aktif</Text>
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-1 gap-0.5">
-          <Text className="text-lg font-bold text-black dark:text-white">{label}</Text>
+          <Text className="text-xl font-bold text-black dark:text-white">{label}</Text>
           <Text className="text-xs text-neutral-500 dark:text-neutral-400">{breadcrumb}</Text>
         </View>
         <Pressable
@@ -82,13 +82,13 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
             className="max-h-[75%] gap-4 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
             accessibilityLabel="Pilih periode fokus">
             <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-bold text-black dark:text-white">Pilih Periode</Text>
+              <Text className="text-xl font-bold text-black dark:text-white">Pilih Periode</Text>
               <Pressable
                 className="min-h-[44px] items-center justify-center px-2 active:opacity-60"
                 accessibilityRole="button"
                 accessibilityLabel="Tutup pilihan periode"
                 onPress={() => setOpen(false)}>
-                <Text className="text-base font-semibold text-brand-dark">Tutup</Text>
+                <Text className="text-base font-semibold text-brand-dark dark:text-brand">Tutup</Text>
               </Pressable>
             </View>
 

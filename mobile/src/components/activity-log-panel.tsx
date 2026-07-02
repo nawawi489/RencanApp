@@ -69,7 +69,7 @@ export function ActivityLogPanel({
         isLoading ? (
           <SkeletonList count={2} />
         ) : isError ? (
-          <Text className="text-sm text-red-600" accessibilityRole="alert">
+          <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
             Gagal memuat log aktivitas.
           </Text>
         ) : shown.length === 0 ? (

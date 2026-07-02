@@ -5,9 +5,9 @@
 //   ke level-3 (Strategy / Initiative) untuk turunkan tap-count Goal→Strategy dari 3 → 1.
 // Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Alert, FlatList } from 'react-native';
-import { Pressable, Text, View } from 'react-native-css/components';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
 import PrototypeWorkspaceScreen from '@/prototype/screens/workspace';
@@ -66,6 +66,24 @@ function PastPeriodBadge() {
 }
 
 /**
+ * UI-S-W08 — dim "periode lewat" single-layer: hanya node past TERATAS yang di-dim.
+ * Tanpa ini opacity-50 bertumpuk multiplikatif di tree bersarang (0.5³ = 0.125 di level-3)
+ * dan merusak jaminan kontras AA (DESIGN §4). Inline style, bukan class NativeWind —
+ * flatten deterministik di jest (pola SendButton, DESIGN §7).
+ */
+function PastDim({
+  past,
+  ancestorPast = false,
+  children,
+}: {
+  past: boolean;
+  ancestorPast?: boolean;
+  children: ReactNode;
+}) {
+  return <View style={past && !ancestorPast ? { opacity: 0.5 } : undefined}>{children}</View>;
+}
+
+/**
  * Baris aksi tree-card (PRD V1.8.2 §7.3): [Lihat/Tutup ▾] [Detail] [⋯] [+ tambah?].
  * Tap di luar tombol TIDAK membuka detail. `+` dikunci popup bila past period (§7.7).
  *
@@ -104,20 +122,20 @@ function CardActionRow({
         accessibilityLabel={expanded ? collapseLabel : expandLabel}
         accessibilityState={{ expanded }}
         onPress={onToggleExpand}>
-        <Text className="text-sm font-semibold text-brand-dark">
+        <Text className="text-sm font-semibold text-brand-dark dark:text-brand">
           {expanded ? collapseLabel : expandLabel}
         </Text>
-        <Text className="text-sm text-brand-dark">{expanded ? '▾' : '▸'}</Text>
+        <Text className="text-sm text-brand-dark dark:text-brand">{expanded ? '▾' : '▸'}</Text>
       </Pressable>
       <Pressable
-        className="min-h-[44px] items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+        className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
         accessibilityRole="button"
         accessibilityLabel={detailLabel}
         onPress={onDetail}>
         <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
       </Pressable>
       <Pressable
-        className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+        className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
         accessibilityRole="button"
         accessibilityLabel={`Aksi lain ${cardLabel}`}
         onPress={onMore}>
@@ -125,7 +143,7 @@ function CardActionRow({
       </Pressable>
       {onAdd ? (
         <Pressable
-          className={`min-h-[44px] w-11 items-center justify-center rounded-lg active:opacity-70 ${
+          className={`min-h-[44px] w-11 items-center justify-center rounded-xl active:opacity-70 ${
             past
               ? 'border border-neutral-300 dark:border-neutral-700'
               : 'bg-brand-dark'
@@ -162,7 +180,13 @@ function defaultRowActions(cardLabel: string): { label: string; onPress: () => v
  * Tidak punya tree expand sendiri (Initiative tetap stack-nav via Strategy detail).
  * Punya RowActionsMenu + tombol "+ Initiative" (gated `create_initiative`, past-period lock).
  */
-function StrategySubRow({ strategy }: { strategy: Strategy }) {
+function StrategySubRow({
+  strategy,
+  ancestorPast = false,
+}: {
+  strategy: Strategy;
+  ancestorPast?: boolean;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -171,8 +195,8 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
   const canAddInit = can('create_initiative');
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
-      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+    <PastDim past={past} ancestorPast={ancestorPast}>
+      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-start justify-between gap-2">
           <Text
             className="flex-1 text-sm font-medium text-black dark:text-white"
@@ -185,16 +209,16 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
             <StatusBadge status={strategy.status} />
           </View>
         </View>
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] flex-1 items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${strategy.name}`}
             onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
             <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${strategy.name}`}
             onPress={() => setMenuOpen(true)}>
@@ -202,7 +226,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
           </Pressable>
           {canAddInit ? (
             <Pressable
-              className={`min-h-[44px] w-11 items-center justify-center rounded-lg active:opacity-70 ${
+              className={`min-h-[44px] w-11 items-center justify-center rounded-xl active:opacity-70 ${
                 past ? 'border border-neutral-300 dark:border-neutral-700' : 'bg-brand-dark'
               }`}
               accessibilityRole="button"
@@ -229,7 +253,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
         title={strategy.name}
         items={defaultRowActions(strategy.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -237,7 +261,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
  * Sub-row level 2: KPI Area di bawah satu Goal. Expandable → Strategy children.
  * Lazy fetch Strategy hanya saat `expanded` (parameter `enabled` di useStrategies).
  */
-function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
+function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPast?: boolean }) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -248,7 +272,7 @@ function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
   const canAddStrategy = can('create_kpi_area'); // proxy izin tambah turunan (existing pattern)
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past} ancestorPast={ancestorPast}>
       <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-sm font-medium text-black dark:text-white">
@@ -289,7 +313,7 @@ function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
           ) : (
             <View className="gap-2">
               {strategies.map((s) => (
-                <StrategySubRow key={s.id} strategy={s} />
+                <StrategySubRow key={s.id} strategy={s} ancestorPast={ancestorPast || past} />
               ))}
             </View>
           )
@@ -301,7 +325,7 @@ function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
         title={kpi.name}
         items={defaultRowActions(kpi.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -310,7 +334,9 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { kpiAreas } = useKpiAreas(goal.id, expanded);
+  // UI-S-W07: destrukturisasi state fetch penuh — expand tanpa skeleton/empty/error
+  // terasa seperti tombol mati (paritas dgn KpiAreaSubRow level-2).
+  const { kpiAreas, isLoading, isError, refetch } = useKpiAreas(goal.id, expanded);
   const { focus } = usePeriodFocus();
 
   const count = kpiCountOf(goal);
@@ -319,7 +345,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   const canAddKpi = can('create_kpi_area');
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past}>
       <SectionCard>
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">{goal.name}</Text>
@@ -346,11 +372,21 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
         />
 
         {expanded ? (
-          <View className="gap-2">
-            {kpiAreas.map((k) => (
-              <KpiAreaSubRow key={k.id} kpi={k} />
-            ))}
-          </View>
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : kpiAreas.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada KPI Area. Tambah KPI Area untuk pecah Goal ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {kpiAreas.map((k) => (
+                <KpiAreaSubRow key={k.id} kpi={k} ancestorPast={past} />
+              ))}
+            </View>
+          )
         ) : null}
       </SectionCard>
       <RowActionsMenu
@@ -359,7 +395,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
         title={goal.name}
         items={defaultRowActions(goal.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -367,15 +403,21 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
  * Sub-row level 3: Initiative di bawah satu Problem Statement (Development pane).
  * Action Plan tetap stack-nav via Initiative detail (4-level penuh ditunda — lihat ADR Stage 1).
  */
-function InitiativeSubRow({ item }: { item: Initiative }) {
+function InitiativeSubRow({
+  item,
+  ancestorPast = false,
+}: {
+  item: Initiative;
+  ancestorPast?: boolean;
+}) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(item, focus) === 'past';
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
-      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+    <PastDim past={past} ancestorPast={ancestorPast}>
+      <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-start justify-between gap-2">
           <Text
             className="flex-1 text-sm font-medium text-black dark:text-white"
@@ -388,16 +430,16 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
             <StatusBadge status={item.status} />
           </View>
         </View>
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] flex-1 items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${item.name}`}
             onPress={() => router.push(`/initiative/${item.id}` as Href)}>
             <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${item.name}`}
             onPress={() => setMenuOpen(true)}>
@@ -411,7 +453,7 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
         title={item.name}
         items={defaultRowActions(item.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -419,7 +461,13 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
  * Sub-row level 2: Problem Statement di bawah satu Development Area. Expandable → Initiative.
  * Symmetric dgn KpiAreaSubRow di Performance pane.
  */
-function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
+function ProblemStatementSubRow({
+  ps,
+  ancestorPast = false,
+}: {
+  ps: ProblemStatement;
+  ancestorPast?: boolean;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -430,7 +478,7 @@ function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
   const canAddInit = can('create_initiative');
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past} ancestorPast={ancestorPast}>
       <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-sm font-medium text-black dark:text-white">{ps.name}</Text>
@@ -469,7 +517,7 @@ function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
           ) : (
             <View className="gap-2">
               {initiatives.map((i) => (
-                <InitiativeSubRow key={i.id} item={i} />
+                <InitiativeSubRow key={i.id} item={i} ancestorPast={ancestorPast || past} />
               ))}
             </View>
           )
@@ -481,7 +529,7 @@ function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
         title={ps.name}
         items={defaultRowActions(ps.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -490,7 +538,11 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { problemStatements } = useProblemStatements(devArea.id, expanded);
+  // UI-S-W07: paritas state fetch dgn GoalRow/ProblemStatementSubRow.
+  const { problemStatements, isLoading, isError, refetch } = useProblemStatements(
+    devArea.id,
+    expanded,
+  );
   const { focus } = usePeriodFocus();
 
   const count = problemCountOf(devArea);
@@ -500,7 +552,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
   const canAddProblem = can('create_development_area'); // proxy izin tambah turunan DevArea
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past}>
       <SectionCard>
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">
@@ -533,11 +585,22 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
         />
 
         {expanded ? (
-          <View className="gap-2">
-            {problemStatements.map((p) => (
-              <ProblemStatementSubRow key={p.id} ps={p} />
-            ))}
-          </View>
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : problemStatements.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada Problem Statement. Tambah Problem Statement untuk pecah Development Area
+              ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {problemStatements.map((p) => (
+                <ProblemStatementSubRow key={p.id} ps={p} ancestorPast={past} />
+              ))}
+            </View>
+          )
         ) : null}
       </SectionCard>
       <RowActionsMenu
@@ -546,7 +609,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
         title={devArea.name}
         items={defaultRowActions(devArea.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -555,7 +618,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
   const [menuOpen, setMenuOpen] = useState(false);
   const past = cardPeriodStatus(item, focus) === 'past';
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past}>
       <SectionCard>
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
@@ -566,14 +629,14 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
         </View>
         <View className="flex-row items-center justify-end gap-2">
           <Pressable
-            className="min-h-[44px] items-center justify-center rounded-lg border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${item.name}`}
             onPress={onPress}>
             <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
           </Pressable>
           <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-lg border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${item.name}`}
             onPress={() => setMenuOpen(true)}>
@@ -587,7 +650,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
         title={item.name}
         items={defaultRowActions(item.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -607,10 +670,10 @@ function PaneTopHeader({
           accessibilityRole="button"
           accessibilityLabel="Kembali ke Workspace"
           onPress={onBackToHub}
-          className="min-h-[36px] self-start active:opacity-70">
-          <Text className="text-sm font-semibold text-brand-dark">{WS_HUB_COPY.backToHub}</Text>
+          className="min-h-[44px] justify-center self-start active:opacity-70">
+          <Text className="text-sm font-semibold text-brand-dark dark:text-brand">{WS_HUB_COPY.backToHub}</Text>
         </Pressable>
-        <Text className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
+        <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
       </View>
       <TabBar<'performance' | 'development'>
         tabs={[
@@ -645,10 +708,11 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
   const loading = goalsQ.isLoading || devQ.isLoading;
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-black">
+    // ScrollView (bukan View) — hub harus selamat saat Dynamic Type besar / layar pendek (DESIGN §4.5).
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <View className="gap-5 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">{WS_HUB_COPY.title}</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{WS_HUB_COPY.title}</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             {WS_HUB_COPY.subtitle}
           </Text>
@@ -682,7 +746,7 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
           </View>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -717,7 +781,7 @@ function PerformancePane({
       {canCreate ? (
         <Button label={WS_COPY.btnGoalBaru} onPress={() => router.push('/goal-wizard' as Href)} />
       ) : null}
-      <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
+      <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
       {goalsQ.isLoading ? <SkeletonList count={3} /> : null}
       {goalsQ.isError ? <ErrorState onRetry={() => goalsQ.refetch()} /> : null}
     </View>
@@ -725,7 +789,7 @@ function PerformancePane({
 
   const footer = (
     <View className="gap-3 pt-5">
-      <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
+      <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
       {flatQ.isLoading ? (
         <SkeletonList count={2} />
       ) : flatQ.isError ? (
@@ -812,7 +876,7 @@ function DevelopmentPane({
           onPress={() => router.push('/development-area/new' as Href)}
         />
       ) : null}
-      <Text className="text-lg font-bold text-black dark:text-white">
+      <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">
         {WS_DEV_COPY.sectionDevAreas}
       </Text>
       {devQ.isLoading ? <SkeletonList count={3} /> : null}

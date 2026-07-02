@@ -24,6 +24,7 @@ export function CardHelpTrigger({
       accessibilityRole="button"
       accessibilityLabel={label ?? `Bantuan ${entry.title}`}
       onPress={() => Alert.alert(entry.title, entry.body)}
+      hitSlop={12}
       className="h-6 w-6 items-center justify-center rounded-full border border-neutral-300 active:opacity-70 dark:border-neutral-700">
       <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300">?</Text>
     </Pressable>

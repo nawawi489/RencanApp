@@ -87,7 +87,7 @@ function GuidanceChecklist({
         {items.map((it, i) => (
           <View key={i} className="flex-row items-start gap-2">
             <View
-              className={`mt-0.5 h-5 w-5 items-center justify-center rounded-md border ${it.checked ? 'border-emerald-600 bg-emerald-600' : 'border-neutral-300 dark:border-neutral-700'}`}
+              className={`mt-0.5 h-5 w-5 items-center justify-center rounded-md border ${it.checked ? 'border-green-700 bg-green-700' : 'border-neutral-300 dark:border-neutral-700'}`}
               accessible
               accessibilityLabel={it.checked ? 'Selesai' : 'Belum selesai'}>
               {it.checked ? (
@@ -250,12 +250,12 @@ function InstanceRow({
       </View>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">Deadline {time}</Text>
       {inst.status === 'missed' ? (
-        <Text className="text-xs font-semibold text-red-600 dark:text-red-400">
+        <Text className="text-xs font-semibold text-red-700 dark:text-red-400">
           Terlewat — deadline terlewati tanpa submit.
         </Text>
       ) : null}
       {needsReview ? (
-        <Text className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+        <Text className="text-xs font-semibold text-amber-700 dark:text-amber-400">
           Menunggu review Anda — buka detail untuk menyetujui/menolak.
         </Text>
       ) : null}
@@ -381,7 +381,7 @@ export function LiveActionPlanDetailScreen() {
           <SkeletonList count={3} />
         ) : (
           <>
-            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
               <View className="flex-row items-start gap-3">
                 <View className="flex-1 gap-1">
                   <Badge
@@ -429,7 +429,15 @@ export function LiveActionPlanDetailScreen() {
             />
 
             <SectionCard>
-              <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
+              <View className="flex-row items-center justify-between gap-2">
+                <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
+                {/* UI-S-AP3 — akses cepat ke Inbox dari konteks Action Plan. */}
+                <Button
+                  label="Buka Chat"
+                  variant="secondary"
+                  onPress={() => router.push('/(tabs)/inbox' as Href)}
+                />
+              </View>
               <Field label="Periode" value={`${ap.start_date ?? '—'} → ${ap.deadline ?? '—'}`} />
               {ap.priority ? <Field label="Prioritas" value={PRIORITY_LABEL[ap.priority] ?? ap.priority} /> : null}
               {ap.expected_output ? <Field label="Output yang Diharapkan" value={ap.expected_output} /> : null}

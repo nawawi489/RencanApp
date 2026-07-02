@@ -94,7 +94,7 @@ export function KpiAreaBreakdownPanel({
       {isLoading ? (
         <SkeletonList count={2} />
       ) : isError ? (
-        <Text className="text-sm text-red-600">
+        <Text className="text-sm text-red-700 dark:text-red-400">
           Gagal memuat breakdown.{' '}
           <Text className="underline" onPress={() => refetch()}>
             Coba lagi

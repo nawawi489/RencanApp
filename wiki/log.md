@@ -927,3 +927,47 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Token didaftarkan lebih dulu di `DESIGN.md` §7 (baris `IconTile`) + §10 (library Ionicons + aturan ikon≠satu-satunya sinyal), sesuai aturan CLAUDE.md.
 - Verifikasi: `tsc --noEmit` bersih; jest `ui-feedback` 20/20 (termasuk test IconTile baru) + `settings-repeat-rules` 3/3 + `settings-score-link` 2/2. Live DOM (Expo web @430px): 19 tile render, 19 glyph unik, 5 tone warna ikon tepat (#1564b3/#6d28d9/#15803d/#b91c1c/#b45309).
 - Ditunda: icon-button bulat di hero Inbox/People (dampak kecil).
+
+## [2026-07-02] update | Polish backlog UI P1: 5 item detail screen ditutup
+
+- Survey feasibility (Explore agent) atas 6 item terbuka `wiki/concepts/ui-prototype-gap.md` §4.5/4.6/4.7 (UI-S-GD1, KD1-3, DA2, ID1, AP3, H04) — semua feasible tanpa migrasi schema baru. UI-S-H04 (konsolidasi 6 section Home) ditunda ke sesi lain (risiko restructuring lebih tinggi, severity MINOR, banyak test existing).
+- **UI-S-GD1** (`goal/[id].tsx`): kartu "Progress vs Capaian" — `ratioActiveOfChildren` (baru, `lib/progress.ts`) untuk "Progress kerja" + `ratioDoneOfChildren` (reuse) untuk "Capaian hasil", 2× `ProgressBar`.
+- **UI-S-KD1** sudah ada sebelumnya (kartu "Capaian vs Target" dari commit KPI gap tracking) — hanya perlu update status backlog.
+- **UI-S-KD2/KD3** (`kpi-area/[id].tsx`): `listKpiAreaResultValueSources` (baru, `lib/cards.ts`, join `action_plan_result_values`→`action_plan_submissions`→`action_plans`) → kartu `NilaiHasilCard` (proposed pending + "Buka Review") dan panel `SumberNilaiHasilPanel` (riwayat submission lintas AP, tap→buka AP). "Input Nilai Hasil" langsung dari KPI Area **diskip** — result value harus terikat 1 Action Plan (PIC/evidence), tak ada target aman dari layar ini.
+- **UI-S-DA2** (`development-area/[id].tsx`): `DevAreaSummaryStrip` 3-tile (Progress/Problem Statement/Initiative) — `listInitiativesByProblemStatementIds` (baru, `lib/cards.ts`, 1 query batched `.in()`, bukan N+1).
+- **UI-S-ID1**: sudah terimplementasi ("Buka Chat Initiative" di `ExecSpaceCard`) — diverifikasi, tidak ada perubahan kode.
+- **UI-S-AP3** (`action-plan/[id].tsx`): tombol "Buka Chat" ditambah di header kartu Brief Kerja; "Ajukan Ubah Deadline" inline sudah ada sebelumnya.
+- Pages updated: [[ui-prototype-gap]] (5 item ditandai selesai di §4.5/4.6/4.7 + §5 P1).
+- Verifikasi: `tsc --noEmit` bersih; jest **86 suite / 774 tes pass** (+10 tes baru: `ratioActiveOfChildren`, `listInitiativesByProblemStatementIds`, `listKpiAreaResultValueSources`), tidak ada regresi.
+
+## [2026-07-02] update | Design review tab Workspace (audit + 12 fix atomik)
+
+- `/design-review` scoped ke tab Workspace (Expo web + seed lokal, login CEO). Skor desain B- → A-; AI slop B+ (satu-satunya hit blacklist = system-ui yang memang keputusan owner DESIGN §11).
+- **Bug kritis (FINDING-001):** `workspace-hub-card.tsx` membagi `orbPercent/100` padahal `ProgressOrb` menerima 0–100 → orb lobby selalu render ~1% tone danger. Fix + regression test `workspace-hub-card.test.tsx` (3 tes).
+- **A11y/kontras mengikat (DESIGN §4):** back-link 36→44px; avatar header 34→44px hit area; `text-brand-dark` +`dark:text-brand` (7 titik); kicker `neutral-400` (2.5:1) → token muted `neutral-500` + varian dark; `accessibilityRole="header"` di 5 judul layar/section.
+- **Token & hirarki:** `SectionCard` kini cat surface `bg-white dark:bg-neutral-950` (inset level-2 `bg-neutral-50` jadi terbaca; elevasi dark level-3 tidak lagi terbalik); tombol tree `rounded-lg`→`rounded-xl` (10 titik); heading section `text-lg`→`text-xl` (peran H2 §3); pill `emerald`→`green` (§2); Detail level-3 tidak lagi `flex-1` (prominence konsisten antar level); `HubView` kini `ScrollView` (Dynamic Type §4.5).
+- Ditunda ke backlog: [[ui-prototype-gap]] **UI-S-W05** (glyph unicode → Ionicons; string terkunci test) + **UI-S-W06** (chrome pane menumpuk — keputusan struktur). Polish kecil (p-2.5, max-width web desktop) dicatat di laporan.
+- Verifikasi: jest **87 suite / 777 tes pass**; live re-scan touch target <44px = 0; tanpa console error. Laporan lengkap + screenshot before/after: `~/.gstack/projects/nawawi489-RencanApp/designs/design-audit-20260702/`.
+- Commits: 12 commit `style(design): FINDING-0NN — …` di `feat/sf1-score-formula-editor`.
+
+## [2026-07-02] update | Design consultation tab Workspace (analisa + 2 fix UI-S-W07/W08)
+
+- `/design-consultation` scoped ke tab Workspace: analisa kode vs `DESIGN.md` + backlog [[ui-prototype-gap]]; 2 temuan baru langsung dieksekusi.
+- **UI-S-W07:** expand level-1 (`GoalRow`/`DevelopmentAreaRow`) tanpa state loading/kosong/error — tap "Lihat KPI Area" pada Goal kosong terasa seperti tombol mati. Fix: paritas level-2 (`SkeletonList` + `ErrorState` retry + hint kosong); +4 tes [W07·1..4].
+- **UI-S-W08:** dim "periode lewat" `opacity-50` bertumpuk multiplikatif di tree bersarang (0.5³ = 0.125 di level-3 → gagal kontras AA, DESIGN §4). Fix: `PastDim` single-layer (hanya node past teratas; `ancestorPast` threading; inline style agar flatten deterministik di jest); badge teks per node tetap tampil; +2 tes [W08·1..2].
+- Feedback lain dicatat tanpa eksekusi (butuh putusan owner): **UI-S-W04** subhead gap % per node (prioritas berikut — infrastruktur `target_numeric` 0032 sudah ada), **UI-S-W06** struktur chrome (usulan: gabung back-link+H1, H1 = nama ruang, demosi CTA "+ Goal Baru"), menu ⋯ berisi placeholder semua, gate izin "+" pakai proxy permission yang salah objek.
+- Pages updated: [[ui-prototype-gap]] (§4.3 + baris UI-S-W07/W08 ✅ implemented).
+- Verifikasi: `tsc --noEmit` bersih; jest **87 suite / 783 tes pass** (+6); live Expo web (login CEO seed, fokus Desember 2026): 5 badge "Periode lewat" tampil, 2 node dim, opacity efektif tiap node dim = tepat 0.5 (tanpa penumpukan); console error 0.
+- Commits: `99d739b` (UI-S-W07), `fe46e18` (UI-S-W08) di `feat/sf1-score-formula-editor`.
+
+## [2026-07-02] update | Review UI/UX — audit kepatuhan DESIGN.md + batch fix
+
+- Sweep `mobile/src/` terhadap `DESIGN.md` §2/§3/§4/§12 (kontras AA, a11y mengikat, dark mode, konsistensi token) via 3 agen audit paralel (warna/kontras, aksesibilitas, konsistensi komponen). Fondasi sehat: `SectionCard` 196×/38 layar, tidak ada `bg-brand` polos + teks putih, dark mode konsisten, ikon = Ionicons saja.
+- **AA contrast (fix di sumber → menjalar):** `Button` success `green-600→700`, badge unread `Tabs` `red-500→700`, `ScoreSparkline` delta `-600→700` (`ui.tsx`); tombol Setujui/Tolak custom (`deadline-change-request.tsx`) + `TypeBadge` `emerald-600→green-700` (`home-screen.tsx`); sweep teks error/alert `text-red-600` polos → `text-red-700 dark:text-red-400` (~14 file).
+- **A11y §4:** `SectionCard` press `accessibilityRole`; chip Priority/Chip/weekday `action-plan/new` ekspos `tab`/`checkbox` + selected/checked; `user-picker` trigger/close/opsi role+label+44px + `text-brand`→`brand-dark`; `hitSlop` `card-help-trigger` & eye-toggle login; 2 segmented control (`settings-permission-users`, `settings-org-structure`) 32/36→44px + `rounded-full`; 3 filter-chip settings 36→44px.
+- **Dark mode §12:** splash `dark:bg-black`; ikon search header via `useColorScheme`; 10 kartu hero detail `dark:bg-neutral-900→950` selaras `SectionCard`.
+- **Tipografi §3:** `font-medium→font-semibold` di sumber (`LabeledInput`, `StatPill`) + turunan.
+- **Housekeeping:** hapus 10 file mati template Expo (themed-text/view, web-badge, animated-icon ×3, ui/collapsible, constants/theme, hooks/use-theme, prototype/tokens/theme) — nol importer live (verified); register token `placeholder` + wordmark login `text-green-700` di `DESIGN.md`.
+- Residual sengaja ditunda sebagai backlog baru [[ui-prototype-gap]] §2.1: **UI-G-012** (palette drift emerald→green), **UI-G-013** (mikro-tipografi text-[10px]/[11px]), **UI-G-014** (fill grafis green-600 ProgressBar/legend), **UI-G-015** (hex dekoratif login belum terdaftar). Semua kosmetik/palet, lulus 3:1 — bukan kegagalan AA.
+- Pages updated: [[ui-prototype-gap]] (§2.1 baru + UI-G-012..015), `DESIGN.md` (token placeholder §2), `MEMORY.md` n/a.
+- Verifikasi: `tsc --noEmit` bersih; jest **87 suite / 783 tes pass** (clean serial run — kegagalan pada run paralel `--ci` = flake timeout kontensi CPU, bukan regresi); ~39 file diedit, 10 file mati dihapus (614 deletions). Belum di-commit (working tree `feat/sf1-score-formula-editor`).

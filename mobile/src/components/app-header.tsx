@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,6 +13,10 @@ export function AppHeader({ kicker }: { kicker?: string }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useProfile();
+  const scheme = useColorScheme();
+  // Ikon di atas pill bg-neutral-50/dark:bg-neutral-900 — brand-dark kontras di terang,
+  // blue-300 di gelap (pola IconTile info, DESIGN §12: warna eksplisit via scheme).
+  const searchIconColor = scheme === 'dark' ? '#93c5fd' : '#1564b3';
   const name = profile?.full_name?.trim() || profile?.email || 'Pengguna';
 
   return (
@@ -39,11 +44,11 @@ export function AppHeader({ kicker }: { kicker?: string }) {
             onPress={() => router.push('/(app)/search')}
             accessibilityRole="button"
             accessibilityLabel="Cari">
-            <Ionicons name="search-outline" size={18} color="#1564b3" />
+            <Ionicons name="search-outline" size={18} color={searchIconColor} />
             <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Cari</Text>
           </Pressable>
           <Pressable
-            className="active:opacity-70"
+            className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
             onPress={() => router.push('/(app)/settings')}
             accessibilityRole="button"
             accessibilityLabel="Buka profil & pengaturan">

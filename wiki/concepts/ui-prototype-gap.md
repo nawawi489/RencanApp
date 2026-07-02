@@ -53,6 +53,27 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 ---
 
+## 2.1 Audit kepatuhan DESIGN.md (review UI/UX 2026-07-02)
+
+Sweep menyeluruh `mobile/src/` terhadap [[architecture#a11y|DESIGN.md §2/§3/§4/§12]] (kontras AA, aksesibilitas mengikat, dark mode, konsistensi token). Fondasi sehat — `SectionCard` dipakai 196× di 38 layar, tidak ada `bg-brand` polos + teks putih, dark mode konsisten. **Batch fix diterapkan (jest 783/783, tsc bersih):**
+
+- **AA contrast (di sumber → menjalar):** `Button` success `green-600→700`, badge unread `Tabs` `red-500→700`, `ScoreSparkline` delta `-600→700` (`ui.tsx`); tombol Setujui/Tolak custom (`deadline-change-request.tsx`) + `TypeBadge` `emerald-600→green-700` (`home-screen.tsx`); sweep teks error/alert `text-red-600` polos → `text-red-700 dark:text-red-400` (~14 file).
+- **A11y §4:** `SectionCard` press dapat `accessibilityRole`; chip Priority/Chip/weekday di `action-plan/new` ekspos `tab`/`checkbox` + state selected/checked; `user-picker` trigger/close/opsi dapat role+label+44px; `hitSlop` di `card-help-trigger` & eye-toggle login; 2 segmented control (`settings-permission-users`, `settings-org-structure`) 32/36px→44px + `rounded-full`; 3 baris filter-chip settings 36px→44px.
+- **Dark mode §12:** splash `dark:bg-black`; ikon search header via `useColorScheme`; **10 kartu hero detail** `dark:bg-neutral-900→950` selaras `SectionCard`.
+- **Tipografi §3:** `font-medium→font-semibold` di sumber (`LabeledInput`, `StatPill`) + turunannya.
+- **Housekeeping:** hapus 10 file mati template Expo (themed-text/view, web-badge, animated-icon ×3, ui/collapsible, constants/theme, hooks/use-theme, prototype/tokens/theme) — nol importer live; daftarkan token `placeholder` + samakan wordmark login `text-green-700` di `DESIGN.md`.
+
+**Residual (sengaja ditunda — kosmetik/palette, bukan kegagalan AA):**
+
+| ID | Residual | Lokasi | Acceptance criteria ringkas |
+|---|---|---|---|
+| **UI-G-012** | **Palette drift `emerald`** — tone "done/verified" pakai `emerald-100/950` alih-alih `green` kanonik | `action-plan/instance/[id].tsx`, `development-area/[id].tsx`, `initiative/[id].tsx` (containerCls badge success) | Putuskan: emerald = sub-tone resmi (daftarkan di DESIGN §2) atau normalisasi ke `green`. Lulus 3:1 (bg terang) jadi bukan blocker AA. |
+| **UI-G-013** | **Mikro-tipografi `text-[10px]/[11px]`** di bawah skala §3 (min caption 11–12) | 14 file (terbanyak `action-plan/instance/[id].tsx`, stat-chip) | Naikkan ke `text-xs` atau daftarkan tier caption terkecil di DESIGN §3. |
+| **UI-G-014** | **Fill grafis `green-600`** (bukan teks) pada `ProgressBar` success + `LEGEND_DOT` | `ui.tsx` | Putuskan 600 vs 700 untuk elemen grafis non-teks (lulus 3:1 sekarang; keputusan konsistensi palet, bukan a11y). |
+| **UI-G-015** | **Hex dekoratif login belum terdaftar** — gradien `#0b1220`/`#eef4fb`, eye/placeholder `#94a3b8`/`#6b7280` | `(auth)/login.tsx` (layar display khusus) | Daftarkan di DESIGN §2 sebagai token layar login, atau petakan ke token neutral terdekat. |
+
+---
+
 ## 3. Gap navigasi (struktural)
 
 | ID | Gap | Severity |
@@ -95,6 +116,10 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-W02 | **Pohon 4–5 level** dengan expand/collapse + per-node `+ child` button (terkait UI-N-003) | MAJOR ✅ **STAGE 1 IMPLEMENTED 2026-06-28 (3-level kompromi)** — lihat UI-N-003. Initiative + AP level masih stack-nav per kompromi CEO review (mobile real-estate concern). Stage 2 (hub-card UI-N-002) sebagai polish berikut. |
 | UI-S-W03 | **Period switcher** (lihat UI-G-010) | MAJOR ✅ **IMPLEMENTED 2026-06-28 (S1)** |
 | UI-S-W04 | **Subhead kaya** per node (Aktual/Target/Gap, Kontribusi %, Risiko) | MAJOR |
+| UI-S-W05 | **Ikon glyph unicode → Ionicons** di tree Workspace (`▾ ▸ ⋯ + › ←`) — web fallback ke Times New Roman, Android bervariasi per OEM font; melanggar DESIGN §10 (library = Ionicons). String terkunci test di `workspace-copy.ts` → butuh pass khusus + update test. Temuan design-review 2026-07-02 (FINDING-013). | MINOR |
+| UI-S-W06 | **Chrome pane menumpuk sebelum konten**: back-link + H1 + segmented + kartu periode + deskripsi + CTA full-width ≈ 580px sebelum Goal pertama; "Workspace" tampil 3×; 3 elemen solid brand-dark bersaing di atas fold. Butuh keputusan struktur (mis. gabung back-link+H1, demosi CTA), bukan patch CSS. Temuan design-review 2026-07-02 (FINDING-014). | MINOR |
+| UI-S-W07 | **Expand level-1 tanpa state loading/kosong/error**: `GoalRow`/`DevelopmentAreaRow` hanya me-map children — tap "Lihat KPI Area" pada Goal kosong tidak menampilkan apa pun (terasa tombol mati). Temuan design-consultation 2026-07-02. | MINOR ✅ **IMPLEMENTED 2026-07-02** — paritas level-2: `SkeletonList` + `ErrorState` + hint kosong; +4 tes [W07·1..4]. |
+| UI-S-W08 | **Dim "periode lewat" bertumpuk multiplikatif**: wrapper `opacity-50` per level bersarang → level-3 past dalam ancestor past dirender 0.125 (gagal kontras AA, DESIGN §4). Temuan design-consultation 2026-07-02. | MINOR ✅ **IMPLEMENTED 2026-07-02** — `PastDim` single-layer (hanya node past teratas; `ancestorPast` threading); +2 tes [W08·1..2]. |
 
 ### 4.4 Performance forms — Goal/KPI/Strategy/Initiative
 
@@ -112,11 +137,11 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 
 | ID | Item | Severity |
 |---|---|---|
-| UI-S-GD1 | `goal/[id]`: **Progress vs Capaian** dual progress bars | MAJOR |
-| UI-S-KD1 | `kpi-area/[id]`: kartu **"Cakupan & Gap"** (Target bulan / Nilai Hasil / Gap + capaian %) | MAJOR |
-| UI-S-KD2 | `kpi-area/[id]`: kartu **"Nilai Hasil"** (current vs proposed) + "Input Nilai Hasil" + "Buka Review" actions | MAJOR |
-| UI-S-KD3 | `kpi-area/[id]`: **Pecahan Target** panel + **Sumber Nilai Hasil** | MAJOR |
-| UI-S-ID1 | `initiative/[id]`: **"Buka Chat"** action menuju Inbox room | MAJOR |
+| UI-S-GD1 | `goal/[id]`: **Progress vs Capaian** dual progress bars | MAJOR ✅ **IMPLEMENTED 2026-07-02** — kartu "Progress vs Capaian": "Progress kerja" (`ratioActiveOfChildren` — % KPI Area sudah bergerak dari draft) + "Capaian hasil" (`ratioDoneOfChildren`, reuse); 2× `ProgressBar` (brand/success). Indikatif dari status anak, konsisten filosofi `lib/progress.ts`. |
+| UI-S-KD1 | `kpi-area/[id]`: kartu **"Cakupan & Gap"** (Target bulan / Nilai Hasil / Gap + capaian %) | MAJOR ✅ **IMPLEMENTED (KPI gap tracking 2026-07-02)** — kartu "Capaian vs Target" (`computeKpiGap` + VIEW `kpi_area_current_values`), tampil bila `target_numeric` diisi. |
+| UI-S-KD2 | `kpi-area/[id]`: kartu **"Nilai Hasil"** (current vs proposed) + "Input Nilai Hasil" + "Buka Review" actions | MAJOR ✅ **PARTIAL 2026-07-02** — `NilaiHasilCard` tampil bila ada submission `review_status='pending'` menunjuk KPI Area ini (via `listKpiAreaResultValueSources`); "Buka Review" → `/action-plan/{id}`. "Input Nilai Hasil" langsung dari KPI Area **diskip** — result value selalu terikat konteks satu Action Plan (PIC/evidence), tak ada target AP tunggal yang aman diasumsikan dari layar ini; tetap lewat `action-plan/submit`. |
+| UI-S-KD3 | `kpi-area/[id]`: **Pecahan Target** panel + **Sumber Nilai Hasil** | MAJOR ✅ **IMPLEMENTED 2026-07-02** — `SumberNilaiHasilPanel`: daftar submission (approved/pending/rejected) lintas Action Plan yang menunjuk KPI Area ini, tap → buka Action Plan sumber. Pecahan Target (`KpiAreaBreakdownPanel`) sudah ada sebelumnya. |
+| UI-S-ID1 | `initiative/[id]`: **"Buka Chat"** action menuju Inbox room | MAJOR ✅ **sudah ada** (verified 2026-07-02) — `ExecSpaceCard` → "Buka Chat Initiative" route `/(tabs)/inbox`. |
 | UI-S-ID2 | `initiative/[id]`: kartu **"Ruang Eksekusi"** (Action Plan/Bukti/Keputusan counts) + **"Tim & Akses Otomatis"** roster | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `ExecSpaceCard` 5-tile (Aktif/Review/Selesai/Revisi/Draft) + "Buka Chat Initiative" CTA (V1 route ke /(tabs)/inbox; per-initiative room ditunda); `RosterCard` unique PIC+Reviewer dari AP turunannya + Initiative PIC badge. Bukti/Keputusan counts ditunda (perlu query submissions per initiative). |
 | UI-S-PD1 | **Kelengkapan Card** checklist per-field (Konteks/PIC/Target/Bukti rule) — bukan sekadar rasio MBR | MAJOR |
 
@@ -125,7 +150,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | ID | Item | Severity |
 |---|---|---|
 | UI-S-DA1 | `development-area/new`: field **Visibilitas** | MINOR |
-| UI-S-DA2 | `development-area/[id]`: **summary-strip** (Progress/Problem/Initiative counts) | MAJOR |
+| UI-S-DA2 | `development-area/[id]`: **summary-strip** (Progress/Problem/Initiative counts) | MAJOR ✅ **IMPLEMENTED 2026-07-02** — `DevAreaSummaryStrip` 3-tile (Progress % via `ratioDoneOfChildren`, jumlah Problem Statement, jumlah Initiative via `listInitiativesByProblemStatementIds` — 1 query batched, bukan N+1). |
 | UI-S-PR1 | `problem-statement/new`: field **Dampak** (High/Med/Low) + **Bukti awal** + context-bar parent | MAJOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0030 `problem_statements.impact text CHECK ('high','medium','low')` + `initial_evidence text`. Form: `ImpactSelector` chip 3-pilihan (wajib) + multiline "Bukti Awal" + context-bar "Development Area induk: ..." (PRD §15 metadata). |
 | UI-S-PR2 | `problem-statement/[id]`: **summary-strip** + kartu "Bukti Problem Statement" | MAJOR |
 
@@ -135,7 +160,7 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 |---|---|---|
 | UI-S-AP1 | `action-plan/[id]`: panel **"Panduan Selesai"** checklist | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `GuidanceChecklist` 5-langkah PIC journey (Pelajari brief → Aktifkan → Mulai kerja → Submit bukti → Tunggu approval); centang otomatis dari `ap.status`+lastSubmission; ratio badge `N/5` + note "Revisi" saat status=revision. |
 | UI-S-AP2 | `action-plan/[id]`: panel **"Gate & kendala"** | MAJOR ✅ **IMPLEMENTED 2026-06-28** — `GateAndConstraints` 6-row derivasi field (PIC, Reviewer≠PIC, Deadline, Output, DoD, Bukti) + row Repeat rule saat repeat=true. Summary badge "N blokir"/"N perhatian"/"Tidak ada kendala" tone otomatis. |
-| UI-S-AP3 | `action-plan/[id]`: tombol **"Buka Chat"** + shortcut "Ubah deadline" inline di Brief | MINOR |
+| UI-S-AP3 | `action-plan/[id]`: tombol **"Buka Chat"** + shortcut "Ubah deadline" inline di Brief | MINOR ✅ **IMPLEMENTED 2026-07-02** — tombol "Buka Chat" (→ `/(tabs)/inbox`) ditambah di header kartu Brief Kerja; "Ajukan Ubah Deadline" inline sudah ada sebelumnya (gated PIC + status aktif). |
 | UI-S-AP4 | `action-plan/new`: **context-bar** parent Initiative; field **"Bukti yang diminta"** deskriptif (selain toggle wajib) | MINOR ✅ **IMPLEMENTED 2026-06-28** — migrasi 0027 `action_plans.evidence_description text` + form input multiline; context-bar parent Initiative (query `getInitiative(initiativeId)` + header strip "Initiative induk: ..."); gate aktivasi (0028) Bukti yang Diminta wajib bila `evidence_required=true` (PRD §22.5). |
 | UI-S-AP5 | `action-plan/submit`: **file upload** (saat ini hanya text_note + link) | MAJOR |
 | UI-S-AP6 | `action-plan/submit`: pisah **Result Value Input** dengan **linkage KPI Area + nilai lama→baru** ([[execution-loop]]) | MAJOR |
@@ -202,6 +227,11 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 - UI-S-KT1 (KPI Template management). ✅ done.
 - UI-S-EV1 (Evaluation SOP/rollout checklist). ✅ done 2026-06-28.
 - UI-S-AP7 (Instance daily summary + Panduan Hari Ini). ✅ done.
+- UI-S-GD1 (Goal Progress vs Capaian dual bars). ✅ done 2026-07-02.
+- UI-S-KD1/KD2/KD3 (KPI Area Cakupan & Gap / Nilai Hasil / Sumber Nilai Hasil). ✅ done 2026-07-02 (KD2 partial — lihat catatan §4.5).
+- UI-S-DA2 (Development Area summary-strip). ✅ done 2026-07-02.
+- UI-S-ID1 (Initiative Buka Chat). ✅ sudah ada, diverifikasi 2026-07-02.
+- UI-S-AP3 (Action Plan Buka Chat + deadline shortcut). ✅ done 2026-07-02.
 
 **P2 — kekayaan visual & navigasi (perlu putusan produk dulu)**
 - ~~UI-N-001 (Menu tab vs People tab)~~ ✅ **DONE 2026-06-28 (S0)** — `(tabs)/menu.tsx` aktif; People = stack route `/people`.

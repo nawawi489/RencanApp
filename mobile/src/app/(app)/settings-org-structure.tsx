@@ -269,7 +269,7 @@ function RoleTab() {
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={opt.label}
                   onPress={() => setLevel(opt.value)}
-                  className={`min-h-[36px] flex-1 items-center justify-center rounded-lg px-2 ${
+                  className={`min-h-[44px] flex-1 items-center justify-center rounded-full px-2 ${
                     active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
                   } active:opacity-70`}>
                   <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-black dark:text-white'}`}>

@@ -5,11 +5,11 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressBar, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import type { KpiArea } from '@/lib/kpi-areas';
-import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
+import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
@@ -92,7 +92,7 @@ export function LiveGoalDetailScreen() {
           <ErrorState onRetry={() => goalQ.refetch()} />
         ) : (
           <>
-            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
               <View className="flex-row items-start gap-3">
                 <View className="flex-1 gap-1">
                   <Badge
@@ -118,6 +118,30 @@ export function LiveGoalDetailScreen() {
                 ]}
               />
             </View>
+
+            {/* UI-S-GD1 — Progress vs Capaian: "Progress kerja" (KPI Area sudah bergerak dari draft)
+                vs "Capaian hasil" (KPI Area selesai). Indikatif dari status anak, lihat lib/progress.ts. */}
+            <SectionCard>
+              <Text className="text-sm font-bold text-black dark:text-white">Progress vs Capaian</Text>
+              <View className="gap-1.5">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">Progress kerja</Text>
+                  <Text className="text-xs font-semibold text-black dark:text-white">
+                    {ratioActiveOfChildren(kpiQ.kpiAreas ?? [])}%
+                  </Text>
+                </View>
+                <ProgressBar value={ratioActiveOfChildren(kpiQ.kpiAreas ?? [])} tone="brand" />
+              </View>
+              <View className="gap-1.5">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">Capaian hasil</Text>
+                  <Text className="text-xs font-semibold text-black dark:text-white">
+                    {ratioDoneOfChildren(kpiQ.kpiAreas ?? [])}%
+                  </Text>
+                </View>
+                <ProgressBar value={ratioDoneOfChildren(kpiQ.kpiAreas ?? [])} tone="success" />
+              </View>
+            </SectionCard>
 
             {goal.description ? (
               <SectionCard>

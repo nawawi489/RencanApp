@@ -20,3 +20,4 @@ Thumbs.db
 
 # UI/UX screenshots & mockups — artefak lokal, tidak perlu di-repo
 ui/
+.gstack/
