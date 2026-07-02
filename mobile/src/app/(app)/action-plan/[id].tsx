@@ -429,7 +429,15 @@ export function LiveActionPlanDetailScreen() {
             />
 
             <SectionCard>
-              <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
+              <View className="flex-row items-center justify-between gap-2">
+                <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
+                {/* UI-S-AP3 — akses cepat ke Inbox dari konteks Action Plan. */}
+                <Button
+                  label="Buka Chat"
+                  variant="secondary"
+                  onPress={() => router.push('/(tabs)/inbox' as Href)}
+                />
+              </View>
               <Field label="Periode" value={`${ap.start_date ?? '—'} → ${ap.deadline ?? '—'}`} />
               {ap.priority ? <Field label="Prioritas" value={PRIORITY_LABEL[ap.priority] ?? ap.priority} /> : null}
               {ap.expected_output ? <Field label="Output yang Diharapkan" value={ap.expected_output} /> : null}

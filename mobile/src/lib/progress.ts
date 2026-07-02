@@ -34,6 +34,18 @@ export function computeActionPlanProgress(args: {
   return ACTION_PLAN_STATUS_PROGRESS[args.status] ?? 0;
 }
 
+/**
+ * UI-S-GD1 — proksi "Progress kerja": % child non-archived yang sudah bergerak dari draft
+ * (active/submitted/done/dst). Berpasangan dengan `ratioDoneOfChildren` ("Capaian hasil") di
+ * kartu "Progress vs Capaian". Total 0 → 0.
+ */
+export function ratioActiveOfChildren(children: StatusItem[]): number {
+  const active = children.filter((c) => c.status !== 'archived');
+  if (active.length === 0) return 0;
+  const moving = active.filter((c) => c.status !== 'draft').length;
+  return Math.round((moving / active.length) * 100);
+}
+
 /** Sublabel ringkas untuk orb (mis. "3/5 selesai" atau "Belum ada turunan"). */
 export function childrenSublabel(children: StatusItem[]): string {
   const active = children.filter((c) => c.status !== 'archived');

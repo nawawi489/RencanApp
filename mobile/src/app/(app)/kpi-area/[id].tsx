@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
@@ -19,8 +19,9 @@ import {
   SkeletonList,
 } from '@/components/ui';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
-import { getKpiAreaCurrentValue } from '@/lib/cards';
+import { getKpiAreaCurrentValue, listKpiAreaResultValueSources, type KpiResultValueSource } from '@/lib/cards';
 import { computeKpiGap, formatRemaining, groupThousands } from '@/lib/kpi-gap';
+import { REVIEW_STATUS, formatDateTime } from '@/components/submission-card';
 import { UserPicker } from '@/components/user-picker';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { KpiAreaBreakdownPanel } from '@/components/kpi-area-breakdown-panel';
@@ -43,6 +44,75 @@ import {
 import type { Strategy } from '@/lib/strategies';
 
 type Person = NonNullable<PersonRef>;
+
+function resultValueLabel(v: KpiResultValueSource): string {
+  if (v.value_numeric != null) return groupThousands(v.value_numeric);
+  return v.value_text?.trim() || '—';
+}
+
+/** UI-S-KD2 — Nilai Hasil yang sudah diajukan tapi belum direview reviewer (proposed vs current). */
+function NilaiHasilCard({ pending, onOpenReview }: { pending: KpiResultValueSource; onOpenReview: () => void }) {
+  return (
+    <SectionCard>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-sm font-bold text-black dark:text-white">Nilai Hasil Diajukan</Text>
+        <Badge label="Menunggu Review" tone="warn" />
+      </View>
+      <Text className="text-sm text-neutral-600 dark:text-neutral-400">
+        {resultValueLabel(pending)} · dari {pending.submission?.action_plan?.name ?? 'Action Plan'}
+      </Text>
+      <Button label="Buka Review" variant="secondary" onPress={onOpenReview} />
+    </SectionCard>
+  );
+}
+
+/** UI-S-KD3 — sumber Nilai Hasil (submission per Action Plan) yang membentuk "Capaian vs Target" di atas. */
+function SumberNilaiHasilPanel({
+  sources,
+  onOpenActionPlan,
+}: {
+  sources: KpiResultValueSource[];
+  onOpenActionPlan: (actionPlanId: string) => void;
+}) {
+  return (
+    <SectionCard>
+      <Text className="text-sm font-bold text-black dark:text-white">Sumber Nilai Hasil</Text>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        Submission Action Plan yang berkontribusi ke nilai di atas, terbaru dahulu.
+      </Text>
+      <View className="gap-2 pt-1">
+        {sources.map((s) => {
+          const status = REVIEW_STATUS[s.submission?.review_status ?? 'pending'] ?? REVIEW_STATUS.pending;
+          const apId = s.submission?.action_plan_id;
+          return (
+            <Pressable
+              key={s.id}
+              disabled={!apId}
+              onPress={() => apId && onOpenActionPlan(apId)}
+              accessibilityRole={apId ? 'button' : undefined}
+              accessibilityLabel={`Buka Action Plan ${s.submission?.action_plan?.name ?? ''}`}
+              className="gap-0.5 rounded-xl bg-neutral-50 px-3 py-2 active:opacity-70 dark:bg-neutral-900">
+              <View className="flex-row items-start justify-between gap-2">
+                <Text className="flex-1 text-sm font-medium text-black dark:text-white" numberOfLines={1}>
+                  {s.submission?.action_plan?.name ?? 'Action Plan'}
+                </Text>
+                <Badge label={status.label} tone={status.tone} />
+              </View>
+              <View className="flex-row items-center justify-between gap-2">
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {resultValueLabel(s)}
+                </Text>
+                <Text className="text-[11px] text-neutral-400">
+                  {s.submission ? formatDateTime(s.submission.submitted_at) : '—'}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </SectionCard>
+  );
+}
 
 function StrategyRow({ item, onPress }: { item: Strategy; onPress: () => void }) {
   return (
@@ -113,6 +183,11 @@ export function LiveKpiAreaDetailScreen() {
     queryKey: ['kpi_area_current_value', id],
     queryFn: () => getKpiAreaCurrentValue(id),
   });
+  // UI-S-KD2/KD3 — sumber Nilai Hasil lintas Action Plan (proposed pending + riwayat approved/rejected).
+  const resultSourcesQ = useQuery({
+    queryKey: ['kpi_area_result_sources', id],
+    queryFn: () => listKpiAreaResultValueSources(id),
+  });
   const { strategies, isLoading: strategiesLoading, isError: strategiesError, refetch: refetchStrategies } =
     useStrategies(id);
 
@@ -124,6 +199,7 @@ export function LiveKpiAreaDetailScreen() {
     useCallback(() => {
       kpiAreaQ.refetch();
       currentValueQ.refetch();
+      resultSourcesQ.refetch();
       refetchStrategies();
       refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Strategy
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -248,6 +324,25 @@ export function LiveKpiAreaDetailScreen() {
                   );
                 })()
               : null}
+
+            {/* UI-S-KD2 — Nilai Hasil yang sudah diajukan tapi menunggu review (ambil yang terbaru). */}
+            {(() => {
+              const pending = resultSourcesQ.data?.find((s) => s.submission?.review_status === 'pending');
+              return pending ? (
+                <NilaiHasilCard
+                  pending={pending}
+                  onOpenReview={() => router.push(`/action-plan/${pending.submission!.action_plan_id}` as Href)}
+                />
+              ) : null;
+            })()}
+
+            {/* UI-S-KD3 — Sumber Nilai Hasil (riwayat submission lintas Action Plan). */}
+            {resultSourcesQ.data && resultSourcesQ.data.length > 0 ? (
+              <SumberNilaiHasilPanel
+                sources={resultSourcesQ.data}
+                onOpenActionPlan={(apId) => router.push(`/action-plan/${apId}` as Href)}
+              />
+            ) : null}
 
             {kpiArea.description ? (
               <SectionCard>

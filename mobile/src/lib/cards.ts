@@ -110,6 +110,14 @@ export async function listInitiatives(opts?: {
   return data;
 }
 
+/** UI-S-DA2 — hitung Initiative di bawah beberapa Problem Statement sekaligus (satu query, hindari N+1). */
+export async function listInitiativesByProblemStatementIds(ids: string[]): Promise<Initiative[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase.from('initiatives').select('*').in('problem_statement_id', ids);
+  if (error) throw error;
+  return data;
+}
+
 export async function getInitiative(id: string): Promise<Initiative> {
   const { data, error } = await supabase.from('initiatives').select('*').eq('id', id).single();
   if (error) throw error;
@@ -499,6 +507,37 @@ export async function getKpiAreaCurrentValue(kpiAreaId: string): Promise<KpiArea
     .maybeSingle();
   if (error) throw error;
   return (data as KpiAreaCurrentValue | null) ?? null;
+}
+
+/** UI-S-KD2/KD3 — satu submission yang menyumbang Nilai Hasil ke KPI Area ini (approved/pending/rejected). */
+export type KpiResultValueSource = {
+  id: string;
+  value_numeric: number | null;
+  value_text: string | null;
+  created_at: string;
+  submission: {
+    id: string;
+    action_plan_id: string;
+    review_status: string;
+    submitted_at: string;
+    action_plan: { id: string; name: string } | null;
+  } | null;
+};
+
+/**
+ * Daftar Nilai Hasil (result value) yang menunjuk ke KPI Area ini, lintas Action Plan, terurut terbaru.
+ * Dipakai untuk kartu "Nilai Hasil" (proposed vs current) dan panel "Sumber Nilai Hasil".
+ */
+export async function listKpiAreaResultValueSources(kpiAreaId: string): Promise<KpiResultValueSource[]> {
+  const { data, error } = await supabase
+    .from('action_plan_result_values')
+    .select(
+      'id, value_numeric, value_text, created_at, submission:submission_id(id, action_plan_id, review_status, submitted_at, action_plan:action_plan_id(id, name))',
+    )
+    .eq('kpi_area_id', kpiAreaId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as KpiResultValueSource[];
 }
 
 export async function reviewSubmission(args: {

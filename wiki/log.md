@@ -927,3 +927,15 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Token didaftarkan lebih dulu di `DESIGN.md` §7 (baris `IconTile`) + §10 (library Ionicons + aturan ikon≠satu-satunya sinyal), sesuai aturan CLAUDE.md.
 - Verifikasi: `tsc --noEmit` bersih; jest `ui-feedback` 20/20 (termasuk test IconTile baru) + `settings-repeat-rules` 3/3 + `settings-score-link` 2/2. Live DOM (Expo web @430px): 19 tile render, 19 glyph unik, 5 tone warna ikon tepat (#1564b3/#6d28d9/#15803d/#b91c1c/#b45309).
 - Ditunda: icon-button bulat di hero Inbox/People (dampak kecil).
+
+## [2026-07-02] update | Polish backlog UI P1: 5 item detail screen ditutup
+
+- Survey feasibility (Explore agent) atas 6 item terbuka `wiki/concepts/ui-prototype-gap.md` §4.5/4.6/4.7 (UI-S-GD1, KD1-3, DA2, ID1, AP3, H04) — semua feasible tanpa migrasi schema baru. UI-S-H04 (konsolidasi 6 section Home) ditunda ke sesi lain (risiko restructuring lebih tinggi, severity MINOR, banyak test existing).
+- **UI-S-GD1** (`goal/[id].tsx`): kartu "Progress vs Capaian" — `ratioActiveOfChildren` (baru, `lib/progress.ts`) untuk "Progress kerja" + `ratioDoneOfChildren` (reuse) untuk "Capaian hasil", 2× `ProgressBar`.
+- **UI-S-KD1** sudah ada sebelumnya (kartu "Capaian vs Target" dari commit KPI gap tracking) — hanya perlu update status backlog.
+- **UI-S-KD2/KD3** (`kpi-area/[id].tsx`): `listKpiAreaResultValueSources` (baru, `lib/cards.ts`, join `action_plan_result_values`→`action_plan_submissions`→`action_plans`) → kartu `NilaiHasilCard` (proposed pending + "Buka Review") dan panel `SumberNilaiHasilPanel` (riwayat submission lintas AP, tap→buka AP). "Input Nilai Hasil" langsung dari KPI Area **diskip** — result value harus terikat 1 Action Plan (PIC/evidence), tak ada target aman dari layar ini.
+- **UI-S-DA2** (`development-area/[id].tsx`): `DevAreaSummaryStrip` 3-tile (Progress/Problem Statement/Initiative) — `listInitiativesByProblemStatementIds` (baru, `lib/cards.ts`, 1 query batched `.in()`, bukan N+1).
+- **UI-S-ID1**: sudah terimplementasi ("Buka Chat Initiative" di `ExecSpaceCard`) — diverifikasi, tidak ada perubahan kode.
+- **UI-S-AP3** (`action-plan/[id].tsx`): tombol "Buka Chat" ditambah di header kartu Brief Kerja; "Ajukan Ubah Deadline" inline sudah ada sebelumnya.
+- Pages updated: [[ui-prototype-gap]] (5 item ditandai selesai di §4.5/4.6/4.7 + §5 P1).
+- Verifikasi: `tsc --noEmit` bersih; jest **86 suite / 774 tes pass** (+10 tes baru: `ratioActiveOfChildren`, `listInitiativesByProblemStatementIds`, `listKpiAreaResultValueSources`), tidak ada regresi.

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
@@ -23,7 +23,9 @@ import {
   activateDevelopmentArea,
   getDevelopmentArea,
 } from '@/lib/development-areas';
+import { listInitiativesByProblemStatementIds } from '@/lib/cards';
 import type { ProblemStatement } from '@/lib/problem-statements';
+import { ratioDoneOfChildren } from '@/lib/progress';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
@@ -38,6 +40,53 @@ function ProblemStatementRow({ item, onPress }: { item: ProblemStatement; onPres
         <Badge label={PLANNING_STATUS_LABEL[item.status] ?? item.status} tone={STATUS_TONE[item.status]} />
       </View>
     </SectionCard>
+  );
+}
+
+function SummaryTile({ label, value, containerCls, textCls }: {
+  label: string;
+  value: string;
+  containerCls: string;
+  textCls: string;
+}) {
+  return (
+    <View className={`flex-1 gap-0.5 rounded-lg px-3 py-2 ${containerCls}`}>
+      <Text className={`text-[10px] ${textCls}`}>{label}</Text>
+      <Text className={`text-base font-bold ${textCls}`}>{value}</Text>
+    </View>
+  );
+}
+
+/** UI-S-DA2 — Progress (Problem Statement selesai), jumlah Problem Statement, jumlah Initiative turunan. */
+function DevAreaSummaryStrip({
+  problemStatements,
+  initiativeCount,
+}: {
+  problemStatements: ProblemStatement[];
+  initiativeCount: number;
+}) {
+  const progress = ratioDoneOfChildren(problemStatements);
+  return (
+    <View className="flex-row gap-2">
+      <SummaryTile
+        label="Progress"
+        value={`${progress}%`}
+        containerCls="bg-blue-100 dark:bg-blue-950"
+        textCls="text-blue-700 dark:text-blue-300"
+      />
+      <SummaryTile
+        label="Problem Statement"
+        value={String(problemStatements.length)}
+        containerCls="bg-neutral-100 dark:bg-neutral-800"
+        textCls="text-neutral-700 dark:text-neutral-300"
+      />
+      <SummaryTile
+        label="Initiative"
+        value={String(initiativeCount)}
+        containerCls="bg-emerald-100 dark:bg-emerald-950"
+        textCls="text-emerald-700 dark:text-emerald-300"
+      />
+    </View>
   );
 }
 
@@ -66,6 +115,13 @@ export function LiveDevelopmentAreaDetailScreen() {
     refetch: refetchPs,
   } = useProblemStatements(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('development_area', id);
+
+  const psIds = useMemo(() => problemStatements.map((p) => p.id), [problemStatements]);
+  const initiativesQ = useQuery({
+    queryKey: ['initiatives-by-problem-statements', psIds],
+    queryFn: () => listInitiativesByProblemStatementIds(psIds),
+    enabled: psIds.length > 0,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -140,6 +196,10 @@ export function LiveDevelopmentAreaDetailScreen() {
                     value: `${devArea.period_start ?? '—'} → ${devArea.period_end ?? '—'}`,
                   },
                 ]}
+              />
+              <DevAreaSummaryStrip
+                problemStatements={problemStatements}
+                initiativeCount={initiativesQ.data?.length ?? 0}
               />
             </View>
 
