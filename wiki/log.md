@@ -1035,3 +1035,8 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Fix nested-button (ditemukan via QA Expo web): `WorkspaceHubCard` sebelumnya `Pressable` membungkus tombol `?` + `Masuk` → `<button>` di dalam `<button>` (invalid HTML, a11y buruk). Kartu diubah jadi `View`; `Masuk` jadi satu-satunya tombol pembawa `onEnter` (spec §4.4: card-tap opsional). 0 nested button di DOM.
 - QA live (Expo web, viewport 390px, akun ceo@rencan.local): hub 2-card + `?` modal + search + period pill + header row + tree 5-level dikonfirmasi render benar (warna kategori, letter pill, indent, Action Plan leaf).
 - Verifikasi: `tsc --noEmit` bersih; jest **90 suite / 818 tes pass**.
+
+## [2026-07-03] update | Sprint 5 WSA-14 — action sheet fungsional
+
+- WSA-14: aksi sekunder `⋯` card tree tidak lagi placeholder. Hook baru `useTreeRowActions(entityType, id, name)` di workspace.tsx: `Ubah` → detail page (per `ENTITY_ROUTE_SEGMENT`), `Arsipkan` (destructive) → konfirmasi Alert → `useArchiveActions().archive({entityType, entityId})`, error disanitasi via `alertFriendlyError`. Server (RPC `archive_card`) tetap penegak izin. Diwire ke 8 baris (Goal/KPI/Strategy/Initiative/ActionPlan/DevArea/ProblemStatement/flat Initiative); menu `Salin` (di luar spec §12.2) dihapus.
+- Catatan test: menekan item RowActionsMenu (state update onClose) HARUS dibungkus `act()`; press di luar act mencemari scheduler act dan bikin render test berikutnya time-out (di-debug via bisect). `period-switcher.test.tsx` diberi `jest.setTimeout(20000)` (cold-start render pertama, pola sama suite RN berat lain).

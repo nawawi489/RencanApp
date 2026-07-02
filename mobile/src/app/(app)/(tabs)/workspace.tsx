@@ -5,7 +5,7 @@
 //   ke level-3 (Strategy / Initiative) untuk turunkan tap-count Goal→Strategy dari 3 → 1.
 // Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Alert, FlatList } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
@@ -34,8 +34,12 @@ import {
 } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import { useMbrCompliance } from '@/hooks/use-mbr';
+import { useArchiveActions } from '@/hooks/use-governance-admin';
 import { mbrBreakdownGuardMessage } from '@/lib/activation-check';
 import type { MbrCompliance } from '@/lib/settings-mbr';
+import type { CardEntityType } from '@/lib/governance-admin';
+import { alertFriendlyError } from '@/lib/errors';
+import type { RowAction } from '@/components/row-actions-menu';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
 import { type ActionPlanWithPeople, type Initiative } from '@/lib/cards';
 import type { KpiArea } from '@/lib/kpi-areas';
@@ -190,15 +194,62 @@ function CardActionRow({
   );
 }
 
-/** Aksi sekunder default (Arsipkan/Ubah/Salin/Hapus draft) — saat ini placeholder V1: notify "Belum tersedia". */
-function defaultRowActions(cardLabel: string): { label: string; onPress: () => void; disabled?: boolean }[] {
-  const ph = (label: string) => () =>
-    Alert.alert(label, `Aksi "${label}" untuk ${cardLabel} belum tersedia di V1.`);
-  return [
-    { label: 'Ubah', onPress: ph('Ubah') },
-    { label: 'Arsipkan', onPress: ph('Arsipkan') },
-    { label: 'Salin', onPress: ph('Salin') },
-  ];
+// WSA-14 — path detail per jenis card (Ubah membuka detail page tempat edit/aktivasi).
+const ENTITY_ROUTE_SEGMENT: Record<CardEntityType, string> = {
+  goal: 'goal',
+  kpi_area: 'kpi-area',
+  strategy: 'strategy',
+  initiative: 'initiative',
+  action_plan: 'action-plan',
+  development_area: 'development-area',
+  problem_statement: 'problem-statement',
+};
+
+/**
+ * WSA-14 — aksi sekunder card tree yang FUNGSIONAL (spec §12.2): `Ubah` → detail page,
+ * `Arsipkan` → konfirmasi lalu `archiveCard` (server penegak izin; error disanitasi).
+ * Menggantikan placeholder Alert "belum tersedia".
+ */
+function useTreeRowActions(
+  entityType: CardEntityType,
+  entityId: string,
+  cardLabel: string,
+): RowAction[] {
+  const router = useRouter();
+  const { archive } = useArchiveActions();
+  return useMemo<RowAction[]>(
+    () => [
+      {
+        label: 'Ubah',
+        onPress: () =>
+          router.push(`/${ENTITY_ROUTE_SEGMENT[entityType]}/${entityId}` as Href),
+      },
+      {
+        label: 'Arsipkan',
+        destructive: true,
+        onPress: () =>
+          Alert.alert(
+            'Arsipkan card?',
+            `Arsipkan "${cardLabel}"? Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.`,
+            [
+              { text: 'Batal', style: 'cancel' },
+              {
+                text: 'Arsipkan',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await archive({ entityType, entityId });
+                  } catch (e) {
+                    alertFriendlyError('Gagal mengarsipkan', e, 'Card belum bisa diarsipkan. Coba lagi.');
+                  }
+                },
+              },
+            ],
+          ),
+      },
+    ],
+    [router, archive, entityType, entityId, cardLabel],
+  );
 }
 
 /**
@@ -223,6 +274,7 @@ function StrategySubRow({
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(strategy, focus) === 'past';
   const canAddInit = can('create_initiative');
+  const rowActions = useTreeRowActions('strategy', strategy.id, strategy.name);
   // WSA-04 — guard MBR: fail-open saat data belum ada (undefined); guard hanya saat tahu non-compliant.
   const mbrGuarded = !!parentCompliance && !parentCompliance.is_compliant;
   const onAddInitiative = () => {
@@ -297,7 +349,7 @@ function StrategySubRow({
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={strategy.name}
-        items={defaultRowActions(strategy.name)}
+        items={rowActions}
       />
     </PastDim>
   );
@@ -319,6 +371,7 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(kpi, focus) === 'past';
   const canAddStrategy = can('create_strategy'); // WSA-13 — key presisi (bukan proxy create_kpi_area)
+  const rowActions = useTreeRowActions('kpi_area', kpi.id, kpi.name);
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
@@ -382,7 +435,7 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={kpi.name}
-        items={defaultRowActions(kpi.name)}
+        items={rowActions}
       />
     </PastDim>
   );
@@ -402,6 +455,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   const countLabel = count == null ? WS_COPY.kpiCountUnknown : WS_COPY.kpiCount(count);
   const past = cardPeriodStatus(goal, focus) === 'past';
   const canAddKpi = can('create_kpi_area');
+  const rowActions = useTreeRowActions('goal', goal.id, goal.name);
 
   return (
     <PastDim past={past}>
@@ -457,7 +511,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={goal.name}
-        items={defaultRowActions(goal.name)}
+        items={rowActions}
       />
     </PastDim>
   );
@@ -480,6 +534,7 @@ function ActionPlanSubRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(item, focus) === 'past';
+  const rowActions = useTreeRowActions('action_plan', item.id, item.name);
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
@@ -523,7 +578,7 @@ function ActionPlanSubRow({
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={item.name}
-        items={defaultRowActions(item.name)}
+        items={rowActions}
       />
     </PastDim>
   );
@@ -552,6 +607,7 @@ function InitiativeSubRow({
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(item, focus) === 'past';
   const canAddPlan = can('create_action_plan');
+  const rowActions = useTreeRowActions('initiative', item.id, item.name);
   const childLevel = (level + 1) as 4 | 5;
 
   return (
@@ -614,7 +670,7 @@ function InitiativeSubRow({
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={item.name}
-        items={defaultRowActions(item.name)}
+        items={rowActions}
       />
     </PastDim>
   );
@@ -639,6 +695,7 @@ function ProblemStatementSubRow({
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(ps, focus) === 'past';
   const canAddInit = can('create_initiative');
+  const rowActions = useTreeRowActions('problem_statement', ps.id, ps.name);
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
@@ -695,7 +752,7 @@ function ProblemStatementSubRow({
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={ps.name}
-        items={defaultRowActions(ps.name)}
+        items={rowActions}
       />
     </PastDim>
   );
@@ -718,6 +775,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
     count == null ? WS_DEV_COPY.problemCountUnknown : WS_DEV_COPY.problemCount(count);
   const past = cardPeriodStatus(devArea, focus) === 'past';
   const canAddProblem = can('create_problem_statement'); // WSA-13 — key presisi (bukan proxy create_development_area)
+  const rowActions = useTreeRowActions('development_area', devArea.id, devArea.name);
 
   return (
     <PastDim past={past}>
@@ -780,7 +838,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={devArea.name}
-        items={defaultRowActions(devArea.name)}
+        items={rowActions}
       />
     </PastDim>
   );
@@ -790,6 +848,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
   const { focus } = usePeriodFocus();
   const [menuOpen, setMenuOpen] = useState(false);
   const past = cardPeriodStatus(item, focus) === 'past';
+  const rowActions = useTreeRowActions('initiative', item.id, item.name);
   return (
     <PastDim past={past}>
       <SectionCard>
@@ -821,7 +880,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         title={item.name}
-        items={defaultRowActions(item.name)}
+        items={rowActions}
       />
     </PastDim>
   );

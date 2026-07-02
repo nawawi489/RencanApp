@@ -51,6 +51,13 @@ jest.mock('@/hooks/use-mbr', () => ({
   useMbrCompliance: (...a: unknown[]) => mockUseMbrCompliance(...a),
 }));
 
+// WSA-14 — action sheet Arsipkan → archiveCard.
+const mockArchive = jest.fn();
+jest.mock('@/hooks/use-governance-admin', () => ({
+  __esModule: true,
+  useArchiveActions: () => ({ archive: mockArchive, isPending: false }),
+}));
+
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn() }),
@@ -150,6 +157,8 @@ beforeEach(async () => {
   mockUseStrategyInitiatives.mockReturnValue(stratInitResult());
   mockUseInitiativeActionPlans.mockReset();
   mockUseInitiativeActionPlans.mockReturnValue(actionPlanResult());
+  mockArchive.mockReset();
+  mockArchive.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -415,6 +424,36 @@ describe('WorkspaceScreen', () => {
       'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
     );
     expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/kpi-area/new'));
+    alertSpy.mockRestore();
+  });
+
+  // WSA-14 — Arsipkan fungsional: konfirmasi → archiveCard({goal, id}). Bukan placeholder.
+  it('[WSA-14] "⋯" → Arsipkan → konfirmasi → archive({entityType:goal, entityId})', async () => {
+    mockCan.mockReturnValue(true);
+    mockUseGoals.mockReturnValue(
+      goalsResult({
+        goals: [
+          { id: 'g-arc', name: 'Goal Arsip', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' },
+        ],
+      }),
+    );
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await renderScreen();
+    fireEvent.press(await screen.findByLabelText('Aksi lain Goal Arsip'));
+    // Press di dalam act — update state RowActionsMenu (onClose) harus di-flush.
+    await act(async () => {
+      fireEvent.press(await screen.findByLabelText('Arsipkan'));
+    });
+    // Popup konfirmasi §12.2: tombol Batal + Arsipkan (destructive).
+    const call = alertSpy.mock.calls.find((c) => c[0] === 'Arsipkan card?');
+    expect(call).toBeTruthy();
+    const buttons = call![2] as Array<{ text: string; onPress?: () => void }>;
+    expect(buttons.map((b) => b.text)).toEqual(['Batal', 'Arsipkan']);
+    expect(mockArchive).not.toHaveBeenCalled();
+    // Unmount sebelum invoke handler arsip → promise archive tidak mencemari test berikutnya.
+    cleanup();
+    await buttons[1].onPress?.();
+    expect(mockArchive).toHaveBeenCalledWith({ entityType: 'goal', entityId: 'g-arc' });
     alertSpy.mockRestore();
   });
 
