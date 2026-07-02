@@ -717,7 +717,7 @@ function PerformancePane({
       {canCreate ? (
         <Button label={WS_COPY.btnGoalBaru} onPress={() => router.push('/goal-wizard' as Href)} />
       ) : null}
-      <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
+      <Text className="text-xl font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
       {goalsQ.isLoading ? <SkeletonList count={3} /> : null}
       {goalsQ.isError ? <ErrorState onRetry={() => goalsQ.refetch()} /> : null}
     </View>
@@ -725,7 +725,7 @@ function PerformancePane({
 
   const footer = (
     <View className="gap-3 pt-5">
-      <Text className="text-lg font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
+      <Text className="text-xl font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
       {flatQ.isLoading ? (
         <SkeletonList count={2} />
       ) : flatQ.isError ? (
@@ -812,7 +812,7 @@ function DevelopmentPane({
           onPress={() => router.push('/development-area/new' as Href)}
         />
       ) : null}
-      <Text className="text-lg font-bold text-black dark:text-white">
+      <Text className="text-xl font-bold text-black dark:text-white">
         {WS_DEV_COPY.sectionDevAreas}
       </Text>
       {devQ.isLoading ? <SkeletonList count={3} /> : null}

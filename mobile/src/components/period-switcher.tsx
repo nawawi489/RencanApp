@@ -64,7 +64,7 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
       <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Periode aktif</Text>
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-1 gap-0.5">
-          <Text className="text-lg font-bold text-black dark:text-white">{label}</Text>
+          <Text className="text-xl font-bold text-black dark:text-white">{label}</Text>
           <Text className="text-xs text-neutral-500 dark:text-neutral-400">{breadcrumb}</Text>
         </View>
         <Pressable
@@ -82,7 +82,7 @@ export function PeriodSwitcher({ now }: { now?: Date }) {
             className="max-h-[75%] gap-4 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
             accessibilityLabel="Pilih periode fokus">
             <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-bold text-black dark:text-white">Pilih Periode</Text>
+              <Text className="text-xl font-bold text-black dark:text-white">Pilih Periode</Text>
               <Pressable
                 className="min-h-[44px] items-center justify-center px-2 active:opacity-60"
                 accessibilityRole="button"
