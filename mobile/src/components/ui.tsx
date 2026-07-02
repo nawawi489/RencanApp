@@ -160,7 +160,7 @@ export function SectionCard({
 export function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <View className="gap-0.5">
-      <Text className="text-xs font-semibold uppercase text-neutral-400">{label}</Text>
+      <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{label}</Text>
       {typeof value === 'string' ? (
         <Text className="text-base text-black dark:text-white">{value}</Text>
       ) : (
@@ -648,7 +648,7 @@ export function MetaGrid({ items }: { items: { label: string; value: string }[] 
         <View
           key={i}
           className="min-w-[45%] flex-1 gap-0.5 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
-          <Text className="text-xs font-semibold uppercase text-neutral-400">{it.label}</Text>
+          <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{it.label}</Text>
           <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={1}>
             {it.value}
           </Text>
