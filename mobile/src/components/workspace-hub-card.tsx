@@ -27,7 +27,8 @@ export function WorkspaceHubCard({
   onEnter: () => void;
 }) {
   // Orb null (belum ada data) → tampilkan "—" tanpa angka misleading.
-  const orbValue = stats.orbPercent == null ? null : stats.orbPercent / 100;
+  // orbPercent sudah 0–100 (workspace-hub-stats), ProgressOrb juga 0–100 — jangan dibagi lagi.
+  const orbValue = stats.orbPercent;
 
   return (
     <Pressable
