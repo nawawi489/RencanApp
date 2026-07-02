@@ -5,7 +5,7 @@
 //   ke level-3 (Strategy / Initiative) untuk turunkan tap-count Goal→Strategy dari 3 → 1.
 // Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Alert, FlatList } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
@@ -63,6 +63,24 @@ function StatusBadge({ status }: { status: string }) {
 
 function PastPeriodBadge() {
   return <Badge label="Periode lewat" tone="neutral" />;
+}
+
+/**
+ * UI-S-W08 — dim "periode lewat" single-layer: hanya node past TERATAS yang di-dim.
+ * Tanpa ini opacity-50 bertumpuk multiplikatif di tree bersarang (0.5³ = 0.125 di level-3)
+ * dan merusak jaminan kontras AA (DESIGN §4). Inline style, bukan class NativeWind —
+ * flatten deterministik di jest (pola SendButton, DESIGN §7).
+ */
+function PastDim({
+  past,
+  ancestorPast = false,
+  children,
+}: {
+  past: boolean;
+  ancestorPast?: boolean;
+  children: ReactNode;
+}) {
+  return <View style={past && !ancestorPast ? { opacity: 0.5 } : undefined}>{children}</View>;
 }
 
 /**
@@ -162,7 +180,13 @@ function defaultRowActions(cardLabel: string): { label: string; onPress: () => v
  * Tidak punya tree expand sendiri (Initiative tetap stack-nav via Strategy detail).
  * Punya RowActionsMenu + tombol "+ Initiative" (gated `create_initiative`, past-period lock).
  */
-function StrategySubRow({ strategy }: { strategy: Strategy }) {
+function StrategySubRow({
+  strategy,
+  ancestorPast = false,
+}: {
+  strategy: Strategy;
+  ancestorPast?: boolean;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -171,7 +195,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
   const canAddInit = can('create_initiative');
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past} ancestorPast={ancestorPast}>
       <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-start justify-between gap-2">
           <Text
@@ -229,7 +253,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
         title={strategy.name}
         items={defaultRowActions(strategy.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -237,7 +261,7 @@ function StrategySubRow({ strategy }: { strategy: Strategy }) {
  * Sub-row level 2: KPI Area di bawah satu Goal. Expandable → Strategy children.
  * Lazy fetch Strategy hanya saat `expanded` (parameter `enabled` di useStrategies).
  */
-function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
+function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPast?: boolean }) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -248,7 +272,7 @@ function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
   const canAddStrategy = can('create_kpi_area'); // proxy izin tambah turunan (existing pattern)
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past} ancestorPast={ancestorPast}>
       <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-sm font-medium text-black dark:text-white">
@@ -289,7 +313,7 @@ function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
           ) : (
             <View className="gap-2">
               {strategies.map((s) => (
-                <StrategySubRow key={s.id} strategy={s} />
+                <StrategySubRow key={s.id} strategy={s} ancestorPast={ancestorPast || past} />
               ))}
             </View>
           )
@@ -301,7 +325,7 @@ function KpiAreaSubRow({ kpi }: { kpi: KpiArea }) {
         title={kpi.name}
         items={defaultRowActions(kpi.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -321,7 +345,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   const canAddKpi = can('create_kpi_area');
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past}>
       <SectionCard>
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">{goal.name}</Text>
@@ -359,7 +383,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
           ) : (
             <View className="gap-2">
               {kpiAreas.map((k) => (
-                <KpiAreaSubRow key={k.id} kpi={k} />
+                <KpiAreaSubRow key={k.id} kpi={k} ancestorPast={past} />
               ))}
             </View>
           )
@@ -371,7 +395,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
         title={goal.name}
         items={defaultRowActions(goal.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -379,14 +403,20 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
  * Sub-row level 3: Initiative di bawah satu Problem Statement (Development pane).
  * Action Plan tetap stack-nav via Initiative detail (4-level penuh ditunda — lihat ADR Stage 1).
  */
-function InitiativeSubRow({ item }: { item: Initiative }) {
+function InitiativeSubRow({
+  item,
+  ancestorPast = false,
+}: {
+  item: Initiative;
+  ancestorPast?: boolean;
+}) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(item, focus) === 'past';
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past} ancestorPast={ancestorPast}>
       <View className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-start justify-between gap-2">
           <Text
@@ -423,7 +453,7 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
         title={item.name}
         items={defaultRowActions(item.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -431,7 +461,13 @@ function InitiativeSubRow({ item }: { item: Initiative }) {
  * Sub-row level 2: Problem Statement di bawah satu Development Area. Expandable → Initiative.
  * Symmetric dgn KpiAreaSubRow di Performance pane.
  */
-function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
+function ProblemStatementSubRow({
+  ps,
+  ancestorPast = false,
+}: {
+  ps: ProblemStatement;
+  ancestorPast?: boolean;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -442,7 +478,7 @@ function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
   const canAddInit = can('create_initiative');
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past} ancestorPast={ancestorPast}>
       <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-sm font-medium text-black dark:text-white">{ps.name}</Text>
@@ -481,7 +517,7 @@ function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
           ) : (
             <View className="gap-2">
               {initiatives.map((i) => (
-                <InitiativeSubRow key={i.id} item={i} />
+                <InitiativeSubRow key={i.id} item={i} ancestorPast={ancestorPast || past} />
               ))}
             </View>
           )
@@ -493,7 +529,7 @@ function ProblemStatementSubRow({ ps }: { ps: ProblemStatement }) {
         title={ps.name}
         items={defaultRowActions(ps.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -516,7 +552,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
   const canAddProblem = can('create_development_area'); // proxy izin tambah turunan DevArea
 
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past}>
       <SectionCard>
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">
@@ -561,7 +597,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
           ) : (
             <View className="gap-2">
               {problemStatements.map((p) => (
-                <ProblemStatementSubRow key={p.id} ps={p} />
+                <ProblemStatementSubRow key={p.id} ps={p} ancestorPast={past} />
               ))}
             </View>
           )
@@ -573,7 +609,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
         title={devArea.name}
         items={defaultRowActions(devArea.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
@@ -582,7 +618,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
   const [menuOpen, setMenuOpen] = useState(false);
   const past = cardPeriodStatus(item, focus) === 'past';
   return (
-    <View className={past ? 'opacity-50' : undefined}>
+    <PastDim past={past}>
       <SectionCard>
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
@@ -614,7 +650,7 @@ function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => voi
         title={item.name}
         items={defaultRowActions(item.name)}
       />
-    </View>
+    </PastDim>
   );
 }
 
