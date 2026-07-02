@@ -95,6 +95,8 @@ Item-item ini muncul di banyak layar sekaligus → satu PR bisa menutup banyak b
 | UI-S-W02 | **Pohon 4–5 level** dengan expand/collapse + per-node `+ child` button (terkait UI-N-003) | MAJOR ✅ **STAGE 1 IMPLEMENTED 2026-06-28 (3-level kompromi)** — lihat UI-N-003. Initiative + AP level masih stack-nav per kompromi CEO review (mobile real-estate concern). Stage 2 (hub-card UI-N-002) sebagai polish berikut. |
 | UI-S-W03 | **Period switcher** (lihat UI-G-010) | MAJOR ✅ **IMPLEMENTED 2026-06-28 (S1)** |
 | UI-S-W04 | **Subhead kaya** per node (Aktual/Target/Gap, Kontribusi %, Risiko) | MAJOR |
+| UI-S-W05 | **Ikon glyph unicode → Ionicons** di tree Workspace (`▾ ▸ ⋯ + › ←`) — web fallback ke Times New Roman, Android bervariasi per OEM font; melanggar DESIGN §10 (library = Ionicons). String terkunci test di `workspace-copy.ts` → butuh pass khusus + update test. Temuan design-review 2026-07-02 (FINDING-013). | MINOR |
+| UI-S-W06 | **Chrome pane menumpuk sebelum konten**: back-link + H1 + segmented + kartu periode + deskripsi + CTA full-width ≈ 580px sebelum Goal pertama; "Workspace" tampil 3×; 3 elemen solid brand-dark bersaing di atas fold. Butuh keputusan struktur (mis. gabung back-link+H1, demosi CTA), bukan patch CSS. Temuan design-review 2026-07-02 (FINDING-014). | MINOR |
 
 ### 4.4 Performance forms — Goal/KPI/Strategy/Initiative
 

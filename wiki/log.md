@@ -939,3 +939,13 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - **UI-S-AP3** (`action-plan/[id].tsx`): tombol "Buka Chat" ditambah di header kartu Brief Kerja; "Ajukan Ubah Deadline" inline sudah ada sebelumnya.
 - Pages updated: [[ui-prototype-gap]] (5 item ditandai selesai di §4.5/4.6/4.7 + §5 P1).
 - Verifikasi: `tsc --noEmit` bersih; jest **86 suite / 774 tes pass** (+10 tes baru: `ratioActiveOfChildren`, `listInitiativesByProblemStatementIds`, `listKpiAreaResultValueSources`), tidak ada regresi.
+
+## [2026-07-02] update | Design review tab Workspace (audit + 12 fix atomik)
+
+- `/design-review` scoped ke tab Workspace (Expo web + seed lokal, login CEO). Skor desain B- → A-; AI slop B+ (satu-satunya hit blacklist = system-ui yang memang keputusan owner DESIGN §11).
+- **Bug kritis (FINDING-001):** `workspace-hub-card.tsx` membagi `orbPercent/100` padahal `ProgressOrb` menerima 0–100 → orb lobby selalu render ~1% tone danger. Fix + regression test `workspace-hub-card.test.tsx` (3 tes).
+- **A11y/kontras mengikat (DESIGN §4):** back-link 36→44px; avatar header 34→44px hit area; `text-brand-dark` +`dark:text-brand` (7 titik); kicker `neutral-400` (2.5:1) → token muted `neutral-500` + varian dark; `accessibilityRole="header"` di 5 judul layar/section.
+- **Token & hirarki:** `SectionCard` kini cat surface `bg-white dark:bg-neutral-950` (inset level-2 `bg-neutral-50` jadi terbaca; elevasi dark level-3 tidak lagi terbalik); tombol tree `rounded-lg`→`rounded-xl` (10 titik); heading section `text-lg`→`text-xl` (peran H2 §3); pill `emerald`→`green` (§2); Detail level-3 tidak lagi `flex-1` (prominence konsisten antar level); `HubView` kini `ScrollView` (Dynamic Type §4.5).
+- Ditunda ke backlog: [[ui-prototype-gap]] **UI-S-W05** (glyph unicode → Ionicons; string terkunci test) + **UI-S-W06** (chrome pane menumpuk — keputusan struktur). Polish kecil (p-2.5, max-width web desktop) dicatat di laporan.
+- Verifikasi: jest **87 suite / 777 tes pass**; live re-scan touch target <44px = 0; tanpa console error. Laporan lengkap + screenshot before/after: `~/.gstack/projects/nawawi489-RencanApp/designs/design-audit-20260702/`.
+- Commits: 12 commit `style(design): FINDING-0NN — …` di `feat/sf1-score-formula-editor`.
