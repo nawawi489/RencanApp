@@ -310,7 +310,9 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { kpiAreas } = useKpiAreas(goal.id, expanded);
+  // UI-S-W07: destrukturisasi state fetch penuh — expand tanpa skeleton/empty/error
+  // terasa seperti tombol mati (paritas dgn KpiAreaSubRow level-2).
+  const { kpiAreas, isLoading, isError, refetch } = useKpiAreas(goal.id, expanded);
   const { focus } = usePeriodFocus();
 
   const count = kpiCountOf(goal);
@@ -346,11 +348,21 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
         />
 
         {expanded ? (
-          <View className="gap-2">
-            {kpiAreas.map((k) => (
-              <KpiAreaSubRow key={k.id} kpi={k} />
-            ))}
-          </View>
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : kpiAreas.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada KPI Area. Tambah KPI Area untuk pecah Goal ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {kpiAreas.map((k) => (
+                <KpiAreaSubRow key={k.id} kpi={k} />
+              ))}
+            </View>
+          )
         ) : null}
       </SectionCard>
       <RowActionsMenu
@@ -490,7 +502,11 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { problemStatements } = useProblemStatements(devArea.id, expanded);
+  // UI-S-W07: paritas state fetch dgn GoalRow/ProblemStatementSubRow.
+  const { problemStatements, isLoading, isError, refetch } = useProblemStatements(
+    devArea.id,
+    expanded,
+  );
   const { focus } = usePeriodFocus();
 
   const count = problemCountOf(devArea);
@@ -533,11 +549,22 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
         />
 
         {expanded ? (
-          <View className="gap-2">
-            {problemStatements.map((p) => (
-              <ProblemStatementSubRow key={p.id} ps={p} />
-            ))}
-          </View>
+          isLoading ? (
+            <SkeletonList count={2} />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : problemStatements.length === 0 ? (
+            <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Belum ada Problem Statement. Tambah Problem Statement untuk pecah Development Area
+              ini.
+            </Text>
+          ) : (
+            <View className="gap-2">
+              {problemStatements.map((p) => (
+                <ProblemStatementSubRow key={p.id} ps={p} />
+              ))}
+            </View>
+          )
         ) : null}
       </SectionCard>
       <RowActionsMenu

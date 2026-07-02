@@ -573,4 +573,55 @@ describe('WorkspaceScreen', () => {
     });
   });
 
+  // UI-S-W07 (design-consultation 2026-07-02) — expand level-1 (Goal/Dev Area) wajib punya
+  // state loading/kosong/error, paritas dgn level-2 (KpiAreaSubRow/ProblemStatementSubRow).
+  describe('[UI-S-W07] expand level-1: loading/kosong/error', () => {
+    const GOAL_NOW = {
+      id: 'g1',
+      name: 'Goal Aktif',
+      status: 'active',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+    };
+    const DEV_NOW = {
+      id: 'd1',
+      name: 'Development Area Ops',
+      status: 'active',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+    };
+
+    it('[W07·1] expand Goal saat KPI loading → SkeletonList tampil', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ isLoading: true }));
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      expect((await screen.findAllByLabelText('Memuat…')).length).toBeGreaterThan(0);
+    });
+
+    it('[W07·2] expand Goal tanpa KPI Area → hint "Belum ada KPI Area"', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [] }));
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      expect(await screen.findByText(/Belum ada KPI Area/)).toBeTruthy();
+    });
+
+    it('[W07·3] expand Goal error fetch KPI → ErrorState', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ isError: true }));
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      expect(await screen.findByText('Gagal memuat')).toBeTruthy();
+    });
+
+    it('[W07·4] expand Dev Area tanpa Problem Statement → hint "Belum ada Problem Statement"', async () => {
+      mockUseDevelopmentAreas.mockReturnValue(devResult({ developmentAreas: [DEV_NOW] }));
+      mockUseProblemStatements.mockReturnValue(psResult({ problemStatements: [] }));
+      await renderScreen('development');
+      fireEvent.press(await screen.findByLabelText('Lihat Problem Statement'));
+      expect(await screen.findByText(/Belum ada Problem Statement/)).toBeTruthy();
+    });
+  });
+
 });
