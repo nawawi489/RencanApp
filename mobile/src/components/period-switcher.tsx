@@ -30,7 +30,7 @@ function statusPill(status: PeriodOption['status']) {
   if (status === 'past') {
     return { label: 'Arsip', cls: 'bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400' };
   }
-  return { label: 'Akan datang', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' };
+  return { label: 'Akan datang', cls: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' };
 }
 
 function optionToFocus(opt: PeriodOption): PeriodFocus {
