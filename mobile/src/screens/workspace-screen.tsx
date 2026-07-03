@@ -1,14 +1,13 @@
-// Workspace (Fase 6) — dual-tab Performance/Development.
+// Workspace (Fase 6) — Performance & Development sebagai route deep-linkable.
 // Performance (Fase 4): Goal → KPI Area → Strategy → Initiative, + Initiative Tanpa Goal.
 // Development (Fase 6): Development Area → Problem Statement → Initiative → Action Plan.
 // UI-N-003 (Stage 1 B′): tree 3-level inline — KPI Area & Problem Statement EXPANDABLE
 //   ke level-3 (Strategy / Initiative) untuk turunkan tap-count Goal→Strategy dari 3 → 1.
-// Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
+// Perpindahan pane dilakukan via Hub (Kembali di AppHeader → Masuk ruang lain) — TIDAK ada
+// TabBar internal di pane agar tidak duplikasi navigasi hub-card lobby.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -26,7 +25,6 @@ import {
   ErrorState,
   SectionCard,
   SkeletonList,
-  TabBar,
   TreeProgressOrb,
 } from '@/components/ui';
 import { PeriodSwitcher } from '@/components/period-switcher';
@@ -74,14 +72,7 @@ import {
   derivePerformanceHubStats,
   deriveDevelopmentHubStats,
 } from '@/lib/workspace-hub-stats';
-import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY, WS_TABS } from '@/lib/workspace-copy';
-
-/**
- * Tab Workspace + state lobby. `'hub'` = HubView (2 hub-card pilih ruang); `'performance'`/
- * `'development'` = panel detail. UI-N-002 Stage 2: default = `'hub'` agar user lihat ringkasan
- * dulu sebelum dive in. Pane dapat tombol "← Workspace" untuk balik ke hub.
- */
-type Tab = 'hub' | 'performance' | 'development';
+import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY } from '@/lib/workspace-copy';
 
 // Tree merender status dari beberapa jenis kartu: planning (goal/kpi/strategy/dev-area/PS),
 // initiative, dan action plan (execution). PLANNING_STATUS_LABEL saja bocorkan enum mentah
@@ -108,9 +99,9 @@ function TreeConnector() {
       pointerEvents="none"
       style={{
         position: 'absolute',
-        left: -10,
+        left: -16,
         top: -10,
-        width: 10,
+        width: 16,
         height: 32,
         borderLeftWidth: 2,
         borderBottomWidth: 2,
@@ -144,97 +135,20 @@ function PastPeriodBadge() {
   return <Badge label="Periode lewat" tone="neutral" />;
 }
 
-// WSA-20 (spec §12.1.4) — tap badan card → toast edukasi non-blocking (BUKAN Alert modal).
-// Toast di-host per-pane (WorkspaceToastHost) & dipicu lewat context agar row terdalam tak perlu
-// prop-drilling. Timer di-clear saat unmount → tak ada setState pasca-unmount (aman di jest).
-const ToastContext = createContext<(message: string) => void>(() => {});
 
 /**
- * Host toast Workspace — overlay bawah non-interaktif. `show(msg)` menampilkan pesan 2.6s lalu
- * auto-hilang. Timer ref di-clear di cleanup effect (unmount) sehingga tidak ada setState setelah
- * unmount (cegah act-warning + kebocoran antar-test).
+ * Badan card (pill + judul + orb): tap → langsung membuka Detail (menggantikan tombol Detail terpisah).
+ * Tap-target = Pressable overlay absolut DI ATAS baris konten.
  */
-function WorkspaceToastHost({ children }: PropsWithChildren) {
-  const [message, setMessage] = useState<string | null>(null);
-  const isDark = useThemePreference().effective === 'dark';
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // `mounted` guard: auto-dismiss timer di-clear saat unmount, DAN callback jadi no-op bila sudah
-  // unmount. Tanpa ini, timer 2.6s bisa memanggil setState pasca-unmount → act-warning yang
-  // mencemari test lain (persis kerapuhan yang jadi alasan WSA-20 sempat ditunda).
-  const mounted = useRef(true);
-  const show = useCallback((msg: string) => {
-    setMessage(msg);
-    if (timer.current) clearTimeout(timer.current);
-    const handle = setTimeout(() => {
-      if (mounted.current) setMessage(null);
-    }, 2600);
-    // Node/jest: unref agar timer tak menahan worker exit (warning "active timers"); no-op di RN
-    // (setTimeout mengembalikan number). Safety net; unmount tetap clear via cleanup effect.
-    (handle as { unref?: () => void }).unref?.();
-    timer.current = handle;
-  }, []);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
-
-  return (
-    <ToastContext.Provider value={show}>
-      <View className="flex-1">
-        {children}
-        {message ? (
-          <View
-            pointerEvents="none"
-            accessibilityLiveRegion="polite"
-            style={{ position: 'absolute', left: 16, right: 16, bottom: 24, alignItems: 'center' }}>
-            <View
-              style={{
-                maxWidth: 520,
-                borderRadius: 12,
-                // Gelap: surface #0f172a menyatu dgn latar dark:bg-black (≈1.3:1, tak terlihat).
-                // Inversi ke surface terang + teks gelap agar toast tetap menonjol (DESIGN §12).
-                backgroundColor: isDark ? '#f8fafc' : '#0f172a',
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-              }}>
-              <Text
-                style={{
-                  color: isDark ? '#0f172a' : '#ffffff',
-                  fontSize: 13,
-                  fontWeight: '600',
-                  textAlign: 'center',
-                }}>
-                {message}
-              </Text>
-            </View>
-          </View>
-        ) : null}
-      </View>
-    </ToastContext.Provider>
-  );
-}
-
-/**
- * WSA-20 — "badan card" (pill + judul + orb): tap → toast edukasi (§12.1.4) yang MENGARAHKAN user ke
- * tombol Detail. Tap-target = Pressable overlay absolut DI ATAS baris konten (bukan pembungkus/ancestor).
- * Alasan: kalau Pressable membungkus konten, `fireEvent.press` pada teks judul akan mem-bubble ke
- * Pressable dan membocorkan kerja async pressed-state antar-test (overlapping act). Sebagai overlay
- * sibling, teks judul tak punya handler (tap judul = no-op di test, seperti baseline), sedangkan di
- * device tap area badan mengenai overlay. Aksi turunan (Detail/⋯/+/panah) berada di luar wrapper.
- */
-function TreeCardBody({ cardLabel, children }: { cardLabel: string; children: ReactNode }) {
-  const show = useContext(ToastContext);
+function TreeCardBody({ cardLabel, onPress, children }: { cardLabel: string; onPress: () => void; children: ReactNode }) {
   return (
     <View style={{ position: 'relative' }}>
       <View className="flex-row items-start gap-3">{children}</View>
       <Pressable
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         accessibilityRole="button"
-        accessibilityLabel={`Isi card ${cardLabel}`}
-        onPress={() => show(WS_COPY.bodyTapHint)}
+        accessibilityLabel={`Buka detail ${cardLabel}`}
+        onPress={onPress}
       />
     </View>
   );
@@ -255,7 +169,7 @@ function PastDim({
   ancestorPast?: boolean;
   children: ReactNode;
 }) {
-  return <View style={past && !ancestorPast ? { opacity: 0.5 } : undefined}>{children}</View>;
+  return <View>{children}</View>;
 }
 
 /**
@@ -270,8 +184,6 @@ function CardActionRow({
   onToggleExpand,
   expandLabel,
   collapseLabel,
-  onDetail,
-  detailLabel,
   onMore,
   past,
   onAdd,
@@ -285,8 +197,6 @@ function CardActionRow({
   onToggleExpand: () => void;
   expandLabel: string;
   collapseLabel: string;
-  onDetail: () => void;
-  detailLabel: string;
   onMore: () => void;
   past: boolean;
   onAdd?: () => void;
@@ -299,7 +209,6 @@ function CardActionRow({
   addButtonLabel?: string;
 }) {
   // Spec §11 (amandemen a11y — DESIGN §4 mengikat menang atas lock; lihat lock §3/§11):
-  // Detail solid brand-dark #1564b3 (5.99:1, bukan #1877f2 3.6:1) + teks putih, h30 r999;
   // ⋯ 34×30 r999 surface-soft; + blue-soft teks #145ebc. hitSlop menjaga touch target ≥44px
   // meski tinggi visual 30px (DESIGN §4). Surface/border netral theme-aware: warna terang
   // terkunci HANYA berlaku di light mode; di dark mode ikut gelap (preseden workspace-hub-card).
@@ -317,14 +226,6 @@ function CardActionRow({
           {expanded ? collapseLabel : expandLabel}
         </Text>
         <Text className="text-sm text-brand-dark dark:text-brand">{expanded ? '▾' : '▸'}</Text>
-      </Pressable>
-      <Pressable
-        hitSlop={hit}
-        style={{ height: 30, borderRadius: 999, backgroundColor: '#1564b3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
-        accessibilityRole="button"
-        accessibilityLabel={detailLabel}
-        onPress={onDetail}>
-        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
       </Pressable>
       <Pressable
         hitSlop={hit}
@@ -474,7 +375,7 @@ function StrategySubRow({
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy, marginLeft: TREE_LEVEL_INDENT[3] }}>
         <TreeConnector />
-        <TreeCardBody cardLabel={strategy.name}>
+        <TreeCardBody cardLabel={strategy.name} onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
           <View className="flex-1 gap-2">
             <View
               className="flex-row items-center justify-between gap-2"
@@ -500,8 +401,6 @@ function StrategySubRow({
           onToggleExpand={() => setExpanded((v) => !v)}
           expandLabel="Lihat Initiative"
           collapseLabel="Tutup"
-          onDetail={() => router.push(`/strategy/${strategy.id}` as Href)}
-          detailLabel={`Buka detail ${strategy.name}`}
           onMore={() => setMenuOpen(true)}
           past={past}
           onAddPress={canAddInit ? onAddInitiative : undefined}
@@ -577,7 +476,7 @@ function KpiAreaSubRow({
         className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area, marginLeft: TREE_LEVEL_INDENT[2] }}>
         <TreeConnector />
-        <TreeCardBody cardLabel={kpi.name}>
+        <TreeCardBody cardLabel={kpi.name} onPress={() => router.push(`/kpi-area/${kpi.id}` as Href)}>
           <View className="flex-1 gap-2">
             <View
               className="flex-row items-center justify-between gap-2"
@@ -600,8 +499,6 @@ function KpiAreaSubRow({
           onToggleExpand={() => setExpanded((v) => !v)}
           expandLabel="Lihat Strategy"
           collapseLabel="Tutup"
-          onDetail={() => router.push(`/kpi-area/${kpi.id}` as Href)}
-          detailLabel={`Buka detail ${kpi.name}`}
           onMore={() => setMenuOpen(true)}
           past={past}
           onAdd={
@@ -670,7 +567,7 @@ function GoalRow({ goal, progress }: { goal: GoalWithKpiCount; progress: number 
       {/* Spec §6.4 + §8: level-0 (indent 0), border kiri 5px warna kategori Goal. */}
       <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
-        <TreeCardBody cardLabel={goal.name}>
+        <TreeCardBody cardLabel={goal.name} onPress={() => router.push(`/goal/${goal.id}` as Href)}>
           <View className="flex-1 gap-2">
             <View
               className="flex-row items-center justify-between gap-2"
@@ -693,8 +590,6 @@ function GoalRow({ goal, progress }: { goal: GoalWithKpiCount; progress: number 
           onToggleExpand={() => setExpanded((v) => !v)}
           expandLabel="Lihat KPI Area"
           collapseLabel="Tutup"
-          onDetail={() => router.push(`/goal/${goal.id}` as Href)}
-          detailLabel={`Buka detail ${goal.name}`}
           onMore={() => setMenuOpen(true)}
           past={past}
           onAdd={canAddKpi ? () => router.push(`/kpi-area/new?goalId=${goal.id}` as Href) : undefined}
@@ -760,7 +655,7 @@ function ActionPlanSubRow({
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan, marginLeft: TREE_LEVEL_INDENT[level] }}>
         <TreeConnector />
-        <TreeCardBody cardLabel={item.name}>
+        <TreeCardBody cardLabel={item.name} onPress={() => router.push(`/action-plan/${item.id}` as Href)}>
           <View className="flex-1 gap-2">
             <View
               className="flex-row items-center justify-between gap-2"
@@ -780,16 +675,8 @@ function ActionPlanSubRow({
           </View>
           <TreeOrbCell kind="action_plan" value={orbValue} />
         </TreeCardBody>
-        {/* Action Plan = leaf: tanpa panah/+ (spec §6.8). Hanya Detail + ⋯. */}
+        {/* Action Plan = leaf: tanpa panah/+ (spec §6.8). Hanya ⋯. */}
         <View className="flex-row items-center justify-end gap-2">
-          <Pressable
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ height: 30, borderRadius: 999, backgroundColor: '#1564b3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
-            accessibilityRole="button"
-            accessibilityLabel={`Buka detail ${item.name}`}
-            onPress={() => router.push(`/action-plan/${item.id}` as Href)}>
-            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Detail</Text>
-          </Pressable>
           <Pressable
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
@@ -845,7 +732,7 @@ function InitiativeSubRow({
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative, marginLeft: TREE_LEVEL_INDENT[level] }}>
         <TreeConnector />
-        <TreeCardBody cardLabel={item.name}>
+        <TreeCardBody cardLabel={item.name} onPress={() => router.push(`/initiative/${item.id}` as Href)}>
           <View className="flex-1 gap-2">
             <View
               className="flex-row items-center justify-between gap-2"
@@ -871,8 +758,6 @@ function InitiativeSubRow({
           onToggleExpand={() => setExpanded((v) => !v)}
           expandLabel="Lihat Action Plan"
           collapseLabel="Tutup"
-          onDetail={() => router.push(`/initiative/${item.id}` as Href)}
-          detailLabel={`Buka detail ${item.name}`}
           onMore={() => setMenuOpen(true)}
           past={past}
           onAdd={
@@ -943,7 +828,7 @@ function ProblemStatementSubRow({
         className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement, marginLeft: TREE_LEVEL_INDENT[2] }}>
         <TreeConnector />
-        <TreeCardBody cardLabel={ps.name}>
+        <TreeCardBody cardLabel={ps.name} onPress={() => router.push(`/problem-statement/${ps.id}` as Href)}>
           <View className="flex-1 gap-2">
             <View
               className="flex-row items-center justify-between gap-2"
@@ -964,8 +849,6 @@ function ProblemStatementSubRow({
           onToggleExpand={() => setExpanded((v) => !v)}
           expandLabel="Lihat Initiative"
           collapseLabel="Tutup"
-          onDetail={() => router.push(`/problem-statement/${ps.id}` as Href)}
-          detailLabel={`Buka detail ${ps.name}`}
           onMore={() => setMenuOpen(true)}
           past={past}
           onAdd={
@@ -1042,7 +925,7 @@ function DevelopmentAreaRow({
       {/* Spec §7.3 + §8: level-0 Dev pane, border kiri 5px warna Development Area (#0f766e). */}
       <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
-        <TreeCardBody cardLabel={devArea.name}>
+        <TreeCardBody cardLabel={devArea.name} onPress={() => router.push(`/development-area/${devArea.id}` as Href)}>
           <View className="flex-1 gap-2">
             <View
               className="flex-row items-center justify-between gap-2"
@@ -1067,8 +950,6 @@ function DevelopmentAreaRow({
           onToggleExpand={() => setExpanded((v) => !v)}
           expandLabel="Lihat Problem Statement"
           collapseLabel="Tutup"
-          onDetail={() => router.push(`/development-area/${devArea.id}` as Href)}
-          detailLabel={`Buka detail ${devArea.name}`}
           onMore={() => setMenuOpen(true)}
           past={past}
           onAdd={
@@ -1110,73 +991,36 @@ function DevelopmentAreaRow({
   );
 }
 
-function PaneTopHeader({
-  tab,
-  onTabChange,
-  onBackToHub,
+function PaneSectionHeader({
+  title,
   primaryLabel,
   onPrimary,
-  canEdit,
-  onEdit,
 }: {
-  tab: Tab;
-  onTabChange: (t: Tab) => void;
-  onBackToHub: () => void;
-  /** WSA-07 — tombol utama pane, mis. "+ Goal" / "+ Development Area". */
+  title: string;
+  /** Tombol primary di kanan section header (mis. "+ Goal" / "+ Development Area"). */
   primaryLabel?: string;
   onPrimary?: () => void;
-  /** WSA-07 — tombol `Edit` di-gate izin admin. */
-  canEdit?: boolean;
-  onEdit?: () => void;
 }) {
-  // Amandemen a11y lock §6.1 (DESIGN §4 mengikat): tinggi tombol 42→44 (touch target ≥44),
-  // radius 8→12 (token rounded-xl DESIGN §5), primary #1877f2→brand-dark #1564b3 (AA 5.99:1).
-  // Surface netral (Kembali/Edit) theme-aware — terang terkunci HANYA di light mode.
-  const isDark = useThemePreference().effective === 'dark';
+  // Pola "section header + section action" — konsisten dengan section lain di app. Brand-dark
+  // fill, radius 12, tinggi 32 (compact — kartu pertama juga punya tombol sendiri, jadi bukan
+  // satu-satunya cara).
   return (
-    <View className="gap-5 pb-5">
-      {/* WSA-07 — button row paling atas: Kembali · [Edit (gated)] · + Turunan (primary). */}
-      <View className="flex-row items-center gap-2">
+    <View className="flex-row items-center justify-between">
+      <Text
+        accessibilityRole="header"
+        className="text-xl font-bold text-black dark:text-white">
+        {title}
+      </Text>
+      {primaryLabel && onPrimary ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Kembali ke Workspace"
-          onPress={onBackToHub}
-          style={{ minHeight: 44, minWidth: 92, borderRadius: 999, borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', backgroundColor: isDark ? '#171717' : '#ffffff', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          accessibilityLabel={primaryLabel}
+          onPress={onPrimary}
+          style={{ height: 32, borderRadius: 12, backgroundColor: '#1564b3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
           className="active:opacity-70">
-          <Text style={{ color: isDark ? '#208aef' : '#145ebc', fontSize: 16 }}>←</Text>
-          <Text style={{ color: isDark ? '#208aef' : '#145ebc', fontSize: 13, fontWeight: '900' }}>Kembali</Text>
+          <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>{primaryLabel}</Text>
         </Pressable>
-        <View style={{ flex: 1 }} />
-        {canEdit && onEdit ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Edit Workspace"
-            onPress={onEdit}
-            style={{ height: 44, borderRadius: 12, borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', backgroundColor: isDark ? '#171717' : '#ffffff', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
-            className="active:opacity-70">
-            <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 13, fontWeight: '900' }}>Edit</Text>
-          </Pressable>
-        ) : null}
-        {primaryLabel && onPrimary ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={primaryLabel}
-            onPress={onPrimary}
-            style={{ height: 44, borderRadius: 12, backgroundColor: '#1564b3', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
-            className="active:opacity-70">
-            <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '900' }}>{primaryLabel}</Text>
-          </Pressable>
-        ) : null}
-      </View>
-      <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{WS_COPY.title}</Text>
-      <TabBar<'performance' | 'development'>
-        tabs={[
-          { key: 'performance', label: WS_TABS.performance },
-          { key: 'development', label: WS_TABS.development },
-        ]}
-        active={tab === 'hub' ? 'performance' : tab}
-        onChange={(t) => onTabChange(t)}
-      />
+      ) : null}
     </View>
   );
 }
@@ -1264,15 +1108,7 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
   );
 }
 
-function PerformancePane({
-  tab,
-  onTabChange,
-  onBackToHub,
-}: {
-  tab: Tab;
-  onTabChange: (t: Tab) => void;
-  onBackToHub: () => void;
-}) {
+function PerformancePane() {
   const router = useRouter();
   const { can } = useProfile();
   const goalsQ = useGoals();
@@ -1287,16 +1123,22 @@ function PerformancePane({
 
   const header = (
     <View className="gap-5 pb-3">
-      <PaneTopHeader
-        tab={tab}
-        onTabChange={onTabChange}
-        onBackToHub={onBackToHub}
+      <View className="gap-1">
+        <Text
+          accessibilityRole="header"
+          className="text-2xl font-bold text-black dark:text-white">
+          {WS_HUB_COPY.perf.kicker}
+        </Text>
+        <Text className="text-base text-neutral-500 dark:text-neutral-400">
+          {WS_COPY.subtitle}
+        </Text>
+      </View>
+      <PeriodSwitcher />
+      <PaneSectionHeader
+        title={WS_COPY.sectionStrategis}
         primaryLabel={canCreate ? WS_COPY.btnGoalBaru : undefined}
         onPrimary={canCreate ? () => router.push('/goal-wizard' as Href) : undefined}
       />
-      <PeriodSwitcher />
-      <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_COPY.subtitle}</Text>
-      <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">{WS_COPY.sectionStrategis}</Text>
       {goalsQ.isLoading ? <SkeletonList count={3} /> : null}
       {goalsQ.isError ? <ErrorState onRetry={() => goalsQ.refetch()} /> : null}
     </View>
@@ -1310,47 +1152,30 @@ function PerformancePane({
 
   // WSA-15 — orb capaian Goal root: 1 RPC untuk semua Goal terlihat (bukan per row).
   const { progressOf: goalProgressOf } = useCardProgress(goalsData.map((g) => g.id));
-  const renderItem = ({ item: goal }: { item: GoalWithKpiCount }) => (
-    <GoalRow goal={goal} progress={goalProgressOf(goal.id)} />
-  );
-
   return (
-    <WorkspaceToastHost>
-      <View className="flex-1 bg-neutral-50 dark:bg-black">
-        <FlatList<GoalWithKpiCount>
-          contentContainerStyle={{ gap: 12, padding: 20 }}
-          data={goalsData}
-          keyExtractor={(goal) => goal.id}
-          ListHeaderComponent={header}
-          ListEmptyComponent={
-            showEmpty ? (
-              <EmptyState
-                title={WS_COPY.emptyGoalTitle}
-                description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
-                action={
-                  canCreate
-                    ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
-                    : undefined
-                }
-              />
-            ) : null
-          }
-          renderItem={renderItem}
-        />
-      </View>
-    </WorkspaceToastHost>
+    <View className="flex-1 bg-neutral-50 dark:bg-black">
+      <ScrollView contentContainerStyle={{ gap: 12, padding: 20 }}>
+        {header}
+        {showEmpty ? (
+          <EmptyState
+            title={WS_COPY.emptyGoalTitle}
+            description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
+            action={
+              canCreate
+                ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
+                : undefined
+            }
+          />
+        ) : null}
+        {goalsData.map((goal) => (
+          <GoalRow key={goal.id} goal={goal} progress={goalProgressOf(goal.id)} />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
-function DevelopmentPane({
-  tab,
-  onTabChange,
-  onBackToHub,
-}: {
-  tab: Tab;
-  onTabChange: (t: Tab) => void;
-  onBackToHub: () => void;
-}) {
+function DevelopmentPane() {
   const router = useRouter();
   const { can } = useProfile();
   const devQ = useDevelopmentAreas();
@@ -1365,18 +1190,22 @@ function DevelopmentPane({
 
   const header = (
     <View className="gap-5 pb-3">
-      <PaneTopHeader
-        tab={tab}
-        onTabChange={onTabChange}
-        onBackToHub={onBackToHub}
+      <View className="gap-1">
+        <Text
+          accessibilityRole="header"
+          className="text-2xl font-bold text-black dark:text-white">
+          {WS_HUB_COPY.dev.kicker}
+        </Text>
+        <Text className="text-base text-neutral-500 dark:text-neutral-400">
+          {WS_DEV_COPY.subtitle}
+        </Text>
+      </View>
+      <PeriodSwitcher space="development" />
+      <PaneSectionHeader
+        title={WS_DEV_COPY.sectionDevAreas}
         primaryLabel={canCreate ? WS_DEV_COPY.btnDevAreaBaru : undefined}
         onPrimary={canCreate ? () => router.push('/development-area/new' as Href) : undefined}
       />
-      <PeriodSwitcher space="development" />
-      <Text className="text-base text-neutral-500 dark:text-neutral-400">{WS_DEV_COPY.subtitle}</Text>
-      <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">
-        {WS_DEV_COPY.sectionDevAreas}
-      </Text>
       {devQ.isLoading ? <SkeletonList count={3} /> : null}
       {devQ.isError ? <ErrorState onRetry={() => devQ.refetch()} /> : null}
     </View>
@@ -1387,55 +1216,38 @@ function DevelopmentPane({
 
   // WSA-15 — orb capaian Development Area root: 1 RPC untuk semua DA terlihat.
   const { progressOf: devProgressOf } = useCardProgress(devData.map((d) => d.id));
-  const renderItem = ({ item: d }: { item: DevelopmentAreaWithProblemCount }) => (
-    <DevelopmentAreaRow devArea={d} progress={devProgressOf(d.id)} />
-  );
-
   return (
-    <WorkspaceToastHost>
-      <View className="flex-1 bg-neutral-50 dark:bg-black">
-        <FlatList<DevelopmentAreaWithProblemCount>
-          contentContainerStyle={{ gap: 12, padding: 20 }}
-          data={devData}
-          keyExtractor={(d) => d.id}
-          ListHeaderComponent={header}
-          ListEmptyComponent={
-            showEmpty ? (
-              <EmptyState
-                title={WS_DEV_COPY.emptyDevAreaTitle}
-                description={
-                  canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
-                }
-                action={
-                  canCreate
-                    ? {
-                        label: WS_DEV_COPY.btnDevAreaBaru,
-                        onPress: () => router.push('/development-area/new' as Href),
-                      }
-                    : undefined
-                }
-              />
-            ) : null
-          }
-          renderItem={renderItem}
-        />
-      </View>
-    </WorkspaceToastHost>
+    <View className="flex-1 bg-neutral-50 dark:bg-black">
+      <ScrollView contentContainerStyle={{ gap: 12, padding: 20 }}>
+        {header}
+        {showEmpty ? (
+          <EmptyState
+            title={WS_DEV_COPY.emptyDevAreaTitle}
+            description={
+              canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
+            }
+            action={
+              canCreate
+                ? {
+                    label: WS_DEV_COPY.btnDevAreaBaru,
+                    onPress: () => router.push('/development-area/new' as Href),
+                  }
+                : undefined
+            }
+          />
+        ) : null}
+        {devData.map((d) => (
+          <DevelopmentAreaRow key={d.id} devArea={d} progress={devProgressOf(d.id)} />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
 // WSA-19 — pane Workspace kini route deep-linkable di dalam nested stack tab (bukan state lokal).
 // "Masuk" MENAVIGASI ke `/workspace/performance` · `/workspace/development`; tab bar tetap terlihat
-// (pane hidup di bawah tab Workspace) dan back gesture kembali ke hub (index anchor via _layout).
-
-/** Navigasi balik ke hub: back bila ada history, else replace ke index (kasus deep-link langsung). */
-function useBackToHub() {
-  const router = useRouter();
-  return useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/workspace' as Href);
-  }, [router]);
-}
+// (pane hidup di bawah tab Workspace) dan back di AppHeader kembali ke hub (replace fallback untuk
+// deep-link tanpa history).
 
 /** Route index `/workspace` — Hub (lobby). Tap "Masuk" → push pane deep-linkable. */
 export function HubScreen() {
@@ -1443,22 +1255,12 @@ export function HubScreen() {
   return <HubView onSelect={(t) => router.push(`/workspace/${t}` as Href)} />;
 }
 
-/** Route `/workspace/performance` — pane Performance. */
+/** Route `/workspace/performance` — pane Performance. Back button di AppHeader. */
 export function PerformanceScreen() {
-  const router = useRouter();
-  const onBackToHub = useBackToHub();
-  const onTabChange = (t: Tab) => {
-    if (t === 'development') router.replace('/workspace/development' as Href);
-  };
-  return <PerformancePane tab="performance" onTabChange={onTabChange} onBackToHub={onBackToHub} />;
+  return <PerformancePane />;
 }
 
-/** Route `/workspace/development` — pane Development. */
+/** Route `/workspace/development` — pane Development. Back button di AppHeader. */
 export function DevelopmentScreen() {
-  const router = useRouter();
-  const onBackToHub = useBackToHub();
-  const onTabChange = (t: Tab) => {
-    if (t === 'performance') router.replace('/workspace/performance' as Href);
-  };
-  return <DevelopmentPane tab="development" onTabChange={onTabChange} onBackToHub={onBackToHub} />;
+  return <DevelopmentPane />;
 }

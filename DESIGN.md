@@ -53,9 +53,9 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 
 Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), `ui.tsx`.
 
-### Workspace category (letter-badge pill §9 lock spec V1.82)
+### Workspace category (letter-badge pill V1.82)
 
-Warna kategori kartu Workspace **terkunci** oleh `WORKSPACE_UI_LOCK_SPEC_V1.82.md` §9 (menang atas brand kanonik untuk area Workspace, §19.6). Dipakai inline (bukan class Tailwind) agar hex persis spec — sumber tunggal di [`workspace-kind-pill.tsx`](mobile/src/components/workspace-kind-pill.tsx).
+Warna kategori kartu Workspace mengikuti prototype final `outputs/ems-mobile-ui/index.html`. Nilai hex di bawah adalah kanonik untuk area Workspace dan dipakai inline (bukan class Tailwind) agar persis prototype — sumber tunggal di [`workspace-kind-pill.tsx`](mobile/src/components/workspace-kind-pill.tsx).
 
 | Kategori | Huruf | Teks | Latar | Border | Lingkaran |
 |---|---|---|---|---|---|
@@ -71,7 +71,7 @@ Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line bo
 
 #### Rekonsiliasi a11y Workspace (owner 2026-07-03)
 
-Lock spec V1.82 menang atas **PRD** untuk area Workspace (§19.6), **bukan** atas §4 a11y yang **mengikat**. Di titik konflik, §4 menang dan lock **diperbarui** agar konsisten (bukan dilanggar). Doktrin (preseden [`workspace-hub-card.tsx`](mobile/src/components/workspace-hub-card.tsx), kini diperluas ke semua kontrol Workspace terkunci):
+§4 a11y **mengikat** untuk semua kontrol Workspace — termasuk saat prototype/referensi memakai nilai light-only yang gagal AA. Di titik konflik, §4 menang. Doktrin (preseden [`workspace-hub-card.tsx`](mobile/src/components/workspace-hub-card.tsx), berlaku untuk semua kontrol Workspace):
 
 1. **Fill solid + teks putih** (tombol `Detail`, `+ Goal`/primary header, `Ubah` periode) pakai **`brand-dark #1564b3`** (5.99:1) — bukan `#1877f2` (3.6:1, gagal AA). `#1877f2` tetap boleh sebagai **aksen non-teks** (border kiri kategori, progress line, tint chip).
 2. **Surface & border netral terkunci** (⋯, `+ Turunan`, `Kembali`, `Edit`, panel periode) **theme-aware**: warna terang terkunci **hanya** berlaku di **light mode**; di **dark mode** ikut gelap (`useThemePreference().effective`) agar tak jadi "light island" dan teks anak tetap kontras AA.
