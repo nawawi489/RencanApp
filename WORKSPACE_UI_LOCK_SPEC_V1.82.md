@@ -5,7 +5,7 @@ Dokumen ini adalah lock spec khusus Workspace agar implementasi Claude Code meng
 Source of truth visual:
 
 1. Prototype final: `outputs/ems-mobile-ui/index.html`.
-2. PRD utama: `outputs/PRD_EMS_V1.82_Rencanaapp.md`.
+2. PRD utama: `PRD.md` (V1.82 — di root repo).
 3. Dokumen ini mengunci area Workspace saja.
 
 Tujuan dokumen:

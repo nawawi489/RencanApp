@@ -7,7 +7,7 @@ sources: 4
 
 # RencanApp — Overview
 
-RencanApp adalah implementasi **EMS (Execution Management System) V1.8.2** (sumber kebenaran: `PRD_EMS_V1.82_Rencanaapp.md`) — sistem yang membantu perusahaan mengubah arah besar menjadi eksekusi nyata yang bisa dipantau, direview, dan dipertanggungjawabkan. Bukan task manager biasa, chat, social media, atau aplikasi KPI formal.
+RencanApp adalah implementasi **EMS (Execution Management System) V1.8.2** (sumber kebenaran: `PRD.md` di root repo) — sistem yang membantu perusahaan mengubah arah besar menjadi eksekusi nyata yang bisa dipantau, direview, dan dipertanggungjawabkan. Bukan task manager biasa, chat, social media, atau aplikasi KPI formal.
 
 ## What is RencanApp?
 
@@ -38,4 +38,4 @@ Mobile app (iOS + Android) di atas **Expo (React Native) + TypeScript**, dengan 
 
 ## Status
 
-Implementasi berjalan (Fase 0–8 + Inbox/Score/Theme). **Sumber kebenaran = `PRD_EMS_V1.82_Rencanaapp.md`** (root repo); ringkasan V1.8.1 di `prd/` (3 bagian) kini historis. Catatan: sebagian wiki & kode `mobile/` masih lag V1.8.1 dan sedang disinkronkan ke V1.8.2 (nav Menu, Period Focus Engine, KPI Area Target Breakdown).
+Implementasi berjalan (Fase 0–8 + Inbox/Score/Theme). **Sumber kebenaran = `PRD.md`** (root repo, V1.82); breakdown per-topik di `prd/` (3 bagian) sudah disinkronkan ke V1.82. Catatan: sebagian wiki & kode `mobile/` masih lag V1.8.1 dan sedang disinkronkan ke V1.8.2 (nav Menu, Period Focus Engine, KPI Area Target Breakdown).

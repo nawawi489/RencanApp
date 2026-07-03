@@ -1,6 +1,6 @@
 # TODOS — Sinkronisasi kode `mobile/` ke PRD V1.8.2
 
-Sumber kebenaran: `PRD_EMS_V1.82_Rencanaapp.md`. Sequencing + watch berasal dari review `/autoplan` 2026-06-27
+Sumber kebenaran: `PRD.md` (V1.82). Sequencing + watch berasal dari review `/autoplan` 2026-06-27
 (`~/.gstack/projects/nawawi489-RencanApp/feat-sf1-prd-reconciliation-plan-20260627.md`).
 Backlog UI ber-ID lengkap: `wiki/concepts/ui-prototype-gap.md`. Aturan token UI: `DESIGN.md`.
 
