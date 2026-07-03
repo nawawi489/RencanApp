@@ -53,6 +53,31 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 
 Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), `ui.tsx`.
 
+### Workspace category (letter-badge pill §9 lock spec V1.82)
+
+Warna kategori kartu Workspace **terkunci** oleh `WORKSPACE_UI_LOCK_SPEC_V1.82.md` §9 (menang atas brand kanonik untuk area Workspace, §19.6). Dipakai inline (bukan class Tailwind) agar hex persis spec — sumber tunggal di [`workspace-kind-pill.tsx`](mobile/src/components/workspace-kind-pill.tsx).
+
+| Kategori | Huruf | Teks | Latar | Border | Lingkaran |
+|---|---|---|---|---|---|
+| Goal | `G` | `#145ebc` | `#e8f2ff` | `#cce2ff` | `#1877f2` |
+| KPI Area | `K` | `#b76b00` | `#fff3d7` | `#ffe1a1` | `#b76b00` |
+| Strategy | `S` | `#6941c6` | `#f1ebff` | `#dfd1ff` | `#6941c6` |
+| Initiative | `I` | `#14845c` | `#e7f7ef` | `#c9ebda` | `#14845c` |
+| Action Plan | `AP` | `#145ebc` | `#eef6ff` | `#cce2ff` | `#145ebc` (font 8px) |
+| Development Area | `D` | `#0f766e` | `#e6fffb` | `#99f6e4` | `#0f766e` |
+| Problem Statement | `P` | `#c2410c` | `#fff7ed` | `#fed7aa` | `#c2410c` |
+
+Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line border `#d9e2ec`. Connector L-shape `#cfd8e5`.
+
+#### Rekonsiliasi a11y Workspace (owner 2026-07-03)
+
+Lock spec V1.82 menang atas **PRD** untuk area Workspace (§19.6), **bukan** atas §4 a11y yang **mengikat**. Di titik konflik, §4 menang dan lock **diperbarui** agar konsisten (bukan dilanggar). Doktrin (preseden [`workspace-hub-card.tsx`](mobile/src/components/workspace-hub-card.tsx), kini diperluas ke semua kontrol Workspace terkunci):
+
+1. **Fill solid + teks putih** (tombol `Detail`, `+ Goal`/primary header, `Ubah` periode) pakai **`brand-dark #1564b3`** (5.99:1) — bukan `#1877f2` (3.6:1, gagal AA). `#1877f2` tetap boleh sebagai **aksen non-teks** (border kiri kategori, progress line, tint chip).
+2. **Surface & border netral terkunci** (⋯, `+ Turunan`, `Kembali`, `Edit`, panel periode) **theme-aware**: warna terang terkunci **hanya** berlaku di **light mode**; di **dark mode** ikut gelap (`useThemePreference().effective`) agar tak jadi "light island" dan teks anak tetap kontras AA.
+3. **Tint kategori/aksen hue** (letter-badge pill §9, kicker hub-card) **dipertahankan** di kedua mode — teks gelap di atas tint tetap terbaca (bukan pelanggaran, memang by design).
+4. **Touch target**: tombol header row Workspace tinggi **44px** (bukan 42) & radius **12** (token `rounded-xl`, bukan 8) agar patuh §4 rule 1 + §5.
+
 ---
 
 ## 3. Typography
@@ -201,6 +226,9 @@ Mode tampilan dapat dipilih oleh pengguna di **Settings → Tampilan** dengan 3 
 - Memanggil `Appearance.setColorScheme()` agar NativeWind v5 (lewat `react-native-css`) ikut mengganti varian `dark:*` realtime.
 - `expo-router` `ThemeProvider` + `StatusBar` ikut nilai `effective` (`'light' | 'dark'`).
 - Hook `useThemePreference()` mengembalikan `{ mode, effective, setMode }`. Fallback aman tanpa provider (test-friendly: default `'system'` + `effective: 'light'`).
+
+> [!warning] Sumber tema tunggal untuk warna imperatif — **pakai `useThemePreference().effective`, JANGAN `useColorScheme()`**.
+> Di **web**, `react-native-web` tidak mengimplementasi `Appearance.setColorScheme()`, jadi saat user memilih mode manual (Terang/Gelap), varian `dark:*` diatur via class `.dark`/`.light` di root oleh provider, sementara `useColorScheme()` tetap membaca `prefers-color-scheme` OS. Keduanya **berbeda** saat pilihan manual ≠ OS → komponen yang memilih hex lewat `useColorScheme()` (mis. track SVG, ikon, placeholder, surface inline) jadi "salah tema" (kartu hitam di mode Terang, dst). Hanya `effective` yang konsisten native + web. Mode `Sistem` juga live di web karena provider me-`apply()` ulang saat OS scheme berubah.
 
 **Override fidelity mode:**
 - Saat `EXPO_PUBLIC_UI_MODE=prototype`, tampilan dipaksa ke `light` agar audit visual bisa dibandingkan langsung dengan `design.html`.

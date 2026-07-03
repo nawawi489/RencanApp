@@ -10,10 +10,8 @@ import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import type { KpiArea } from '@/lib/kpi-areas';
 import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
-import { useMbrCompliance } from '@/hooks/use-mbr';
+import { guardActivationFields } from '@/lib/activation-check';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeGoalDetailScreen from '@/prototype/screens/goal-detail';
 
@@ -37,21 +35,7 @@ export function LiveGoalDetailScreen() {
   const goalQ = useGoal(id);
   const kpiQ = useKpiAreas(id);
   const { activate, restore, activatePending, restorePending } = useGoalActions();
-  const { focus } = usePeriodFocus();
-  const { compliance } = useMbrCompliance('goal', id);
-  const goalPast = goalQ.goal ? cardPeriodStatus(goalQ.goal, focus) === 'past' : false;
-  const handleAddKpiArea = () => {
-    if (goalPast) {
-      showPastPeriodAlert(goalQ.goal?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: goalQ.goal?.name ?? 'Goal',
-      childLabel: 'KPI Area',
-      onProceed: () => router.push(`/kpi-area/new?goalId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah" dihapus dari detail page; tambah turunan HANYA dari tree Workspace.
 
   useFocusEffect(
     useCallback(() => {
@@ -68,7 +52,7 @@ export function LiveGoalDetailScreen() {
     try {
       await activate(id);
     } catch (e) {
-      Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Goal butuh minimal 1 KPI Area sebelum diaktifkan.');
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Goal butuh minimal 1 KPI Area sebelum diaktifkan.');
     }
   }
 
@@ -78,7 +62,7 @@ export function LiveGoalDetailScreen() {
       const added = await restore(id);
       Alert.alert('Pulihkan dari template', added > 0 ? `${added} KPI Area ditambahkan.` : 'Semua item template sudah ada.');
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan. Coba lagi.');
     }
   }
 
@@ -164,16 +148,9 @@ export function LiveGoalDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
-                  <CardHelpTrigger topic="kpi_area" />
-                </View>
-                <Button
-                  label="+ Tambah KPI Area"
-                  variant="secondary"
-                  onPress={handleAddKpiArea}
-                />
+              <View className="flex-row items-center gap-2">
+                <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
+                <CardHelpTrigger topic="kpi_area" />
               </View>
 
               {kpiQ.isLoading ? (

@@ -346,6 +346,8 @@ export function LiveActionPlanDetailScreen() {
     qc.invalidateQueries({ queryKey: ['action-plan', id] });
     qc.invalidateQueries({ queryKey: ['submissions', id] });
     qc.invalidateQueries({ queryKey: ['action-plans'] });
+    // WSA-15 — perubahan status AP (activate/start/review→done) mengubah %done Initiative → orb refresh.
+    qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
   }
 
   const activateM = useMutation({

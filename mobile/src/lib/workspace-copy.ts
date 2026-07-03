@@ -7,15 +7,22 @@ export const WS_COPY = {
   subtitle: 'Performance — Goal, KPI Area, Strategy, Initiative & Action Plan.',
   sectionStrategis: 'Hierarki Strategis',
   sectionTanpaGoal: 'Initiative Tanpa Goal',
-  btnGoalBaru: '+ Goal Baru',
+  // WSA-12 — CTA terkunci spec §6.3: "+ Goal" (bukan "+ Goal Baru").
+  btnGoalBaru: '+ Goal',
   /** Indikator count-only (bukan X/N — MBR kuantitatif ditunda Fase 5). */
   kpiCount: (n: number) => `KPI Area: ${n}`,
   /** Boundary: count error/undefined → '—', bukan '0'. */
   kpiCountUnknown: 'KPI Area: —',
-  emptyGoalTitle: 'Belum ada Goal',
+  // WSA-12 — empty state terkunci spec §17.
+  emptyGoalTitle: 'Belum ada Goal aktif di periode ini.',
   emptyGoalDescCan: 'Buat Goal pertama lewat Wizard, lalu pecah jadi KPI Area, Strategy, dan Initiative.',
   emptyGoalDescView: 'Anda akan melihat Goal di sini begitu menjadi PIC atau Reviewer sebuah card.',
   emptyFlatInitiative: 'Tidak ada Initiative tanpa Goal.',
+  // WSA-12 — toast periode-lewat terkunci spec §12.4 (satu kalimat, dipecah title/message untuk Alert).
+  archivePeriodTitle: 'Periode ini sudah menjadi Archive',
+  archivePeriodMsg: 'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
+  // WSA-20 — toast edukasi tap badan card (spec §12.1.4).
+  bodyTapHint: 'Untuk membuka isi Card, gunakan tombol Detail di dalam Card.',
 } as const;
 
 /** Label dual-tab Workspace — Performance vs Development. Test wajib pakai konstanta. */
@@ -27,19 +34,52 @@ export const WS_TABS = {
 /** UI-N-002 Stage 2 — Hub view (lobby) di tab Workspace. 2 hub-card + back-to-hub button. */
 export const WS_HUB_COPY = {
   title: 'Workspace',
-  subtitle: '2 ruang eksekusi — pilih untuk masuk.',
+  // WSA-12 — section title kanan "2 ruang" (spec §4.1), menggantikan subtitle kalimat.
+  sectionCount: '2 ruang',
   backToHub: '← Workspace',
   perf: {
     kicker: 'Performance',
     title: 'Target Kinerja',
     meta: 'Goal → KPI Area → Strategy → Initiative → Action Plan',
-    enter: 'Masuk Performance',
+    // WSA-12 — tombol masuk visible = "Masuk" (spec §6.4 no.14); a11y label tetap
+    // membedakan ruang agar test/aksesibilitas tak ambigu antar dua hub-card.
+    enter: 'Masuk',
+    enterA11y: 'Masuk Performance',
   },
   dev: {
     kicker: 'Development',
     title: 'Pembangunan Sistem',
     meta: 'Development Area → Problem Statement → Initiative → Action Plan',
-    enter: 'Masuk Development',
+    enter: 'Masuk',
+    enterA11y: 'Masuk Development',
+  },
+} as const;
+
+/** WSA-05 / spec §5 — konten Help Modal `?` per ruang (terkunci spec). */
+export const WS_HELP_COPY = {
+  performance: {
+    kind: 'Performance',
+    title: 'Apa itu Performance Workspace?',
+    question: 'Ruang mana yang dipakai untuk mengejar target kinerja?',
+    description:
+      'Performance Workspace berisi struktur eksekusi target perusahaan dari Goal sampai Action Plan.',
+    checks: [
+      'Dipakai untuk target tahunan dan pecahan bulan/quarter.',
+      'Fokus pada hasil terukur seperti omset, profit, customer, dan output.',
+      'Masuk ke ruang ini untuk melihat turunan Goal dan pekerjaan aktif.',
+    ],
+  },
+  development: {
+    kind: 'Development',
+    title: 'Apa itu Development Workspace?',
+    question: 'Ruang mana yang dipakai untuk memperbaiki sistem kerja?',
+    description:
+      'Development Workspace berisi area perbaikan perusahaan, Problem Statement, Initiative, dan Action Plan.',
+    checks: [
+      'Dipakai untuk membangun sistem, SOP, alur kerja, dan governance.',
+      'Fokus pada masalah yang perlu dibereskan agar eksekusi lebih rapi.',
+      'Masuk ke ruang ini untuk melihat perbaikan yang sedang berjalan.',
+    ],
   },
 } as const;
 
@@ -47,11 +87,13 @@ export const WS_HUB_COPY = {
 export const WS_DEV_COPY = {
   subtitle: 'Development — Development Area, Problem Statement, Initiative & Action Plan.',
   sectionDevAreas: 'Development Area',
-  btnDevAreaBaru: '+ Development Area Baru',
+  // WSA-12 — CTA terkunci spec §7.1: "+ Development Area" (bukan "…Baru").
+  btnDevAreaBaru: '+ Development Area',
   /** Indikator count-only (PS per DA). */
   problemCount: (n: number) => `Problem Statement: ${n}`,
   problemCountUnknown: 'Problem Statement: —',
-  emptyDevAreaTitle: 'Belum ada Development Area',
+  // WSA-12 — empty state terkunci spec §17.
+  emptyDevAreaTitle: 'Belum ada Development Area aktif di periode ini.',
   emptyDevAreaDescCan:
     'Buat Development Area pertama, lalu pecah jadi Problem Statement, Initiative, dan Action Plan.',
   emptyDevAreaDescView:

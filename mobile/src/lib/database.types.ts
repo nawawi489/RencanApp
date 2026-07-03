@@ -3109,6 +3109,10 @@ export type Database = {
       }
     }
     Functions: {
+      workspace_card_progress: {
+        Args: { p_card_ids: string[] }
+        Returns: { card_id: string; progress: number }[]
+      }
       activate_action_plan: {
         Args: { p_action_plan_id: string }
         Returns: undefined

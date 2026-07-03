@@ -7,7 +7,7 @@
 // Alert injectable (`alertImpl`) supaya unit test pure tanpa react-native Alert.
 import { Alert } from 'react-native';
 
-import type { MbrCompliance } from './settings-mbr';
+import { CARD_TYPE_LABEL, type MbrCompliance } from './settings-mbr';
 
 export type ActivatableCardType =
   | 'goal'
@@ -98,10 +98,14 @@ export function guardActivationFields(
 }
 
 /**
- * §7.5 — Popup arahan saat klik "+ Tambah X". Bila MBR sudah memenuhi (atau data belum
- * tersedia / fail-open), langsung `onProceed()` tanpa popup. Bila belum memenuhi,
- * popup berisi rasio + CTA "+ Tambah X" yang memanggil `onProceed`. Server tetap penegak akhir
- * untuk mode `blokir_akses_turunan` saat user tekan CTA.
+ * §7.5 / §12.3 — Guard Minimum Breakdown Rule saat klik "+ Tambah X".
+ *
+ * WSA-04: guard fail-CLOSED dan TIDAK membuka form.
+ * - Compliant → `onProceed()` langsung tanpa popup.
+ * - Belum compliant → popup kalimat spec §12.3 dengan SATU tombol "Tutup"; `onProceed`
+ *   tidak pernah dipanggil (klik tidak membuka form; server tetap penegak akhir).
+ * - Data compliance belum ada (undefined) → fail-closed: popup "tunggu", `onProceed`
+ *   tidak dipanggil (dulu fail-open — memungkinkan bypass guard).
  */
 export function confirmAddDescendantIfIncomplete(opts: {
   compliance: MbrCompliance | undefined;
@@ -111,17 +115,63 @@ export function confirmAddDescendantIfIncomplete(opts: {
   alertImpl?: AlertFn;
 }): void {
   const { compliance, parentLabel, childLabel, onProceed, alertImpl } = opts;
-  if (!compliance || compliance.is_compliant) {
+  const alert = alertImpl ?? (Alert.alert as AlertFn);
+  if (compliance?.is_compliant) {
     onProceed();
     return;
   }
-  const remaining = compliance.min_count - compliance.child_count;
-  const title = 'Kelengkapan Perencanaan';
-  const msg =
-    `${parentLabel} ini baru punya ${compliance.child_count} dari ${compliance.min_count} ${childLabel}. ` +
-    `Tambahkan ${remaining} ${childLabel} lagi agar memenuhi rule.`;
-  (alertImpl ?? (Alert.alert as AlertFn))(title, msg, [
-    { text: 'Tutup', style: 'cancel' },
-    { text: `+ Tambah ${childLabel}`, onPress: onProceed },
-  ]);
+  if (!compliance) {
+    // Fail-closed: belum tahu kepatuhan → jangan buka form.
+    alert('Mengecek kelengkapan', 'Data kelengkapan belum siap. Coba lagi sebentar.', [
+      { text: 'Tutup', style: 'cancel' },
+    ]);
+    return;
+  }
+  alert(mbrIncompleteMessage(parentLabel, childLabel, compliance).title,
+    mbrIncompleteMessage(parentLabel, childLabel, compliance).message, [
+      { text: 'Tutup', style: 'cancel' },
+    ]);
+}
+
+/**
+ * Kalimat guard MBR §12.3 untuk tombol "+ <next>" di tree (terkunci spec §6.6/§12.3):
+ * "<ParentType> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu,
+ *  baru tombol + <NextButton> aktif."
+ * `parentTypeLabel` = label TIPE parent (mis. "KPI Area"); `nextButtonLabel` = turunan yang
+ * tombolnya di-guard (mis. "Initiative"); jenis child yang dihitung diambil dari compliance.
+ */
+export function mbrBreakdownGuardMessage(
+  parentTypeLabel: string,
+  compliance: MbrCompliance,
+  nextButtonLabel: string,
+): { title: string; message: string } {
+  const childLabel = compliance.child_card_type
+    ? CARD_TYPE_LABEL[compliance.child_card_type]
+    : 'turunan';
+  const remaining = Math.max(compliance.min_count - compliance.child_count, 0);
+  return {
+    title: 'Kelengkapan Perencanaan',
+    message:
+      `${parentTypeLabel} ini baru punya ${compliance.child_count} dari ${compliance.min_count} ${childLabel}. ` +
+      `Tambahkan ${remaining} ${childLabel} lagi dulu, baru tombol + ${nextButtonLabel} aktif.`,
+  };
+}
+
+/**
+ * Kalimat guard MBR §12.3 (terkunci spec). `childLabel` = jenis turunan yang dihitung
+ * (mis. "Strategy"); pesan mengikuti pola:
+ * "<Parent> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu, …".
+ */
+export function mbrIncompleteMessage(
+  parentLabel: string,
+  childLabel: string,
+  compliance: MbrCompliance,
+): { title: string; message: string } {
+  const remaining = Math.max(compliance.min_count - compliance.child_count, 0);
+  return {
+    title: 'Kelengkapan Perencanaan',
+    message:
+      `${parentLabel} ini baru punya ${compliance.child_count} dari ${compliance.min_count} ${childLabel}. ` +
+      `Tambahkan ${remaining} ${childLabel} lagi dulu, baru turunan berikutnya bisa dibuat.`,
+  };
 }

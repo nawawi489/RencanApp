@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
@@ -12,9 +11,8 @@ import { useStrategyInitiatives } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL, type Initiative } from '@/lib/cards';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } from '@/lib/strategies';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { guardActivationFields } from '@/lib/activation-check';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeStrategyDetailScreen from '@/prototype/screens/strategy-detail';
 
@@ -67,24 +65,11 @@ export function LiveStrategyDetailScreen() {
       qc.invalidateQueries({ queryKey: ['strategy', id] });
       qc.invalidateQueries({ queryKey: ['strategies'] });
     },
-    onError: (e) => Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Strategy belum bisa diaktifkan. Periksa kelengkapan lalu coba lagi.'),
   });
 
   const strategy = strategyQ.data;
-  const { focus } = usePeriodFocus();
-  const strategyPast = strategy ? cardPeriodStatus(strategy, focus) === 'past' : false;
-  const handleAddInitiative = () => {
-    if (strategyPast) {
-      showPastPeriodAlert(strategy?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: strategy?.name ?? 'Strategy',
-      childLabel: 'Initiative',
-      onProceed: () => router.push(`/initiative/new?strategyId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah Initiative" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (strategy && guardActivationFields('strategy', strategy)) return;
@@ -156,14 +141,7 @@ export function LiveStrategyDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
-                <Button
-                  label="+ Tambah Initiative"
-                  variant="secondary"
-                  onPress={handleAddInitiative}
-                />
-              </View>
+              <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
 
               {initiativesLoading ? (
                 <SkeletonList count={2} />

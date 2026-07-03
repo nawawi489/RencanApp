@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
@@ -26,9 +25,8 @@ import {
 import { listInitiativesByProblemStatementIds } from '@/lib/cards';
 import type { ProblemStatement } from '@/lib/problem-statements';
 import { ratioDoneOfChildren } from '@/lib/progress';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { guardActivationFields } from '@/lib/activation-check';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeDevelopmentAreaDetailScreen from '@/prototype/screens/development-area-detail';
 
@@ -139,25 +137,11 @@ export function LiveDevelopmentAreaDetailScreen() {
       qc.invalidateQueries({ queryKey: ['development_areas'] });
     },
     onError: (e) =>
-      Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Development Area belum bisa diaktifkan. Coba lagi.'),
   });
 
   const devArea = devAreaQ.data;
-  const { focus } = usePeriodFocus();
-  const devPast = devArea ? cardPeriodStatus(devArea, focus) === 'past' : false;
-  const handleAddProblem = () => {
-    if (devPast) {
-      showPastPeriodAlert(devArea?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: devArea?.name ?? 'Development Area',
-      childLabel: 'Problem Statement',
-      onProceed: () =>
-        router.push(`/problem-statement/new?developmentAreaId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah Problem Statement" dihapus; tambah turunan hanya dari tree.
 
   function handleActivate() {
     if (devArea && guardActivationFields('development_area', devArea)) return;
@@ -218,14 +202,7 @@ export function LiveDevelopmentAreaDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Problem Statement</Text>
-                <Button
-                  label="+ Tambah Problem Statement"
-                  variant="secondary"
-                  onPress={handleAddProblem}
-                />
-              </View>
+              <Text className="text-lg font-bold text-black dark:text-white">Problem Statement</Text>
 
               {psLoading ? (
                 <SkeletonList count={2} />

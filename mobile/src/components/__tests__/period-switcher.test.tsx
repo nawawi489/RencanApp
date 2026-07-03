@@ -6,6 +6,10 @@ import { type PropsWithChildren } from 'react';
 import { PeriodSwitcher } from '../period-switcher';
 import { PeriodFocusProvider } from '@/providers/period-focus-provider';
 
+// Render pertama membayar biaya compile modul; 5s default terlalu ketat di CI/mesin sibuk
+// (pola sama dgn suite RN berat lain di repo).
+jest.setTimeout(20000);
+
 const NOW = new Date(2026, 5, 15); // Jun 2026 (Q2)
 
 function Wrap({ children }: PropsWithChildren) {

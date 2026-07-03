@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
@@ -24,9 +23,8 @@ import {
   activateProblemStatement,
   getProblemStatement,
 } from '@/lib/problem-statements';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { guardActivationFields } from '@/lib/activation-check';
+import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeProblemStatementDetailScreen from '@/prototype/screens/problem-statement-detail';
 
@@ -86,24 +84,11 @@ export function LiveProblemStatementDetailScreen() {
       qc.invalidateQueries({ queryKey: ['problem_statements'] });
     },
     onError: (e) =>
-      Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Problem Statement belum bisa diaktifkan. Coba lagi.'),
   });
 
   const ps = psQ.data;
-  const { focus } = usePeriodFocus();
-  const psPast = ps ? cardPeriodStatus(ps, focus) === 'past' : false;
-  const handleAddInitiative = () => {
-    if (psPast) {
-      showPastPeriodAlert(ps?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: ps?.name ?? 'Problem Statement',
-      childLabel: 'Initiative',
-      onProceed: () => router.push(`/initiative/new?problemStatementId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah Initiative" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (ps && guardActivationFields('problem_statement', ps)) return;
@@ -172,14 +157,7 @@ export function LiveProblemStatementDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
-                <Button
-                  label="+ Tambah Initiative"
-                  variant="secondary"
-                  onPress={handleAddInitiative}
-                />
-              </View>
+              <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
 
               {initiativesLoading ? (
                 <SkeletonList count={2} />

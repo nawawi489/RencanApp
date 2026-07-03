@@ -645,6 +645,60 @@ export function ProgressOrb({
   );
 }
 
+// ---------------------------------------------------------------- TreeProgressOrb (spec §10)
+
+/** Warna orb tree terkunci spec §10: good/risk/bad. */
+export function treeOrbColor(value: number): string {
+  const v = Math.max(0, Math.min(100, Math.round(value)));
+  if (v >= 70) return '#14845c'; // good green
+  if (v >= 35) return '#b76b00'; // risk amber
+  return '#c93434'; // bad red
+}
+
+/**
+ * Orb progress varian tree (§10, WSA-15): 50×50, angka + "%" di tengah, label visual di bawah
+ * (`Capaian` untuk Goal/KPI Area, `Progress` untuk lainnya). Ring SVG dgn warna good/risk/bad.
+ */
+export function TreeProgressOrb({ value, label }: { value: number; label: string }) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  const size = 50;
+  const stroke = 6;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  const color = treeOrbColor(pct);
+  return (
+    <View
+      className="items-center gap-0.5"
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={`${label} ${pct} persen`}
+      accessibilityValue={{ now: pct, min: 0, max: 100 }}>
+      <View style={{ width: size, height: size }} className="items-center justify-center">
+        <Svg width={size} height={size} style={{ position: 'absolute' }}>
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke="#d9e2ec" strokeWidth={stroke} fill="none" />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={color}
+            strokeWidth={stroke}
+            fill="none"
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </Svg>
+        <Text className="font-extrabold text-black dark:text-white" style={{ fontSize: 12 }}>
+          {pct}%
+        </Text>
+      </View>
+      <Text className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">{label}</Text>
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------- MetaGrid
 
 /** Grid 2 kolom metadata (PIC/Reviewer/Deadline/Mode) untuk layar detail. */
