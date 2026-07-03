@@ -54,7 +54,7 @@ export function SubmissionCard({ s }: { s: SubmissionDetail }) {
 
       {s.evidence_files.length > 0 ? (
         <View className="gap-1.5">
-          <Text className="text-xs font-semibold uppercase text-neutral-400">Bukti</Text>
+          <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Bukti</Text>
           {s.evidence_files.map((ev) => (
             <EvidenceItem key={ev.id} ev={ev} />
           ))}
@@ -63,7 +63,7 @@ export function SubmissionCard({ s }: { s: SubmissionDetail }) {
 
       {s.action_plan_result_values.length > 0 ? (
         <View className="gap-1.5">
-          <Text className="text-xs font-semibold uppercase text-neutral-400">Nilai Hasil</Text>
+          <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Nilai Hasil</Text>
           {s.action_plan_result_values.map((rv) => (
             <ResultValueItem key={rv.id} rv={rv} />
           ))}

@@ -11,7 +11,7 @@ import { ScrollView } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
-import { Avatar, EmptyState, ErrorState, SkeletonList } from '@/components/ui';
+import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatActions, useChatMessages } from '@/hooks/use-inbox';
 import type { ChatMessage } from '@/lib/inbox';
 import { useAuth } from '@/providers/auth-provider';
@@ -117,6 +117,7 @@ export default function ChatRoomScreen() {
   const { messages, isLoading, isError, refetch, loadOlder, hasMore } = useChatMessages(safeRoomId);
   const { send, markRead, isSending } = useChatActions(safeRoomId);
   const [text, setText] = useState('');
+  const placeholderColor = usePlaceholderColor();
   const [sendError, setSendError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -221,7 +222,7 @@ export default function ChatRoomScreen() {
           <TextInput
             className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
             placeholder="Tulis pesan…"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={placeholderColor}
             value={text}
             onChangeText={setText}
             multiline

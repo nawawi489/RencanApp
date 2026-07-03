@@ -6,7 +6,7 @@ import { TextInput } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { EmptyState, SectionCard, SkeletonList } from '@/components/ui';
+import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useActivityLog } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -54,6 +54,7 @@ export default function SettingsActivityLogScreen() {
   const { can } = useProfile();
   const { logs, isLoading } = useActivityLog();
   const allowed = can('view_activity_log');
+  const placeholderColor = usePlaceholderColor();
   const [q, setQ] = useState('');
   const [chip, setChip] = useState<ChipKey>('semua');
 
@@ -81,7 +82,7 @@ export default function SettingsActivityLogScreen() {
             <TextInput
               accessibilityLabel="Cari activity log"
               placeholder="Cari aksi / entity (mis. goal, archive)…"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={placeholderColor}
               value={q}
               onChangeText={setQ}
               className="min-h-[44px] rounded-xl border border-neutral-300 bg-white px-4 text-base text-black dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"

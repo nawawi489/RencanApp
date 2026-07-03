@@ -102,7 +102,7 @@ export default function ManualScoreOverrideScreen() {
         </View>
 
         <SectionCard>
-          <Text className="text-xs font-semibold uppercase text-neutral-400">Skor saat ini</Text>
+          <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Skor saat ini</Text>
           {currentEffective != null ? (
             <ScoreBadge score={currentEffective} />
           ) : (

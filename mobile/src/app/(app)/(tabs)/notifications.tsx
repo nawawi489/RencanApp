@@ -122,7 +122,7 @@ function groupByRecency(items: Notification[]): NotifSection[] {
 function SectionHeader({ title }: { title: string }) {
   return (
     <View className="bg-white py-2 dark:bg-black">
-      <Text className="text-xs font-semibold uppercase text-neutral-400">{title}</Text>
+      <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{title}</Text>
     </View>
   );
 }

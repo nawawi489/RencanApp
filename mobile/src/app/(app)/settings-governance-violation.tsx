@@ -8,7 +8,7 @@ import { Alert, Modal, TextInput } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { Badge, Button, EmptyState, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import {
   GOVERNANCE_VIOLATION_SEVERITY_LABEL,
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
@@ -50,6 +50,7 @@ export default function SettingsGovernanceViolationScreen() {
   const [statusChip, setStatusChip] = useState<'semua' | 'open' | 'resolved' | 'dismissed'>('open');
   const [resolveTarget, setResolveTarget] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const placeholderColor = usePlaceholderColor();
 
   const resolveM = useMutation({
     mutationFn: (args: { id: string; note: string; status: 'resolved' | 'dismissed' }) =>
@@ -188,7 +189,7 @@ export default function SettingsGovernanceViolationScreen() {
               value={note}
               onChangeText={setNote}
               placeholder="mis. Sudah konfirmasi PIC + revisi target."
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={placeholderColor}
               multiline
               className="min-h-[100px] rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
             />

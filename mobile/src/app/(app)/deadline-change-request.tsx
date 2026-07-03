@@ -90,7 +90,7 @@ export default function DeadlineChangeRequestScreen() {
 
         {requests.length > 0 ? (
           <View className="gap-3">
-            <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">Riwayat Permintaan</Text>
+            <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Riwayat Permintaan</Text>
             {requests.map((r) => {
               const isSelf = r.requestor_id === profile?.id;
               const showApproveButtons = canReview && r.status === 'pending' && !isSelf;

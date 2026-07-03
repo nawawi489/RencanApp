@@ -255,7 +255,7 @@ function RoleTab() {
       {adding ? (
         <SectionCard>
           <LabeledInput label="Nama Role" value={name} onChangeText={setName} placeholder="mis. Sales Lead" />
-          <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">Level</Text>
+          <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Level</Text>
           <View
             className="flex-row gap-2"
             accessibilityRole="radiogroup"

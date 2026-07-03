@@ -16,6 +16,7 @@ import {
   ScoreLegend,
   ScoreSparkline,
   SkeletonList,
+  usePlaceholderColor,
   type ScoreBreakdownMetric,
 } from '@/components/ui';
 import { listOrgProfilesWithRoles, type OrgProfileWithRole } from '@/lib/cards';
@@ -62,6 +63,7 @@ function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
 
 export function LivePeopleScreen() {
   const router = useRouter();
+  const placeholderColor = usePlaceholderColor();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<PeopleTab>('ranking');
   const { data, isLoading, isError, refetch } = useQuery({
@@ -174,14 +176,14 @@ export function LivePeopleScreen() {
           accessible
           accessibilityLabel="Skor saya">
           <View className="flex-row items-center justify-between">
-            <Text className="text-xs font-semibold uppercase text-neutral-400">
+            <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
               Skor saya · {period.period_name}
             </Text>
           </View>
           <ScoreBadge score={myEffective} />
           {sparklinePoints.length ? (
             <View className="gap-1.5">
-              <Text className="text-xs font-semibold uppercase text-neutral-400">Tren</Text>
+              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tren</Text>
               <ScoreSparkline points={sparklinePoints} />
             </View>
           ) : null}
@@ -222,7 +224,7 @@ export function LivePeopleScreen() {
           accessibilityLabel="Cari anggota"
           className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
           placeholder="Cari nama, posisi, atau role…"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={placeholderColor}
           value={search}
           onChangeText={setSearch}
           autoCapitalize="none"
@@ -251,7 +253,7 @@ export function LivePeopleScreen() {
       </View>
 
       <View className="flex-row items-center justify-between">
-        <Text className="text-xs font-semibold uppercase text-neutral-400">
+        <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
           Anggota Organisasi
         </Text>
         <Text className="text-xs font-semibold text-neutral-400">{filtered.length}/{people.length} user</Text>

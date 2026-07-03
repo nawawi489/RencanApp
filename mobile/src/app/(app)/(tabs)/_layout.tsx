@@ -2,14 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { AppHeader } from '@/components/app-header';
-
-const BRAND = '#1564b3';
+import { useThemePreference } from '@/providers/theme-provider';
 
 export default function TabsLayout() {
+  // Tab bar gelap: brand-dark #1564b3 drop ke ~2:1 (nyaris tak beda dari inactive). blue-300
+  // #93c5fd di gelap (pola app-header/IconTile, DESIGN §12).
+  const { effective } = useThemePreference();
+  const activeTint = effective === 'dark' ? '#93c5fd' : '#1564b3';
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: BRAND,
+        tabBarActiveTintColor: activeTint,
         header: () => <AppHeader />,
       }}>
       <Tabs.Screen

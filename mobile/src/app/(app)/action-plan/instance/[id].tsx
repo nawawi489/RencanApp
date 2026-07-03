@@ -8,7 +8,7 @@ import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { SubmissionCard } from '@/components/submission-card';
 import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
@@ -26,6 +26,7 @@ export default function ActionPlanInstanceDetailScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { profile } = useProfile();
+  const placeholderColor = usePlaceholderColor();
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
@@ -208,7 +209,7 @@ export default function ActionPlanInstanceDetailScreen() {
                     <TextInput
                       className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
                       placeholder="Alasan penolakan (wajib)"
-                      placeholderTextColor="#9ca3af"
+                      placeholderTextColor={placeholderColor}
                       value={rejectReason}
                       onChangeText={setRejectReason}
                       multiline

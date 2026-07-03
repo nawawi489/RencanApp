@@ -142,7 +142,7 @@ export function LiveEvaluationScreen() {
           <LabeledInput label="Lesson learned" value={lessons} onChangeText={setLessons} multiline />
 
           <View className="gap-2">
-            <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">Tindak lanjut</Text>
+            <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tindak lanjut</Text>
             <CheckboxRow
               label="Perlu jadi SOP?"
               description="Pengalaman ini layak dijadikan Standard Operating Procedure organisasi."

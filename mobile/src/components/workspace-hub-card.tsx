@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { ProgressOrb } from '@/components/ui';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePreference } from '@/providers/theme-provider';
 import { WorkspaceHelpModal, type WorkspaceHelpContent } from '@/components/workspace-help-modal';
 import type { HubStats } from '@/lib/workspace-hub-stats';
 
@@ -42,16 +42,19 @@ export function WorkspaceHubCard({
 }) {
   const a11yEnter = enterAccessibilityLabel ?? enterLabel;
   const [helpOpen, setHelpOpen] = useState(false);
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useThemePreference().effective === 'dark';
   // WSA-11 identitas hub-card per ruang:
   //   Performance biru #1877f2 / bg #f8fbff; Development teal #0f766e / bg #f7fffd.
   // Border-kiri kategori dipertahankan di kedua tema. Surface + border netral wajib
   // theme-aware: bg light terkunci spec HANYA berlaku di light mode; di dark mode surface
   // ikut gelap agar teks `dark:` anak (judul/orb/stat) kontras AA (DESIGN.md §4 mengikat).
+  // `border`/`kickerBg` = fill non-teks (border kiri, progress line, chip) → boleh hue penuh.
+  // `cta` = fill tombol solid + teks putih → WAJIB lulus AA (DESIGN §4 rule 3): Performance
+  // #1877f2 (3.6:1) diganti brand-dark #1564b3 (5.99:1); Development #0f766e sudah 4.8:1.
   const identity =
     space === 'performance'
-      ? { border: '#1877f2', bg: '#f8fbff', kickerBg: '#e8f2ff', kickerText: '#145ebc' }
-      : { border: '#0f766e', bg: '#f7fffd', kickerBg: '#e6fffb', kickerText: '#0f766e' };
+      ? { border: '#1877f2', cta: '#1564b3', bg: '#f8fbff', kickerBg: '#e8f2ff', kickerText: '#145ebc' }
+      : { border: '#0f766e', cta: '#0f766e', bg: '#f7fffd', kickerBg: '#e6fffb', kickerText: '#0f766e' };
   const surfaceBg = isDark ? '#0a0a0a' : identity.bg;
   const neutralBorder = isDark ? '#262626' : '#e5e7eb';
   // Orb null (belum ada data) → tampilkan "—" tanpa angka misleading.
@@ -126,7 +129,7 @@ export function WorkspaceHubCard({
         accessibilityRole="button"
         accessibilityLabel={`${a11yEnter}: ${stats.parentCount} ${parentStatLabel}, ${stats.childCount} ${childStatLabel}`}
         onPress={onEnter}
-        style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, height: 44, borderRadius: 999, backgroundColor: identity.border, paddingHorizontal: 16 }}
+        style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, height: 44, borderRadius: 999, backgroundColor: identity.cta, paddingHorizontal: 16 }}
         className="active:opacity-70">
         <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '900' }}>{enterLabel}</Text>
         <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '900' }}>›</Text>

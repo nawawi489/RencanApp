@@ -9,7 +9,7 @@ import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { Avatar, Badge, Button, EmptyState, ErrorState, SkeletonList } from '@/components/ui';
+import { Avatar, Badge, Button, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import {
   usePermissionActions,
   useScopeActions,
@@ -70,7 +70,7 @@ function PermToggle({
       </View>
       {row.granted && !locked ? (
         <View>
-          <Text className="px-1 pb-1 text-[10px] font-semibold uppercase text-neutral-400">Scope</Text>
+          <Text className="px-1 pb-1 text-[10px] font-semibold uppercase text-neutral-500 dark:text-neutral-400">Scope</Text>
           <View
             className="flex-row gap-1"
             accessibilityRole="radiogroup"
@@ -110,6 +110,7 @@ export default function SettingsPermissionUsersScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingChange | null>(null);
   const [reason, setReason] = useState('');
+  const placeholderColor = usePlaceholderColor();
   const [modalError, setModalError] = useState<string | null>(null);
 
   const { data: profiles, isLoading: membersLoading, isError: membersError, refetch } = useQuery({
@@ -297,7 +298,7 @@ export default function SettingsPermissionUsersScreen() {
                 className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
                 accessibilityLabel="Alasan"
                 placeholder="mis. dibutuhkan untuk koordinasi lintas tim"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={placeholderColor}
                 value={reason}
                 onChangeText={(t) => setReason(t.slice(0, REASON_MAX))}
                 multiline

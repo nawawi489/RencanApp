@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { Button, EmptyState, SectionCard, SkeletonList } from '@/components/ui';
+import { Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import { listAllKpiAreaTemplates, type KpiAreaTemplateWithParent } from '@/lib/goals';
 
@@ -16,6 +16,7 @@ export default function SettingsKpiAreaTemplatesScreen() {
   const router = useRouter();
   const { can } = useProfile();
   const allowed = can('manage_kpi_area_templates') || can('manage_goal_templates');
+  const placeholderColor = usePlaceholderColor();
   const [q, setQ] = useState('');
 
   const tplQ = useQuery({
@@ -57,7 +58,7 @@ export default function SettingsKpiAreaTemplatesScreen() {
             <TextInput
               accessibilityLabel="Cari KPI Area Template"
               placeholder="Cari nama KPI Area atau Goal Template…"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={placeholderColor}
               value={q}
               onChangeText={setQ}
               className="min-h-[44px] rounded-xl border border-neutral-300 px-4 text-base text-black dark:border-neutral-700 dark:text-white"
@@ -75,7 +76,7 @@ export default function SettingsKpiAreaTemplatesScreen() {
               grouped.map(([key, slot]) => (
                 <View key={key} className="gap-2">
                   <View className="flex-row items-center justify-between gap-2">
-                    <Text className="text-xs font-semibold uppercase text-neutral-400">
+                    <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
                       Goal Template · {slot.parent?.name ?? 'Tanpa parent'}
                     </Text>
                     {slot.parent ? (

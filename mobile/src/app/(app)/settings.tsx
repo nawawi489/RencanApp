@@ -22,7 +22,7 @@ function ThemeSwitch() {
   const { mode, setMode } = useThemePreference();
   return (
     <View className="gap-1">
-      <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">Tampilan</Text>
+      <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tampilan</Text>
       <View className="overflow-hidden rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
         <Text className="mb-2 text-sm text-neutral-500 dark:text-neutral-400">
           Mode warna aplikasi. "Sistem" mengikuti pengaturan perangkat.
@@ -253,7 +253,7 @@ export default function SettingsScreen() {
           const header =
             isGrid ? (
               <View className="flex-row items-center justify-between px-1">
-                <Text className="text-xs font-semibold uppercase text-neutral-400">{group.title}</Text>
+                <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{group.title}</Text>
                 <Text className="text-xs text-neutral-400">{group.items.length} item</Text>
               </View>
             ) : (
@@ -263,7 +263,7 @@ export default function SettingsScreen() {
                 accessibilityState={{ expanded: isOpen }}
                 className="flex-row items-center justify-between px-1 active:opacity-70"
                 onPress={() => toggleGroup(group.title)}>
-                <Text className="text-xs font-semibold uppercase text-neutral-400">{group.title}</Text>
+                <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{group.title}</Text>
                 <View className="flex-row items-center gap-2">
                   <Text className="text-xs text-neutral-400">{group.items.length} item</Text>
                   <Text className="text-xs text-neutral-400">{isOpen ? '▾' : '▸'}</Text>

@@ -16,6 +16,7 @@ import {
   KpiLinkageCard,
   LabeledInput,
   UploadButton,
+  usePlaceholderColor,
   type UploadState,
 } from '@/components/ui';
 import { useKpiCandidates, useKpiCurrentValue, useSubmissionFlow } from '@/hooks/use-submission';
@@ -85,6 +86,7 @@ function KpiResultRow({
   onChange: (next: ResultRow) => void;
   onRemove: () => void;
 }) {
+  const placeholderColor = usePlaceholderColor();
   const selectedKpi = candidates.find((c) => c.id === row.kpi_area_id) ?? null;
   const proposed = parseFloat(row.value_text);
   const proposedValid = !Number.isNaN(proposed);
@@ -124,7 +126,7 @@ function KpiResultRow({
       <TextInput
         className="rounded-xl border border-neutral-300 px-4 py-2.5 text-base text-black dark:border-neutral-700 dark:text-white"
         placeholder="Label (mis. Jumlah konten)"
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={placeholderColor}
         value={row.label}
         onChangeText={(label) => onChange({ ...row, label })}
       />
@@ -137,7 +139,7 @@ function KpiResultRow({
       <TextInput
         className="rounded-xl border border-neutral-300 px-4 py-2.5 text-base text-black dark:border-neutral-700 dark:text-white"
         placeholder="Nilai baru (mis. 145)"
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={placeholderColor}
         value={row.value_text}
         onChangeText={(value_text) => onChange({ ...row, value_text })}
       />
@@ -189,6 +191,7 @@ export function LiveActionPlanSubmitScreen() {
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [uploadStates, setUploadStates] = useState<Record<string, UploadState>>({});
 
+  const placeholderColor = usePlaceholderColor();
   const submissionFlow = useSubmissionFlow(id);
 
   const instanceMutation = useMutation({
@@ -376,7 +379,7 @@ export function LiveActionPlanSubmitScreen() {
               <TextInput
                 className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
                 placeholder={isLinkKind(row.kind) ? 'https://…' : 'Tulis catatan / rekap…'}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={placeholderColor}
                 autoCapitalize={isLinkKind(row.kind) ? 'none' : 'sentences'}
                 value={row.content}
                 onChangeText={(content) =>

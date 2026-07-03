@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, TextInput } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, ProgressBar, SectionCard, SkeletonList, TabBar } from '@/components/ui';
+import { Button, ProgressBar, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useKpiAreaBreakdown, useKpiAreaBreakdownActions } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import {
@@ -108,7 +108,7 @@ export function KpiAreaBreakdownPanel({
         <View className="gap-3">
           <View className="gap-1.5">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xs font-semibold uppercase text-neutral-400">Quarter</Text>
+              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Quarter</Text>
               <Text
                 className={`text-xs font-semibold ${
                   Math.abs(quarterTotal - 100) <= 0.001
@@ -135,7 +135,7 @@ export function KpiAreaBreakdownPanel({
 
           {QUARTER_KEYS.some((qk) => Object.keys(monthMap[qk]).length > 0) ? (
             <View className="gap-2">
-              <Text className="text-xs font-semibold uppercase text-neutral-400">Bulan per Quarter</Text>
+              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Bulan per Quarter</Text>
               {QUARTER_KEYS.map((qk) => {
                 const months = monthMap[qk];
                 const monthKeys = MONTH_KEYS.filter((m) => quarterOfMonthKey(m) === qk);
@@ -231,6 +231,7 @@ function BreakdownEditorModal({
     return m;
   });
   const [reason, setReason] = useState('');
+  const placeholderColor = usePlaceholderColor();
   const { replace, isPending } = useKpiAreaBreakdownActions(kpiAreaId);
 
   // Reset draft setiap kali modal dibuka — supaya menampilkan state DB terbaru.
@@ -327,7 +328,7 @@ function BreakdownEditorModal({
             {tab === 'quarter' ? (
               <View className="gap-3">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold uppercase text-neutral-400">Total Quarter</Text>
+                  <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Total Quarter</Text>
                   <Text
                     className={`text-sm font-semibold ${
                       quarterOk ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'
@@ -408,7 +409,7 @@ function BreakdownEditorModal({
                 value={reason}
                 onChangeText={setReason}
                 placeholder="mis. Penyesuaian target Q3 setelah review eksekutif"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={placeholderColor}
                 multiline
                 className="min-h-[80px] rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
               />

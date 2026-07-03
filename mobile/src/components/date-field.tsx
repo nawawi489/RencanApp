@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
+import { usePlaceholderColor } from '@/components/ui';
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function parseISODate(s: string): Date | null {
@@ -68,6 +70,7 @@ export function DateField({
   testID,
 }: Props) {
   const [show, setShow] = useState(false);
+  const placeholderColor = usePlaceholderColor();
   const Picker = getDateTimePicker();
   const current = parseISODate(value) ?? new Date();
 
@@ -84,7 +87,7 @@ export function DateField({
           accessibilityLabel={label}
           className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
           placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={placeholderColor}
           value={value}
           onChangeText={onChange}
           keyboardType="numeric"

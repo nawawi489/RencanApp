@@ -204,7 +204,7 @@ export function LivePeopleProfileScreen() {
                 <Text className="text-3xl font-extrabold text-white">#{closedEntry.rank_number}</Text>
               </View>
               <View className="flex-1 gap-0.5">
-                <Text className="text-xs font-semibold uppercase text-neutral-400">Ranking</Text>
+                <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Ranking</Text>
                 <Text className="text-base font-semibold text-black dark:text-white">
                   Periode {closed.period_name}
                 </Text>
@@ -231,7 +231,7 @@ export function LivePeopleProfileScreen() {
               </View>
               {sparkPoints.length ? (
                 <View className="gap-1.5">
-                  <Text className="text-xs font-semibold uppercase text-neutral-400">Tren</Text>
+                  <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tren</Text>
                   <ScoreSparkline points={sparkPoints} />
                 </View>
               ) : null}
