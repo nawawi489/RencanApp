@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
-import { Animated, useColorScheme } from 'react-native';
+import { Animated } from 'react-native';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 import Svg, { Circle } from 'react-native-svg';
 import { avatarColor, initials } from '@/lib/avatar-color';
+import { useThemePreference } from '@/providers/theme-provider';
 import { SCORE_DESC, SCORE_LABEL, SCORE_RANGE, scoreBand, type ScoreBand } from '@/lib/score';
 
 // ---------------------------------------------------------------- Button
@@ -24,7 +25,8 @@ const BUTTON_CLASS: Record<ButtonVariant, string> = {
 const BUTTON_TEXT_CLASS: Record<ButtonVariant, string> = {
   primary: 'text-white',
   secondary: 'text-black dark:text-white',
-  danger: 'text-red-600 dark:text-red-400',
+  // red-700 (#b91c1c, 5.91:1) bukan red-600 (~4.0:1, gagal AA teks normal) — token danger DESIGN §2.
+  danger: 'text-red-700 dark:text-red-400',
   success: 'text-white',
 };
 
@@ -126,8 +128,8 @@ export function IconTile({
   tone?: IconTileTone;
   size?: number;
 }) {
-  const scheme = useColorScheme();
-  const color = ICON_TILE_COLOR[tone][scheme === 'dark' ? 1 : 0];
+  const { effective } = useThemePreference();
+  const color = ICON_TILE_COLOR[tone][effective === 'dark' ? 1 : 0];
   return (
     <View
       style={{ width: size, height: size }}
@@ -177,6 +179,18 @@ export function Field({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+// ---------------------------------------------------------------- placeholder color
+
+/**
+ * Warna `placeholderTextColor` TextInput — RN tak menerima class Tailwind untuk prop ini,
+ * jadi hex eksplisit per tema (DESIGN §2): terang `#9ca3af`, gelap `#6b7280`. Semua layar
+ * bertema wajib memakai hook ini alih-alih hardcode `#9ca3af`.
+ */
+export function usePlaceholderColor(): string {
+  const { effective } = useThemePreference();
+  return effective === 'dark' ? '#6b7280' : '#9ca3af';
+}
+
 // ---------------------------------------------------------------- LabeledInput (form)
 
 export function LabeledInput({
@@ -198,17 +212,18 @@ export function LabeledInput({
   keyboardType?: 'default' | 'numeric' | 'email-address';
   autoCapitalize?: 'none' | 'sentences';
 }) {
+  const placeholderColor = usePlaceholderColor();
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-semibold text-black dark:text-white">
         {label}
-        {required ? <Text className="text-red-600 dark:text-red-400"> *</Text> : null}
+        {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
       </Text>
       <TextInput
         className={`rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white ${multiline ? 'h-24' : ''}`}
         accessibilityLabel={label}
         placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={placeholderColor}
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}
@@ -323,8 +338,8 @@ export function Skeleton({
   radius?: number;
   style?: object;
 }) {
-  const scheme = useColorScheme();
-  const base = scheme === 'dark' ? '#27272a' : '#e2e8f0';
+  const { effective } = useThemePreference();
+  const base = effective === 'dark' ? '#27272a' : '#e2e8f0';
   const [opacity] = useState(() => new Animated.Value(0.5));
   useEffect(() => {
     // Loop tak terbatas membanjiri timer di jest → lewati di test (animasi murni dekoratif).
@@ -610,6 +625,9 @@ export function ProgressOrb({
   const offset = c * (1 - pct / 100);
   const color = ORB_COLOR[resolvedTone];
   const numberSize = size === 72 ? 20 : 16;
+  // Track ring wajib theme-aware: #e2e8f0 terang menyala di atas surface gelap (DESIGN §12).
+  const { effective } = useThemePreference();
+  const trackColor = effective === 'dark' ? '#27272a' : '#e2e8f0';
   const a11y = `Capaian ${pct} persen, ${ORB_TONE_LABEL[resolvedTone]}${
     sublabel ? `. ${sublabel}` : ''
   }`;
@@ -622,7 +640,7 @@ export function ProgressOrb({
       accessibilityLabel={a11y}
       accessibilityValue={{ now: pct, min: 0, max: 100 }}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="#e2e8f0" strokeWidth={stroke} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -667,6 +685,9 @@ export function TreeProgressOrb({ value, label }: { value: number; label: string
   const c = 2 * Math.PI * r;
   const offset = c * (1 - pct / 100);
   const color = treeOrbColor(pct);
+  // Track ring theme-aware (warna value good/risk/bad tetap terkunci spec §10; hanya track).
+  const { effective } = useThemePreference();
+  const trackColor = effective === 'dark' ? '#334155' : '#d9e2ec';
   return (
     <View
       className="items-center gap-0.5"
@@ -676,7 +697,7 @@ export function TreeProgressOrb({ value, label }: { value: number; label: string
       accessibilityValue={{ now: pct, min: 0, max: 100 }}>
       <View style={{ width: size, height: size }} className="items-center justify-center">
         <Svg width={size} height={size} style={{ position: 'absolute' }}>
-          <Circle cx={size / 2} cy={size / 2} r={r} stroke="#d9e2ec" strokeWidth={stroke} fill="none" />
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
           <Circle
             cx={size / 2}
             cy={size / 2}

@@ -5,7 +5,7 @@ import { Alert } from 'react-native';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
-import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { SubmissionCard } from '@/components/submission-card';
 import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
@@ -290,7 +290,7 @@ function RepeatSection({
   return (
     <View className="gap-3">
       <SectionCard>
-        <Text className="text-xs font-semibold uppercase text-neutral-400">Repeat Compliance</Text>
+        <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Repeat Compliance</Text>
         <Text testID="compliance-metric" className="text-lg font-bold text-black dark:text-white">
           {complianceText}
         </Text>
@@ -326,6 +326,7 @@ export function LiveActionPlanDetailScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { profile } = useProfile();
+  const placeholderColor = usePlaceholderColor();
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
@@ -518,7 +519,7 @@ export function LiveActionPlanDetailScreen() {
                     <TextInput
                       className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
                       placeholder="Alasan penolakan (wajib)"
-                      placeholderTextColor="#9ca3af"
+                      placeholderTextColor={placeholderColor}
                       value={rejectReason}
                       onChangeText={setRejectReason}
                       multiline

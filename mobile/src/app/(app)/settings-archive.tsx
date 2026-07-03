@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
-import { Button, EmptyState, SectionCard, SkeletonList } from '@/components/ui';
+import { Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import { getArchiveMetadata } from '@/lib/activity-governance';
 import { restoreCard, type CardEntityType } from '@/lib/governance-admin';
@@ -34,6 +34,7 @@ const FILTER_CHIPS: { key: 'semua' | CardEntityType; label: string }[] = [
 
 export default function SettingsArchiveScreen() {
   const qc = useQueryClient();
+  const placeholderColor = usePlaceholderColor();
   const [query, setQuery] = useState('');
   const [chip, setChip] = useState<'semua' | CardEntityType>('semua');
   const { results, isLoading, enabled } = useSearchCards({ query, includeArchived: true });
@@ -73,7 +74,7 @@ export default function SettingsArchiveScreen() {
         <TextInput
           className="min-h-[44px] rounded-xl border border-neutral-300 px-4 text-base text-black dark:border-neutral-700 dark:text-white"
           placeholder="Cari card terarsip…"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={placeholderColor}
           value={query}
           onChangeText={setQuery}
           accessibilityLabel="Kotak pencarian arsip"

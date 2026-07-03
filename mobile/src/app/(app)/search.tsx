@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FlatList } from 'react-native';
 import { Text, TextInput, View } from 'react-native-css/components';
 
-import { EmptyState, SectionCard, SkeletonList } from '@/components/ui';
+import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import type { SearchResult } from '@/lib/governance-admin';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
@@ -23,13 +23,14 @@ const ENTITY_LABEL: Record<string, string> = {
 export function LiveSearchScreen() {
   const [query, setQuery] = useState('');
   const { results, isLoading, enabled } = useSearchCards({ query });
+  const placeholderColor = usePlaceholderColor();
 
   const header = (
     <View className="pb-3">
       <TextInput
         className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
         placeholder="Cari Goal, Initiative, Action Plan…"
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={placeholderColor}
         value={query}
         onChangeText={setQuery}
         accessibilityLabel="Kotak pencarian"

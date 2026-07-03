@@ -71,6 +71,15 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     };
   }, [prototypeMode]);
 
+  // Web: saat mode 'system', `apply()` hanya membaca prefers-color-scheme sekali (di mount).
+  // Tanpa listener, mengganti tema OS ketika app terbuka tak mengubah class .dark/.light di
+  // root sampai reload. Re-apply saat OS scheme berubah agar 'Sistem' live. `system` berasal
+  // dari useColorScheme() react-native(-web) yang sudah ikut berubah realtime.
+  useEffect(() => {
+    if (prototypeMode) return;
+    if (mode === 'system') apply('system');
+  }, [system, mode, prototypeMode]);
+
   const setMode = (next: ThemeMode) => {
     setModeState(next);
     apply(next);

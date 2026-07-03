@@ -8,7 +8,7 @@ import { FlatList } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
-import { Avatar, Badge, EmptyState, ErrorState, SectionCard, SkeletonList } from '@/components/ui';
+import { Avatar, Badge, EmptyState, ErrorState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useInboxRooms } from '@/hooks/use-inbox';
 import type { ChatRoom } from '@/lib/inbox';
 import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
@@ -74,6 +74,7 @@ function InboxHeader({
   filter: Filter;
   setFilter: (f: Filter) => void;
 }) {
+  const placeholderColor = usePlaceholderColor();
   return (
     <View className="gap-3 pb-3">
       <View className="gap-1">
@@ -82,7 +83,7 @@ function InboxHeader({
       </View>
       <TextInput
         placeholder="Cari Initiative"
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={placeholderColor}
         value={q}
         onChangeText={setQ}
         accessibilityLabel="Cari Initiative"

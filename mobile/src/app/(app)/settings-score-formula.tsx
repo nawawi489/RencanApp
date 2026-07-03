@@ -15,6 +15,7 @@ import {
   ScoreLegend,
   SectionCard,
   SkeletonCard,
+  usePlaceholderColor,
 } from '@/components/ui';
 import {
   useActivePeriod,
@@ -66,6 +67,7 @@ function DraftEditor({
   const initial = useMemo(() => categoriesFromRaw(version.categories), [version.categories]);
   const [draft, setDraft] = useState<FormulaCategory[]>(initial);
   const [reason, setReason] = useState('');
+  const placeholderColor = usePlaceholderColor();
   const { updateWeights, isUpdatingWeights } = useFormulaActions(templateId);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -150,7 +152,7 @@ function DraftEditor({
       <TextInput
         accessibilityLabel="Alasan perubahan (min 8 karakter)"
         placeholder="Alasan perubahan (min 8 karakter)…"
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={placeholderColor}
         value={reason}
         onChangeText={setReason}
         multiline
@@ -314,6 +316,7 @@ function FormulaTemplateSection({
   );
   const [error, setError] = useState<string | null>(null);
   const [createReason, setCreateReason] = useState('');
+  const placeholderColor = usePlaceholderColor();
   const today = new Date().toISOString().slice(0, 10);
 
   const levelVersions = versions.filter((v) => v.level === activeLevel);
@@ -387,7 +390,7 @@ function FormulaTemplateSection({
               <TextInput
                 accessibilityLabel="Alasan pembuatan draft (min 8 karakter)"
                 placeholder="Alasan pembuatan draft (min 8 karakter)…"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={placeholderColor}
                 value={createReason}
                 onChangeText={setCreateReason}
                 className="rounded-xl border border-neutral-300 px-3 py-2 text-sm text-black dark:border-neutral-700 dark:text-white"
@@ -411,7 +414,7 @@ function FormulaTemplateSection({
 
           {otherVersions.length > 0 ? (
             <View className="gap-2">
-              <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">
+              <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
                 Riwayat versi {activeLevel}
               </Text>
               {otherVersions.map((v) => (
@@ -531,7 +534,7 @@ export default function SettingsScoreFormulaScreen() {
 
         {templates.length ? (
           <View className="gap-3">
-            <Text className="px-1 text-xs font-semibold uppercase text-neutral-400">
+            <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
               Template & Versi Formula
             </Text>
             {templates.map((t) => (

@@ -1,22 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui';
 import { BrandLogo } from '@/components/brand-logo';
 import { useProfile } from '@/hooks/use-profile';
+import { useThemePreference } from '@/providers/theme-provider';
 
 /** Topbar app: logo + wordmark + kicker per-layar + avatar (→ Settings). */
 export function AppHeader({ kicker }: { kicker?: string }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useProfile();
-  const scheme = useColorScheme();
+  const { effective } = useThemePreference();
   // Ikon di atas pill bg-neutral-50/dark:bg-neutral-900 — brand-dark kontras di terang,
-  // blue-300 di gelap (pola IconTile info, DESIGN §12: warna eksplisit via scheme).
-  const searchIconColor = scheme === 'dark' ? '#93c5fd' : '#1564b3';
+  // blue-300 di gelap (pola IconTile info, DESIGN §12: warna eksplisit via tema efektif).
+  const searchIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
   const name = profile?.full_name?.trim() || profile?.email || 'Pengguna';
 
   return (
