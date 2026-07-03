@@ -21,8 +21,10 @@ const mockUseProblemStatements = jest.fn();
 const mockUseProblemStatementInitiatives = jest.fn();
 const mockUseStrategyInitiatives = jest.fn();
 const mockUseInitiativeActionPlans = jest.fn();
+const mockUseCardProgress = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
+  useCardProgress: (ids: string[]) => mockUseCardProgress(ids),
   useGoals: () => mockUseGoals(),
   useFlatInitiatives: () => mockUseFlatInitiatives(),
   useKpiAreas: (goalId: string, enabled?: boolean) => mockUseKpiAreas(goalId, enabled),
@@ -157,6 +159,9 @@ beforeEach(async () => {
   mockUseStrategyInitiatives.mockReturnValue(stratInitResult());
   mockUseInitiativeActionPlans.mockReset();
   mockUseInitiativeActionPlans.mockReturnValue(actionPlanResult());
+  mockUseCardProgress.mockReset();
+  // Default WSA-15: progress belum ada → progressOf null (orb render '—'); test orb override per-kasus.
+  mockUseCardProgress.mockReturnValue({ progressOf: () => null, isLoading: false, isError: false });
   mockArchive.mockReset();
   mockArchive.mockResolvedValue(undefined);
 });
@@ -988,6 +993,88 @@ describe('WorkspaceScreen', () => {
       await screen.findByText('Strategy Past');
       expect(countOpacityHalf(screen.toJSON())).toBe(1);
       expect(screen.getAllByText('Periode lewat').length).toBe(1);
+    });
+  });
+
+  describe('WSA-15 — progress orb tree (spec §6.4–6.8 / §10)', () => {
+    const PERIOD = { period_start: '2026-01-01', period_end: '2026-12-31' };
+    const setProgress = (map: Record<string, number>) =>
+      mockUseCardProgress.mockReturnValue({
+        progressOf: (id: string) => (id in map ? map[id] : null),
+        isLoading: false,
+        isError: false,
+      });
+
+    it('[ORB1] GoalRow render orb label "Capaian" dgn nilai capaian', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
+      setProgress({ g1: 82 });
+      await renderScreen();
+      expect(await screen.findByText('82%')).toBeTruthy();
+      expect(screen.getByLabelText('Capaian 82 persen')).toBeTruthy();
+    });
+
+    it('[ORB2] StrategySubRow render orb label "Progress" (bukan "Capaian")', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
+      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
+      setProgress({ s1: 20 });
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      fireEvent.press(await screen.findByLabelText('Lihat Strategy'));
+      expect(await screen.findByText('20%')).toBeTruthy();
+      expect(screen.getByLabelText('Progress 20 persen')).toBeTruthy();
+      expect(screen.queryByLabelText('Capaian 20 persen')).toBeNull();
+    });
+
+    it('[ORB3] ActionPlanSubRow leaf: orb "Progress" dari computeActionPlanProgress (submitted→80)', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
+      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
+      mockUseStrategyInitiatives.mockReturnValue(stratInitResult({ initiatives: [{ id: 'i1', name: 'Init A', status: 'active', ...PERIOD }] }));
+      mockUseInitiativeActionPlans.mockReturnValue(
+        actionPlanResult({ actionPlans: [{ id: 'ap1', name: 'Setup pixel', status: 'submitted', repeat_setting: 'one_time', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
+      );
+      setProgress({}); // induk tak diset — fokus ke leaf yang dihitung klien
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      fireEvent.press(await screen.findByLabelText('Lihat Strategy'));
+      fireEvent.press(await screen.findByLabelText('Lihat Initiative'));
+      fireEvent.press(await screen.findByLabelText('Lihat Action Plan'));
+      expect(await screen.findByText('80%')).toBeTruthy();
+      expect(screen.getByLabelText('Progress 80 persen')).toBeTruthy();
+    });
+
+    it('[ORB4] ActionPlan repeat tanpa compliance → "—" (bukan 0% menyesatkan)', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
+      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
+      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
+      mockUseStrategyInitiatives.mockReturnValue(stratInitResult({ initiatives: [{ id: 'i1', name: 'Init A', status: 'active', ...PERIOD }] }));
+      mockUseInitiativeActionPlans.mockReturnValue(
+        actionPlanResult({ actionPlans: [{ id: 'ap2', name: 'Rutin harian', status: 'active', repeat_setting: 'repeat', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
+      );
+      // Induk diberi nilai agar hanya AP repeat leaf yang jadi '—' (unik untuk assertion).
+      setProgress({ k1: 50, s1: 50, i1: 50 });
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area'));
+      fireEvent.press(await screen.findByLabelText('Lihat Strategy'));
+      fireEvent.press(await screen.findByLabelText('Lihat Initiative'));
+      fireEvent.press(await screen.findByLabelText('Lihat Action Plan'));
+      await screen.findByText('Rutin harian');
+      // AP repeat leaf: computeActionPlanProgress tak dipakai (compliance absen) → '—', bukan 0%.
+      expect(screen.queryByText('0%')).toBeNull();
+      expect(screen.getByLabelText('Progress belum tersedia')).toBeTruthy();
+    });
+
+    it('[ORB5] progress induk null → orb "—", tidak mengarang 0%', async () => {
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Kosong', status: 'active', ...PERIOD }] }));
+      // default mockUseCardProgress → progressOf null.
+      await renderScreen();
+      await screen.findByText('Goal Kosong');
+      expect(screen.queryByText('0%')).toBeNull();
+      expect(screen.getByLabelText('Capaian belum tersedia')).toBeTruthy();
     });
   });
 

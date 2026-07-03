@@ -64,8 +64,31 @@ import {
   type NewProblemStatement,
   type ProblemStatement,
 } from '@/lib/problem-statements';
+import { fetchCardProgress } from '@/lib/workspace-progress';
 
 // ---------------------------------------------------------------- queries
+
+/**
+ * WSA-15 / AC 22 — progress orb tree. Ambil capaian 0–100 untuk sekumpulan card id (anak yang
+ * sedang dirender satu kontainer) via RPC rollup. Dipanggil di level KONTAINER daftar anak (satu
+ * query per parent expanded), BUKAN per row collapsed → hindari N+1. queryKey pakai ids yang
+ * di-sort agar urutan berbeda berbagi cache. `progressOf` null-safe: id tak ada di hasil (belum
+ * fetch / error / tak terlihat RLS) → null → UI render '—' (bukan angka palsu). 0 tetap 0.
+ */
+export function useCardProgress(ids: string[]) {
+  const sortedIds = [...ids].sort();
+  const q = useQuery({
+    queryKey: ['workspace_card_progress', sortedIds],
+    queryFn: () => fetchCardProgress(sortedIds),
+    enabled: ids.length > 0,
+  });
+  const map = q.data;
+  return {
+    progressOf: (id: string): number | null => (map && map.has(id) ? (map.get(id) as number) : null),
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
+}
 
 /** Semua Goal (terbaru dulu). */
 export function useGoals() {
@@ -243,6 +266,7 @@ export function useGoalActions() {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['goal', id] });
       qc.invalidateQueries({ queryKey: ['goals'] });
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
 
@@ -327,6 +351,8 @@ export function useKpiAreaActions(goalId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goal', goalId] });
       qc.invalidateQueries({ queryKey: ['kpi_areas', goalId] });
+      // Anak baru → total anak Goal berubah → capaian Goal (orb) bisa berubah.
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
 
@@ -334,6 +360,7 @@ export function useKpiAreaActions(goalId: string) {
     mutationFn: (id: string) => activateKpiArea(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['kpi_areas', goalId] });
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
 
@@ -437,6 +464,7 @@ export function useDevelopmentAreaActions() {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['development_area', id] });
       qc.invalidateQueries({ queryKey: ['development_areas'] });
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
   return {
@@ -458,6 +486,8 @@ export function useProblemStatementActions(developmentAreaId: string) {
       qc.invalidateQueries({ queryKey: ['problem_statements', developmentAreaId] });
       // MC-? — invalidasi MBR compliance DA agar indikator Kelengkapan Perencanaan refresh.
       qc.invalidateQueries({ queryKey: ['mbr_compliance', 'development_area', developmentAreaId] });
+      // Anak baru → capaian Development Area (orb) bisa berubah.
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
   const activateM = useMutation({
@@ -465,6 +495,7 @@ export function useProblemStatementActions(developmentAreaId: string) {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['problem_statement', id] });
       qc.invalidateQueries({ queryKey: ['problem_statements', developmentAreaId] });
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
   return {
@@ -487,6 +518,7 @@ export function useStrategyActions(kpiAreaId: string) {
       // Tidak ada goalId di scope; pakai prefix.
       qc.invalidateQueries({ queryKey: ['kpi_areas'] });
       qc.invalidateQueries({ queryKey: ['goal'] });
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
 
@@ -496,6 +528,7 @@ export function useStrategyActions(kpiAreaId: string) {
       qc.invalidateQueries({ queryKey: ['strategies', kpiAreaId] });
       qc.invalidateQueries({ queryKey: ['kpi_areas'] });
       qc.invalidateQueries({ queryKey: ['goal'] });
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
 

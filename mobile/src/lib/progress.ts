@@ -46,6 +46,34 @@ export function ratioActiveOfChildren(children: StatusItem[]): number {
   return Math.round((moving / active.length) * 100);
 }
 
+/**
+ * Label bawah orb tree (spec §10 / WSA-15): Goal & KPI Area = 'Capaian' (hasil KPI/Goal),
+ * card lainnya = 'Progress'. Satu sumber kebenaran agar 7 row tree tak punya definisi berbeda.
+ * Kind tak dikenal → default 'Progress' (fail-safe; 'Capaian' punya makna khusus hasil).
+ */
+export function treeOrbLabel(kind: string): 'Capaian' | 'Progress' {
+  return kind === 'goal' || kind === 'kpi_area' ? 'Capaian' : 'Progress';
+}
+
+/**
+ * Nilai orb Action Plan leaf di tree. Reuse `computeActionPlanProgress` (satu sumber kebenaran).
+ * Repeat AP butuh Repeat Compliance real; bila compliance belum ter-fetch (undefined/null) →
+ * kembalikan null agar UI render '—' (prinsip no-misleading-numbers), BUKAN 0%.
+ */
+export function actionPlanTreeProgress(args: {
+  status: string;
+  repeatSetting: string;
+  compliancePercent?: number | null;
+}): number | null {
+  const repeat = args.repeatSetting === 'repeat';
+  if (repeat && args.compliancePercent == null) return null;
+  return computeActionPlanProgress({
+    status: args.status,
+    repeat,
+    compliancePercent: args.compliancePercent ?? null,
+  });
+}
+
 /** Sublabel ringkas untuk orb (mis. "3/5 selesai" atau "Belum ada turunan"). */
 export function childrenSublabel(children: StatusItem[]): string {
   const active = children.filter((c) => c.status !== 'archived');

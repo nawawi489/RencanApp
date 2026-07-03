@@ -19,9 +19,11 @@ import {
   SectionCard,
   SkeletonList,
   TabBar,
+  TreeProgressOrb,
 } from '@/components/ui';
 import { PeriodSwitcher } from '@/components/period-switcher';
 import {
+  useCardProgress,
   useDevelopmentAreas,
   useGoals,
   useInitiativeActionPlans,
@@ -31,6 +33,7 @@ import {
   useStrategies,
   useStrategyInitiatives,
 } from '@/hooks/use-workspace';
+import { actionPlanTreeProgress, treeOrbLabel } from '@/lib/progress';
 import { useProfile } from '@/hooks/use-profile';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useArchiveActions } from '@/hooks/use-governance-admin';
@@ -40,7 +43,12 @@ import type { CardEntityType } from '@/lib/governance-admin';
 import { alertFriendlyError } from '@/lib/errors';
 import type { RowAction } from '@/components/row-actions-menu';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
-import { type ActionPlanWithPeople, type Initiative } from '@/lib/cards';
+import {
+  ACTION_PLAN_STATUS_LABEL,
+  INITIATIVE_STATUS_LABEL,
+  type ActionPlanWithPeople,
+  type Initiative,
+} from '@/lib/cards';
 import type { KpiArea } from '@/lib/kpi-areas';
 import type { Strategy } from '@/lib/strategies';
 import type { ProblemStatement } from '@/lib/problem-statements';
@@ -66,8 +74,61 @@ import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY, WS_TABS } from '@/lib/
  */
 type Tab = 'hub' | 'performance' | 'development';
 
+// Tree merender status dari beberapa jenis kartu: planning (goal/kpi/strategy/dev-area/PS),
+// initiative, dan action plan (execution). PLANNING_STATUS_LABEL saja bocorkan enum mentah
+// (mis. `in_progress`) untuk Action Plan → gabung ketiga map (nilai konsisten, tanpa konflik).
+const TREE_STATUS_LABEL: Record<string, string> = {
+  ...PLANNING_STATUS_LABEL,
+  ...INITIATIVE_STATUS_LABEL,
+  ...ACTION_PLAN_STATUS_LABEL,
+};
+
 function StatusBadge({ status }: { status: string }) {
-  return <Badge label={PLANNING_STATUS_LABEL[status] ?? status} tone={STATUS_TONE[status]} />;
+  return <Badge label={TREE_STATUS_LABEL[status] ?? status} tone={STATUS_TONE[status]} />;
+}
+
+/**
+ * Connector L-shape antar level tree (spec §8). Overlay dekoratif non-interaktif yang
+ * menghubungkan sisi kiri card induk turun ke card anak. Geometri terkunci spec:
+ * absolute, left/top -10, 10×32, border-left+bottom 2px `#cfd8e5`, radius bottom-left 8.
+ * Dirender di dalam card anak (yang punya marginLeft indent) sehingga garis jatuh di gutter.
+ */
+function TreeConnector() {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: -10,
+        top: -10,
+        width: 10,
+        height: 32,
+        borderLeftWidth: 2,
+        borderBottomWidth: 2,
+        borderColor: '#cfd8e5',
+        borderBottomLeftRadius: 8,
+      }}
+    />
+  );
+}
+
+/**
+ * Kolom kanan card tree (spec §6.4–6.8 / §10, WSA-15): progress orb 50px + label bawah
+ * (`treeOrbLabel(kind)` → 'Capaian' Goal/KPI, 'Progress' lainnya). `value` null → '—'
+ * (belum ter-fetch / error / RLS tak terlihat / AP repeat tanpa compliance) — no misleading
+ * numbers, parity hub card; BUKAN 0%. Induk tanpa anak dikembalikan RPC sebagai 0 → orb '0%'.
+ */
+function TreeOrbCell({ kind, value }: { kind: string; value: number | null }) {
+  if (value == null) {
+    return (
+      <View style={{ width: 50 }} className="items-center justify-center py-1">
+        <Text className="text-base font-bold text-neutral-400 dark:text-neutral-500" accessibilityLabel={`${treeOrbLabel(kind)} belum tersedia`}>
+          —
+        </Text>
+      </View>
+    );
+  }
+  return <TreeProgressOrb value={value} label={treeOrbLabel(kind)} />;
 }
 
 function PastPeriodBadge() {
@@ -263,17 +324,20 @@ function StrategySubRow({
   strategy,
   ancestorPast = false,
   parentCompliance,
+  progress,
 }: {
   strategy: Strategy;
   ancestorPast?: boolean;
   /** Kepatuhan MBR kpi_area→strategy (parent). Non-compliant → "+ Initiative" ter-guard (WSA-04). */
   parentCompliance?: MbrCompliance;
+  progress: number | null;
 }) {
   const router = useRouter();
   const { can } = useProfile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const { initiatives, isLoading, isError, refetch } = useStrategyInitiatives(strategy.id, expanded);
+  const { progressOf: initProgressOf } = useCardProgress(expanded ? initiatives.map((i) => i.id) : []);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(strategy, focus) === 'past';
   const canAddInit = can('create_initiative');
@@ -301,18 +365,24 @@ function StrategySubRow({
       <View
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy, marginLeft: TREE_LEVEL_INDENT[3] }}>
-        <WorkspaceKindPill kind="strategy" />
-        <View className="flex-row items-start justify-between gap-2">
-          <Text
-            className="flex-1 text-sm font-medium text-black dark:text-white"
-            numberOfLines={2}
-            accessibilityLabel={`Strategy ${strategy.name}`}>
-            {strategy.name}
-          </Text>
-          <View className="flex-row items-center gap-1">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={strategy.status} />
+        <TreeConnector />
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
+              <WorkspaceKindPill kind="strategy" />
+              <View className="flex-row items-center gap-1">
+                {past ? <PastPeriodBadge /> : null}
+                <StatusBadge status={strategy.status} />
+              </View>
+            </View>
+            <Text
+              className="text-sm font-medium text-black dark:text-white"
+              numberOfLines={2}
+              accessibilityLabel={`Strategy ${strategy.name}`}>
+              {strategy.name}
+            </Text>
           </View>
+          <TreeOrbCell kind="strategy" value={progress} />
         </View>
         <CardActionRow
           cardLabel={strategy.name}
@@ -342,7 +412,12 @@ function StrategySubRow({
           ) : (
             <View className="gap-2">
               {initiatives.map((i) => (
-                <InitiativeSubRow key={i.id} item={i} ancestorPast={ancestorPast || past} />
+                <InitiativeSubRow
+                  key={i.id}
+                  item={i}
+                  ancestorPast={ancestorPast || past}
+                  progress={initProgressOf(i.id)}
+                />
               ))}
             </View>
           )
@@ -362,12 +437,21 @@ function StrategySubRow({
  * Sub-row level 2: KPI Area di bawah satu Goal. Expandable → Strategy children.
  * Lazy fetch Strategy hanya saat `expanded` (parameter `enabled` di useStrategies).
  */
-function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPast?: boolean }) {
+function KpiAreaSubRow({
+  kpi,
+  ancestorPast = false,
+  progress,
+}: {
+  kpi: KpiArea;
+  ancestorPast?: boolean;
+  progress: number | null;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { strategies, isLoading, isError, refetch } = useStrategies(kpi.id, expanded);
+  const { progressOf: stratProgressOf } = useCardProgress(expanded ? strategies.map((s) => s.id) : []);
   // WSA-04 — guard MBR: fetch kepatuhan kpi_area→strategy hanya saat expanded (parentType ''
   // menonaktifkan query di useMbrCompliance). Diteruskan ke StrategySubRow untuk guard "+ Initiative".
   const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'kpi_area' : '', kpi.id);
@@ -382,15 +466,21 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
       <View
         className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area, marginLeft: TREE_LEVEL_INDENT[2] }}>
-        <WorkspaceKindPill kind="kpi_area" />
-        <View className="flex-row items-start justify-between gap-3">
-          <Text className="flex-1 text-sm font-medium text-black dark:text-white">
-            {kpi.name}
-          </Text>
-          <View className="flex-row items-center gap-1.5">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={kpi.status} />
+        <TreeConnector />
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
+              <WorkspaceKindPill kind="kpi_area" />
+              <View className="flex-row items-center gap-1.5">
+                {past ? <PastPeriodBadge /> : null}
+                <StatusBadge status={kpi.status} />
+              </View>
+            </View>
+            <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>
+              {kpi.name}
+            </Text>
           </View>
+          <TreeOrbCell kind="kpi_area" value={progress} />
         </View>
         <CardActionRow
           cardLabel={kpi.name}
@@ -428,6 +518,7 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
                   strategy={s}
                   ancestorPast={ancestorPast || past}
                   parentCompliance={mbrCompliance}
+                  progress={stratProgressOf(s.id)}
                 />
               ))}
             </View>
@@ -444,7 +535,7 @@ function KpiAreaSubRow({ kpi, ancestorPast = false }: { kpi: KpiArea; ancestorPa
   );
 }
 
-function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
+function GoalRow({ goal, progress }: { goal: GoalWithKpiCount; progress: number | null }) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -453,6 +544,8 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
   // terasa seperti tombol mati (paritas dgn KpiAreaSubRow level-2).
   const { kpiAreas, isLoading, isError, refetch } = useKpiAreas(goal.id, expanded);
   const { focus } = usePeriodFocus();
+  // WSA-15 — orb capaian anak (KPI Area) di level kontainer (1 RPC per Goal expanded, bukan per row).
+  const { progressOf: kpiProgressOf } = useCardProgress(expanded ? kpiAreas.map((k) => k.id) : []);
 
   const count = kpiCountOf(goal);
   const countLabel = count == null ? WS_COPY.kpiCountUnknown : WS_COPY.kpiCount(count);
@@ -465,16 +558,20 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
       {/* Spec §6.4 + §8: level-0 (indent 0), border kiri 5px warna kategori Goal. */}
       <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
-        <WorkspaceKindPill kind="goal" />
-        <View className="flex-row items-start justify-between gap-3">
-          <Text className="flex-1 text-base font-semibold text-black dark:text-white">{goal.name}</Text>
-          <View className="flex-row items-center gap-1.5">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={goal.status} />
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
+              <WorkspaceKindPill kind="goal" />
+              <View className="flex-row items-center gap-1.5">
+                {past ? <PastPeriodBadge /> : null}
+                <StatusBadge status={goal.status} />
+              </View>
+            </View>
+            <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>{goal.name}</Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
           </View>
+          <TreeOrbCell kind="goal" value={progress} />
         </View>
-
-        <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
 
         <CardActionRow
           cardLabel={goal.name}
@@ -503,7 +600,7 @@ function GoalRow({ goal }: { goal: GoalWithKpiCount }) {
           ) : (
             <View className="gap-2">
               {kpiAreas.map((k) => (
-                <KpiAreaSubRow key={k.id} kpi={k} ancestorPast={past} />
+                <KpiAreaSubRow key={k.id} kpi={k} ancestorPast={past} progress={kpiProgressOf(k.id)} />
               ))}
             </View>
           )
@@ -538,24 +635,33 @@ function ActionPlanSubRow({
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(item, focus) === 'past';
   const rowActions = useTreeRowActions('action_plan', item.id, item.name);
+  // WSA-15 — orb AP leaf dihitung KLIEN (bukan RPC): status-based (one_time) via progress.ts.
+  // Repeat AP butuh Repeat Compliance yg tak ter-fetch di baris ini → null → '—' (bukan 0% palsu).
+  const orbValue = actionPlanTreeProgress({ status: item.status, repeatSetting: item.repeat_setting });
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
       <View
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan, marginLeft: TREE_LEVEL_INDENT[level] }}>
-        <WorkspaceKindPill kind="action_plan" />
-        <View className="flex-row items-start justify-between gap-2">
-          <Text
-            className="flex-1 text-sm font-medium text-black dark:text-white"
-            numberOfLines={2}
-            accessibilityLabel={`Action Plan ${item.name}`}>
-            {item.name}
-          </Text>
-          <View className="flex-row items-center gap-1">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={item.status} />
+        <TreeConnector />
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
+              <WorkspaceKindPill kind="action_plan" />
+              <View className="flex-row items-center gap-1">
+                {past ? <PastPeriodBadge /> : null}
+                <StatusBadge status={item.status} />
+              </View>
+            </View>
+            <Text
+              className="text-sm font-medium text-black dark:text-white"
+              numberOfLines={2}
+              accessibilityLabel={`Action Plan ${item.name}`}>
+              {item.name}
+            </Text>
           </View>
+          <TreeOrbCell kind="action_plan" value={orbValue} />
         </View>
         {/* Action Plan = leaf: tanpa panah/+ (spec §6.8). Hanya Detail + ⋯. */}
         <View className="flex-row items-center justify-end gap-2">
@@ -596,11 +702,13 @@ function InitiativeSubRow({
   item,
   ancestorPast = false,
   level = 4,
+  progress,
 }: {
   item: Initiative;
   ancestorPast?: boolean;
   /** Level tree Initiative: 4 di Performance (bawah Strategy), 3 di Development (bawah PS). */
   level?: 3 | 4;
+  progress: number | null;
 }) {
   const router = useRouter();
   const { can } = useProfile();
@@ -619,18 +727,24 @@ function InitiativeSubRow({
       <View
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative, marginLeft: TREE_LEVEL_INDENT[level] }}>
-        <WorkspaceKindPill kind="initiative" />
-        <View className="flex-row items-start justify-between gap-2">
-          <Text
-            className="flex-1 text-sm font-medium text-black dark:text-white"
-            numberOfLines={2}
-            accessibilityLabel={`Initiative ${item.name}`}>
-            {item.name}
-          </Text>
-          <View className="flex-row items-center gap-1">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={item.status} />
+        <TreeConnector />
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
+              <WorkspaceKindPill kind="initiative" />
+              <View className="flex-row items-center gap-1">
+                {past ? <PastPeriodBadge /> : null}
+                <StatusBadge status={item.status} />
+              </View>
+            </View>
+            <Text
+              className="text-sm font-medium text-black dark:text-white"
+              numberOfLines={2}
+              accessibilityLabel={`Initiative ${item.name}`}>
+              {item.name}
+            </Text>
           </View>
+          <TreeOrbCell kind="initiative" value={progress} />
         </View>
         <CardActionRow
           cardLabel={item.name}
@@ -686,15 +800,18 @@ function InitiativeSubRow({
 function ProblemStatementSubRow({
   ps,
   ancestorPast = false,
+  progress,
 }: {
   ps: ProblemStatement;
   ancestorPast?: boolean;
+  progress: number | null;
 }) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { initiatives, isLoading, isError, refetch } = useProblemStatementInitiatives(ps.id, expanded);
+  const { progressOf: initProgressOf } = useCardProgress(expanded ? initiatives.map((i) => i.id) : []);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(ps, focus) === 'past';
   const canAddInit = can('create_initiative');
@@ -706,13 +823,19 @@ function ProblemStatementSubRow({
       <View
         className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement, marginLeft: TREE_LEVEL_INDENT[2] }}>
-        <WorkspaceKindPill kind="problem_statement" />
-        <View className="flex-row items-start justify-between gap-3">
-          <Text className="flex-1 text-sm font-medium text-black dark:text-white">{ps.name}</Text>
-          <View className="flex-row items-center gap-1.5">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={ps.status} />
+        <TreeConnector />
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
+              <WorkspaceKindPill kind="problem_statement" />
+              <View className="flex-row items-center gap-1.5">
+                {past ? <PastPeriodBadge /> : null}
+                <StatusBadge status={ps.status} />
+              </View>
+            </View>
+            <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>{ps.name}</Text>
           </View>
+          <TreeOrbCell kind="problem_statement" value={progress} />
         </View>
         <CardActionRow
           cardLabel={ps.name}
@@ -745,7 +868,13 @@ function ProblemStatementSubRow({
           ) : (
             <View className="gap-2">
               {initiatives.map((i) => (
-                <InitiativeSubRow key={i.id} item={i} ancestorPast={ancestorPast || past} level={3} />
+                <InitiativeSubRow
+                  key={i.id}
+                  item={i}
+                  ancestorPast={ancestorPast || past}
+                  level={3}
+                  progress={initProgressOf(i.id)}
+                />
               ))}
             </View>
           )
@@ -761,7 +890,13 @@ function ProblemStatementSubRow({
   );
 }
 
-function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCount }) {
+function DevelopmentAreaRow({
+  devArea,
+  progress,
+}: {
+  devArea: DevelopmentAreaWithProblemCount;
+  progress: number | null;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -772,6 +907,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
     expanded,
   );
   const { focus } = usePeriodFocus();
+  const { progressOf: psProgressOf } = useCardProgress(expanded ? problemStatements.map((p) => p.id) : []);
 
   const count = problemCountOf(devArea);
   const countLabel =
@@ -785,18 +921,22 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
       {/* Spec §7.3 + §8: level-0 Dev pane, border kiri 5px warna Development Area (#0f766e). */}
       <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
-        <WorkspaceKindPill kind="development_area" />
-        <View className="flex-row items-start justify-between gap-3">
-          <Text className="flex-1 text-base font-semibold text-black dark:text-white">
-            {devArea.name}
-          </Text>
-          <View className="flex-row items-center gap-1.5">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={devArea.status} />
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
+              <WorkspaceKindPill kind="development_area" />
+              <View className="flex-row items-center gap-1.5">
+                {past ? <PastPeriodBadge /> : null}
+                <StatusBadge status={devArea.status} />
+              </View>
+            </View>
+            <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>
+              {devArea.name}
+            </Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
           </View>
+          <TreeOrbCell kind="development_area" value={progress} />
         </View>
-
-        <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
 
         <CardActionRow
           cardLabel={devArea.name}
@@ -830,7 +970,7 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
           ) : (
             <View className="gap-2">
               {problemStatements.map((p) => (
-                <ProblemStatementSubRow key={p.id} ps={p} ancestorPast={past} />
+                <ProblemStatementSubRow key={p.id} ps={p} ancestorPast={past} progress={psProgressOf(p.id)} />
               ))}
             </View>
           )
@@ -1041,7 +1181,11 @@ function PerformancePane({
   const goalsData = goalsQ.isLoading || goalsQ.isError ? [] : goalsQ.goals;
   const showEmpty = !goalsQ.isLoading && !goalsQ.isError && goalsQ.goals.length === 0;
 
-  const renderItem = ({ item: goal }: { item: GoalWithKpiCount }) => <GoalRow goal={goal} />;
+  // WSA-15 — orb capaian Goal root: 1 RPC untuk semua Goal terlihat (bukan per row).
+  const { progressOf: goalProgressOf } = useCardProgress(goalsData.map((g) => g.id));
+  const renderItem = ({ item: goal }: { item: GoalWithKpiCount }) => (
+    <GoalRow goal={goal} progress={goalProgressOf(goal.id)} />
+  );
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-black">
@@ -1112,8 +1256,10 @@ function DevelopmentPane({
   const devData = devQ.isLoading || devQ.isError ? [] : devQ.developmentAreas;
   const showEmpty = !devQ.isLoading && !devQ.isError && devQ.developmentAreas.length === 0;
 
+  // WSA-15 — orb capaian Development Area root: 1 RPC untuk semua DA terlihat.
+  const { progressOf: devProgressOf } = useCardProgress(devData.map((d) => d.id));
   const renderItem = ({ item: d }: { item: DevelopmentAreaWithProblemCount }) => (
-    <DevelopmentAreaRow devArea={d} />
+    <DevelopmentAreaRow devArea={d} progress={devProgressOf(d.id)} />
   );
 
   return (

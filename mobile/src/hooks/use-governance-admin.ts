@@ -139,6 +139,8 @@ export function useArchiveActions() {
       qc.invalidateQueries({ queryKey: ['initiatives'] });
       qc.invalidateQueries({ queryKey: ['development_areas'] });
       qc.invalidateQueries({ queryKey: ['problem_statements'] });
+      // WSA-15 — archive mengubah status anak → keluar dari denominator %done induk → orb refresh.
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
   return {

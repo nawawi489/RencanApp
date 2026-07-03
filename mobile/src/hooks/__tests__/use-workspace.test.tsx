@@ -82,6 +82,12 @@ jest.mock('@/lib/kpi-area-breakdown', () => ({
   replaceKpiAreaBreakdown: jest.fn(),
 }));
 
+// WSA-15 — progress orb rollup (lib menyentuh supabase.rpc; mock titik ini).
+const mockFetchCardProgress = jest.fn();
+jest.mock('@/lib/workspace-progress', () => ({
+  fetchCardProgress: (...a: unknown[]) => mockFetchCardProgress(...a),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the imports it mocks
 import {
   useDevelopmentArea,
@@ -100,6 +106,7 @@ import {
   useProblemStatements,
   useStrategies,
   useStrategyActions,
+  useCardProgress,
 } from '../use-workspace';
 
 function makeWrapper() {
@@ -133,6 +140,7 @@ beforeEach(() => {
   mockGetProblemStatement.mockResolvedValue({ id: 'p1' });
   mockCreateProblemStatement.mockResolvedValue({ id: 'p-new' });
   mockActivateProblemStatement.mockResolvedValue(undefined);
+  mockFetchCardProgress.mockResolvedValue(new Map());
 });
 
 describe('useGoals / useGoal (enabled gate)', () => {
@@ -387,5 +395,74 @@ describe('usePerson (prefill PIC induk)', () => {
     const { result } = await renderHook(() => usePerson('p1'), { wrapper });
     await waitFor(() => expect(result.current.person).toEqual({ id: 'p1', full_name: 'Budi', email: null }));
     expect(mockGetPersonRef).toHaveBeenCalledWith('p1');
+  });
+});
+
+describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
+  it('[P1] memanggil fetchCardProgress & expose progressOf(id) 0–100', async () => {
+    mockFetchCardProgress.mockResolvedValue(new Map([['g1', 75], ['g2', 40]]));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCardProgress(['g1', 'g2']), { wrapper });
+    await waitFor(() => expect(result.current.progressOf('g1')).toBe(75));
+    expect(mockFetchCardProgress).toHaveBeenCalledWith(['g1', 'g2']);
+    expect(result.current.progressOf('g2')).toBe(40);
+  });
+
+  it('[P2] ids kosong → tidak fetch; progressOf null-safe', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCardProgress([]), { wrapper });
+    await act(async () => {});
+    expect(mockFetchCardProgress).not.toHaveBeenCalled();
+    expect(result.current.progressOf('x')).toBeNull();
+  });
+
+  it('[P3] queryKey terkunci ["workspace_card_progress", sortedIds] (order-stable cache)', async () => {
+    mockFetchCardProgress.mockResolvedValue(new Map([['a', 10], ['b', 20]]));
+    const { qc, wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCardProgress(['b', 'a']), { wrapper });
+    await waitFor(() => expect(result.current.progressOf('a')).toBe(10));
+    // ids di-sort → cache dapat ditemukan lewat ['a','b'] walau input ['b','a'].
+    const cached = qc.getQueryData(['workspace_card_progress', ['a', 'b']]) as Map<string, number>;
+    expect(cached).toBeInstanceOf(Map);
+    expect(cached.get('a')).toBe(10);
+    expect(mockFetchCardProgress).toHaveBeenCalledWith(['a', 'b']);
+  });
+
+  it('[P4] progressOf(id absen) → null; 0 tetap 0 (no misleading numbers)', async () => {
+    mockFetchCardProgress.mockResolvedValue(new Map([['g1', 0]]));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCardProgress(['g1', 'g2']), { wrapper });
+    await waitFor(() => expect(result.current.progressOf('g1')).toBe(0));
+    expect(result.current.progressOf('g2')).toBeNull();
+  });
+
+  it('[P5] fetch reject → isError, progressOf null (tak memalsukan angka)', async () => {
+    mockFetchCardProgress.mockRejectedValueOnce(new Error('rls'));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCardProgress(['g1']), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.progressOf('g1')).toBeNull();
+  });
+});
+
+describe('invalidasi progress orb pada mutasi status anak (WSA-15)', () => {
+  it('[P6] useStrategyActions.activate meng-invalidate ["workspace_card_progress"]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useStrategyActions('k1'), { wrapper });
+    await act(async () => {
+      await result.current.activate('s1');
+    });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['workspace_card_progress'] });
+  });
+
+  it('[P7] useProblemStatementActions.activate meng-invalidate ["workspace_card_progress"]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useProblemStatementActions('d1'), { wrapper });
+    await act(async () => {
+      await result.current.activate('p1');
+    });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['workspace_card_progress'] });
   });
 });
