@@ -66,6 +66,7 @@ import {
 } from '@/lib/development-areas';
 import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { useThemePreference } from '@/providers/theme-provider';
 import { RowActionsMenu } from '@/components/row-actions-menu';
 import { WorkspaceHubCard } from '@/components/workspace-hub-card';
 import { TREE_LEVEL_INDENT, WORKSPACE_KIND_BORDER, WorkspaceKindPill } from '@/components/workspace-kind-pill';
@@ -155,6 +156,7 @@ const ToastContext = createContext<(message: string) => void>(() => {});
  */
 function WorkspaceToastHost({ children }: PropsWithChildren) {
   const [message, setMessage] = useState<string | null>(null);
+  const isDark = useThemePreference().effective === 'dark';
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // `mounted` guard: auto-dismiss timer di-clear saat unmount, DAN callback jadi no-op bila sudah
   // unmount. Tanpa ini, timer 2.6s bisa memanggil setState pasca-unmount → act-warning yang
@@ -192,11 +194,19 @@ function WorkspaceToastHost({ children }: PropsWithChildren) {
               style={{
                 maxWidth: 520,
                 borderRadius: 12,
-                backgroundColor: '#0f172a',
+                // Gelap: surface #0f172a menyatu dgn latar dark:bg-black (≈1.3:1, tak terlihat).
+                // Inversi ke surface terang + teks gelap agar toast tetap menonjol (DESIGN §12).
+                backgroundColor: isDark ? '#f8fafc' : '#0f172a',
                 paddingVertical: 10,
                 paddingHorizontal: 14,
               }}>
-              <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '600', textAlign: 'center' }}>
+              <Text
+                style={{
+                  color: isDark ? '#0f172a' : '#ffffff',
+                  fontSize: 13,
+                  fontWeight: '600',
+                  textAlign: 'center',
+                }}>
                 {message}
               </Text>
             </View>
@@ -288,9 +298,12 @@ function CardActionRow({
   /** WSA-17 — teks TERLIHAT tombol tambah, mis. "+ KPI Area" (spec §11). */
   addButtonLabel?: string;
 }) {
-  // Spec §11: Detail solid biru #1877f2 teks putih h30 r999; ⋯ 34×30 r999 bg #f8fafc;
-  // + blue-soft #eef6ff border #cce2ff teks #145ebc. hitSlop menjaga touch target ≥44px
-  // meski tinggi visual 30px (DESIGN §4).
+  // Spec §11 (amandemen a11y — DESIGN §4 mengikat menang atas lock; lihat lock §3/§11):
+  // Detail solid brand-dark #1564b3 (5.99:1, bukan #1877f2 3.6:1) + teks putih, h30 r999;
+  // ⋯ 34×30 r999 surface-soft; + blue-soft teks #145ebc. hitSlop menjaga touch target ≥44px
+  // meski tinggi visual 30px (DESIGN §4). Surface/border netral theme-aware: warna terang
+  // terkunci HANYA berlaku di light mode; di dark mode ikut gelap (preseden workspace-hub-card).
+  const isDark = useThemePreference().effective === 'dark';
   const hit = { top: 8, bottom: 8, left: 6, right: 6 };
   return (
     <View className="flex-row items-center gap-2">
@@ -307,7 +320,7 @@ function CardActionRow({
       </Pressable>
       <Pressable
         hitSlop={hit}
-        style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
+        style={{ height: 30, borderRadius: 999, backgroundColor: '#1564b3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
         accessibilityRole="button"
         accessibilityLabel={detailLabel}
         onPress={onDetail}>
@@ -315,11 +328,11 @@ function CardActionRow({
       </Pressable>
       <Pressable
         hitSlop={hit}
-        style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
         accessibilityRole="button"
         accessibilityLabel={`Aksi lain ${cardLabel}`}
         onPress={onMore}>
-        <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
+        <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
       </Pressable>
       {onAdd || onAddPress ? (
         <Pressable
@@ -331,8 +344,12 @@ function CardActionRow({
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1,
-            borderColor: (addDimmed ?? past) ? '#e2e8f0' : '#cce2ff',
-            backgroundColor: (addDimmed ?? past) ? '#f1f5f9' : '#eef6ff',
+            borderColor: (addDimmed ?? past)
+              ? (isDark ? '#404040' : '#e2e8f0')
+              : (isDark ? '#1e3a8a' : '#cce2ff'),
+            backgroundColor: (addDimmed ?? past)
+              ? (isDark ? '#262626' : '#f1f5f9')
+              : (isDark ? '#172554' : '#eef6ff'),
           }}
           accessibilityRole="button"
           accessibilityLabel={addLabel ?? 'Tambah turunan'}
@@ -340,7 +357,7 @@ function CardActionRow({
           onPress={() =>
             onAddPress ? onAddPress() : past ? showPastPeriodAlert(cardLabel) : onAdd?.()
           }>
-          <Text style={{ color: (addDimmed ?? past) ? '#94a3b8' : '#145ebc', fontSize: 12, fontWeight: '900' }}>
+          <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : (isDark ? '#93c5fd' : '#145ebc'), fontSize: 12, fontWeight: '900' }}>
             {addButtonLabel ?? '+'}
           </Text>
         </Pressable>
@@ -731,6 +748,7 @@ function ActionPlanSubRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(item, focus) === 'past';
+  const isDark = useThemePreference().effective === 'dark';
   const rowActions = useTreeRowActions('action_plan', item.id, item.name);
   // WSA-15 — orb AP leaf dihitung KLIEN (bukan RPC): status-based (one_time) via progress.ts.
   // Repeat AP butuh Repeat Compliance yg tak ter-fetch di baris ini → null → '—' (bukan 0% palsu).
@@ -766,7 +784,7 @@ function ActionPlanSubRow({
         <View className="flex-row items-center justify-end gap-2">
           <Pressable
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ height: 30, borderRadius: 999, backgroundColor: '#1877f2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
+            style={{ height: 30, borderRadius: 999, backgroundColor: '#1564b3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={`Buka detail ${item.name}`}
             onPress={() => router.push(`/action-plan/${item.id}` as Href)}>
@@ -774,11 +792,11 @@ function ActionPlanSubRow({
           </Pressable>
           <Pressable
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
             accessibilityRole="button"
             accessibilityLabel={`Aksi lain ${item.name}`}
             onPress={() => setMenuOpen(true)}>
-            <Text style={{ color: '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
+            <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
           </Pressable>
         </View>
       </View>
@@ -1111,6 +1129,10 @@ function PaneTopHeader({
   canEdit?: boolean;
   onEdit?: () => void;
 }) {
+  // Amandemen a11y lock §6.1 (DESIGN §4 mengikat): tinggi tombol 42→44 (touch target ≥44),
+  // radius 8→12 (token rounded-xl DESIGN §5), primary #1877f2→brand-dark #1564b3 (AA 5.99:1).
+  // Surface netral (Kembali/Edit) theme-aware — terang terkunci HANYA di light mode.
+  const isDark = useThemePreference().effective === 'dark';
   return (
     <View className="gap-5 pb-5">
       {/* WSA-07 — button row paling atas: Kembali · [Edit (gated)] · + Turunan (primary). */}
@@ -1119,10 +1141,10 @@ function PaneTopHeader({
           accessibilityRole="button"
           accessibilityLabel="Kembali ke Workspace"
           onPress={onBackToHub}
-          style={{ minHeight: 38, minWidth: 92, borderRadius: 999, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#ffffff', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          style={{ minHeight: 44, minWidth: 92, borderRadius: 999, borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', backgroundColor: isDark ? '#171717' : '#ffffff', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}
           className="active:opacity-70">
-          <Text style={{ color: '#145ebc', fontSize: 16 }}>←</Text>
-          <Text style={{ color: '#145ebc', fontSize: 13, fontWeight: '900' }}>Kembali</Text>
+          <Text style={{ color: isDark ? '#208aef' : '#145ebc', fontSize: 16 }}>←</Text>
+          <Text style={{ color: isDark ? '#208aef' : '#145ebc', fontSize: 13, fontWeight: '900' }}>Kembali</Text>
         </Pressable>
         <View style={{ flex: 1 }} />
         {canEdit && onEdit ? (
@@ -1130,9 +1152,9 @@ function PaneTopHeader({
             accessibilityRole="button"
             accessibilityLabel="Edit Workspace"
             onPress={onEdit}
-            style={{ height: 42, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#ffffff', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+            style={{ height: 44, borderRadius: 12, borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', backgroundColor: isDark ? '#171717' : '#ffffff', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
             className="active:opacity-70">
-            <Text style={{ color: '#0f172a', fontSize: 13, fontWeight: '900' }}>Edit</Text>
+            <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 13, fontWeight: '900' }}>Edit</Text>
           </Pressable>
         ) : null}
         {primaryLabel && onPrimary ? (
@@ -1140,7 +1162,7 @@ function PaneTopHeader({
             accessibilityRole="button"
             accessibilityLabel={primaryLabel}
             onPress={onPrimary}
-            style={{ height: 42, borderRadius: 8, backgroundColor: '#1877f2', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+            style={{ height: 44, borderRadius: 12, backgroundColor: '#1564b3', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
             className="active:opacity-70">
             <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '900' }}>{primaryLabel}</Text>
           </Pressable>

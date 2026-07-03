@@ -10,6 +10,7 @@ import { Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { usePeriodFocus } from '@/providers/period-focus-provider';
+import { useThemePreference } from '@/providers/theme-provider';
 import {
   enumerateMonths,
   enumerateQuarters,
@@ -43,6 +44,7 @@ function optionToFocus(opt: PeriodOption): PeriodFocus {
 export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSpace }) {
   const { focus, setFocus, setMode } = usePeriodFocus();
   const [open, setOpen] = useState(false);
+  const isDark = useThemePreference().effective === 'dark';
   // `now` anchor — di runtime pakai Date saat ini; di test injected agar deterministik.
   const anchor = useMemo(() => now ?? new Date(), [now]);
 
@@ -57,11 +59,15 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
   const label = formatPeriodLabel(focus);
   const breadcrumb = periodBreadcrumb(focus, space);
   // WSA-10 — collapsed pill (spec §6.2/§7.2): bg #eef4fb border #d9e3ef (Performance);
-  // varian Development #eefaf8/#cceee8.
+  // varian Development #eefaf8/#cceee8. Amandemen a11y (DESIGN §4 mengikat):
+  //  - surface/border theme-aware — tint terkunci HANYA light mode; dark ikut gelap
+  //    (preseden workspace-hub-card, cegah "light island" di dark mode).
+  //  - "Ubah" solid + teks putih: Performance #1877f2 (3.6:1) → brand-dark #1564b3 (5.99:1);
+  //    Development #0f766e sudah 4.8:1 (lulus AA), dipertahankan.
   const pillTheme =
     space === 'development'
-      ? { bg: '#eefaf8', border: '#cceee8', changeBg: '#0f766e' }
-      : { bg: '#eef4fb', border: '#d9e3ef', changeBg: '#1877f2' };
+      ? { bg: isDark ? '#171717' : '#eefaf8', border: isDark ? '#404040' : '#cceee8', changeBg: '#0f766e' }
+      : { bg: isDark ? '#171717' : '#eef4fb', border: isDark ? '#404040' : '#d9e3ef', changeBg: '#1564b3' };
 
   return (
     <>
@@ -82,10 +88,10 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
       accessible
       accessibilityLabel={`Periode aktif ${label}`}>
       <View style={{ flex: 1, gap: 0 }}>
-        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.4, color: '#64748b', textTransform: 'uppercase' }}>Periode aktif</Text>
+        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.4, color: isDark ? '#94a3b8' : '#64748b', textTransform: 'uppercase' }}>Periode aktif</Text>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-          <Text style={{ fontSize: 14, fontWeight: '900', color: '#0f172a' }}>{label}</Text>
-          <Text style={{ fontSize: 11, color: '#64748b' }} numberOfLines={1}>{breadcrumb}</Text>
+          <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a' }}>{label}</Text>
+          <Text style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }} numberOfLines={1}>{breadcrumb}</Text>
         </View>
       </View>
       <Pressable

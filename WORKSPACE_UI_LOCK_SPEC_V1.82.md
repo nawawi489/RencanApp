@@ -98,7 +98,7 @@ Token visual wajib:
 4. `--text`: `#172033`.
 5. `--muted`: `#667085`.
 6. `--line`: `#dde3eb`.
-7. `--blue`: `#1877f2`.
+7. `--blue`: `#1877f2`. **Amandemen a11y (DESIGN §4 mengikat):** `#1877f2` hanya untuk **aksen non-teks** (border kiri kategori, progress line, tint). Untuk **fill solid + teks putih** pakai `brand-dark #1564b3` (5.99:1); `#1877f2` gagal AA (3.6:1). Lihat §11 + §21.
 8. `--blue-soft`: `#e8f2ff`.
 9. `--green`: `#14845c`.
 10. `--green-soft`: `#e7f7ef`.
@@ -298,7 +298,7 @@ Button row berada paling atas konten screen.
 Back button:
 
 1. Bentuk pill.
-2. Height 38 px.
+2. Height 44 px (amandemen touch target §4 rule 1; sebelumnya 38). Surface theme-aware (§21).
 3. Min width 92 px.
 4. Icon panah kiri 18 px.
 5. Text `Kembali`.
@@ -308,16 +308,16 @@ Back button:
 
 `+ Goal`:
 
-1. Primary button biru.
-2. Height 42 px.
-3. Radius 8 px.
-4. Text `+ Goal`.
+1. Primary button, fill `brand-dark #1564b3` (bukan `#1877f2` — amandemen a11y AA, §21).
+2. Height 44 px (amandemen touch target §4 rule 1; sebelumnya 42).
+3. Radius 12 px (token `rounded-xl`; sebelumnya 8).
+4. Text `+ Goal` putih.
 
 `Edit`:
 
-1. Secondary button putih.
-2. Height 42 px.
-3. Radius 8 px.
+1. Secondary button, surface theme-aware (light: putih; dark: netral-900 — §21).
+2. Height 44 px (amandemen; sebelumnya 42).
+3. Radius 12 px (amandemen; sebelumnya 8).
 
 Spacing:
 
@@ -801,9 +801,9 @@ Action row class: `structure-actions`.
 
 Button `Detail`:
 
-1. Height 30 px.
+1. Height 30 px (touch target dijamin `hitSlop` ≥44px, DESIGN §4).
 2. Radius 999 px.
-3. Background blue `#1877f2`.
+3. Background `brand-dark #1564b3` (amandemen a11y AA 5.99:1 — bukan `#1877f2` 3.6:1, §21).
 4. Text putih.
 5. Font 12 px, weight 900.
 
@@ -812,8 +812,8 @@ Button `...`:
 1. Width 34 px.
 2. Height 30 px.
 3. Radius 999 px.
-4. Background `#f8fafc`.
-5. Border line.
+4. Background `#f8fafc` (light) / netral-900 dark — theme-aware (§21).
+5. Border line (light `#e2e8f0` / dark netral-700).
 6. Text hanya `⋯`.
 7. Tidak boleh ada label `More`, `Lainnya`, atau icon lain yang membuat lebar berubah.
 
@@ -1112,3 +1112,18 @@ User tidak boleh bingung antara membuka isi card dan membuka turunan card.
 User tidak boleh merasa diserbu terlalu banyak card saat pertama masuk.
 
 Card tree harus membuat target tahunan, target bulan berjalan, Strategy, Initiative, dan Action Plan terasa bisa dieksekusi, bukan seperti dokumen organisasi yang berat.
+
+---
+
+## 21. Amandemen A11y & Dark Mode (owner 2026-07-03)
+
+Konteks: §19.6 menyatakan lock menang atas **PRD umum** untuk area Workspace. Lock **tidak** menyatakan menang atas `DESIGN.md §4` (aksesibilitas **mengikat**). Audit light/dark menemukan lock mengunci nilai yang gagal WCAG AA. Keputusan owner: **Opsi A** — a11y mengikat menang, lock **diperbarui** agar konsisten (bukan dilanggar, bukan dikecualikan). Doktrin ini memperluas preseden `workspace-hub-card.tsx` ke **semua** kontrol Workspace terkunci.
+
+**Aturan mengikat (menang atas nilai light-only di §3/§6/§9/§11):**
+
+1. **Fill solid + teks putih → `brand-dark #1564b3`** (5.99:1), berlaku sama di light & dark. Terkena: `Detail` (§11), `+ Goal`/`+ Development Area` primary header (§6.1), `Ubah` period switcher Performance (§6.2). `#1877f2` (3.6:1) **hanya** boleh untuk aksen non-teks (border kiri kategori §8, progress line, tint). `Ubah` Development `#0f766e` (4.8:1) sudah lulus, dipertahankan.
+2. **Surface & border netral terkunci = theme-aware.** Nilai terang terkunci (`#ffffff`, `#f8fafc`, `#eef4fb`, dst.) berlaku **hanya light mode**; di **dark mode** ikut gelap (`useThemePreference().effective` → netral-900 `#171717` / border netral-700 `#404040`). Terkena: `⋯`, `+ Turunan`, `Kembali`, `Edit`, panel periode collapsed. Cegah "light island" + jaga teks anak kontras AA.
+3. **Tint kategori / aksen hue tetap** di kedua mode (letter-badge pill §9, kicker/border hub-card, `+ Turunan` blue-soft). Teks gelap di atas tint tetap terbaca — by design, bukan pelanggaran.
+4. **Touch target header row = 44px, radius = 12px** (token `rounded-xl`). Sebelumnya 42/38px & radius 8 — gagal §4 rule 1 + §5.
+
+Implementasi: [`workspace-screen.tsx`](mobile/src/screens/workspace-screen.tsx) (`CardActionRow`, `ActionPlanSubRow`, `PaneTopHeader`), [`period-switcher.tsx`](mobile/src/components/period-switcher.tsx), [`workspace-hub-card.tsx`](mobile/src/components/workspace-hub-card.tsx). Sinkron dgn `DESIGN.md §2` (Rekonsiliasi a11y Workspace).
