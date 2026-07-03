@@ -192,15 +192,16 @@ const renderHub = async () => {
 };
 
 describe('WorkspaceScreen', () => {
-  it('[1] dua section render; goal & flat-initiative tampil terpisah', async () => {
+  it('[1] hierarki Goal render; WSA-16: section "Initiative Tanpa Goal" TIDAK ada di pane', async () => {
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
     mockUseFlatInitiatives.mockReturnValue(flatResult({ initiatives: [FLAT] }));
     await renderScreen();
 
     expect(await screen.findByText('Hierarki Strategis')).toBeTruthy();
-    expect(screen.getByText('Initiative Tanpa Goal')).toBeTruthy();
     expect(screen.getByText('Tumbuhkan Revenue')).toBeTruthy();
-    expect(screen.getByText('Initiative Lepas')).toBeTruthy();
+    // WSA-16 — Initiative yatim pindah ke Search/Menu; section + card tak dirender di pane.
+    expect(screen.queryByText('Initiative Tanpa Goal')).toBeNull();
+    expect(screen.queryByText('Initiative Lepas')).toBeNull();
   });
 
   it('[2a] can(create_goal) true → tombol tampil & push goal-wizard', async () => {

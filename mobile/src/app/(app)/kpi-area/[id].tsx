@@ -24,11 +24,8 @@ import { REVIEW_STATUS, formatDateTime } from '@/components/submission-card';
 import { UserPicker } from '@/components/user-picker';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { KpiAreaBreakdownPanel } from '@/components/kpi-area-breakdown-panel';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
-import { useProfile } from '@/hooks/use-profile';
 import { alertFriendlyError } from '@/lib/errors';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
@@ -195,8 +192,6 @@ export function LiveKpiAreaDetailScreen() {
   // Fase 5 — Kelengkapan Perencanaan (MBR). Fail-open di klien: bila data belum tersedia,
   // tombol aktivasi tetap berjalan; server (RPC activate_kpi_area) penegak akhir.
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('kpi_area', id);
-  const { can } = useProfile();
-  const canAddStrategy = can('create_strategy'); // WSA-08/WSA-13 — gate CTA + key presisi
 
   useFocusEffect(
     useCallback(() => {
@@ -222,20 +217,7 @@ export function LiveKpiAreaDetailScreen() {
   const kpiArea = kpiAreaQ.data;
   // PIC tersimpan (mis. warisan Goal Wizard) untuk prefill picker editor.
   const { person: currentPic } = usePerson(kpiArea?.pic_id);
-  const { focus } = usePeriodFocus();
-  const kpiPast = kpiArea ? cardPeriodStatus(kpiArea, focus) === 'past' : false;
-  const handleAddStrategy = () => {
-    if (kpiPast) {
-      showPastPeriodAlert(kpiArea?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: kpiArea?.name ?? 'KPI Area',
-      childLabel: 'Strategy',
-      onProceed: () => router.push(`/strategy/new?kpiAreaId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah Strategy" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (kpiArea && guardActivationFields('kpi_area', kpiArea)) return;
@@ -374,18 +356,9 @@ export function LiveKpiAreaDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-lg font-bold text-black dark:text-white">Strategy</Text>
-                  <CardHelpTrigger topic="strategy" />
-                </View>
-                {canAddStrategy ? (
-                  <Button
-                    label="+ Tambah Strategy"
-                    variant="secondary"
-                    onPress={handleAddStrategy}
-                  />
-                ) : null}
+              <View className="flex-row items-center gap-2">
+                <Text className="text-lg font-bold text-black dark:text-white">Strategy</Text>
+                <CardHelpTrigger topic="strategy" />
               </View>
 
               {strategiesLoading ? (

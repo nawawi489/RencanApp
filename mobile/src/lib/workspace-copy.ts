@@ -21,6 +21,8 @@ export const WS_COPY = {
   // WSA-12 — toast periode-lewat terkunci spec §12.4 (satu kalimat, dipecah title/message untuk Alert).
   archivePeriodTitle: 'Periode ini sudah menjadi Archive',
   archivePeriodMsg: 'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
+  // WSA-20 — toast edukasi tap badan card (spec §12.1.4).
+  bodyTapHint: 'Untuk membuka isi Card, gunakan tombol Detail di dalam Card.',
 } as const;
 
 /** Label dual-tab Workspace — Performance vs Development. Test wajib pakai konstanta. */

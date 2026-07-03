@@ -172,20 +172,14 @@ describe('KpiAreaDetailScreen — indikator Kelengkapan & gating MBR', () => {
     expect(popupCalls).toHaveLength(0);
   });
 
-  // WSA-08 — CTA "+ Tambah Strategy" digate can('create_strategy').
-  it('[WSA-08] can(create_strategy) false → "+ Tambah Strategy" tidak dirender', async () => {
-    mockCan.mockImplementation((key: string) => key !== 'create_strategy');
+  // WSA-08 tahap 2 (§14.4) — CTA "+ Tambah Strategy" DIHAPUS dari detail page; tambah turunan
+  // hanya dari tree Workspace. Tidak pernah dirender meski punya izin.
+  it('[WSA-08] CTA "+ Tambah Strategy" tidak dirender di detail page (izin apa pun)', async () => {
+    mockCan.mockReturnValue(true);
     mockUseMbrCompliance.mockReturnValue({ compliance: undefined, isLoading: false, isCompliant: true });
     await render(<KpiAreaDetailScreen />, { wrapper: wrapper() });
     await screen.findByText('Strategy');
     expect(screen.queryByText('+ Tambah Strategy')).toBeNull();
-  });
-
-  it('[WSA-08b] can(create_strategy) true → "+ Tambah Strategy" tampil', async () => {
-    mockCan.mockReturnValue(true);
-    mockUseMbrCompliance.mockReturnValue({ compliance: undefined, isLoading: false, isCompliant: true });
-    await render(<KpiAreaDetailScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('+ Tambah Strategy')).toBeTruthy();
   });
 
   it('[5] compliance undefined (loading) → fail-open: Aktifkan tetap memanggil activateKpiArea (server otoritatif)', async () => {

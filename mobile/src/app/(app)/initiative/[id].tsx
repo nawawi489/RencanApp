@@ -7,7 +7,6 @@ import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-com
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
-import { useProfile } from '@/hooks/use-profile';
 import { alertFriendlyError } from '@/lib/errors';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import {
@@ -21,10 +20,8 @@ import {
   type ActionPlanWithPeople,
 } from '@/lib/cards';
 import { personLabel } from '@/components/user-picker';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { listTeams } from '@/lib/org-structure';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
+import { guardActivationFields } from '@/lib/activation-check';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeInitiativeDetailScreen from '@/prototype/screens/initiative-detail';
 
@@ -225,7 +222,6 @@ export function LiveInitiativeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
-  const { can } = useProfile();
 
   const initiativeQ = useQuery({ queryKey: ['initiative', id], queryFn: () => getInitiative(id) });
   const plansQ = useQuery({ queryKey: ['action-plans', id], queryFn: () => listActionPlans(id) });
@@ -256,20 +252,7 @@ export function LiveInitiativeDetailScreen() {
     () => collectRoster(plansQ.data ?? [], initiative?.pic_id ?? null),
     [plansQ.data, initiative?.pic_id],
   );
-  const { focus } = usePeriodFocus();
-  const initPast = initiative ? cardPeriodStatus(initiative, focus) === 'past' : false;
-  const handleAddActionPlan = () => {
-    if (initPast) {
-      showPastPeriodAlert(initiative?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: initiative?.name ?? 'Initiative',
-      childLabel: 'Action Plan',
-      onProceed: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah" dihapus; tambah Action Plan hanya dari tree Workspace.
 
   function handleActivate() {
     if (initiative && guardActivationFields('initiative', initiative)) return;
@@ -365,16 +348,7 @@ export function LiveInitiativeDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
-                {can('create_action_plan') ? (
-                  <Button
-                    label="+ Tambah"
-                    variant="secondary"
-                    onPress={handleAddActionPlan}
-                  />
-                ) : null}
-              </View>
+              <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
 
               {plansQ.isLoading ? (
                 <SkeletonList count={2} />

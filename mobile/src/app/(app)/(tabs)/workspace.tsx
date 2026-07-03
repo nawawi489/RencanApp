@@ -23,7 +23,6 @@ import {
 import { PeriodSwitcher } from '@/components/period-switcher';
 import {
   useDevelopmentAreas,
-  useFlatInitiatives,
   useGoals,
   useInitiativeActionPlans,
   useKpiAreas,
@@ -74,6 +73,10 @@ function StatusBadge({ status }: { status: string }) {
 function PastPeriodBadge() {
   return <Badge label="Periode lewat" tone="neutral" />;
 }
+
+// WSA-20 (spec §12.1.4, OPSIONAL) — tap badan card = no-op senyap (AC 20 sudah terpenuhi).
+// Toast edukasi sengaja TIDAK dipasang: modal Alert per tap = UX buruk, dan Pressable pembungkus
+// judul memicu update pressed-state yang merapuhkan scheduler act di test. Ditunda by design.
 
 /**
  * UI-S-W08 — dim "periode lewat" single-layer: hanya node past TERATAS yang di-dim.
@@ -844,48 +847,6 @@ function DevelopmentAreaRow({ devArea }: { devArea: DevelopmentAreaWithProblemCo
   );
 }
 
-function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
-  const { focus } = usePeriodFocus();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const past = cardPeriodStatus(item, focus) === 'past';
-  const rowActions = useTreeRowActions('initiative', item.id, item.name);
-  return (
-    <PastDim past={past}>
-      <SectionCard>
-        <View className="flex-row items-start justify-between gap-3">
-          <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
-          <View className="flex-row items-center gap-1.5">
-            {past ? <PastPeriodBadge /> : null}
-            <StatusBadge status={item.status} />
-          </View>
-        </View>
-        <View className="flex-row items-center justify-end gap-2">
-          <Pressable
-            className="min-h-[44px] items-center justify-center rounded-xl border border-neutral-300 px-3 active:opacity-70 dark:border-neutral-700"
-            accessibilityRole="button"
-            accessibilityLabel={`Buka detail ${item.name}`}
-            onPress={onPress}>
-            <Text className="text-sm font-semibold text-black dark:text-white">Detail</Text>
-          </Pressable>
-          <Pressable
-            className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
-            accessibilityRole="button"
-            accessibilityLabel={`Aksi lain ${item.name}`}
-            onPress={() => setMenuOpen(true)}>
-            <Text className="text-base font-bold text-black dark:text-white">⋯</Text>
-          </Pressable>
-        </View>
-      </SectionCard>
-      <RowActionsMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        title={item.name}
-        items={rowActions}
-      />
-    </PastDim>
-  );
-}
-
 function PaneTopHeader({
   tab,
   onTabChange,
@@ -1048,13 +1009,11 @@ function PerformancePane({
   const router = useRouter();
   const { can } = useProfile();
   const goalsQ = useGoals();
-  const flatQ = useFlatInitiatives();
   const canCreate = can('create_goal');
 
   useFocusEffect(
     useCallback(() => {
       goalsQ.refetch();
-      flatQ.refetch();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -1076,30 +1035,8 @@ function PerformancePane({
     </View>
   );
 
-  const footer = (
-    <View className="gap-3 pt-5">
-      <Text accessibilityRole="header" className="text-xl font-bold text-black dark:text-white">{WS_COPY.sectionTanpaGoal}</Text>
-      {flatQ.isLoading ? (
-        <SkeletonList count={2} />
-      ) : flatQ.isError ? (
-        <ErrorState onRetry={() => flatQ.refetch()} />
-      ) : flatQ.initiatives.length > 0 ? (
-        <View className="gap-3">
-          {flatQ.initiatives.map((item) => (
-            <InitiativeRow
-              key={item.id}
-              item={item}
-              onPress={() => router.push(`/initiative/${item.id}` as Href)}
-            />
-          ))}
-        </View>
-      ) : (
-        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-          {WS_COPY.emptyFlatInitiative}
-        </Text>
-      )}
-    </View>
-  );
+  // WSA-16 — section "Initiative Tanpa Goal" dihapus dari pane (di luar spec §6). Initiative
+  // yatim tetap dapat diakses lewat Search (route /search) & Menu; pane fokus ke hierarki Goal.
 
   const goalsData = goalsQ.isLoading || goalsQ.isError ? [] : goalsQ.goals;
   const showEmpty = !goalsQ.isLoading && !goalsQ.isError && goalsQ.goals.length === 0;
@@ -1126,7 +1063,6 @@ function PerformancePane({
             />
           ) : null
         }
-        ListFooterComponent={footer}
         renderItem={renderItem}
       />
     </View>

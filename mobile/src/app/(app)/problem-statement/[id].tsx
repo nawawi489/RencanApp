@@ -23,10 +23,7 @@ import {
   activateProblemStatement,
   getProblemStatement,
 } from '@/lib/problem-statements';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
-import { useProfile } from '@/hooks/use-profile';
+import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeProblemStatementDetailScreen from '@/prototype/screens/problem-statement-detail';
@@ -70,8 +67,6 @@ export function LiveProblemStatementDetailScreen() {
     refetch: refetchInitiatives,
   } = useProblemStatementInitiatives(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('problem_statement', id);
-  const { can } = useProfile();
-  const canAddInitiative = can('create_initiative'); // WSA-08 — gate CTA tambah turunan
 
   useFocusEffect(
     useCallback(() => {
@@ -93,20 +88,7 @@ export function LiveProblemStatementDetailScreen() {
   });
 
   const ps = psQ.data;
-  const { focus } = usePeriodFocus();
-  const psPast = ps ? cardPeriodStatus(ps, focus) === 'past' : false;
-  const handleAddInitiative = () => {
-    if (psPast) {
-      showPastPeriodAlert(ps?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: ps?.name ?? 'Problem Statement',
-      childLabel: 'Initiative',
-      onProceed: () => router.push(`/initiative/new?problemStatementId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah Initiative" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (ps && guardActivationFields('problem_statement', ps)) return;
@@ -175,16 +157,7 @@ export function LiveProblemStatementDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
-                {canAddInitiative ? (
-                  <Button
-                    label="+ Tambah Initiative"
-                    variant="secondary"
-                    onPress={handleAddInitiative}
-                  />
-                ) : null}
-              </View>
+              <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
 
               {initiativesLoading ? (
                 <SkeletonList count={2} />

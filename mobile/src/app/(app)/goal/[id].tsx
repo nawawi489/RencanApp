@@ -10,11 +10,7 @@ import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import type { KpiArea } from '@/lib/kpi-areas';
 import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
-import { useMbrCompliance } from '@/hooks/use-mbr';
-import { useProfile } from '@/hooks/use-profile';
+import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeGoalDetailScreen from '@/prototype/screens/goal-detail';
@@ -39,23 +35,7 @@ export function LiveGoalDetailScreen() {
   const goalQ = useGoal(id);
   const kpiQ = useKpiAreas(id);
   const { activate, restore, activatePending, restorePending } = useGoalActions();
-  const { focus } = usePeriodFocus();
-  const { compliance } = useMbrCompliance('goal', id);
-  const { can } = useProfile();
-  const canAddKpi = can('create_kpi_area'); // WSA-08 — gate CTA tambah turunan di detail page
-  const goalPast = goalQ.goal ? cardPeriodStatus(goalQ.goal, focus) === 'past' : false;
-  const handleAddKpiArea = () => {
-    if (goalPast) {
-      showPastPeriodAlert(goalQ.goal?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: goalQ.goal?.name ?? 'Goal',
-      childLabel: 'KPI Area',
-      onProceed: () => router.push(`/kpi-area/new?goalId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah" dihapus dari detail page; tambah turunan HANYA dari tree Workspace.
 
   useFocusEffect(
     useCallback(() => {
@@ -168,18 +148,9 @@ export function LiveGoalDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
-                  <CardHelpTrigger topic="kpi_area" />
-                </View>
-                {canAddKpi ? (
-                  <Button
-                    label="+ Tambah KPI Area"
-                    variant="secondary"
-                    onPress={handleAddKpiArea}
-                  />
-                ) : null}
+              <View className="flex-row items-center gap-2">
+                <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
+                <CardHelpTrigger topic="kpi_area" />
               </View>
 
               {kpiQ.isLoading ? (

@@ -11,10 +11,7 @@ import { useStrategyInitiatives } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL, type Initiative } from '@/lib/cards';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } from '@/lib/strategies';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
-import { useProfile } from '@/hooks/use-profile';
+import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeStrategyDetailScreen from '@/prototype/screens/strategy-detail';
@@ -52,8 +49,6 @@ export function LiveStrategyDetailScreen() {
     refetch: refetchInitiatives,
   } = useStrategyInitiatives(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('strategy', id);
-  const { can } = useProfile();
-  const canAddInitiative = can('create_initiative'); // WSA-08 — gate CTA tambah turunan
 
   useFocusEffect(
     useCallback(() => {
@@ -74,20 +69,7 @@ export function LiveStrategyDetailScreen() {
   });
 
   const strategy = strategyQ.data;
-  const { focus } = usePeriodFocus();
-  const strategyPast = strategy ? cardPeriodStatus(strategy, focus) === 'past' : false;
-  const handleAddInitiative = () => {
-    if (strategyPast) {
-      showPastPeriodAlert(strategy?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: strategy?.name ?? 'Strategy',
-      childLabel: 'Initiative',
-      onProceed: () => router.push(`/initiative/new?strategyId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah Initiative" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (strategy && guardActivationFields('strategy', strategy)) return;
@@ -159,16 +141,7 @@ export function LiveStrategyDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
-                {canAddInitiative ? (
-                  <Button
-                    label="+ Tambah Initiative"
-                    variant="secondary"
-                    onPress={handleAddInitiative}
-                  />
-                ) : null}
-              </View>
+              <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
 
               {initiativesLoading ? (
                 <SkeletonList count={2} />

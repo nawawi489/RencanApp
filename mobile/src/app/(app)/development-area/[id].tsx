@@ -25,10 +25,7 @@ import {
 import { listInitiativesByProblemStatementIds } from '@/lib/cards';
 import type { ProblemStatement } from '@/lib/problem-statements';
 import { ratioDoneOfChildren } from '@/lib/progress';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
-import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { confirmAddDescendantIfIncomplete, guardActivationFields } from '@/lib/activation-check';
-import { useProfile } from '@/hooks/use-profile';
+import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
 import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
 import PrototypeDevelopmentAreaDetailScreen from '@/prototype/screens/development-area-detail';
@@ -116,8 +113,6 @@ export function LiveDevelopmentAreaDetailScreen() {
     refetch: refetchPs,
   } = useProblemStatements(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('development_area', id);
-  const { can } = useProfile();
-  const canAddProblem = can('create_problem_statement'); // WSA-08/WSA-13 — gate CTA + key presisi
 
   const psIds = useMemo(() => problemStatements.map((p) => p.id), [problemStatements]);
   const initiativesQ = useQuery({
@@ -146,21 +141,7 @@ export function LiveDevelopmentAreaDetailScreen() {
   });
 
   const devArea = devAreaQ.data;
-  const { focus } = usePeriodFocus();
-  const devPast = devArea ? cardPeriodStatus(devArea, focus) === 'past' : false;
-  const handleAddProblem = () => {
-    if (devPast) {
-      showPastPeriodAlert(devArea?.name);
-      return;
-    }
-    confirmAddDescendantIfIncomplete({
-      compliance,
-      parentLabel: devArea?.name ?? 'Development Area',
-      childLabel: 'Problem Statement',
-      onProceed: () =>
-        router.push(`/problem-statement/new?developmentAreaId=${id}` as Href),
-    });
-  };
+  // WSA-08 §14.4 — CTA "+ Tambah Problem Statement" dihapus; tambah turunan hanya dari tree.
 
   function handleActivate() {
     if (devArea && guardActivationFields('development_area', devArea)) return;
@@ -221,16 +202,7 @@ export function LiveDevelopmentAreaDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-black dark:text-white">Problem Statement</Text>
-                {canAddProblem ? (
-                  <Button
-                    label="+ Tambah Problem Statement"
-                    variant="secondary"
-                    onPress={handleAddProblem}
-                  />
-                ) : null}
-              </View>
+              <Text className="text-lg font-bold text-black dark:text-white">Problem Statement</Text>
 
               {psLoading ? (
                 <SkeletonList count={2} />
