@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [workspace, ui, sprint-plan, lock-spec, v1.82]
-updated: 2026-07-02
+updated: 2026-07-03
 sources: 1
 ---
 
@@ -82,11 +82,11 @@ Estimasi: 3–5 hari. Paling berisiko; kerjakan terakhir setelah lapisan visual/
 
 - [ ] **Tree 4–5 level** (WSA-01): render Initiative di bawah Strategy dan Action Plan di bawah Initiative (Performance), serta Action Plan di bawah Initiative (Development), memakai komponen Sprint 3 dengan lazy fetch per expand. Merevisi ADR Stage 1 — catat pembalikan keputusannya.
 - [ ] **Hapus CTA `+ Tambah <turunan>` di detail page** (WSA-08 final, §14.4) setelah tree lengkap menjadi satu-satunya jalur tambah turunan.
-- [ ] **Route restructure** (WSA-02): pindahkan detail/form Workspace agar bottom nav tetap terlihat dengan tab `Workspace` aktif (mis. nested stack di dalam `(tabs)/workspace/`). Uji regresi navigasi dari Home/Notif/Inbox yang menautkan ke detail yang sama.
-- [ ] **Route pane terpisah** (WSA-19): `Masuk` menavigasi ke route `performance-workspace`/`development-workspace` (deep-linkable, back gesture kembali ke hub) — sekalian dikerjakan saat restrukturisasi route.
+- [~] **Route restructure** (WSA-02): PARSIAL via slice aman — tab bar kini terlihat di **pane** Workspace (nested stack `(tabs)/workspace/`). Tab bar di **halaman detail leaf** (`/goal/[id]` dkk) DITOLAK by owner decision: nge-nest route detail memutus deep-link Home/Notif/Inbox/People/Search (§19.2); pola tab-hidden-on-detail diterima valid. Resolved-by-decision (2026-07-03).
+- [x] **Route pane terpisah** (WSA-19): DONE — `Masuk` → route deep-linkable `/workspace/performance`·`/workspace/development` (nested stack, `initialRouteName='index'` anchor, back gesture ke hub). Screen dipindah ke `src/screens/workspace-screen.tsx`. Verifikasi live 390px. TIDAK memutus deep-link detail.
 - [ ] **Action sheet fungsional** (WSA-14): wire `Arsipkan` ke `useArchiveActions`, `Ubah` ke form edit; tambah permission/history untuk admin; gate per [[permission-model]]; hapus placeholder Alert.
 - [ ] **Keputusan owner — "Initiative Tanpa Goal"** (WSA-16): section ini di luar spec §6. Opsi: (a) hapus dari pane, pindah aksesnya ke search/Menu; (b) pertahankan dengan persetujuan owner sebagai deviasi tercatat. Jangan hapus sepihak — ada kebutuhan data nyata (initiative yatim).
-- [ ] **Toast edukasi body-tap** (WSA-20, opsional): tap badan card → toast `Untuk membuka isi Card, gunakan tombol Detail di dalam Card.` Menutup AC 20 secara harfiah.
+- [x] **Toast edukasi body-tap** (WSA-20): DONE — tap badan card → toast `Untuk membuka isi Card, gunakan tombol Detail di dalam Card.` via `WorkspaceToastHost` + `TreeCardBody` (Pressable overlay absolut, bukan pembungkus, agar test-safe). Menutup AC 20 secara harfiah.
 - [ ] Verifikasi akhir: jalankan seluruh AC §18 (35 item) di viewport 390px, screenshot, dan update [[workspace-lock-audit]] dengan skor baru.
 
 Target AC: 1, 18, 20, 21, 29 (penuh), dan penuntasan 3–4.

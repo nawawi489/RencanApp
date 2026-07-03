@@ -61,14 +61,25 @@ jest.mock('@/hooks/use-governance-admin', () => ({
 }));
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+const mockBack = jest.fn();
+const mockCanGoBack = jest.fn(() => true);
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush, replace: jest.fn() }),
+  useRouter: () => ({
+    push: mockPush,
+    replace: mockReplace,
+    back: mockBack,
+    canGoBack: mockCanGoBack,
+    navigate: jest.fn(),
+  }),
   useFocusEffect: () => {},
   useLocalSearchParams: () => ({}),
 }));
 
+// WSA-19 — Workspace kini nested stack: hub (index) + pane deep-linkable. Test merender screen
+// per-route langsung dari shared module (bukan lewat state lokal hub→pane).
 // eslint-disable-next-line import/first
-import WorkspaceScreen from '../workspace';
+import { HubScreen, PerformanceScreen, DevelopmentScreen } from '@/screens/workspace-screen';
 
 // Anchor periode untuk seluruh test workspace: Juni 2026 (Q2). Deterministik agar
 // klausa "Periode lewat" pada Goal/KPI dapat dites tanpa bergantung jam mesin.
@@ -140,6 +151,10 @@ beforeEach(async () => {
   mockUseKpiAreas.mockReset();
   mockCan.mockReset();
   mockPush.mockReset();
+  mockReplace.mockReset();
+  mockBack.mockReset();
+  mockCanGoBack.mockReset();
+  mockCanGoBack.mockReturnValue(true);
   mockCan.mockReturnValue(false);
   mockUseGoals.mockReturnValue(goalsResult());
   mockUseFlatInitiatives.mockReturnValue(flatResult());
@@ -171,27 +186,22 @@ afterEach(() => {
 });
 
 /**
- * UI-N-002 Stage 2 — default state Workspace adalah `hub` (lobby 2 hub-card). Untuk tes existing
- * yang mengharap pane Performance langsung tampak, helper ini tap "Masuk Performance" segera setelah
- * render. Tes Stage 2 (hub-specific) pakai `renderHub` untuk skip auto-enter.
+ * WSA-19 — pane deep-linkable: render screen route langsung. `'performance'`→PerformanceScreen,
+ * `'development'`→DevelopmentScreen. Tes hub-specific pakai `renderHub`.
  */
-const renderScreen = async (autoEnter: 'performance' | 'development' | null = 'performance') => {
+const renderScreen = async (which: 'performance' | 'development' = 'performance') => {
+  const Screen = which === 'development' ? DevelopmentScreen : PerformanceScreen;
   let result: ReturnType<typeof render> | undefined;
   await act(async () => {
-    result = render(<WorkspaceScreen />, { wrapper: wrapper() });
+    result = render(<Screen />, { wrapper: wrapper() });
   });
-  if (autoEnter === 'performance') {
-    fireEvent.press(await screen.findByLabelText(/Masuk Performance/));
-  } else if (autoEnter === 'development') {
-    fireEvent.press(await screen.findByLabelText(/Masuk Development/));
-  }
   return result!;
 };
 
 const renderHub = async () => {
   let result: ReturnType<typeof render> | undefined;
   await act(async () => {
-    result = render(<WorkspaceScreen />, { wrapper: wrapper() });
+    result = render(<HubScreen />, { wrapper: wrapper() });
   });
   return result!;
 };
@@ -253,9 +263,8 @@ describe('WorkspaceScreen', () => {
 
   it('[5a] loading useGoals → SkeletonList (hub view juga loading)', async () => {
     mockUseGoals.mockReturnValue(goalsResult({ isLoading: true }));
-    // Saat goals loading, HubView tampilkan SkeletonList tanpa render hub-card —
-    // tidak ada tombol "Masuk Performance" untuk di-tap, jadi tahan di hub.
-    await renderScreen(null);
+    // Saat goals loading, HubView tampilkan SkeletonList tanpa render hub-card.
+    await renderHub();
     expect(screen.getAllByLabelText('Memuat…').length).toBeGreaterThan(0);
   });
 
@@ -330,7 +339,7 @@ describe('WorkspaceScreen', () => {
       }),
     );
     await renderScreen();
-    // Tap judul text (Pressable lama) — tidak ada handler nav.
+    // Tap teks judul (di bawah overlay body) — tanpa handler nav di layer teks.
     fireEvent.press(await screen.findByText('Goal Now'));
     expect(mockPush).not.toHaveBeenCalledWith('/goal/g-now');
     // Tap Detail button → push.
@@ -461,6 +470,31 @@ describe('WorkspaceScreen', () => {
     await buttons[1].onPress?.();
     expect(mockArchive).toHaveBeenCalledWith({ entityType: 'goal', entityId: 'g-arc' });
     alertSpy.mockRestore();
+  });
+
+  // WSA-20 (spec §12.1.4) — tap badan card → toast edukasi non-blocking; TIDAK menavigasi.
+  it('[WSA-20] tap badan card → toast "gunakan tombol Detail", TIDAK push detail', async () => {
+    mockCan.mockReturnValue(true);
+    mockUseGoals.mockReturnValue(
+      goalsResult({
+        goals: [
+          {
+            id: 'g-body',
+            name: 'Goal Body',
+            status: 'active',
+            period_start: '2026-01-01',
+            period_end: '2026-12-31',
+          },
+        ],
+      }),
+    );
+    await renderScreen();
+    fireEvent.press(await screen.findByLabelText('Isi card Goal Body'));
+    expect(
+      await screen.findByText('Untuk membuka isi Card, gunakan tombol Detail di dalam Card.'),
+    ).toBeTruthy();
+    // Tap badan = edukasi saja; navigasi hanya lewat tombol Detail.
+    expect(mockPush).not.toHaveBeenCalledWith('/goal/g-body');
   });
 
   it('[S3-4] tombol "⋯" → RowActionsMenu terbuka (judul card di header sheet)', async () => {
@@ -815,30 +849,45 @@ describe('WorkspaceScreen', () => {
       expect(screen.getByText('Problem Statement')).toBeTruthy();
     });
 
-    it('[UI-N-002·2] tap hub Performance → pindah ke pane Performance + tombol back muncul', async () => {
+    // WSA-19 — "Masuk" MENAVIGASI ke route pane deep-linkable (bukan state lokal).
+    it('[UI-N-002·2] tap hub Performance → push /workspace/performance', async () => {
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
       await renderHub();
       fireEvent.press(await screen.findByLabelText(/Masuk Performance/));
-      expect(await screen.findByText('Hierarki Strategis')).toBeTruthy();
-      expect(screen.getByLabelText('Kembali ke Workspace')).toBeTruthy();
+      expect(mockPush).toHaveBeenCalledWith('/workspace/performance');
     });
 
-    it('[UI-N-002·3] tap hub Development → pindah ke pane Development', async () => {
+    it('[UI-N-002·3] tap hub Development → push /workspace/development', async () => {
       mockUseDevelopmentAreas.mockReturnValue(
         devResult({ developmentAreas: [{ id: 'd1', name: 'Dev A', status: 'active' }] }),
       );
       await renderHub();
       fireEvent.press(await screen.findByLabelText(/Masuk Development/));
-      // "Development Area" kini muncul ganda (section title + pill kategori) — pakai nama
-      // card unik untuk konfirmasi kita di pane Development.
-      expect(await screen.findByText('Dev A')).toBeTruthy();
+      expect(mockPush).toHaveBeenCalledWith('/workspace/development');
     });
 
-    it('[UI-N-002·4] tombol "← Workspace" balik ke hub', async () => {
+    it('[UI-N-002·4] tombol "Kembali" di pane → back ke hub', async () => {
       await renderScreen('performance');
+      // Pane Performance tampil (bukan hub); tekan Kembali → router.back (ada history).
       expect(screen.queryByText('Target Kinerja')).toBeNull();
       fireEvent.press(screen.getByLabelText('Kembali ke Workspace'));
-      expect(await screen.findByText('Target Kinerja')).toBeTruthy();
+      expect(mockBack).toHaveBeenCalled();
+    });
+
+    // WSA-19 — deep-link langsung ke pane (tanpa history) → Kembali fallback replace ke hub.
+    it('[WSA-19·1] Kembali saat tanpa history → replace /workspace', async () => {
+      mockCanGoBack.mockReturnValue(false);
+      await renderScreen('performance');
+      fireEvent.press(screen.getByLabelText('Kembali ke Workspace'));
+      expect(mockReplace).toHaveBeenCalledWith('/workspace');
+      expect(mockBack).not.toHaveBeenCalled();
+    });
+
+    // WSA-19 — TabBar antar-pane menavigasi (replace) antar route, bukan swap state.
+    it('[WSA-19·2] TabBar "Development" di pane Performance → replace /workspace/development', async () => {
+      await renderScreen('performance');
+      fireEvent.press(await screen.findByText('Development'));
+      expect(mockReplace).toHaveBeenCalledWith('/workspace/development');
     });
 
     it('[UI-N-002·5] hub-card stats — Performance: 2 Goal, 5 KPI, 1 aktif', async () => {

@@ -5,12 +5,20 @@
 //   ke level-3 (Strategy / Initiative) untuk turunkan tap-count Goal→Strategy dari 3 → 1.
 // Fetch independen per tab (DT-6: error satu tab tidak memblok tab lain). Tab Performance default.
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
+} from 'react';
 import { Alert, FlatList } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
-import PrototypeWorkspaceScreen from '@/prototype/screens/workspace';
 import {
   Badge,
   Button,
@@ -135,9 +143,92 @@ function PastPeriodBadge() {
   return <Badge label="Periode lewat" tone="neutral" />;
 }
 
-// WSA-20 (spec §12.1.4, OPSIONAL) — tap badan card = no-op senyap (AC 20 sudah terpenuhi).
-// Toast edukasi sengaja TIDAK dipasang: modal Alert per tap = UX buruk, dan Pressable pembungkus
-// judul memicu update pressed-state yang merapuhkan scheduler act di test. Ditunda by design.
+// WSA-20 (spec §12.1.4) — tap badan card → toast edukasi non-blocking (BUKAN Alert modal).
+// Toast di-host per-pane (WorkspaceToastHost) & dipicu lewat context agar row terdalam tak perlu
+// prop-drilling. Timer di-clear saat unmount → tak ada setState pasca-unmount (aman di jest).
+const ToastContext = createContext<(message: string) => void>(() => {});
+
+/**
+ * Host toast Workspace — overlay bawah non-interaktif. `show(msg)` menampilkan pesan 2.6s lalu
+ * auto-hilang. Timer ref di-clear di cleanup effect (unmount) sehingga tidak ada setState setelah
+ * unmount (cegah act-warning + kebocoran antar-test).
+ */
+function WorkspaceToastHost({ children }: PropsWithChildren) {
+  const [message, setMessage] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // `mounted` guard: auto-dismiss timer di-clear saat unmount, DAN callback jadi no-op bila sudah
+  // unmount. Tanpa ini, timer 2.6s bisa memanggil setState pasca-unmount → act-warning yang
+  // mencemari test lain (persis kerapuhan yang jadi alasan WSA-20 sempat ditunda).
+  const mounted = useRef(true);
+  const show = useCallback((msg: string) => {
+    setMessage(msg);
+    if (timer.current) clearTimeout(timer.current);
+    const handle = setTimeout(() => {
+      if (mounted.current) setMessage(null);
+    }, 2600);
+    // Node/jest: unref agar timer tak menahan worker exit (warning "active timers"); no-op di RN
+    // (setTimeout mengembalikan number). Safety net; unmount tetap clear via cleanup effect.
+    (handle as { unref?: () => void }).unref?.();
+    timer.current = handle;
+  }, []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
+  return (
+    <ToastContext.Provider value={show}>
+      <View className="flex-1">
+        {children}
+        {message ? (
+          <View
+            pointerEvents="none"
+            accessibilityLiveRegion="polite"
+            style={{ position: 'absolute', left: 16, right: 16, bottom: 24, alignItems: 'center' }}>
+            <View
+              style={{
+                maxWidth: 520,
+                borderRadius: 12,
+                backgroundColor: '#0f172a',
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+              }}>
+              <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '600', textAlign: 'center' }}>
+                {message}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </ToastContext.Provider>
+  );
+}
+
+/**
+ * WSA-20 — "badan card" (pill + judul + orb): tap → toast edukasi (§12.1.4) yang MENGARAHKAN user ke
+ * tombol Detail. Tap-target = Pressable overlay absolut DI ATAS baris konten (bukan pembungkus/ancestor).
+ * Alasan: kalau Pressable membungkus konten, `fireEvent.press` pada teks judul akan mem-bubble ke
+ * Pressable dan membocorkan kerja async pressed-state antar-test (overlapping act). Sebagai overlay
+ * sibling, teks judul tak punya handler (tap judul = no-op di test, seperti baseline), sedangkan di
+ * device tap area badan mengenai overlay. Aksi turunan (Detail/⋯/+/panah) berada di luar wrapper.
+ */
+function TreeCardBody({ cardLabel, children }: { cardLabel: string; children: ReactNode }) {
+  const show = useContext(ToastContext);
+  return (
+    <View style={{ position: 'relative' }}>
+      <View className="flex-row items-start gap-3">{children}</View>
+      <Pressable
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        accessibilityRole="button"
+        accessibilityLabel={`Isi card ${cardLabel}`}
+        onPress={() => show(WS_COPY.bodyTapHint)}
+      />
+    </View>
+  );
+}
 
 /**
  * UI-S-W08 — dim "periode lewat" single-layer: hanya node past TERATAS yang di-dim.
@@ -366,9 +457,11 @@ function StrategySubRow({
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy, marginLeft: TREE_LEVEL_INDENT[3] }}>
         <TreeConnector />
-        <View className="flex-row items-start gap-3">
+        <TreeCardBody cardLabel={strategy.name}>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
+            <View
+              className="flex-row items-center justify-between gap-2"
+              style={{ flexWrap: 'wrap', rowGap: 4 }}>
               <WorkspaceKindPill kind="strategy" />
               <View className="flex-row items-center gap-1">
                 {past ? <PastPeriodBadge /> : null}
@@ -383,7 +476,7 @@ function StrategySubRow({
             </Text>
           </View>
           <TreeOrbCell kind="strategy" value={progress} />
-        </View>
+        </TreeCardBody>
         <CardActionRow
           cardLabel={strategy.name}
           expanded={expanded}
@@ -467,9 +560,11 @@ function KpiAreaSubRow({
         className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area, marginLeft: TREE_LEVEL_INDENT[2] }}>
         <TreeConnector />
-        <View className="flex-row items-start gap-3">
+        <TreeCardBody cardLabel={kpi.name}>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
+            <View
+              className="flex-row items-center justify-between gap-2"
+              style={{ flexWrap: 'wrap', rowGap: 4 }}>
               <WorkspaceKindPill kind="kpi_area" />
               <View className="flex-row items-center gap-1.5">
                 {past ? <PastPeriodBadge /> : null}
@@ -481,7 +576,7 @@ function KpiAreaSubRow({
             </Text>
           </View>
           <TreeOrbCell kind="kpi_area" value={progress} />
-        </View>
+        </TreeCardBody>
         <CardActionRow
           cardLabel={kpi.name}
           expanded={expanded}
@@ -558,9 +653,11 @@ function GoalRow({ goal, progress }: { goal: GoalWithKpiCount; progress: number 
       {/* Spec §6.4 + §8: level-0 (indent 0), border kiri 5px warna kategori Goal. */}
       <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
-        <View className="flex-row items-start gap-3">
+        <TreeCardBody cardLabel={goal.name}>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
+            <View
+              className="flex-row items-center justify-between gap-2"
+              style={{ flexWrap: 'wrap', rowGap: 4 }}>
               <WorkspaceKindPill kind="goal" />
               <View className="flex-row items-center gap-1.5">
                 {past ? <PastPeriodBadge /> : null}
@@ -571,7 +668,7 @@ function GoalRow({ goal, progress }: { goal: GoalWithKpiCount; progress: number 
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
           </View>
           <TreeOrbCell kind="goal" value={progress} />
-        </View>
+        </TreeCardBody>
 
         <CardActionRow
           cardLabel={goal.name}
@@ -645,9 +742,11 @@ function ActionPlanSubRow({
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan, marginLeft: TREE_LEVEL_INDENT[level] }}>
         <TreeConnector />
-        <View className="flex-row items-start gap-3">
+        <TreeCardBody cardLabel={item.name}>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
+            <View
+              className="flex-row items-center justify-between gap-2"
+              style={{ flexWrap: 'wrap', rowGap: 4 }}>
               <WorkspaceKindPill kind="action_plan" />
               <View className="flex-row items-center gap-1">
                 {past ? <PastPeriodBadge /> : null}
@@ -662,7 +761,7 @@ function ActionPlanSubRow({
             </Text>
           </View>
           <TreeOrbCell kind="action_plan" value={orbValue} />
-        </View>
+        </TreeCardBody>
         {/* Action Plan = leaf: tanpa panah/+ (spec §6.8). Hanya Detail + ⋯. */}
         <View className="flex-row items-center justify-end gap-2">
           <Pressable
@@ -728,9 +827,11 @@ function InitiativeSubRow({
         className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative, marginLeft: TREE_LEVEL_INDENT[level] }}>
         <TreeConnector />
-        <View className="flex-row items-start gap-3">
+        <TreeCardBody cardLabel={item.name}>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
+            <View
+              className="flex-row items-center justify-between gap-2"
+              style={{ flexWrap: 'wrap', rowGap: 4 }}>
               <WorkspaceKindPill kind="initiative" />
               <View className="flex-row items-center gap-1">
                 {past ? <PastPeriodBadge /> : null}
@@ -745,7 +846,7 @@ function InitiativeSubRow({
             </Text>
           </View>
           <TreeOrbCell kind="initiative" value={progress} />
-        </View>
+        </TreeCardBody>
         <CardActionRow
           cardLabel={item.name}
           expanded={expanded}
@@ -824,9 +925,11 @@ function ProblemStatementSubRow({
         className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement, marginLeft: TREE_LEVEL_INDENT[2] }}>
         <TreeConnector />
-        <View className="flex-row items-start gap-3">
+        <TreeCardBody cardLabel={ps.name}>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
+            <View
+              className="flex-row items-center justify-between gap-2"
+              style={{ flexWrap: 'wrap', rowGap: 4 }}>
               <WorkspaceKindPill kind="problem_statement" />
               <View className="flex-row items-center gap-1.5">
                 {past ? <PastPeriodBadge /> : null}
@@ -836,7 +939,7 @@ function ProblemStatementSubRow({
             <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>{ps.name}</Text>
           </View>
           <TreeOrbCell kind="problem_statement" value={progress} />
-        </View>
+        </TreeCardBody>
         <CardActionRow
           cardLabel={ps.name}
           expanded={expanded}
@@ -921,9 +1024,11 @@ function DevelopmentAreaRow({
       {/* Spec §7.3 + §8: level-0 Dev pane, border kiri 5px warna Development Area (#0f766e). */}
       <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
       <SectionCard>
-        <View className="flex-row items-start gap-3">
+        <TreeCardBody cardLabel={devArea.name}>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
+            <View
+              className="flex-row items-center justify-between gap-2"
+              style={{ flexWrap: 'wrap', rowGap: 4 }}>
               <WorkspaceKindPill kind="development_area" />
               <View className="flex-row items-center gap-1.5">
                 {past ? <PastPeriodBadge /> : null}
@@ -936,7 +1041,7 @@ function DevelopmentAreaRow({
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
           </View>
           <TreeOrbCell kind="development_area" value={progress} />
-        </View>
+        </TreeCardBody>
 
         <CardActionRow
           cardLabel={devArea.name}
@@ -1188,28 +1293,30 @@ function PerformancePane({
   );
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-black">
-      <FlatList<GoalWithKpiCount>
-        contentContainerStyle={{ gap: 12, padding: 20 }}
-        data={goalsData}
-        keyExtractor={(goal) => goal.id}
-        ListHeaderComponent={header}
-        ListEmptyComponent={
-          showEmpty ? (
-            <EmptyState
-              title={WS_COPY.emptyGoalTitle}
-              description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
-              action={
-                canCreate
-                  ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
-                  : undefined
-              }
-            />
-          ) : null
-        }
-        renderItem={renderItem}
-      />
-    </View>
+    <WorkspaceToastHost>
+      <View className="flex-1 bg-neutral-50 dark:bg-black">
+        <FlatList<GoalWithKpiCount>
+          contentContainerStyle={{ gap: 12, padding: 20 }}
+          data={goalsData}
+          keyExtractor={(goal) => goal.id}
+          ListHeaderComponent={header}
+          ListEmptyComponent={
+            showEmpty ? (
+              <EmptyState
+                title={WS_COPY.emptyGoalTitle}
+                description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
+                action={
+                  canCreate
+                    ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
+                    : undefined
+                }
+              />
+            ) : null
+          }
+          renderItem={renderItem}
+        />
+      </View>
+    </WorkspaceToastHost>
   );
 }
 
@@ -1263,49 +1370,73 @@ function DevelopmentPane({
   );
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-black">
-      <FlatList<DevelopmentAreaWithProblemCount>
-        contentContainerStyle={{ gap: 12, padding: 20 }}
-        data={devData}
-        keyExtractor={(d) => d.id}
-        ListHeaderComponent={header}
-        ListEmptyComponent={
-          showEmpty ? (
-            <EmptyState
-              title={WS_DEV_COPY.emptyDevAreaTitle}
-              description={
-                canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
-              }
-              action={
-                canCreate
-                  ? {
-                      label: WS_DEV_COPY.btnDevAreaBaru,
-                      onPress: () => router.push('/development-area/new' as Href),
-                    }
-                  : undefined
-              }
-            />
-          ) : null
-        }
-        renderItem={renderItem}
-      />
-    </View>
+    <WorkspaceToastHost>
+      <View className="flex-1 bg-neutral-50 dark:bg-black">
+        <FlatList<DevelopmentAreaWithProblemCount>
+          contentContainerStyle={{ gap: 12, padding: 20 }}
+          data={devData}
+          keyExtractor={(d) => d.id}
+          ListHeaderComponent={header}
+          ListEmptyComponent={
+            showEmpty ? (
+              <EmptyState
+                title={WS_DEV_COPY.emptyDevAreaTitle}
+                description={
+                  canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
+                }
+                action={
+                  canCreate
+                    ? {
+                        label: WS_DEV_COPY.btnDevAreaBaru,
+                        onPress: () => router.push('/development-area/new' as Href),
+                      }
+                    : undefined
+                }
+              />
+            ) : null
+          }
+          renderItem={renderItem}
+        />
+      </View>
+    </WorkspaceToastHost>
   );
 }
 
-export function LiveWorkspaceScreen() {
-  // UI-N-002 Stage 2: default `hub` agar user lihat lobby dulu sebelum dive in.
-  const [tab, setTab] = useState<Tab>('hub');
-  const backToHub = () => setTab('hub');
+// WSA-19 — pane Workspace kini route deep-linkable di dalam nested stack tab (bukan state lokal).
+// "Masuk" MENAVIGASI ke `/workspace/performance` · `/workspace/development`; tab bar tetap terlihat
+// (pane hidup di bawah tab Workspace) dan back gesture kembali ke hub (index anchor via _layout).
 
-  if (tab === 'hub') return <HubView onSelect={setTab} />;
-  return tab === 'performance' ? (
-    <PerformancePane tab={tab} onTabChange={setTab} onBackToHub={backToHub} />
-  ) : (
-    <DevelopmentPane tab={tab} onTabChange={setTab} onBackToHub={backToHub} />
-  );
+/** Navigasi balik ke hub: back bila ada history, else replace ke index (kasus deep-link langsung). */
+function useBackToHub() {
+  const router = useRouter();
+  return useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/workspace' as Href);
+  }, [router]);
 }
 
-export default function WorkspaceRoute() {
-  return <TabScreenAdapter live={LiveWorkspaceScreen} prototype={PrototypeWorkspaceScreen} />;
+/** Route index `/workspace` — Hub (lobby). Tap "Masuk" → push pane deep-linkable. */
+export function HubScreen() {
+  const router = useRouter();
+  return <HubView onSelect={(t) => router.push(`/workspace/${t}` as Href)} />;
+}
+
+/** Route `/workspace/performance` — pane Performance. */
+export function PerformanceScreen() {
+  const router = useRouter();
+  const onBackToHub = useBackToHub();
+  const onTabChange = (t: Tab) => {
+    if (t === 'development') router.replace('/workspace/development' as Href);
+  };
+  return <PerformancePane tab="performance" onTabChange={onTabChange} onBackToHub={onBackToHub} />;
+}
+
+/** Route `/workspace/development` — pane Development. */
+export function DevelopmentScreen() {
+  const router = useRouter();
+  const onBackToHub = useBackToHub();
+  const onTabChange = (t: Tab) => {
+    if (t === 'performance') router.replace('/workspace/performance' as Href);
+  };
+  return <DevelopmentPane tab="development" onTabChange={onTabChange} onBackToHub={onBackToHub} />;
 }
