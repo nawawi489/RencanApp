@@ -5,7 +5,7 @@ Tugas kamu adalah memperbaiki hanya area Workspace agar 1:1 dengan prototype fin
 Source of truth wajib:
 
 1. `outputs/WORKSPACE_UI_LOCK_SPEC_V1.82.md`
-2. `outputs/PRD_EMS_V1.82_Rencanaapp.md`
+2. `PRD.md` (V1.82 — di root repo)
 3. Prototype visual final: `outputs/ems-mobile-ui/index.html`
 
 Scope patch:

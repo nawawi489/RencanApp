@@ -7,7 +7,7 @@ sources: 1
 
 # Prototype ↔ PRD V1.82 Conformance
 
-Penilaian apakah prototype `design.html` (8.069 baris, phone shell ~430px) sesuai dengan [[spesifikasi-card-dan-eksekusi|PRD FINAL V1.82]] (`PRD_EMS_V1.82_Rencanaapp.md`). Berbeda dari [[design-fidelity-audit]] (yang membandingkan `mobile/` vs prototype) — halaman ini membandingkan **prototype vs PRD**.
+Penilaian apakah prototype `design.html` (8.069 baris, phone shell ~430px) sesuai dengan [[spesifikasi-card-dan-eksekusi|PRD FINAL V1.82]] (`PRD.md` di root repo). Berbeda dari [[design-fidelity-audit]] (yang membandingkan `mobile/` vs prototype) — halaman ini membandingkan **prototype vs PRD**.
 
 ## Verdict
 

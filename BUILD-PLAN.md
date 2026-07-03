@@ -1,6 +1,6 @@
-# EMS V1.8.1 — Build Plan Terfase
+# EMS V1.82 — Build Plan Terfase
 
-Turunan dari [PRD.md](PRD.md). Cakupan = 100% scope V1.8.1. Yang berubah dari Section 86 PRD hanya **urutan**: loop eksekusi harian dinaikkan ke depan supaya produk bisa dipakai dan divalidasi sejak fase awal, bukan setelah seluruh infrastruktur jadi.
+Turunan dari [PRD.md](PRD.md). Cakupan = 100% scope V1.82. Yang berubah dari Section 86 PRD hanya **urutan**: loop eksekusi harian dinaikkan ke depan supaya produk bisa dipakai dan divalidasi sejak fase awal, bukan setelah seluruh infrastruktur jadi.
 
 ## Prinsip Phasing
 
@@ -179,7 +179,7 @@ Turunan dari [PRD.md](PRD.md). Cakupan = 100% scope V1.8.1. Yang berubah dari Se
 
 ## Aturan Tetap Sepanjang Build
 
-- Anti-scope-creep PRD §88 berlaku. Tolak Feed, Announcement, AI, Watcher, Routine, Area Goal, dll. untuk V1.8.1.
+- Anti-scope-creep PRD §88 berlaku. Tolak Feed, Announcement, AI, Watcher, Routine, Area Goal, dll. untuk V1.82.
 - Tidak ada bobot di planning card (§44). Bobot hanya di Score Formula (§45).
 - Bahasa UI Indonesia, istilah khusus dipertahankan (§4).
 - Setiap card harus lengkap sebelum aktif; setiap Strategy wajib alasan/risiko/alternatif.
