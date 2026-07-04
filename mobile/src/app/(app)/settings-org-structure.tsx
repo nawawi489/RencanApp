@@ -75,104 +75,33 @@ export default function SettingsOrgStructureScreen() {
   );
 }
 
-function DepartmentTab() {
-  const { departments, isLoading } = useOrgStructure();
-  const { createDepartment, isPending } = useOrgActions();
-  const [name, setName] = useState('');
-  const [adding, setAdding] = useState(false);
+/** Item bersama tab Departemen/Posisi/Tim (nama + optional deskripsi + is_active). */
+type OrgItem = { id: string; name: string; description: string | null; is_active: boolean };
 
-  async function handleAdd() {
-    if (!name.trim()) return;
-    await createDepartment({ name: name.trim() });
-    setName('');
-    setAdding(false);
-  }
-
-  if (isLoading) return <SkeletonList count={4} />;
-  return (
-    <View className="gap-3">
-      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-        Kelola Departemen organisasi. Nonaktifkan tanpa menghapus untuk menjaga riwayat.
-      </Text>
-      {departments.length === 0 ? (
-        <EmptyState title="Belum ada Departemen" description="Tambahkan Departemen pertama Anda." />
-      ) : (
-        departments.map((d) => (
-          <SectionCard key={d.id}>
-            <Text className="text-base font-semibold text-black dark:text-white">{d.name}</Text>
-            {d.description ? (
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{d.description}</Text>
-            ) : null}
-            {!d.is_active ? <Text className="text-xs text-neutral-400">Nonaktif</Text> : null}
-          </SectionCard>
-        ))
-      )}
-      {adding ? (
-        <SectionCard>
-          <LabeledInput label="Nama Departemen" value={name} onChangeText={setName} placeholder="mis. Operasi" />
-          <Button label="Simpan Departemen" onPress={handleAdd} disabled={isPending || !name.trim()} />
-        </SectionCard>
-      ) : (
-        <Button label="+ Departemen Baru" onPress={() => setAdding(true)} />
-      )}
-    </View>
-  );
-}
-
-function PositionTab() {
-  const { positions, isLoading } = usePositions();
-  const { createPosition, isPending } = useOrgActions();
-  const [name, setName] = useState('');
-  const [adding, setAdding] = useState(false);
-
-  async function handleAdd() {
-    if (!name.trim()) return;
-    await createPosition({ name: name.trim() });
-    setName('');
-    setAdding(false);
-  }
-
-  if (isLoading) return <SkeletonList count={4} />;
-  return (
-    <View className="gap-3">
-      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-        Posisi (jabatan) yang bisa dipilih saat memetakan struktur organisasi.
-      </Text>
-      {positions.length === 0 ? (
-        <EmptyState title="Belum ada Posisi" description="Tambahkan Posisi pertama untuk mulai memetakan." />
-      ) : (
-        positions.map((p) => (
-          <SectionCard key={p.id}>
-            <Text className="text-base font-semibold text-black dark:text-white">{p.name}</Text>
-            {p.description ? (
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{p.description}</Text>
-            ) : null}
-            {!p.is_active ? <Text className="text-xs text-neutral-400">Nonaktif</Text> : null}
-          </SectionCard>
-        ))
-      )}
-      {adding ? (
-        <SectionCard>
-          <LabeledInput label="Nama Posisi" value={name} onChangeText={setName} placeholder="mis. Sales Manager" />
-          <Button label="Simpan Posisi" onPress={handleAdd} disabled={isPending || !name.trim()} />
-        </SectionCard>
-      ) : (
-        <Button label="+ Posisi Baru" onPress={() => setAdding(true)} />
-      )}
-    </View>
-  );
-}
-
-function TeamTab() {
-  const { teams, isLoading } = useTeams();
-  const { createTeam, isPending } = useOrgActions();
+function SimpleOrgTab({
+  items,
+  isLoading,
+  isPending,
+  onCreate,
+  entity,
+  subhead,
+  placeholder,
+}: {
+  items: OrgItem[];
+  isLoading: boolean;
+  isPending: boolean;
+  onCreate: (name: string) => Promise<unknown>;
+  entity: string;
+  subhead: string;
+  placeholder: string;
+}) {
   const [name, setName] = useState('');
   const [adding, setAdding] = useState(false);
 
   async function handleAdd() {
     if (!name.trim()) return;
     try {
-      await createTeam({ name: name.trim(), departmentId: null, leadId: null });
+      await onCreate(name.trim());
       setName('');
       setAdding(false);
     } catch (e) {
@@ -183,31 +112,77 @@ function TeamTab() {
   if (isLoading) return <SkeletonList count={4} />;
   return (
     <View className="gap-3">
-      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-        Tim lintas departemen — gunakan untuk kelompokkan eksekusi yang membutuhkan kolaborasi.
-      </Text>
-      {teams.length === 0 ? (
-        <EmptyState title="Belum ada Tim" description="Tambahkan Tim pertama Anda." />
+      <Text className="text-sm text-neutral-500 dark:text-neutral-400">{subhead}</Text>
+      {items.length === 0 ? (
+        <EmptyState title={`Belum ada ${entity}`} description={`Tambahkan ${entity} pertama Anda.`} />
       ) : (
-        teams.map((t) => (
-          <SectionCard key={t.id}>
-            <Text className="text-base font-semibold text-black dark:text-white">{t.name}</Text>
-            {t.description ? (
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{t.description}</Text>
+        items.map((it) => (
+          <SectionCard key={it.id}>
+            <Text className="text-base font-semibold text-black dark:text-white">{it.name}</Text>
+            {it.description ? (
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{it.description}</Text>
             ) : null}
-            {!t.is_active ? <Text className="text-xs text-neutral-400">Nonaktif</Text> : null}
+            {!it.is_active ? <Text className="text-xs text-neutral-400">Nonaktif</Text> : null}
           </SectionCard>
         ))
       )}
       {adding ? (
         <SectionCard>
-          <LabeledInput label="Nama Tim" value={name} onChangeText={setName} placeholder="mis. Squad Mobile" />
-          <Button label="Simpan Tim" onPress={handleAdd} disabled={isPending || !name.trim()} />
+          <LabeledInput label={`Nama ${entity}`} value={name} onChangeText={setName} placeholder={placeholder} />
+          <Button label={`Simpan ${entity}`} onPress={handleAdd} disabled={isPending || !name.trim()} />
         </SectionCard>
       ) : (
-        <Button label="+ Tim Baru" onPress={() => setAdding(true)} />
+        <Button label={`+ ${entity} Baru`} onPress={() => setAdding(true)} />
       )}
     </View>
+  );
+}
+
+function DepartmentTab() {
+  const { departments, isLoading } = useOrgStructure();
+  const { createDepartment, isPending } = useOrgActions();
+  return (
+    <SimpleOrgTab
+      items={departments}
+      isLoading={isLoading}
+      isPending={isPending}
+      onCreate={(name) => createDepartment({ name })}
+      entity="Departemen"
+      subhead="Kelola Departemen organisasi. Nonaktifkan tanpa menghapus untuk menjaga riwayat."
+      placeholder="mis. Operasi"
+    />
+  );
+}
+
+function PositionTab() {
+  const { positions, isLoading } = usePositions();
+  const { createPosition, isPending } = useOrgActions();
+  return (
+    <SimpleOrgTab
+      items={positions}
+      isLoading={isLoading}
+      isPending={isPending}
+      onCreate={(name) => createPosition({ name })}
+      entity="Posisi"
+      subhead="Posisi (jabatan) yang bisa dipilih saat memetakan struktur organisasi."
+      placeholder="mis. Sales Manager"
+    />
+  );
+}
+
+function TeamTab() {
+  const { teams, isLoading } = useTeams();
+  const { createTeam, isPending } = useOrgActions();
+  return (
+    <SimpleOrgTab
+      items={teams}
+      isLoading={isLoading}
+      isPending={isPending}
+      onCreate={(name) => createTeam({ name, departmentId: null, leadId: null })}
+      entity="Tim"
+      subhead="Tim lintas departemen — gunakan untuk kelompokkan eksekusi yang membutuhkan kolaborasi."
+      placeholder="mis. Squad Mobile"
+    />
   );
 }
 

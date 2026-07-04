@@ -8,6 +8,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import {
+  Fragment,
   memo,
   useCallback,
   useMemo,
@@ -1380,140 +1381,98 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
   );
 }
 
-function PerformancePane() {
+/**
+ * Pane workspace (Performance / Development) — hierarki Goal atau Development Area
+ * dengan pattern identik: header + PeriodSwitcher + section + list. Beda hanya
+ * sumber data, izin, copy, tombol, dan row component (lihat 2 call site di bawah).
+ * WSA-15/-16: orb capaian root dihitung 1 RPC untuk semua item terlihat.
+ */
+type PaneConfig<T extends { id: string }> = {
+  kicker: string;
+  subtitle: string;
+  sectionTitle: string;
+  btnLabel: string;
+  emptyTitle: string;
+  emptyDescCan: string;
+  emptyDescView: string;
+  permission: string;
+  newRoute: string;
+  periodSpace?: 'performance' | 'development';
+  useItems: () => { items: T[]; isLoading: boolean; isError: boolean; refetch: () => void };
+  renderRow: (item: T, progress: number | null) => ReactNode;
+};
+
+function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
   const router = useRouter();
   const { can } = useProfile();
-  const goalsQ = useGoals();
-  const canCreate = can('create_goal');
+  const q = config.useItems();
+  const canCreate = can(config.permission);
 
   useFocusEffect(
     useCallback(() => {
-      goalsQ.refetch();
+      q.refetch();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
-  const header = (
-    <View className="gap-5 pb-3">
-      <View className="gap-1">
-        <Text
-          accessibilityRole="header"
-          className="text-2xl font-bold text-black dark:text-white">
-          {WS_HUB_COPY.perf.kicker}
-        </Text>
-        <Text className="text-base text-neutral-500 dark:text-neutral-400">
-          {WS_COPY.subtitle}
-        </Text>
-      </View>
-      <PeriodSwitcher />
-      <PaneSectionHeader
-        title={WS_COPY.sectionStrategis}
-        primaryLabel={canCreate ? WS_COPY.btnGoalBaru : undefined}
-        onPrimary={canCreate ? () => router.push('/goal-wizard' as Href) : undefined}
-      />
-      {goalsQ.isLoading ? <SkeletonList count={3} /> : null}
-      {goalsQ.isError ? <ErrorState onRetry={() => goalsQ.refetch()} /> : null}
-    </View>
-  );
+  const items = q.isLoading || q.isError ? [] : q.items;
+  const showEmpty = !q.isLoading && !q.isError && q.items.length === 0;
+  const { progressOf } = useCardProgress(items.map((i) => i.id));
 
-  // WSA-16 — section "Initiative Tanpa Goal" dihapus dari pane (di luar spec §6). Initiative
-  // yatim tetap dapat diakses lewat Search (route /search) & Menu; pane fokus ke hierarki Goal.
-
-  const goalsData = goalsQ.isLoading || goalsQ.isError ? [] : goalsQ.goals;
-  const showEmpty = !goalsQ.isLoading && !goalsQ.isError && goalsQ.goals.length === 0;
-
-  // WSA-15 — orb capaian Goal root: 1 RPC untuk semua Goal terlihat (bukan per row).
-  const { progressOf: goalProgressOf } = useCardProgress(goalsData.map((g) => g.id));
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-black">
       <ScrollView contentContainerStyle={{ gap: 12, padding: 20 }}>
-        {header}
+        <View className="gap-5 pb-3">
+          <View className="gap-1">
+            <Text
+              accessibilityRole="header"
+              className="text-2xl font-bold text-black dark:text-white">
+              {config.kicker}
+            </Text>
+            <Text className="text-base text-neutral-500 dark:text-neutral-400">
+              {config.subtitle}
+            </Text>
+          </View>
+          <PeriodSwitcher space={config.periodSpace} />
+          <PaneSectionHeader
+            title={config.sectionTitle}
+            primaryLabel={canCreate ? config.btnLabel : undefined}
+            onPrimary={canCreate ? () => router.push(config.newRoute as Href) : undefined}
+          />
+          {q.isLoading ? <SkeletonList count={3} /> : null}
+          {q.isError ? <ErrorState onRetry={() => q.refetch()} /> : null}
+        </View>
         {showEmpty ? (
           <EmptyState
-            title={WS_COPY.emptyGoalTitle}
-            description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
+            title={config.emptyTitle}
+            description={canCreate ? config.emptyDescCan : config.emptyDescView}
             action={
               canCreate
-                ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
+                ? { label: config.btnLabel, onPress: () => router.push(config.newRoute as Href) }
                 : undefined
             }
           />
         ) : null}
-        {goalsData.map((goal) => (
-          <GoalRow key={goal.id} goal={goal} progress={goalProgressOf(goal.id)} />
+        {items.map((item) => (
+          <Fragment key={item.id}>{config.renderRow(item, progressOf(item.id))}</Fragment>
         ))}
       </ScrollView>
     </View>
   );
 }
 
-function DevelopmentPane() {
-  const router = useRouter();
-  const { can } = useProfile();
-  const devQ = useDevelopmentAreas();
-  const canCreate = can('create_development_area');
-
-  useFocusEffect(
-    useCallback(() => {
-      devQ.refetch();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
-  );
-
-  const header = (
-    <View className="gap-5 pb-3">
-      <View className="gap-1">
-        <Text
-          accessibilityRole="header"
-          className="text-2xl font-bold text-black dark:text-white">
-          {WS_HUB_COPY.dev.kicker}
-        </Text>
-        <Text className="text-base text-neutral-500 dark:text-neutral-400">
-          {WS_DEV_COPY.subtitle}
-        </Text>
-      </View>
-      <PeriodSwitcher space="development" />
-      <PaneSectionHeader
-        title={WS_DEV_COPY.sectionDevAreas}
-        primaryLabel={canCreate ? WS_DEV_COPY.btnDevAreaBaru : undefined}
-        onPrimary={canCreate ? () => router.push('/development-area/new' as Href) : undefined}
-      />
-      {devQ.isLoading ? <SkeletonList count={3} /> : null}
-      {devQ.isError ? <ErrorState onRetry={() => devQ.refetch()} /> : null}
-    </View>
-  );
-
-  const devData = devQ.isLoading || devQ.isError ? [] : devQ.developmentAreas;
-  const showEmpty = !devQ.isLoading && !devQ.isError && devQ.developmentAreas.length === 0;
-
-  // WSA-15 — orb capaian Development Area root: 1 RPC untuk semua DA terlihat.
-  const { progressOf: devProgressOf } = useCardProgress(devData.map((d) => d.id));
-  return (
-    <View className="flex-1 bg-neutral-50 dark:bg-black">
-      <ScrollView contentContainerStyle={{ gap: 12, padding: 20 }}>
-        {header}
-        {showEmpty ? (
-          <EmptyState
-            title={WS_DEV_COPY.emptyDevAreaTitle}
-            description={
-              canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
-            }
-            action={
-              canCreate
-                ? {
-                    label: WS_DEV_COPY.btnDevAreaBaru,
-                    onPress: () => router.push('/development-area/new' as Href),
-                  }
-                : undefined
-            }
-          />
-        ) : null}
-        {devData.map((d) => (
-          <DevelopmentAreaRow key={d.id} devArea={d} progress={devProgressOf(d.id)} />
-        ))}
-      </ScrollView>
-    </View>
-  );
+function usePerformanceItems() {
+  const q = useGoals();
+  return { items: q.goals, isLoading: q.isLoading, isError: q.isError, refetch: q.refetch };
+}
+function useDevelopmentItems() {
+  const q = useDevelopmentAreas();
+  return {
+    items: q.developmentAreas,
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
 }
 
 // WSA-19 — pane Workspace kini route deep-linkable di dalam nested stack tab (bukan state lokal).
@@ -1529,10 +1488,39 @@ export function HubScreen() {
 
 /** Route `/workspace/performance` — pane Performance. Back button di AppHeader. */
 export function PerformanceScreen() {
-  return <PerformancePane />;
+  return (
+    <WorkspacePane
+      kicker={WS_HUB_COPY.perf.kicker}
+      subtitle={WS_COPY.subtitle}
+      sectionTitle={WS_COPY.sectionStrategis}
+      btnLabel={WS_COPY.btnGoalBaru}
+      emptyTitle={WS_COPY.emptyGoalTitle}
+      emptyDescCan={WS_COPY.emptyGoalDescCan}
+      emptyDescView={WS_COPY.emptyGoalDescView}
+      permission="create_goal"
+      newRoute="/goal-wizard"
+      useItems={usePerformanceItems}
+      renderRow={(goal, progress) => <GoalRow goal={goal} progress={progress} />}
+    />
+  );
 }
 
 /** Route `/workspace/development` — pane Development. Back button di AppHeader. */
 export function DevelopmentScreen() {
-  return <DevelopmentPane />;
+  return (
+    <WorkspacePane
+      kicker={WS_HUB_COPY.dev.kicker}
+      subtitle={WS_DEV_COPY.subtitle}
+      sectionTitle={WS_DEV_COPY.sectionDevAreas}
+      btnLabel={WS_DEV_COPY.btnDevAreaBaru}
+      emptyTitle={WS_DEV_COPY.emptyDevAreaTitle}
+      emptyDescCan={WS_DEV_COPY.emptyDevAreaDescCan}
+      emptyDescView={WS_DEV_COPY.emptyDevAreaDescView}
+      permission="create_development_area"
+      newRoute="/development-area/new"
+      periodSpace="development"
+      useItems={useDevelopmentItems}
+      renderRow={(d, progress) => <DevelopmentAreaRow devArea={d} progress={progress} />}
+    />
+  );
 }
