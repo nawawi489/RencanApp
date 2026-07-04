@@ -7,6 +7,7 @@ import { act, createElement, type PropsWithChildren } from 'react';
 import { Alert } from 'react-native';
 
 import { PeriodFocusProvider } from '@/providers/period-focus-provider';
+import { WS_DEV_COPY } from '@/lib/workspace-copy';
 
 jest.setTimeout(30000);
 
@@ -64,6 +65,8 @@ const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
+// Default segments untuk pane: AppHeader akan tampilkan back button.
+let mockSegments: string[] = ['(app)', '(tabs)', 'workspace', 'performance'];
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -72,6 +75,7 @@ jest.mock('expo-router', () => ({
     canGoBack: mockCanGoBack,
     navigate: jest.fn(),
   }),
+  useSegments: () => mockSegments,
   useFocusEffect: () => {},
   useLocalSearchParams: () => ({}),
 }));
@@ -322,8 +326,9 @@ describe('WorkspaceScreen', () => {
     expect(screen.queryByText('Periode lewat')).toBeNull();
   });
 
-  // S3 — Card Interaction Rule (PRD V1.8.2 §7.3 / §7.7).
-  it('[S3-1] Detail button → push detail; tap area judul TIDAK push', async () => {
+  // S3 — Card Interaction Rule (PRD V1.8.2 §7.3 / §7.7). Tombol Detail terpisah sudah dilebur ke
+  // badan card (overlay penuh di atas pill + judul + orb) — tap di mana saja pada badan → push.
+  it('[S3-1] tap badan card ("Buka detail X") → push detail', async () => {
     mockCan.mockReturnValue(true);
     mockUseGoals.mockReturnValue(
       goalsResult({
@@ -339,11 +344,7 @@ describe('WorkspaceScreen', () => {
       }),
     );
     await renderScreen();
-    // Tap teks judul (di bawah overlay body) — tanpa handler nav di layer teks.
-    fireEvent.press(await screen.findByText('Goal Now'));
-    expect(mockPush).not.toHaveBeenCalledWith('/goal/g-now');
-    // Tap Detail button → push.
-    fireEvent.press(screen.getByLabelText('Buka detail Goal Now'));
+    fireEvent.press(await screen.findByLabelText('Buka detail Goal Now'));
     expect(mockPush).toHaveBeenCalledWith('/goal/g-now');
   });
 
@@ -472,8 +473,9 @@ describe('WorkspaceScreen', () => {
     alertSpy.mockRestore();
   });
 
-  // WSA-20 (spec §12.1.4) — tap badan card → toast edukasi non-blocking; TIDAK menavigasi.
-  it('[WSA-20] tap badan card → toast "gunakan tombol Detail", TIDAK push detail', async () => {
+  // WSA-20 — tombol Detail terpisah & toast edukasi (spec §12.1.4 lama) sudah dilebur: badan card
+  // kini SATU overlay "Buka detail X" yang langsung push (bukan toast non-blocking).
+  it('[WSA-20] tap badan card → push detail langsung (bukan toast)', async () => {
     mockCan.mockReturnValue(true);
     mockUseGoals.mockReturnValue(
       goalsResult({
@@ -489,12 +491,8 @@ describe('WorkspaceScreen', () => {
       }),
     );
     await renderScreen();
-    fireEvent.press(await screen.findByLabelText('Isi card Goal Body'));
-    expect(
-      await screen.findByText('Untuk membuka isi Card, gunakan tombol Detail di dalam Card.'),
-    ).toBeTruthy();
-    // Tap badan = edukasi saja; navigasi hanya lewat tombol Detail.
-    expect(mockPush).not.toHaveBeenCalledWith('/goal/g-body');
+    fireEvent.press(await screen.findByLabelText('Buka detail Goal Body'));
+    expect(mockPush).toHaveBeenCalledWith('/goal/g-body');
   });
 
   it('[S3-4] tombol "⋯" → RowActionsMenu terbuka (judul card di header sheet)', async () => {
@@ -519,7 +517,24 @@ describe('WorkspaceScreen', () => {
     expect(screen.getByLabelText('Arsipkan')).toBeTruthy();
   });
 
-  // UI-N-003 (Stage 1 B′) — tree 3-level inline: Goal → KPI Area → Strategy.
+  // [S3-5] Judul pane kontekstual — bukan hardcode "Workspace" untuk kedua pane.
+  // Sebelumnya PaneTopHeader render WS_COPY.title ("Workspace") pada Performance & Development,
+  // sehingga user tidak bisa membedakan pane dari judul. Sekarang masing-masing pakai kicker
+  // hub-card (Performance / Development) dan fallback ke WS_COPY.title untuk back-compat.
+  it('[S3-5] Pane Performance: judul h1 = "Performance" (bukan "Workspace")', async () => {
+    await renderScreen('performance');
+    expect(await screen.findByText('Performance')).toBeTruthy();
+    // Sanity: judul lama sudah tidak muncul.
+    expect(screen.queryByText('Workspace')).toBeNull();
+  });
+
+  it('[S3-6] Pane Development: judul h1 = "Development" (bukan "Workspace")', async () => {
+    await renderScreen('development');
+    expect(await screen.findByText('Development')).toBeTruthy();
+    expect(screen.queryByText('Workspace')).toBeNull();
+  });
+
+  // [UI-N-003 (Stage 1 B′) — tree 3-level inline: Goal → KPI Area → Strategy.
   describe('[UI-N-003 tree 3-level] Performance pane', () => {
     const GOAL_NOW = {
       id: 'g1',
@@ -866,28 +881,39 @@ describe('WorkspaceScreen', () => {
       expect(mockPush).toHaveBeenCalledWith('/workspace/development');
     });
 
-    it('[UI-N-002·4] tombol "Kembali" di pane → back ke hub', async () => {
+    // WSA-19 — back button pindah ke AppHeader (pola seragam dgn tab lain). Test behavior
+    // back ada di app-header.test.tsx. Di sini cukup pastikan pane TIDAK merender back
+    // secara inline (paritas dgn Notifications/Inbox/Menu yang tak punya back inline).
+    it('[UI-N-002·4] pane Performance TIDAK merender tombol "Kembali" inline', async () => {
       await renderScreen('performance');
-      // Pane Performance tampil (bukan hub); tekan Kembali → router.back (ada history).
       expect(screen.queryByText('Target Kinerja')).toBeNull();
-      fireEvent.press(screen.getByLabelText('Kembali ke Workspace'));
-      expect(mockBack).toHaveBeenCalled();
+      // Back dipindah ke AppHeader (di luar hierarki pane).
+      expect(screen.queryByLabelText('Kembali ke Workspace')).toBeNull();
+      // PerformancePane tampil dengan section h1 dari PaneSectionHeader.
+      expect(await screen.findByText('Hierarki Strategis')).toBeTruthy();
     });
 
-    // WSA-19 — deep-link langsung ke pane (tanpa history) → Kembali fallback replace ke hub.
-    it('[WSA-19·1] Kembali saat tanpa history → replace /workspace', async () => {
-      mockCanGoBack.mockReturnValue(false);
-      await renderScreen('performance');
-      fireEvent.press(screen.getByLabelText('Kembali ke Workspace'));
-      expect(mockReplace).toHaveBeenCalledWith('/workspace');
-      expect(mockBack).not.toHaveBeenCalled();
+    it('[UI-N-002·4b] pane Development TIDAK merender tombol "Kembali" inline', async () => {
+      await renderScreen('development');
+      expect(screen.queryByLabelText('Kembali ke Workspace')).toBeNull();
+      expect(await screen.findByText(WS_DEV_COPY.sectionDevAreas)).toBeTruthy();
     });
 
-    // WSA-19 — TabBar antar-pane menavigasi (replace) antar route, bukan swap state.
-    it('[WSA-19·2] TabBar "Development" di pane Performance → replace /workspace/development', async () => {
+    // WSA-19 — deep-link langsung ke pane (tanpa history). Back button di AppHeader fallback
+    // ke `router.replace('/workspace')`. Test detail di app-header.test.tsx.
+
+    // WSA-19 — pane dalam di Workspace tidak lagi punya TabBar internal; perpindahan
+    // pane dilakukan via kembali ke Hub lalu masuk ruang lain. Tombol "Performance"/
+    // "Development" tidak boleh muncul di pane agar tidak duplikasi navigasi hub.
+    it('[WSA-19·2] TabBar internal pane TIDAK dirender; PaneSectionHeader tampil', async () => {
       await renderScreen('performance');
-      fireEvent.press(await screen.findByText('Development'));
-      expect(mockReplace).toHaveBeenCalledWith('/workspace/development');
+      // Tab "Development" tidak ada — `Development` text hanya muncul di Hub copy, bukan
+      // sebagai tab button di pane.
+      expect(screen.queryByRole('tab', { name: 'Development' })).toBeNull();
+      expect(screen.queryByRole('tab', { name: 'Performance' })).toBeNull();
+      // PaneSectionHeader tetap ada (h2 + primary action button) — paritas dengan section
+      // header di screen lain.
+      expect(await screen.findByText('Hierarki Strategis')).toBeTruthy();
     });
 
     it('[UI-N-002·5] hub-card stats — Performance: 2 Goal, 5 KPI, 1 aktif', async () => {
@@ -993,13 +1019,14 @@ describe('WorkspaceScreen', () => {
     });
   });
 
-  // UI-S-W08 (design-consultation 2026-07-02) — dim "periode lewat" tidak boleh bertumpuk:
-  // opacity 0.5 per level bersarang = 0.125 efektif di level-3 → teks tak terbaca (DESIGN §4).
-  describe('[UI-S-W08] dim periode-lewat single-layer', () => {
+  // UI-S-W08 (design-consultation 2026-07-02) — dim "periode lewat" via opacity dihapus (tidak ada
+  // lagi opacity 0.5 di level manapun); badge teks "Periode lewat" jadi SATU-SATUNYA sinyal
+  // periode-lewat (DESIGN §4: warna/opacity bukan satu-satunya sinyal — teks tetap wajib ada).
+  describe('[UI-S-W08] periode-lewat: badge teks, tanpa dim opacity', () => {
     const PAST_PERIOD = { period_start: '2025-01-01', period_end: '2025-12-31' };
     const NOW_PERIOD = { period_start: '2026-01-01', period_end: '2026-12-31' };
 
-    it('[W08·1] Goal+KPI+Strategy semuanya past → tepat 1 lapis opacity 0.5, badge tetap 3×', async () => {
+    it('[W08·1] Goal+KPI+Strategy semuanya past → tanpa opacity dim, badge tetap 3×', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(
         goalsResult({ goals: [{ id: 'g', name: 'Goal Past', status: 'active', ...PAST_PERIOD }] }),
@@ -1017,12 +1044,12 @@ describe('WorkspaceScreen', () => {
       await screen.findByText('KPI Past');
       fireEvent.press(screen.getByLabelText('Lihat Strategy'));
       await screen.findByText('Strategy Past');
-      expect(countOpacityHalf(screen.toJSON())).toBe(1);
+      expect(countOpacityHalf(screen.toJSON())).toBe(0);
       // Sinyal teks per-node tetap utuh (warna ≠ satu-satunya sinyal, DESIGN §4).
       expect(screen.getAllByText('Periode lewat').length).toBe(3);
     });
 
-    it('[W08·2] hanya Strategy yang past → dim 1 lapis di level-3', async () => {
+    it('[W08·2] hanya Strategy yang past → tanpa opacity dim di level-3, badge tetap tampil', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(
         goalsResult({ goals: [{ id: 'g', name: 'Goal Aktif', status: 'active', ...NOW_PERIOD }] }),
@@ -1040,7 +1067,7 @@ describe('WorkspaceScreen', () => {
       await screen.findByText('KPI Aktif');
       fireEvent.press(screen.getByLabelText('Lihat Strategy'));
       await screen.findByText('Strategy Past');
-      expect(countOpacityHalf(screen.toJSON())).toBe(1);
+      expect(countOpacityHalf(screen.toJSON())).toBe(0);
       expect(screen.getAllByText('Periode lewat').length).toBe(1);
     });
   });

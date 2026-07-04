@@ -20,11 +20,11 @@ export const WORKSPACE_KIND_BORDER: Record<
 /** Level tree → margin kiri sesuai spec §8. Level 0 = root (0px). */
 export const TREE_LEVEL_INDENT: Record<0 | 1 | 2 | 3 | 4 | 5, number> = {
   0: 0,
-  1: 12,
-  2: 16,
-  3: 20,
-  4: 24,
-  5: 28,
+  1: 16,
+  2: 32,
+  3: 48,
+  4: 64,
+  5: 80,
 };
 
 export type WorkspaceKind =

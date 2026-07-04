@@ -55,12 +55,12 @@ describe('WORKSPACE_KIND_BORDER (spec §6.4–6.8, 5px kiri)', () => {
 });
 
 describe('TREE_LEVEL_INDENT (spec §8)', () => {
-  it('level 0..5 → 0/12/16/20/24/28', () => {
+  it('level 0..5 → 0/16/32/48/64/80', () => {
     expect(TREE_LEVEL_INDENT[0]).toBe(0);
-    expect(TREE_LEVEL_INDENT[1]).toBe(12);
-    expect(TREE_LEVEL_INDENT[2]).toBe(16);
-    expect(TREE_LEVEL_INDENT[3]).toBe(20);
-    expect(TREE_LEVEL_INDENT[4]).toBe(24);
-    expect(TREE_LEVEL_INDENT[5]).toBe(28);
+    expect(TREE_LEVEL_INDENT[1]).toBe(16);
+    expect(TREE_LEVEL_INDENT[2]).toBe(32);
+    expect(TREE_LEVEL_INDENT[3]).toBe(48);
+    expect(TREE_LEVEL_INDENT[4]).toBe(64);
+    expect(TREE_LEVEL_INDENT[5]).toBe(80);
   });
 });

@@ -7,7 +7,7 @@ sources: 1
 
 # Workspace Lock Audit (V1.82)
 
-Hasil audit implementasi `mobile/` terhadap `WORKSPACE_UI_LOCK_SPEC_V1.82.md` (root repo). Spec tersebut mengunci area Workspace agar mengikuti prototype final `outputs/ems-mobile-ui/index.html`; jika konflik dengan PRD umum, untuk area Workspace spec lock menang (§19.6).
+Hasil audit implementasi `mobile/` terhadap prototype final `outputs/ems-mobile-ui/index.html` (dulu diformalkan sebagai `WORKSPACE_UI_LOCK_SPEC_V1.82.md`, kini dihapus 2026-07-03 — sumber kebenaran kembali ke `PRD.md` V1.82 + prototype). Catatan §-referensi di bawah (mis. §18, §19.6) merujuk penomoran spec lama yang sudah tidak ada.
 
 Audit dilakukan 2026-07-02 pada jalur live (`LiveWorkspaceScreen`), bukan prototype stub. Skor acceptance criteria §18: **20 PASS · 7 PARTIAL · 8 FAIL** dari 35.
 

@@ -7,7 +7,7 @@ sources: 1
 
 # Workspace Lock Sprint Plan
 
-Rencana eksekusi perbaikan seluruh temuan [[workspace-lock-audit]] agar `mobile/` memenuhi `WORKSPACE_UI_LOCK_SPEC_V1.82.md`. Lima sprint, diurutkan dari murah-berdampak ke struktural-berisiko. Setiap sprint harus meninggalkan jest suite hijau dan tidak menyentuh area di luar Workspace (§19.2).
+Rencana eksekusi perbaikan seluruh temuan [[workspace-lock-audit]] agar `mobile/` memenuhi prototype final Workspace (dulu diformalkan sebagai `WORKSPACE_UI_LOCK_SPEC_V1.82.md`, kini dihapus 2026-07-03 — rujukan §-nomor di bawah mengikuti penomoran spec lama). Lima sprint, diurutkan dari murah-berdampak ke struktural-berisiko. Setiap sprint harus meninggalkan jest suite hijau dan tidak menyentuh area di luar Workspace.
 
 Aturan lintas-sprint:
 

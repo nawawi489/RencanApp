@@ -4,9 +4,8 @@ Tugas kamu adalah memperbaiki hanya area Workspace agar 1:1 dengan prototype fin
 
 Source of truth wajib:
 
-1. `outputs/WORKSPACE_UI_LOCK_SPEC_V1.82.md`
-2. `PRD.md` (V1.82 — di root repo)
-3. Prototype visual final: `outputs/ems-mobile-ui/index.html`
+1. `PRD.md` (V1.82 — di root repo)
+2. Prototype visual final: `outputs/ems-mobile-ui/index.html`
 
 Scope patch:
 
@@ -100,4 +99,4 @@ After patch, verify at 390 px mobile viewport:
 Output requirement:
 
 1. Explain only changed files.
-2. Mention any intentional divergence from the spec. If there is no divergence, say `Workspace sudah mengikuti UI Lock Spec V1.82`.
+2. Mention any intentional divergence from the prototype. If there is no divergence, say `Workspace sudah mengikuti prototype final V1.82`.
