@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
+import { DetailChildRow } from '@/components/detail-child-row';
 import {
   Badge,
   Button,
@@ -37,8 +38,6 @@ import {
   type KpiAreaPatch,
   type PersonRef,
 } from '@/lib/kpi-areas';
-import type { Strategy } from '@/lib/strategies';
-
 type Person = NonNullable<PersonRef>;
 
 function resultValueLabel(v: KpiResultValueSource): string {
@@ -105,17 +104,6 @@ function SumberNilaiHasilPanel({
             </Pressable>
           );
         })}
-      </View>
-    </SectionCard>
-  );
-}
-
-function StrategyRow({ item, onPress }: { item: Strategy; onPress: () => void }) {
-  return (
-    <SectionCard onPress={onPress}>
-      <View className="flex-row items-start justify-between gap-3">
-        <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
-        <Badge label={PLANNING_STATUS_LABEL[item.status] ?? item.status} tone={STATUS_TONE[item.status]} />
       </View>
     </SectionCard>
   );
@@ -365,9 +353,11 @@ export function LiveKpiAreaDetailScreen() {
                 <ErrorState onRetry={() => refetchStrategies()} />
               ) : strategies.length > 0 ? (
                 strategies.map((item) => (
-                  <StrategyRow
+                  <DetailChildRow
                     key={item.id}
-                    item={item}
+                    name={item.name}
+                    statusLabel={PLANNING_STATUS_LABEL[item.status] ?? item.status}
+                    statusTone={STATUS_TONE[item.status]}
                     onPress={() => router.push(`/strategy/${item.id}` as Href)}
                   />
                 ))

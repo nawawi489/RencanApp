@@ -192,25 +192,31 @@ export function LiveActionPlanSubmitScreen() {
   const placeholderColor = usePlaceholderColor();
   const submissionFlow = useSubmissionFlow(id);
 
+  // Bentuk payload evidence/result/note dari state form — sama untuk mode instance & action-plan.
+  function buildPayload() {
+    const ev: EvidenceInput[] = evidence
+      .filter((e) => e.content.trim())
+      .map((e) => ({
+        kind: e.kind,
+        text_content: isLinkKind(e.kind) ? null : e.content.trim(),
+        url: isLinkKind(e.kind) ? e.content.trim() : null,
+      }));
+    const rv: ResultValueInput[] = results
+      .filter((r) => r.value_text.trim() || r.label.trim())
+      .map((r) => ({
+        kpi_area_id: r.kpi_area_id ?? autoKpiId,
+        label: r.label.trim() || null,
+        value_type: r.value_type,
+        value_text: r.value_text.trim() || null,
+        value_numeric: parseFloat(r.value_text) || null,
+      }));
+    const noteVal = note.trim() || null;
+    return { evidence: ev, resultValues: rv, note: noteVal };
+  }
+
   const instanceMutation = useMutation({
     mutationFn: () => {
-      const ev: EvidenceInput[] = evidence
-        .filter((e) => e.content.trim())
-        .map((e) => ({
-          kind: e.kind,
-          text_content: isLinkKind(e.kind) ? null : e.content.trim(),
-          url: isLinkKind(e.kind) ? e.content.trim() : null,
-        }));
-      const rv: ResultValueInput[] = results
-        .filter((r) => r.value_text.trim() || r.label.trim())
-        .map((r) => ({
-          kpi_area_id: r.kpi_area_id ?? autoKpiId,
-          label: r.label.trim() || null,
-          value_type: r.value_type,
-          value_text: r.value_text.trim() || null,
-          value_numeric: parseFloat(r.value_text) || null,
-        }));
-      const noteVal = note.trim() || null;
+      const { evidence: ev, resultValues: rv, note: noteVal } = buildPayload();
       return submitInstance({ instanceId: instanceId!, note: noteVal, evidence: ev, resultValues: rv });
     },
     onSuccess: () => {
@@ -251,23 +257,7 @@ export function LiveActionPlanSubmitScreen() {
 
   async function submitActionPlanFlow() {
     if (!ap || !id) return;
-    const staticEvidence: EvidenceInput[] = evidence
-      .filter((e) => e.content.trim())
-      .map((e) => ({
-        kind: e.kind,
-        text_content: isLinkKind(e.kind) ? null : e.content.trim(),
-        url: isLinkKind(e.kind) ? e.content.trim() : null,
-      }));
-    const resultValues: ResultValueInput[] = results
-      .filter((r) => r.value_text.trim() || r.label.trim())
-      .map((r) => ({
-        kpi_area_id: r.kpi_area_id ?? autoKpiId,
-        label: r.label.trim() || null,
-        value_type: r.value_type,
-        value_text: r.value_text.trim() || null,
-        value_numeric: parseFloat(r.value_text) || null,
-      }));
-    const noteVal = note.trim() || null;
+    const { evidence: staticEvidence, resultValues, note: noteVal } = buildPayload();
 
     if (ap.evidence_required && staticEvidence.length === 0 && pendingFiles.length === 0) {
       Alert.alert('Bukti wajib', 'Lampirkan minimal satu bukti sebelum submit.');

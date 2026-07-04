@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
-import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { SubmissionCard } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
@@ -324,9 +325,6 @@ export function LiveActionPlanDetailScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { profile } = useProfile();
-  const placeholderColor = usePlaceholderColor();
-  const [rejecting, setRejecting] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
 
   const apQ = useQuery({ queryKey: ['action-plan', id], queryFn: () => getActionPlan(id) });
   const subsQ = useQuery({ queryKey: ['submissions', id], queryFn: () => listSubmissions(id) });
@@ -362,11 +360,7 @@ export function LiveActionPlanDetailScreen() {
   const reviewM = useMutation({
     mutationFn: (args: { decision: 'approve' | 'reject'; reason: string | null }) =>
       reviewSubmission({ submissionId: ap!.current_submission_id!, decision: args.decision, reason: args.reason }),
-    onSuccess: () => {
-      setRejecting(false);
-      setRejectReason('');
-      refresh();
-    },
+    onSuccess: refresh,
     onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.'),
   });
 
@@ -508,47 +502,7 @@ export function LiveActionPlanDetailScreen() {
             ) : null}
 
             {ap.status === 'submitted' && isReviewer ? (
-              <View className="gap-2 rounded-2xl border border-amber-200 p-4 dark:border-amber-900">
-                <Text className="text-sm font-semibold text-black dark:text-white">
-                  Review submission terbaru
-                </Text>
-                {rejecting ? (
-                  <View className="gap-2">
-                    <TextInput
-                      className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-                      placeholder="Alasan penolakan (wajib)"
-                      placeholderTextColor={placeholderColor}
-                      value={rejectReason}
-                      onChangeText={setRejectReason}
-                      multiline
-                      textAlignVertical="top"
-                    />
-                    <Button
-                      label="Kirim Penolakan"
-                      variant="danger"
-                      loading={reviewM.isPending}
-                      onPress={() => {
-                        if (!rejectReason.trim()) {
-                          Alert.alert('Alasan wajib', 'Isi alasan penolakan terlebih dahulu.');
-                          return;
-                        }
-                        reviewM.mutate({ decision: 'reject', reason: rejectReason.trim() });
-                      }}
-                    />
-                    <Button label="Batal" variant="secondary" onPress={() => setRejecting(false)} />
-                  </View>
-                ) : (
-                  <View className="gap-2">
-                    <Button
-                      label="Setujui (Selesai)"
-                      variant="success"
-                      loading={reviewM.isPending}
-                      onPress={() => reviewM.mutate({ decision: 'approve', reason: null })}
-                    />
-                    <Button label="Tolak (Minta Revisi)" variant="danger" onPress={() => setRejecting(true)} />
-                  </View>
-                )}
-              </View>
+              <ReviewSubmissionPanel onDecide={(args) => reviewM.mutate(args)} isPending={reviewM.isPending} />
             ) : null}
 
             {ap.status === 'submitted' && isPic ? (

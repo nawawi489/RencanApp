@@ -2,6 +2,7 @@
 // Otorisasi ditegakkan di server (RLS + RPC); fungsi di sini hanya pemanggil tipis.
 // Card dibuat via INSERT ber-RLS (pola createInitiative); hanya activate_* yang lewat RPC.
 import type { Tables } from './database.types';
+import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 // Re-export token semantik dari sumber tunggal (cards) — JANGAN duplikasi nilai.
@@ -50,18 +51,10 @@ export type NewKpiArea = {
 };
 
 export async function createKpiArea(input: NewKpiArea): Promise<KpiArea> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not authenticated');
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', uid)
-    .single();
-  if (!profile?.organization_id) throw new Error('Organization not found');
+  const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('kpi_areas')
-    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
+    .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;

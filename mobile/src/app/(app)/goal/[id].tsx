@@ -5,26 +5,13 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
+import { DetailChildRow } from '@/components/detail-child-row';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressBar, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
-import type { KpiArea } from '@/lib/kpi-areas';
 import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
-function KpiAreaRow({ item, onPress }: { item: KpiArea; onPress: () => void }) {
-  return (
-    <SectionCard onPress={onPress}>
-      <View className="flex-row items-start justify-between gap-3">
-        <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
-        <Badge
-          label={PLANNING_STATUS_LABEL[item.status] ?? item.status}
-          tone={STATUS_TONE[item.status]}
-        />
-      </View>
-    </SectionCard>
-  );
-}
 
 export function LiveGoalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -156,9 +143,11 @@ export function LiveGoalDetailScreen() {
                 <ErrorState onRetry={() => kpiQ.refetch()} />
               ) : kpiQ.kpiAreas.length > 0 ? (
                 kpiQ.kpiAreas.map((item) => (
-                  <KpiAreaRow
+                  <DetailChildRow
                     key={item.id}
-                    item={item}
+                    name={item.name}
+                    statusLabel={PLANNING_STATUS_LABEL[item.status] ?? item.status}
+                    statusTone={STATUS_TONE[item.status]}
                     onPress={() => router.push(`/kpi-area/${item.id}` as Href)}
                   />
                 ))

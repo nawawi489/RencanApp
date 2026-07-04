@@ -1,6 +1,7 @@
 // Data layer Fase 1 — Card Engine + Loop Eksekusi.
 // Semua otorisasi ditegakkan di server (RLS + RPC); fungsi di sini hanya pemanggil tipis.
 import type { Tables } from './database.types';
+import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type Initiative = Tables<'initiatives'>;
@@ -322,20 +323,10 @@ export type NewInitiative = {
 };
 
 export async function createInitiative(input: NewInitiative): Promise<Initiative> {
-  const { data: auth, error: authErr } = await supabase.auth.getUser();
-  if (authErr) throw authErr;
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not authenticated');
-  const { data: profile, error: profErr } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', uid)
-    .single();
-  if (profErr) throw profErr;
-  if (!profile?.organization_id) throw new Error('Organization not found');
+  const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('initiatives')
-    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
+    .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;
@@ -362,20 +353,10 @@ export type NewActionPlan = {
 };
 
 export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan> {
-  const { data: auth, error: authErr } = await supabase.auth.getUser();
-  if (authErr) throw authErr;
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not authenticated');
-  const { data: profile, error: profErr } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', uid)
-    .single();
-  if (profErr) throw profErr;
-  if (!profile?.organization_id) throw new Error('Organization not found');
+  const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('action_plans')
-    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
+    .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;

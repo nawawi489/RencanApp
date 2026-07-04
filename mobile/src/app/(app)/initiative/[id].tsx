@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { StatTile } from '@/components/stat-tile';
 import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { alertFriendlyError } from '@/lib/errors';
@@ -45,25 +46,6 @@ function computeExecCounts(plans: ActionPlanWithPeople[]): ExecCounts {
   return c;
 }
 
-function ExecTile({
-  label,
-  value,
-  containerCls,
-  textCls,
-}: {
-  label: string;
-  value: number;
-  containerCls: string;
-  textCls: string;
-}) {
-  return (
-    <View className={`rounded-lg px-3 py-1.5 ${containerCls}`}>
-      <Text className={`text-[10px] ${textCls}`}>{label}</Text>
-      <Text className={`text-sm font-semibold ${textCls}`}>{value}</Text>
-    </View>
-  );
-}
-
 function ExecSpaceCard({
   counts,
   onOpenChat,
@@ -81,31 +63,31 @@ function ExecSpaceCard({
         Status pekerjaan di bawah Initiative ini.
       </Text>
       <View className="flex-row flex-wrap gap-2 pt-1">
-        <ExecTile
+        <StatTile
           label="Aktif"
           value={counts.active}
           containerCls="bg-blue-100 dark:bg-blue-950"
           textCls="text-blue-700 dark:text-blue-300"
         />
-        <ExecTile
+        <StatTile
           label="Review"
           value={counts.submitted}
           containerCls="bg-amber-100 dark:bg-amber-950"
           textCls="text-amber-700 dark:text-amber-300"
         />
-        <ExecTile
+        <StatTile
           label="Selesai"
           value={counts.done}
           containerCls="bg-emerald-100 dark:bg-emerald-950"
           textCls="text-emerald-700 dark:text-emerald-300"
         />
-        <ExecTile
+        <StatTile
           label="Revisi"
           value={counts.revision}
           containerCls="bg-red-100 dark:bg-red-950"
           textCls="text-red-700 dark:text-red-300"
         />
-        <ExecTile
+        <StatTile
           label="Draft"
           value={counts.draft}
           containerCls="bg-neutral-100 dark:bg-neutral-800"

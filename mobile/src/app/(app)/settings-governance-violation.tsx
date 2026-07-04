@@ -5,10 +5,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Modal, TextInput } from 'react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { Badge, Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { Badge, Button, EmptyState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import {
   GOVERNANCE_VIOLATION_SEVERITY_LABEL,
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
@@ -70,34 +70,7 @@ export default function SettingsGovernanceViolationScreen() {
           <SkeletonList count={5} />
         ) : (
           <>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Filter status pelanggaran"
-              contentContainerStyle={{ gap: 8 }}>
-              {STATUS_CHIPS.map((c) => {
-                const active = statusChip === c.key;
-                return (
-                  <Pressable
-                    key={c.key}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={`Filter ${c.label}`}
-                    onPress={() => setStatusChip(c.key)}
-                    className={`min-h-[44px] items-center justify-center rounded-full px-3 ${
-                      active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
-                    } active:opacity-70`}>
-                    <Text
-                      className={`text-xs font-semibold ${
-                        active ? 'text-white' : 'text-black dark:text-white'
-                      }`}>
-                      {c.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <TabBar tabs={STATUS_CHIPS} active={statusChip} onChange={setStatusChip} />
 
             {filtered.length === 0 ? (
               <EmptyState

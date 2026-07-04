@@ -4,6 +4,8 @@ import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { DetailChildRow } from '@/components/detail-child-row';
+import { DetailField } from '@/components/detail-field';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import {
   Badge,
@@ -11,12 +13,11 @@ import {
   EmptyState,
   ErrorState,
   MetaGrid,
-  SectionCard,
   SkeletonList,
 } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useProblemStatementInitiatives } from '@/hooks/use-workspace';
-import { INITIATIVE_STATUS_LABEL, STATUS_TONE as INIT_TONE, type Initiative } from '@/lib/cards';
+import { INITIATIVE_STATUS_LABEL, STATUS_TONE as INIT_TONE } from '@/lib/cards';
 import {
   PLANNING_STATUS_LABEL,
   STATUS_TONE,
@@ -25,29 +26,6 @@ import {
 } from '@/lib/problem-statements';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
-
-function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
-  return (
-    <SectionCard onPress={onPress}>
-      <View className="flex-row items-start justify-between gap-3">
-        <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
-        <Badge
-          label={INITIATIVE_STATUS_LABEL[item.status] ?? item.status}
-          tone={INIT_TONE[item.status]}
-        />
-      </View>
-    </SectionCard>
-  );
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <SectionCard>
-      <Text className="text-sm font-bold text-black dark:text-white">{label}</Text>
-      <Text className="text-base text-black dark:text-white">{value}</Text>
-    </SectionCard>
-  );
-}
 
 export function LiveProblemStatementDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -163,9 +141,11 @@ export function LiveProblemStatementDetailScreen() {
                 <ErrorState onRetry={() => refetchInitiatives()} />
               ) : initiatives.length > 0 ? (
                 initiatives.map((item) => (
-                  <InitiativeRow
+                  <DetailChildRow
                     key={item.id}
-                    item={item}
+                    name={item.name}
+                    statusLabel={INITIATIVE_STATUS_LABEL[item.status] ?? item.status}
+                    statusTone={INIT_TONE[item.status]}
                     onPress={() => router.push(`/initiative/${item.id}` as Href)}
                   />
                 ))

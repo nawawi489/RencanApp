@@ -3,10 +3,10 @@
 import { Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { TextInput } from 'react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { EmptyState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useActivityLog } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -87,34 +87,11 @@ export default function SettingsActivityLogScreen() {
               onChangeText={setQ}
               className="min-h-[44px] rounded-xl border border-neutral-300 bg-white px-4 text-base text-black dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
             />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Filter kategori aksi"
-              contentContainerStyle={{ gap: 8 }}>
-              {CHIP_DEFS.map((c) => {
-                const active = chip === c.key;
-                return (
-                  <Pressable
-                    key={c.key}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={`Filter ${c.label}`}
-                    onPress={() => setChip(c.key)}
-                    className={`min-h-[44px] items-center justify-center rounded-full px-3 ${
-                      active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
-                    } active:opacity-70`}>
-                    <Text
-                      className={`text-xs font-semibold ${
-                        active ? 'text-white' : 'text-black dark:text-white'
-                      }`}>
-                      {c.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <TabBar
+              tabs={CHIP_DEFS.map((c) => ({ key: c.key, label: c.label }))}
+              active={chip}
+              onChange={setChip}
+            />
 
             {filtered.length === 0 ? (
               <EmptyState

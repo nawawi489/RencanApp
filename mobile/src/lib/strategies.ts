@@ -3,6 +3,7 @@
 // Otorisasi ditegakkan di server.
 import { STATUS_TONE } from './cards';
 import type { Tables } from './database.types';
+import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type Strategy = Tables<'strategies'>;
@@ -48,18 +49,10 @@ export type NewStrategy = {
 };
 
 export async function createStrategy(input: NewStrategy): Promise<Strategy> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not authenticated');
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', uid)
-    .single();
-  if (!profile?.organization_id) throw new Error('Organization not found');
+  const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('strategies')
-    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
+    .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;
