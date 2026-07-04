@@ -5,8 +5,10 @@
 //   ke level-3 (Strategy / Initiative) untuk turunkan tap-count Goal→Strategy dari 3 → 1.
 // Perpindahan pane dilakukan via Hub (Kembali di AppHeader → Masuk ruang lain) — TIDAK ada
 // TabBar internal di pane agar tidak duplikasi navigasi hub-card lobby.
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -48,7 +50,7 @@ import type { MbrCompliance } from '@/lib/settings-mbr';
 import type { CardEntityType } from '@/lib/governance-admin';
 import { alertFriendlyError } from '@/lib/errors';
 import type { RowAction } from '@/components/row-actions-menu';
-import { PLANNING_STATUS_LABEL, STATUS_TONE, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
+import { PLANNING_STATUS_LABEL, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
 import {
   ACTION_PLAN_STATUS_LABEL,
   INITIATIVE_STATUS_LABEL,
@@ -62,17 +64,28 @@ import {
   problemCountOf,
   type DevelopmentAreaWithProblemCount,
 } from '@/lib/development-areas';
-import { cardPeriodStatus, showPastPeriodAlert } from '@/lib/period-focus';
+import {
+  MONTH_LABELS_ID,
+  cardPeriodStatus,
+  formatPeriodLabel,
+  quarterOfMonth,
+  showPastPeriodAlert,
+} from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { useThemePreference } from '@/providers/theme-provider';
 import { RowActionsMenu } from '@/components/row-actions-menu';
 import { WorkspaceHubCard } from '@/components/workspace-hub-card';
-import { TREE_LEVEL_INDENT, WORKSPACE_KIND_BORDER, WorkspaceKindPill } from '@/components/workspace-kind-pill';
+import {
+  TREE_LEVEL_INDENT,
+  WORKSPACE_KIND_BORDER,
+  WorkspaceKindPill,
+  type WorkspaceKind,
+} from '@/components/workspace-kind-pill';
 import {
   derivePerformanceHubStats,
   deriveDevelopmentHubStats,
 } from '@/lib/workspace-hub-stats';
-import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY } from '@/lib/workspace-copy';
+import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY, WS_TREE_COMPACT_COPY } from '@/lib/workspace-copy';
 
 // Tree merender status dari beberapa jenis kartu: planning (goal/kpi/strategy/dev-area/PS),
 // initiative, dan action plan (execution). PLANNING_STATUS_LABEL saja bocorkan enum mentah
@@ -83,15 +96,24 @@ const TREE_STATUS_LABEL: Record<string, string> = {
   ...ACTION_PLAN_STATUS_LABEL,
 };
 
-function StatusBadge({ status }: { status: string }) {
-  return <Badge label={TREE_STATUS_LABEL[status] ?? status} tone={STATUS_TONE[status]} />;
-}
+// UI-S-W09 — hitSlop dinaikkan ke 10/8 agar touch target efektif ≥ 44px (DESIGN §4 a11y).
+// Tombol visual 32–34px + hitSlop ini → 48–54px target sentuh, setara panduan iOS/Material.
+const ACTION_HIT_SLOP = { top: 10, bottom: 10, left: 8, right: 8 };
+const EMPTY_IDS: string[] = [];
+
+type TreeCardDates = {
+  period_start?: string | null;
+  period_end?: string | null;
+  start_date?: string | null;
+  deadline?: string | null;
+};
 
 /**
- * Connector L-shape antar level tree (spec §8). Overlay dekoratif non-interaktif yang
- * menghubungkan sisi kiri card induk turun ke card anak. Geometri terkunci spec:
- * absolute, left/top -10, 10×32, border-left+bottom 2px `#cfd8e5`, radius bottom-left 8.
- * Dirender di dalam card anak (yang punya marginLeft indent) sehingga garis jatuh di gutter.
+ * Garis vertikal lurus di gutter antar level tree (spec §8). Overlay dekoratif non-interaktif
+ * yang membentang sepanjang sisi kiri card anak. Geometri compact untuk mobile: absolute,
+ * left -10, top 0 → bottom 0 (full height), lebar 1.5px, warna `#cfd8e5`. Dirender di dalam
+ * card anak (yang punya marginLeft indent) sehingga garis jatuh di gutter, menyatu rapi
+ * dengan border kiri 5px card.
  */
 function TreeConnector() {
   return (
@@ -99,14 +121,35 @@ function TreeConnector() {
       pointerEvents="none"
       style={{
         position: 'absolute',
-        left: -16,
-        top: -10,
-        width: 16,
-        height: 32,
-        borderLeftWidth: 2,
-        borderBottomWidth: 2,
-        borderColor: '#cfd8e5',
-        borderBottomLeftRadius: 8,
+        left: -10,
+        top: 0,
+        bottom: 0,
+        width: 1.5,
+        backgroundColor: '#cfd8e5',
+        borderRadius: 1,
+      }}
+    />
+  );
+}
+
+/**
+ * Garis kontinu yang membentang di sepanjang daftar sibling card (spesifik §8 polish).
+ * Berbeda dengan `TreeConnector` (per-card), `SiblingTreeLine` dipasang sekali di wrapper
+ * yang membungkus list anak, sehingga garis TIDAK putus di antara card-card level yang
+ * sama. `offsetLeft` = posisi absolut garis di dalam wrapper (gutter relatif thd child).
+ */
+function SiblingTreeLine({ offsetLeft }: { offsetLeft: number }) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: offsetLeft,
+        top: 0,
+        bottom: 0,
+        width: 1.5,
+        backgroundColor: '#cfd8e5',
+        borderRadius: 1,
       }}
     />
   );
@@ -118,38 +161,143 @@ function TreeConnector() {
  * (belum ter-fetch / error / RLS tak terlihat / AP repeat tanpa compliance) — no misleading
  * numbers, parity hub card; BUKAN 0%. Induk tanpa anak dikembalikan RPC sebagai 0 → orb '0%'.
  */
-function TreeOrbCell({ kind, value }: { kind: string; value: number | null }) {
+function TreeOrbCell({
+  kind,
+  value,
+  compact = false,
+}: {
+  kind: string;
+  value: number | null;
+  compact?: boolean;
+}) {
   if (value == null) {
     return (
-      <View style={{ width: 50 }} className="items-center justify-center py-1">
+      <View style={{ width: compact ? 38 : 50 }} className="items-center justify-center py-0.5">
         <Text className="text-base font-bold text-neutral-400 dark:text-neutral-500" accessibilityLabel={`${treeOrbLabel(kind)} belum tersedia`}>
           —
         </Text>
       </View>
     );
   }
-  return <TreeProgressOrb value={value} label={treeOrbLabel(kind)} />;
+  return <TreeProgressOrb value={value} label={treeOrbLabel(kind)} compact={compact} />;
 }
 
-function PastPeriodBadge() {
-  return <Badge label="Periode lewat" tone="neutral" />;
+function CompactMeta({ lines }: { lines: Array<string | null | undefined> }) {
+  const visibleLines = lines.filter((line): line is string => !!line && line.trim().length > 0).slice(0, 2);
+  if (visibleLines.length === 0) return null;
+  return (
+    <View className="gap-1">
+      {visibleLines.map((line) => (
+        <Text
+          key={line}
+          className="text-xs leading-4.5 text-neutral-500 dark:text-neutral-400"
+          numberOfLines={2}>
+          {line}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function compactDate(value: string | null | undefined) {
+  return value?.trim() ? value.slice(0, 10) : null;
+}
+
+function parseDateOnly(value: string | null | undefined) {
+  if (!value?.trim()) return null;
+  const iso = value.slice(0, 10);
+  const [year, month, day] = iso.split('-').map((part) => Number(part));
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function endOfMonth(year: number, monthIndex: number) {
+  return new Date(year, monthIndex + 1, 0, 0, 0, 0, 0).getDate();
+}
+
+function treePeriodPillLabel(
+  card: TreeCardDates,
+  fallbackFocus: ReturnType<typeof usePeriodFocus>['focus'],
+) {
+  const start = parseDateOnly(card.period_start ?? card.start_date);
+  const end = parseDateOnly(card.period_end ?? card.deadline);
+  if (!start || !end) return formatPeriodLabel(fallbackFocus);
+
+  if (
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === 0 &&
+    start.getDate() === 1 &&
+    end.getMonth() === 11 &&
+    end.getDate() === 31
+  ) {
+    return `${start.getFullYear()}`;
+  }
+
+  if (start.getFullYear() === end.getFullYear()) {
+    const startQuarter = quarterOfMonth(start.getMonth() + 1);
+    const endQuarter = quarterOfMonth(end.getMonth() + 1);
+    const quarterStartMonth = (startQuarter - 1) * 3;
+    const quarterEndMonth = quarterStartMonth + 2;
+    if (
+      startQuarter === endQuarter &&
+      start.getMonth() === quarterStartMonth &&
+      start.getDate() === 1 &&
+      end.getMonth() === quarterEndMonth &&
+      end.getDate() === endOfMonth(end.getFullYear(), end.getMonth())
+    ) {
+      return `Q${startQuarter} ${start.getFullYear()}`;
+    }
+  }
+
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${MONTH_LABELS_ID[start.getMonth() + 1]} ${start.getFullYear()}`;
+  }
+
+  return formatPeriodLabel(fallbackFocus);
 }
 
 
 /**
- * Badan card (pill + judul + orb): tap → langsung membuka Detail (menggantikan tombol Detail terpisah).
- * Tap-target = Pressable overlay absolut DI ATAS baris konten.
+ * Badan card (pill + judul + orb): tap → membuka detail. Action row tetap menyediakan tombol
+ * Detail eksplisit untuk pola compact, tetapi overlay ini dipertahankan agar perilaku tap badan
+ * card yang sudah ada tidak regres. `overlayRightInset` dipakai bila ada kontrol independen di sisi
+ * kanan header (mis. chevron compact) agar tombol itu tidak tertutup overlay detail.
  */
-function TreeCardBody({ cardLabel, onPress, children }: { cardLabel: string; onPress: () => void; children: ReactNode }) {
+function TreeCardBody({
+  cardLabel,
+  onPress,
+  children,
+  overlayRightInset = 0,
+}: {
+  cardLabel: string;
+  onPress: () => void;
+  children: ReactNode;
+  overlayRightInset?: number;
+}) {
   return (
     <View style={{ position: 'relative' }}>
-      <View className="flex-row items-start gap-3">{children}</View>
+      <View className="flex-row items-start gap-2">{children}</View>
       <Pressable
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: overlayRightInset, bottom: 0 }}
         accessibilityRole="button"
         accessibilityLabel={`Buka detail ${cardLabel}`}
         onPress={onPress}
       />
+    </View>
+  );
+}
+
+function CompactHeaderPills({
+  kind,
+  periodLabel,
+}: {
+  kind: WorkspaceKind;
+  periodLabel: string;
+}) {
+  return (
+    <View className="flex-row flex-wrap items-center gap-1.5">
+      <WorkspaceKindPill kind={kind} />
+      <Badge label={periodLabel} tone="neutral" />
     </View>
   );
 }
@@ -172,18 +320,80 @@ function PastDim({
   return <View>{children}</View>;
 }
 
-/**
- * Baris aksi tree-card (PRD V1.8.2 §7.3): [Lihat/Tutup ▾] [Detail] [⋯] [+ tambah?].
- * Tap di luar tombol TIDAK membuka detail. `+` dikunci popup bila past period (§7.7).
- *
- * `onAdd` & `addLabel` opsional — child terdalam (mis. KPI Area di expand Goal) tak punya "+".
- */
-function CardActionRow({
-  cardLabel,
+function TreeToggleButton({
   expanded,
-  onToggleExpand,
-  expandLabel,
-  collapseLabel,
+  label,
+  onPress,
+}: {
+  expanded: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  const isDark = useThemePreference().effective === 'dark';
+  const borderColor = expanded ? (isDark ? '#3b82f6' : '#bfdbfe') : isDark ? '#404040' : '#d9e3ef';
+  const backgroundColor = expanded ? (isDark ? '#172554' : '#eff6ff') : isDark ? '#171717' : '#f8fafc';
+  const iconColor = expanded ? (isDark ? '#bfdbfe' : '#2563eb') : isDark ? '#e5e7eb' : '#64748b';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ expanded }}
+      hitSlop={ACTION_HIT_SLOP}
+      onPress={onPress}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor,
+        backgroundColor,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <View
+        pointerEvents="none"
+        style={{
+          transform: [{ rotate: expanded ? '90deg' : '0deg' }],
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <Ionicons name="chevron-forward" size={18} color={iconColor} />
+      </View>
+    </Pressable>
+  );
+}
+
+function ExpandChildCount({
+  label,
+  expanded,
+  onPress,
+}: {
+  label: string;
+  expanded: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={ACTION_HIT_SLOP}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ketuk untuk ${expanded ? 'tutup' : 'buka'}`}>
+      <Text className="text-xs leading-4.5 text-neutral-500 dark:text-neutral-400">
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Action row compact tree-card: [Detail] [⋯] [+ tambah?].
+ * Expand/collapse dipindah ke chevron kanan atas; tombol "+" tetap mewarisi seluruh guard bisnis
+ * lama (past-period, permission, MBR) agar semantik tidak berubah.
+ */
+function CompactActionRow({
+  cardLabel,
+  detailLabel,
+  onDetail,
   onMore,
   past,
   onAdd,
@@ -193,10 +403,8 @@ function CardActionRow({
   addButtonLabel,
 }: {
   cardLabel: string;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  expandLabel: string;
-  collapseLabel: string;
+  detailLabel: string;
+  onDetail: () => void;
   onMore: () => void;
   past: boolean;
   onAdd?: () => void;
@@ -209,27 +417,28 @@ function CardActionRow({
   addButtonLabel?: string;
 }) {
   // Spec §11 (amandemen a11y — DESIGN §4 mengikat menang atas lock; lihat lock §3/§11):
-  // ⋯ 34×30 r999 surface-soft; + blue-soft teks #145ebc. hitSlop menjaga touch target ≥44px
-  // meski tinggi visual 30px (DESIGN §4). Surface/border netral theme-aware: warna terang
-  // terkunci HANYA berlaku di light mode; di dark mode ikut gelap (preseden workspace-hub-card).
+  // row dibuat tetap compact: tombol visible 30px dengan hitSlop agar target sentuh tetap nyaman.
   const isDark = useThemePreference().effective === 'dark';
-  const hit = { top: 8, bottom: 8, left: 6, right: 6 };
   return (
     <View className="flex-row items-center gap-2">
       <Pressable
-        className="min-h-[44px] flex-1 flex-row items-center gap-1 active:opacity-70"
+        hitSlop={ACTION_HIT_SLOP}
+        style={{
+          minHeight: 34,
+          borderRadius: 999,
+          paddingHorizontal: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: isDark ? '#1d4ed8' : '#1564b3',
+        }}
         accessibilityRole="button"
-        accessibilityLabel={expanded ? collapseLabel : expandLabel}
-        accessibilityState={{ expanded }}
-        onPress={onToggleExpand}>
-        <Text className="text-sm font-semibold text-brand-dark dark:text-brand">
-          {expanded ? collapseLabel : expandLabel}
-        </Text>
-        <Text className="text-sm text-brand-dark dark:text-brand">{expanded ? '▾' : '▸'}</Text>
+        accessibilityLabel={detailLabel}
+        onPress={onDetail}>
+        <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '900' }}>Detail</Text>
       </Pressable>
       <Pressable
-        hitSlop={hit}
-        style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
+        hitSlop={ACTION_HIT_SLOP}
+        style={{ width: 34, height: 34, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
         accessibilityRole="button"
         accessibilityLabel={`Aksi lain ${cardLabel}`}
         onPress={onMore}>
@@ -237,20 +446,22 @@ function CardActionRow({
       </Pressable>
       {onAdd || onAddPress ? (
         <Pressable
-          hitSlop={hit}
+          hitSlop={ACTION_HIT_SLOP}
           style={{
-            height: 30,
+            minHeight: 34,
             borderRadius: 999,
             paddingHorizontal: 12,
             alignItems: 'center',
             justifyContent: 'center',
+            // UI-S-W09 — tombol "+ Child" pakai family teal (konstruktif) agar tidak rancu
+            // dengan Detail (biru = primary nav) dan "⋯" (netral = utility).
             borderWidth: 1,
             borderColor: (addDimmed ?? past)
               ? (isDark ? '#404040' : '#e2e8f0')
-              : (isDark ? '#1e3a8a' : '#cce2ff'),
+              : (isDark ? '#115e59' : '#99f6e4'),
             backgroundColor: (addDimmed ?? past)
               ? (isDark ? '#262626' : '#f1f5f9')
-              : (isDark ? '#172554' : '#eef6ff'),
+              : (isDark ? '#134e4a' : '#ccfbf1'),
           }}
           accessibilityRole="button"
           accessibilityLabel={addLabel ?? 'Tambah turunan'}
@@ -258,7 +469,7 @@ function CardActionRow({
           onPress={() =>
             onAddPress ? onAddPress() : past ? showPastPeriodAlert(cardLabel) : onAdd?.()
           }>
-          <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : (isDark ? '#93c5fd' : '#145ebc'), fontSize: 12, fontWeight: '900' }}>
+          <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : (isDark ? '#5eead4' : '#0f766e'), fontSize: 11, fontWeight: '900' }}>
             {addButtonLabel ?? '+'}
           </Text>
         </Pressable>
@@ -329,7 +540,7 @@ function useTreeRowActions(
  * Sub-row level 3: Strategy di bawah satu KPI Area. WSA-01: expandable → Initiative (level 4).
  * "+ Initiative" gated `create_initiative`, past-period lock, guard MBR kpi_area→strategy.
  */
-function StrategySubRow({
+const StrategySubRow = memo(function StrategySubRow({
   strategy,
   ancestorPast = false,
   parentCompliance,
@@ -346,14 +557,33 @@ function StrategySubRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const { initiatives, isLoading, isError, refetch } = useStrategyInitiatives(strategy.id, expanded);
-  const { progressOf: initProgressOf } = useCardProgress(expanded ? initiatives.map((i) => i.id) : []);
+  const initiativeIds = useMemo(
+    () => (expanded ? initiatives.map((i) => i.id) : EMPTY_IDS),
+    [expanded, initiatives],
+  );
+  const { progressOf: initProgressOf } = useCardProgress(initiativeIds);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(strategy, focus) === 'past';
   const canAddInit = can('create_initiative');
   const rowActions = useTreeRowActions('strategy', strategy.id, strategy.name);
+  const periodLabel = treePeriodPillLabel(strategy, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.strategyMeta({
+    past,
+    statusLabel: TREE_STATUS_LABEL[strategy.status] ?? strategy.status,
+    contribution: strategy.contribution_pct == null ? null : `${strategy.contribution_pct}%`,
+    risk: strategy.main_risk,
+  });
   // WSA-04 — guard MBR: fail-open saat data belum ada (undefined); guard hanya saat tahu non-compliant.
   const mbrGuarded = !!parentCompliance && !parentCompliance.is_compliant;
-  const onAddInitiative = () => {
+  const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openDetail = useCallback(
+    () => router.push(`/strategy/${strategy.id}` as Href),
+    [router, strategy.id],
+  );
+  const retryChildren = useCallback(() => refetch(), [refetch]);
+  const onAddInitiative = useCallback(() => {
     if (mbrGuarded && parentCompliance) {
       const { title, message } = mbrBreakdownGuardMessage('KPI Area', parentCompliance, 'Initiative');
       Alert.alert(title, message);
@@ -364,62 +594,64 @@ function StrategySubRow({
       return;
     }
     router.push(`/initiative/new?strategyId=${strategy.id}` as Href);
-  };
+  }, [mbrGuarded, parentCompliance, past, router, strategy.id, strategy.name]);
   // Tombol redup bila past ATAU ter-guard MBR (spec §11: tetap terlihat, tapi redup).
   const addDimmed = past || mbrGuarded;
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      {/* Spec §6.6 + §8: level-3 (indent 20px), border kiri 5px warna Strategy (#6941c6). */}
       <View
-        className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
-        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy, marginLeft: TREE_LEVEL_INDENT[3] }}>
-        <TreeConnector />
-        <TreeCardBody cardLabel={strategy.name} onPress={() => router.push(`/strategy/${strategy.id}` as Href)}>
-          <View className="flex-1 gap-2">
-            <View
-              className="flex-row items-center justify-between gap-2"
-              style={{ flexWrap: 'wrap', rowGap: 4 }}>
-              <WorkspaceKindPill kind="strategy" />
-              <View className="flex-row items-center gap-1">
-                {past ? <PastPeriodBadge /> : null}
-                <StatusBadge status={strategy.status} />
-              </View>
+        className="gap-2"
+        style={{ marginLeft: TREE_LEVEL_INDENT[3] }}>
+        {/* Spec §6.6 + §8: level-3 (indent 20px), border kiri 5px warna Strategy (#6941c6). */}
+        <View
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy }}>
+          <TreeCardBody cardLabel={strategy.name} onPress={openDetail} overlayRightInset={52}>
+            <View className="flex-1 gap-1.5">
+              <CompactHeaderPills kind="strategy" periodLabel={periodLabel} />
+              <Text
+                className="text-sm font-medium text-black dark:text-white"
+                numberOfLines={2}
+                accessibilityLabel={`Strategy ${strategy.name}`}>
+                {strategy.name}
+              </Text>
+              <CompactMeta lines={metaLines} />
             </View>
-            <Text
-              className="text-sm font-medium text-black dark:text-white"
-              numberOfLines={2}
-              accessibilityLabel={`Strategy ${strategy.name}`}>
-              {strategy.name}
-            </Text>
-          </View>
-          <TreeOrbCell kind="strategy" value={progress} />
-        </TreeCardBody>
-        <CardActionRow
-          cardLabel={strategy.name}
-          expanded={expanded}
-          onToggleExpand={() => setExpanded((v) => !v)}
-          expandLabel="Lihat Initiative"
-          collapseLabel="Tutup"
-          onMore={() => setMenuOpen(true)}
-          past={past}
-          onAddPress={canAddInit ? onAddInitiative : undefined}
-          addDimmed={addDimmed}
-          addLabel={`Tambah Initiative ke ${strategy.name}`}
-          addButtonLabel="+ Initiative"
-        />
+            <View className="items-center gap-1">
+              <TreeOrbCell kind="strategy" value={progress} compact />
+              <TreeToggleButton
+                expanded={expanded}
+                label={`Toggle Initiative ${strategy.name}`}
+                onPress={toggleExpanded}
+              />
+            </View>
+          </TreeCardBody>
+          <CompactActionRow
+            cardLabel={strategy.name}
+            detailLabel={`Detail ${strategy.name}`}
+            onDetail={openDetail}
+            onMore={openMenu}
+            past={past}
+            onAddPress={canAddInit ? onAddInitiative : undefined}
+            addDimmed={addDimmed}
+            addLabel={`Tambah Initiative ke ${strategy.name}`}
+            addButtonLabel="+ Initiative"
+          />
+        </View>
 
         {expanded ? (
           isLoading ? (
             <SkeletonList count={2} />
           ) : isError ? (
-            <ErrorState onRetry={() => refetch()} />
+            <ErrorState onRetry={retryChildren} />
           ) : initiatives.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Initiative. Tambah Initiative untuk eksekusi Strategy ini.
             </Text>
           ) : (
-            <View className="gap-2">
+            <View className="gap-2" style={{ position: 'relative' }}>
+              <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[4] - 10} />
               {initiatives.map((i) => (
                 <InitiativeSubRow
                   key={i.id}
@@ -434,19 +666,19 @@ function StrategySubRow({
       </View>
       <RowActionsMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         title={strategy.name}
         items={rowActions}
       />
     </PastDim>
   );
-}
+});
 
 /**
  * Sub-row level 2: KPI Area di bawah satu Goal. Expandable → Strategy children.
  * Lazy fetch Strategy hanya saat `expanded` (parameter `enabled` di useStrategies).
  */
-function KpiAreaSubRow({
+const KpiAreaSubRow = memo(function KpiAreaSubRow({
   kpi,
   ancestorPast = false,
   progress,
@@ -460,7 +692,11 @@ function KpiAreaSubRow({
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { strategies, isLoading, isError, refetch } = useStrategies(kpi.id, expanded);
-  const { progressOf: stratProgressOf } = useCardProgress(expanded ? strategies.map((s) => s.id) : []);
+  const strategyIds = useMemo(
+    () => (expanded ? strategies.map((s) => s.id) : EMPTY_IDS),
+    [expanded, strategies],
+  );
+  const { progressOf: stratProgressOf } = useCardProgress(strategyIds);
   // WSA-04 — guard MBR: fetch kepatuhan kpi_area→strategy hanya saat expanded (parentType ''
   // menonaktifkan query di useMbrCompliance). Diteruskan ke StrategySubRow untuk guard "+ Initiative".
   const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'kpi_area' : '', kpi.id);
@@ -468,59 +704,76 @@ function KpiAreaSubRow({
   const past = cardPeriodStatus(kpi, focus) === 'past';
   const canAddStrategy = can('create_strategy'); // WSA-13 — key presisi (bukan proxy create_kpi_area)
   const rowActions = useTreeRowActions('kpi_area', kpi.id, kpi.name);
+  const periodLabel = treePeriodPillLabel(kpi, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.kpiMeta({
+    past,
+    statusLabel: TREE_STATUS_LABEL[kpi.status] ?? kpi.status,
+    target: kpi.target,
+    outcome: kpi.expected_outcome,
+  });
+  const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openDetail = useCallback(
+    () => router.push(`/kpi-area/${kpi.id}` as Href),
+    [router, kpi.id],
+  );
+  const addStrategy = useCallback(
+    () => router.push(`/strategy/new?kpiAreaId=${kpi.id}` as Href),
+    [router, kpi.id],
+  );
+  const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna KPI Area (#b76b00). */}
       <View
-        className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
-        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area, marginLeft: TREE_LEVEL_INDENT[2] }}>
-        <TreeConnector />
-        <TreeCardBody cardLabel={kpi.name} onPress={() => router.push(`/kpi-area/${kpi.id}` as Href)}>
-          <View className="flex-1 gap-2">
-            <View
-              className="flex-row items-center justify-between gap-2"
-              style={{ flexWrap: 'wrap', rowGap: 4 }}>
-              <WorkspaceKindPill kind="kpi_area" />
-              <View className="flex-row items-center gap-1.5">
-                {past ? <PastPeriodBadge /> : null}
-                <StatusBadge status={kpi.status} />
-              </View>
+        className="gap-2"
+        style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
+        {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna KPI Area (#b76b00). */}
+        <View
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800"
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area }}>
+          <TreeCardBody cardLabel={kpi.name} onPress={openDetail} overlayRightInset={52}>
+            <View className="flex-1 gap-1.5">
+              <CompactHeaderPills kind="kpi_area" periodLabel={periodLabel} />
+              <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>
+                {kpi.name}
+              </Text>
+              <CompactMeta lines={metaLines} />
             </View>
-            <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>
-              {kpi.name}
-            </Text>
-          </View>
-          <TreeOrbCell kind="kpi_area" value={progress} />
-        </TreeCardBody>
-        <CardActionRow
-          cardLabel={kpi.name}
-          expanded={expanded}
-          onToggleExpand={() => setExpanded((v) => !v)}
-          expandLabel="Lihat Strategy"
-          collapseLabel="Tutup"
-          onMore={() => setMenuOpen(true)}
-          past={past}
-          onAdd={
-            canAddStrategy
-              ? () => router.push(`/strategy/new?kpiAreaId=${kpi.id}` as Href)
-              : undefined
-          }
-          addLabel={`Tambah Strategy ke ${kpi.name}`}
-          addButtonLabel="+ Strategy"
-        />
+            <View className="items-center gap-1">
+              <TreeOrbCell kind="kpi_area" value={progress} compact />
+              <TreeToggleButton
+                expanded={expanded}
+                label={`Toggle Strategy ${kpi.name}`}
+                onPress={toggleExpanded}
+              />
+            </View>
+          </TreeCardBody>
+          <CompactActionRow
+            cardLabel={kpi.name}
+            detailLabel={`Detail ${kpi.name}`}
+            onDetail={openDetail}
+            onMore={openMenu}
+            past={past}
+            onAdd={canAddStrategy ? addStrategy : undefined}
+            addLabel={`Tambah Strategy ke ${kpi.name}`}
+            addButtonLabel="+ Strategy"
+          />
+        </View>
 
         {expanded ? (
           isLoading ? (
             <SkeletonList count={2} />
           ) : isError ? (
-            <ErrorState onRetry={() => refetch()} />
+            <ErrorState onRetry={retryChildren} />
           ) : strategies.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Strategy. Tambah Strategy untuk pecah KPI Area ini.
             </Text>
           ) : (
-            <View className="gap-2">
+            <View className="gap-2" style={{ position: 'relative' }}>
+              <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[3] - 10} />
               {strategies.map((s) => (
                 <StrategySubRow
                   key={s.id}
@@ -536,15 +789,21 @@ function KpiAreaSubRow({
       </View>
       <RowActionsMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         title={kpi.name}
         items={rowActions}
       />
     </PastDim>
   );
-}
+});
 
-function GoalRow({ goal, progress }: { goal: GoalWithKpiCount; progress: number | null }) {
+const GoalRow = memo(function GoalRow({
+  goal,
+  progress,
+}: {
+  goal: GoalWithKpiCount;
+  progress: number | null;
+}) {
   const router = useRouter();
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -554,83 +813,109 @@ function GoalRow({ goal, progress }: { goal: GoalWithKpiCount; progress: number 
   const { kpiAreas, isLoading, isError, refetch } = useKpiAreas(goal.id, expanded);
   const { focus } = usePeriodFocus();
   // WSA-15 — orb capaian anak (KPI Area) di level kontainer (1 RPC per Goal expanded, bukan per row).
-  const { progressOf: kpiProgressOf } = useCardProgress(expanded ? kpiAreas.map((k) => k.id) : []);
+  const kpiIds = useMemo(() => (expanded ? kpiAreas.map((k) => k.id) : EMPTY_IDS), [expanded, kpiAreas]);
+  const { progressOf: kpiProgressOf } = useCardProgress(kpiIds);
 
   const count = kpiCountOf(goal);
-  const countLabel = count == null ? WS_COPY.kpiCountUnknown : WS_COPY.kpiCount(count);
   const past = cardPeriodStatus(goal, focus) === 'past';
   const canAddKpi = can('create_kpi_area');
   const rowActions = useTreeRowActions('goal', goal.id, goal.name);
+  const periodLabel = treePeriodPillLabel(goal, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.goalMeta({
+    past,
+    statusLabel: TREE_STATUS_LABEL[goal.status] ?? goal.status,
+    target: goal.target_result,
+  });
+  const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openDetail = useCallback(() => router.push(`/goal/${goal.id}` as Href), [router, goal.id]);
+  const addKpi = useCallback(
+    () => router.push(`/kpi-area/new?goalId=${goal.id}` as Href),
+    [router, goal.id],
+  );
+  const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
     <PastDim past={past}>
       {/* Spec §6.4 + §8: level-0 (indent 0), border kiri 5px warna kategori Goal. */}
-      <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
-      <SectionCard>
-        <TreeCardBody cardLabel={goal.name} onPress={() => router.push(`/goal/${goal.id}` as Href)}>
-          <View className="flex-1 gap-2">
-            <View
-              className="flex-row items-center justify-between gap-2"
-              style={{ flexWrap: 'wrap', rowGap: 4 }}>
-              <WorkspaceKindPill kind="goal" />
-              <View className="flex-row items-center gap-1.5">
-                {past ? <PastPeriodBadge /> : null}
-                <StatusBadge status={goal.status} />
+      <View className="gap-2" style={{ marginLeft: TREE_LEVEL_INDENT[0] }}>
+        <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16 }}>
+          <SectionCard>
+            <TreeCardBody cardLabel={goal.name} onPress={openDetail} overlayRightInset={52}>
+              <View className="flex-1 gap-1.5">
+                <CompactHeaderPills kind="goal" periodLabel={periodLabel} />
+                <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>{goal.name}</Text>
+                <CompactMeta lines={metaLines} />
               </View>
-            </View>
-            <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>{goal.name}</Text>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
-          </View>
-          <TreeOrbCell kind="goal" value={progress} />
-        </TreeCardBody>
+              <View className="items-center gap-1">
+                <TreeOrbCell kind="goal" value={progress} compact />
+                <TreeToggleButton
+                  expanded={expanded}
+                  label={`Toggle KPI Area ${goal.name}`}
+                  onPress={toggleExpanded}
+                />
+              </View>
+            </TreeCardBody>
 
-        <CardActionRow
-          cardLabel={goal.name}
-          expanded={expanded}
-          onToggleExpand={() => setExpanded((v) => !v)}
-          expandLabel="Lihat KPI Area"
-          collapseLabel="Tutup"
-          onMore={() => setMenuOpen(true)}
-          past={past}
-          onAdd={canAddKpi ? () => router.push(`/kpi-area/new?goalId=${goal.id}` as Href) : undefined}
-          addLabel={`Tambah KPI Area ke ${goal.name}`}
-          addButtonLabel="+ KPI Area"
-        />
+            <ExpandChildCount
+              label={count === 0 ? 'Belum ada KPI' : WS_TREE_COMPACT_COPY.needChild(count, 'KPI Area')}
+              expanded={expanded}
+              onPress={toggleExpanded}
+            />
+
+            <CompactActionRow
+              cardLabel={goal.name}
+              detailLabel={`Detail ${goal.name}`}
+              onDetail={openDetail}
+              onMore={openMenu}
+              past={past}
+              onAdd={canAddKpi ? addKpi : undefined}
+              addLabel={`Tambah KPI Area ke ${goal.name}`}
+              addButtonLabel="+ KPI Area"
+            />
+          </SectionCard>
+        </View>
 
         {expanded ? (
           isLoading ? (
             <SkeletonList count={2} />
           ) : isError ? (
-            <ErrorState onRetry={() => refetch()} />
+            <ErrorState onRetry={retryChildren} />
           ) : kpiAreas.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada KPI Area. Tambah KPI Area untuk pecah Goal ini.
             </Text>
           ) : (
-            <View className="gap-2">
+            <View className="gap-2" style={{ position: 'relative' }}>
+              <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[2] - 10} />
               {kpiAreas.map((k) => (
-                <KpiAreaSubRow key={k.id} kpi={k} ancestorPast={past} progress={kpiProgressOf(k.id)} />
+                <KpiAreaSubRow
+                  key={k.id}
+                  kpi={k}
+                  ancestorPast={past}
+                  progress={kpiProgressOf(k.id)}
+                />
               ))}
             </View>
           )
         ) : null}
-      </SectionCard>
       </View>
       <RowActionsMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         title={goal.name}
         items={rowActions}
       />
     </PastDim>
   );
-}
+});
 
 /**
  * Sub-row Action Plan — level TERBAWAH (spec §6.8/§7.5): tanpa panah, tanpa tombol tambah.
  * Hanya Detail + ⋯. `level` menentukan indent (5 di Performance, 4 di Development).
  */
-function ActionPlanSubRow({
+const ActionPlanSubRow = memo(function ActionPlanSubRow({
   item,
   ancestorPast = false,
   level,
@@ -643,66 +928,67 @@ function ActionPlanSubRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(item, focus) === 'past';
-  const isDark = useThemePreference().effective === 'dark';
   const rowActions = useTreeRowActions('action_plan', item.id, item.name);
+  const periodLabel = treePeriodPillLabel(item, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.actionPlanMeta({
+    past,
+    statusLabel: TREE_STATUS_LABEL[item.status] ?? item.status,
+    deadline: compactDate(item.deadline ?? item.start_date),
+    reviewer: item.reviewer?.full_name,
+  });
   // WSA-15 — orb AP leaf dihitung KLIEN (bukan RPC): status-based (one_time) via progress.ts.
   // Repeat AP butuh Repeat Compliance yg tak ter-fetch di baris ini → null → '—' (bukan 0% palsu).
   const orbValue = actionPlanTreeProgress({ status: item.status, repeatSetting: item.repeat_setting });
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openDetail = useCallback(
+    () => router.push(`/action-plan/${item.id}` as Href),
+    [router, item.id],
+  );
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
       <View
-        className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
+        className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan, marginLeft: TREE_LEVEL_INDENT[level] }}>
-        <TreeConnector />
-        <TreeCardBody cardLabel={item.name} onPress={() => router.push(`/action-plan/${item.id}` as Href)}>
-          <View className="flex-1 gap-2">
-            <View
-              className="flex-row items-center justify-between gap-2"
-              style={{ flexWrap: 'wrap', rowGap: 4 }}>
-              <WorkspaceKindPill kind="action_plan" />
-              <View className="flex-row items-center gap-1">
-                {past ? <PastPeriodBadge /> : null}
-                <StatusBadge status={item.status} />
-              </View>
-            </View>
+        <TreeCardBody cardLabel={item.name} onPress={openDetail}>
+          <View className="flex-1 gap-1.5">
+            <CompactHeaderPills kind="action_plan" periodLabel={periodLabel} />
             <Text
               className="text-sm font-medium text-black dark:text-white"
               numberOfLines={2}
               accessibilityLabel={`Action Plan ${item.name}`}>
               {item.name}
             </Text>
+            <CompactMeta lines={metaLines} />
           </View>
-          <TreeOrbCell kind="action_plan" value={orbValue} />
+          <TreeOrbCell kind="action_plan" value={orbValue} compact />
         </TreeCardBody>
-        {/* Action Plan = leaf: tanpa panah/+ (spec §6.8). Hanya ⋯. */}
-        <View className="flex-row items-center justify-end gap-2">
-          <Pressable
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={{ width: 34, height: 30, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
-            accessibilityRole="button"
-            accessibilityLabel={`Aksi lain ${item.name}`}
-            onPress={() => setMenuOpen(true)}>
-            <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
-          </Pressable>
-        </View>
+        {/* Action Plan = leaf: tanpa panah/+. Tetap pakai pola compact Detail + ⋯. */}
+        <CompactActionRow
+          cardLabel={item.name}
+          detailLabel={`Detail ${item.name}`}
+          onDetail={openDetail}
+          onMore={openMenu}
+          past={past}
+        />
       </View>
       <RowActionsMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         title={item.name}
         items={rowActions}
       />
     </PastDim>
   );
-}
+});
 
 /**
  * Sub-row Initiative. WSA-01: expandable → Action Plan (level terbawah). Dipakai di Performance
  * (di bawah Strategy, level 4) dan Development (di bawah Problem Statement, level 3).
  * "+ Plan" gated `create_action_plan`, past-period lock.
  */
-function InitiativeSubRow({
+const InitiativeSubRow = memo(function InitiativeSubRow({
   item,
   ancestorPast = false,
   level = 4,
@@ -723,63 +1009,79 @@ function InitiativeSubRow({
   const past = cardPeriodStatus(item, focus) === 'past';
   const canAddPlan = can('create_action_plan');
   const rowActions = useTreeRowActions('initiative', item.id, item.name);
+  const periodLabel = treePeriodPillLabel(item, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.initiativeMeta({
+    past,
+    statusLabel: TREE_STATUS_LABEL[item.status] ?? item.status,
+    target: item.target_result,
+  });
   const childLevel = (level + 1) as 4 | 5;
+  const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openDetail = useCallback(
+    () => router.push(`/initiative/${item.id}` as Href),
+    [router, item.id],
+  );
+  const addPlan = useCallback(
+    () => router.push(`/action-plan/new?initiativeId=${item.id}` as Href),
+    [router, item.id],
+  );
+  const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      {/* Spec §6.7/§7.5 + §8: border kiri 5px warna Initiative (#14845c). */}
       <View
-        className="gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
-        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative, marginLeft: TREE_LEVEL_INDENT[level] }}>
-        <TreeConnector />
-        <TreeCardBody cardLabel={item.name} onPress={() => router.push(`/initiative/${item.id}` as Href)}>
-          <View className="flex-1 gap-2">
-            <View
-              className="flex-row items-center justify-between gap-2"
-              style={{ flexWrap: 'wrap', rowGap: 4 }}>
-              <WorkspaceKindPill kind="initiative" />
-              <View className="flex-row items-center gap-1">
-                {past ? <PastPeriodBadge /> : null}
-                <StatusBadge status={item.status} />
-              </View>
+        className="gap-2"
+        style={{ marginLeft: TREE_LEVEL_INDENT[level] }}>
+        {/* Spec §6.7/§7.5 + §8: border kiri 5px warna Initiative (#14845c). */}
+        <View
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative }}>
+          <TreeCardBody cardLabel={item.name} onPress={openDetail} overlayRightInset={52}>
+            <View className="flex-1 gap-1.5">
+              <CompactHeaderPills kind="initiative" periodLabel={periodLabel} />
+              <Text
+                className="text-sm font-medium text-black dark:text-white"
+                numberOfLines={2}
+                accessibilityLabel={`Initiative ${item.name}`}>
+                {item.name}
+              </Text>
+              <CompactMeta lines={metaLines} />
             </View>
-            <Text
-              className="text-sm font-medium text-black dark:text-white"
-              numberOfLines={2}
-              accessibilityLabel={`Initiative ${item.name}`}>
-              {item.name}
-            </Text>
-          </View>
-          <TreeOrbCell kind="initiative" value={progress} />
-        </TreeCardBody>
-        <CardActionRow
-          cardLabel={item.name}
-          expanded={expanded}
-          onToggleExpand={() => setExpanded((v) => !v)}
-          expandLabel="Lihat Action Plan"
-          collapseLabel="Tutup"
-          onMore={() => setMenuOpen(true)}
-          past={past}
-          onAdd={
-            canAddPlan
-              ? () => router.push(`/action-plan/new?initiativeId=${item.id}` as Href)
-              : undefined
-          }
-          addLabel={`Tambah Action Plan ke ${item.name}`}
-          addButtonLabel="+ Plan"
-        />
+            <View className="items-center gap-1">
+              <TreeOrbCell kind="initiative" value={progress} compact />
+              <TreeToggleButton
+                expanded={expanded}
+                label={`Toggle Action Plan ${item.name}`}
+                onPress={toggleExpanded}
+              />
+            </View>
+          </TreeCardBody>
+          <CompactActionRow
+            cardLabel={item.name}
+            detailLabel={`Detail ${item.name}`}
+            onDetail={openDetail}
+            onMore={openMenu}
+            past={past}
+            onAdd={canAddPlan ? addPlan : undefined}
+            addLabel={`Tambah Action Plan ke ${item.name}`}
+            addButtonLabel="+ Plan"
+          />
+        </View>
 
         {expanded ? (
           isLoading ? (
             <SkeletonList count={2} />
           ) : isError ? (
-            <ErrorState onRetry={() => refetch()} />
+            <ErrorState onRetry={retryChildren} />
           ) : actionPlans.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Action Plan. Tambah Action Plan untuk eksekusi Initiative ini.
             </Text>
           ) : (
-            <View className="gap-2">
+            <View className="gap-2" style={{ position: 'relative' }}>
+              <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[5] - 10} />
               {actionPlans.map((ap) => (
                 <ActionPlanSubRow key={ap.id} item={ap} ancestorPast={ancestorPast || past} level={childLevel} />
               ))}
@@ -789,19 +1091,19 @@ function InitiativeSubRow({
       </View>
       <RowActionsMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         title={item.name}
         items={rowActions}
       />
     </PastDim>
   );
-}
+});
 
 /**
  * Sub-row level 2: Problem Statement di bawah satu Development Area. Expandable → Initiative.
  * Symmetric dgn KpiAreaSubRow di Performance pane.
  */
-function ProblemStatementSubRow({
+const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
   ps,
   ancestorPast = false,
   progress,
@@ -815,62 +1117,83 @@ function ProblemStatementSubRow({
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { initiatives, isLoading, isError, refetch } = useProblemStatementInitiatives(ps.id, expanded);
-  const { progressOf: initProgressOf } = useCardProgress(expanded ? initiatives.map((i) => i.id) : []);
+  const initiativeIds = useMemo(
+    () => (expanded ? initiatives.map((i) => i.id) : EMPTY_IDS),
+    [expanded, initiatives],
+  );
+  const { progressOf: initProgressOf } = useCardProgress(initiativeIds);
   const { focus } = usePeriodFocus();
   const past = cardPeriodStatus(ps, focus) === 'past';
   const canAddInit = can('create_initiative');
   const rowActions = useTreeRowActions('problem_statement', ps.id, ps.name);
+  const periodLabel = treePeriodPillLabel(ps, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.problemStatementMeta({
+    past,
+    statusLabel: TREE_STATUS_LABEL[ps.status] ?? ps.status,
+    impact: ps.impact,
+    evidence: ps.initial_evidence,
+  });
+  const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openDetail = useCallback(
+    () => router.push(`/problem-statement/${ps.id}` as Href),
+    [router, ps.id],
+  );
+  const addInitiative = useCallback(
+    () => router.push(`/initiative/new?problemStatementId=${ps.id}` as Href),
+    [router, ps.id],
+  );
+  const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
     <PastDim past={past} ancestorPast={ancestorPast}>
-      {/* Spec §7.4 + §8: level-2 Dev pane, border kiri 5px warna Problem Statement (#c2410c). */}
       <View
-        className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"
-        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement, marginLeft: TREE_LEVEL_INDENT[2] }}>
-        <TreeConnector />
-        <TreeCardBody cardLabel={ps.name} onPress={() => router.push(`/problem-statement/${ps.id}` as Href)}>
-          <View className="flex-1 gap-2">
-            <View
-              className="flex-row items-center justify-between gap-2"
-              style={{ flexWrap: 'wrap', rowGap: 4 }}>
-              <WorkspaceKindPill kind="problem_statement" />
-              <View className="flex-row items-center gap-1.5">
-                {past ? <PastPeriodBadge /> : null}
-                <StatusBadge status={ps.status} />
-              </View>
+        className="gap-2"
+        style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
+        {/* Spec §7.4 + §8: level-2 Dev pane, border kiri 5px warna Problem Statement (#c2410c). */}
+        <View
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800"
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement }}>
+          <TreeCardBody cardLabel={ps.name} onPress={openDetail} overlayRightInset={52}>
+            <View className="flex-1 gap-1.5">
+              <CompactHeaderPills kind="problem_statement" periodLabel={periodLabel} />
+              <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>{ps.name}</Text>
+              <CompactMeta lines={metaLines} />
             </View>
-            <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>{ps.name}</Text>
-          </View>
-          <TreeOrbCell kind="problem_statement" value={progress} />
-        </TreeCardBody>
-        <CardActionRow
-          cardLabel={ps.name}
-          expanded={expanded}
-          onToggleExpand={() => setExpanded((v) => !v)}
-          expandLabel="Lihat Initiative"
-          collapseLabel="Tutup"
-          onMore={() => setMenuOpen(true)}
-          past={past}
-          onAdd={
-            canAddInit
-              ? () => router.push(`/initiative/new?problemStatementId=${ps.id}` as Href)
-              : undefined
-          }
-          addLabel={`Tambah Initiative ke ${ps.name}`}
-          addButtonLabel="+ Initiative"
-        />
+            <View className="items-center gap-1">
+              <TreeOrbCell kind="problem_statement" value={progress} compact />
+              <TreeToggleButton
+                expanded={expanded}
+                label={`Toggle Initiative ${ps.name}`}
+                onPress={toggleExpanded}
+              />
+            </View>
+          </TreeCardBody>
+          <CompactActionRow
+            cardLabel={ps.name}
+            detailLabel={`Detail ${ps.name}`}
+            onDetail={openDetail}
+            onMore={openMenu}
+            past={past}
+            onAdd={canAddInit ? addInitiative : undefined}
+            addLabel={`Tambah Initiative ke ${ps.name}`}
+            addButtonLabel="+ Initiative"
+          />
+        </View>
 
         {expanded ? (
           isLoading ? (
             <SkeletonList count={2} />
           ) : isError ? (
-            <ErrorState onRetry={() => refetch()} />
+            <ErrorState onRetry={retryChildren} />
           ) : initiatives.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Initiative. Tambah Initiative untuk eksekusi Problem Statement ini.
             </Text>
           ) : (
-            <View className="gap-2">
+            <View className="gap-2" style={{ position: 'relative' }}>
+              <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[3] - 10} />
               {initiatives.map((i) => (
                 <InitiativeSubRow
                   key={i.id}
@@ -886,15 +1209,15 @@ function ProblemStatementSubRow({
       </View>
       <RowActionsMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         title={ps.name}
         items={rowActions}
       />
     </PastDim>
   );
-}
+});
 
-function DevelopmentAreaRow({
+const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
   devArea,
   progress,
 }: {
@@ -911,85 +1234,106 @@ function DevelopmentAreaRow({
     expanded,
   );
   const { focus } = usePeriodFocus();
-  const { progressOf: psProgressOf } = useCardProgress(expanded ? problemStatements.map((p) => p.id) : []);
+  const problemStatementIds = useMemo(
+    () => (expanded ? problemStatements.map((p) => p.id) : EMPTY_IDS),
+    [expanded, problemStatements],
+  );
+  const { progressOf: psProgressOf } = useCardProgress(problemStatementIds);
 
   const count = problemCountOf(devArea);
-  const countLabel =
-    count == null ? WS_DEV_COPY.problemCountUnknown : WS_DEV_COPY.problemCount(count);
   const past = cardPeriodStatus(devArea, focus) === 'past';
   const canAddProblem = can('create_problem_statement'); // WSA-13 — key presisi (bukan proxy create_development_area)
   const rowActions = useTreeRowActions('development_area', devArea.id, devArea.name);
+  const periodLabel = treePeriodPillLabel(devArea, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.developmentAreaMeta({
+    past,
+    statusLabel: TREE_STATUS_LABEL[devArea.status] ?? devArea.status,
+  });
+  const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openDetail = useCallback(
+    () => router.push(`/development-area/${devArea.id}` as Href),
+    [router, devArea.id],
+  );
+  const addProblemStatement = useCallback(
+    () => router.push(`/problem-statement/new?developmentAreaId=${devArea.id}` as Href),
+    [router, devArea.id],
+  );
+  const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
     <PastDim past={past}>
       {/* Spec §7.3 + §8: level-0 Dev pane, border kiri 5px warna Development Area (#0f766e). */}
-      <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16, marginLeft: TREE_LEVEL_INDENT[0] }}>
-      <SectionCard>
-        <TreeCardBody cardLabel={devArea.name} onPress={() => router.push(`/development-area/${devArea.id}` as Href)}>
-          <View className="flex-1 gap-2">
-            <View
-              className="flex-row items-center justify-between gap-2"
-              style={{ flexWrap: 'wrap', rowGap: 4 }}>
-              <WorkspaceKindPill kind="development_area" />
-              <View className="flex-row items-center gap-1.5">
-                {past ? <PastPeriodBadge /> : null}
-                <StatusBadge status={devArea.status} />
+      <View className="gap-2" style={{ marginLeft: TREE_LEVEL_INDENT[0] }}>
+        <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16 }}>
+          <SectionCard>
+            <TreeCardBody cardLabel={devArea.name} onPress={openDetail} overlayRightInset={52}>
+              <View className="flex-1 gap-1.5">
+                <CompactHeaderPills kind="development_area" periodLabel={periodLabel} />
+                <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>
+                  {devArea.name}
+                </Text>
+                <CompactMeta lines={metaLines} />
               </View>
-            </View>
-            <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>
-              {devArea.name}
-            </Text>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">{countLabel}</Text>
-          </View>
-          <TreeOrbCell kind="development_area" value={progress} />
-        </TreeCardBody>
+              <View className="items-center gap-1">
+                <TreeOrbCell kind="development_area" value={progress} compact />
+                <TreeToggleButton
+                  expanded={expanded}
+                  label={`Toggle Problem Statement ${devArea.name}`}
+                  onPress={toggleExpanded}
+                />
+              </View>
+            </TreeCardBody>
 
-        <CardActionRow
-          cardLabel={devArea.name}
-          expanded={expanded}
-          onToggleExpand={() => setExpanded((v) => !v)}
-          expandLabel="Lihat Problem Statement"
-          collapseLabel="Tutup"
-          onMore={() => setMenuOpen(true)}
-          past={past}
-          onAdd={
-            canAddProblem
-              ? () => router.push(`/problem-statement/new?developmentAreaId=${devArea.id}` as Href)
-              : undefined
-          }
-          addLabel={`Tambah Problem Statement ke ${devArea.name}`}
-          addButtonLabel="+ Problem Statement"
-        />
+            <ExpandChildCount
+              label={WS_TREE_COMPACT_COPY.needChild(count, 'Problem Statement')}
+              expanded={expanded}
+              onPress={toggleExpanded}
+            />
+
+            <CompactActionRow
+              cardLabel={devArea.name}
+              detailLabel={`Detail ${devArea.name}`}
+              onDetail={openDetail}
+              onMore={openMenu}
+              past={past}
+              onAdd={canAddProblem ? addProblemStatement : undefined}
+              addLabel={`Tambah Problem Statement ke ${devArea.name}`}
+              addButtonLabel="+ Problem Statement"
+            />
+          </SectionCard>
+        </View>
 
         {expanded ? (
           isLoading ? (
             <SkeletonList count={2} />
           ) : isError ? (
-            <ErrorState onRetry={() => refetch()} />
+            <ErrorState onRetry={retryChildren} />
           ) : problemStatements.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Problem Statement. Tambah Problem Statement untuk pecah Development Area
               ini.
             </Text>
           ) : (
-            <View className="gap-2">
+            <View className="gap-2" style={{ position: 'relative' }}>
+              <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[2] - 10} />
               {problemStatements.map((p) => (
                 <ProblemStatementSubRow key={p.id} ps={p} ancestorPast={past} progress={psProgressOf(p.id)} />
               ))}
             </View>
           )
         ) : null}
-      </SectionCard>
       </View>
       <RowActionsMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         title={devArea.name}
         items={rowActions}
       />
     </PastDim>
   );
-}
+});
 
 function PaneSectionHeader({
   title,

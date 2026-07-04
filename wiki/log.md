@@ -1098,3 +1098,25 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Pane Performance/Development pindah dari `FlatList` ke `ScrollView` + `.map()` (imbas hilangnya `PaneTopHeader`/`TabBar` internal — perpindahan pane sepenuhnya lewat Hub).
 - **Catatan drift**: desain (`docs/superpowers/specs/2026-07-03-workspace-full-drill-down-design.md`) + plan TDD (`docs/superpowers/plans/2026-07-03-workspace-full-drill-down.md`) sudah APPROVED untuk mengganti tree inline ini sepenuhnya dengan navigasi full drill-down per level (route eksplisit + shell generik). Belum diimplementasikan — task 1-7 plan tsb semua belum dieksekusi; perubahan di entry log ini murni polish di atas tree inline yang masih berlaku.
 - **Test**: full suite **92 suite / 855 tes pass**, `tsc --noEmit` bersih. 3 tes lama (`S3-1`, `WSA-20`, `W08·1/2`) diupdate agar sesuai perilaku baru (bukan regresi — direview eksplisit dgn owner).
+
+## [2026-07-04] update | Rollout workspace tree mobile optimization
+
+- Indent tree dikompresi untuk level dalam agar hierarki mobile tidak cepat terdorong ke kanan.
+- Progress orb non-root dibuat compact supaya kolom kanan lebih stabil pada lebar sempit.
+- Action row dipadatkan tanpa menghilangkan affordance utama untuk expand, aksi lain, dan tambah turunan.
+- `useCardProgress` distabilkan dengan normalisasi ID dan referensi yang lebih konsisten untuk mengurangi churn render subtree.
+
+## [2026-07-04] update | Rollout workspace compact card anatomy
+
+- Nested card tree diubah ke anatomi compact yang hampir selebar parent agar hierarki tetap muat inline di satu layar.
+- Cluster progress orb dan chevron dipindah ke kanan atas supaya header tiap card lebih ringkas dan ritmenya konsisten.
+- Action row diseragamkan ke pola `Detail`, `...`, dan `+ Child` untuk Performance dan Development.
+- Meta card diringkas ke 1-2 baris agar konteks utama tetap terbaca tanpa membuat tinggi card cepat membengkak.
+- Final pass compact anatomy: header semua level sekarang memakai kombinasi `kind pill + period pill`, sehingga ritme visual lebih dekat ke prototype.
+- Status dan sinyal `Periode lewat` dipindah dari badge header ke meta compact agar area atas card tetap bersih.
+- Helper meta dipecah per card type supaya Performance dan Development merakit copy compact dengan pola yang sejajar.
+- Orb compact diperkecil lagi dan action row dibesarkan sedikit agar keseimbangan visual mendekati prototype tanpa mengorbankan ruang tree.
+- Polish final setelah review screenshot: indent level dalam dikompresi lagi agar child card terasa lebih lebar dan tidak cepat kehilangan ruang baca.
+- Connector dipendekkan dan cluster `orb + chevron` dirapatkan supaya subtree terlihat lebih seperti kartu bertumpuk daripada lorong sempit.
+- Copy meta dibersihkan dari status teknis yang berulang; fokusnya sekarang ke target, risiko, bukti, deadline, dan kebutuhan child.
+- Spacing vertical antarblok di tiap card dipadatkan lagi agar lebih banyak level yang muat dalam satu viewport mobile.
