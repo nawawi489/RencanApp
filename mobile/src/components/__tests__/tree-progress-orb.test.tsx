@@ -1,7 +1,7 @@
 // WSA-15 / spec §10 — Progress Orb tree variant: 50px, angka + "%", label bawah Capaian/Progress.
 import { render, screen } from '@testing-library/react-native';
 
-import { TreeProgressOrb, treeOrbColor } from '../ui';
+import { TREE_PROGRESS_ORB_COMPACT_SIZE, TreeProgressOrb, treeOrbColor } from '../ui';
 
 describe('TreeProgressOrb', () => {
   it('menampilkan angka dengan "%" dan label bawah', async () => {
@@ -20,9 +20,24 @@ describe('TreeProgressOrb', () => {
     await render(<TreeProgressOrb value={150.6} label="Progress" />);
     expect(screen.getByText('100%')).toBeTruthy();
   });
+
+  it('tetap menampilkan angka dan label pada mode compact', async () => {
+    await render(<TreeProgressOrb value={41} label="Progress" compact />);
+    expect(screen.getByText('41%')).toBeTruthy();
+    expect(screen.getByText('Progress')).toBeTruthy();
+  });
+
+  it('mode compact memakai ukuran visual lebih kecil', async () => {
+    const view = await render(<TreeProgressOrb value={41} label="Progress" compact />);
+    const ring = view.getByA11yLabel('Progress 41 persen');
+    expect(TREE_PROGRESS_ORB_COMPACT_SIZE).toBe(38);
+    expect(ring.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minWidth: TREE_PROGRESS_ORB_COMPACT_SIZE })]),
+    );
+  });
 });
 
-describe('treeOrbColor (spec §10)', () => {
+describe('treeOrbColor (spec §10 + UI-S-W09)', () => {
   it('good green ≥70', () => {
     expect(treeOrbColor(70)).toBe('#14845c');
     expect(treeOrbColor(100)).toBe('#14845c');
@@ -31,8 +46,11 @@ describe('treeOrbColor (spec §10)', () => {
     expect(treeOrbColor(35)).toBe('#b76b00');
     expect(treeOrbColor(69)).toBe('#b76b00');
   });
-  it('bad red <35', () => {
-    expect(treeOrbColor(0)).toBe('#c93434');
+  it('bad red 1..34', () => {
+    expect(treeOrbColor(1)).toBe('#c93434');
     expect(treeOrbColor(34)).toBe('#c93434');
+  });
+  it('neutral 0 (UI-S-W09): 0% = "belum mulai", bukan kondisi buruk', () => {
+    expect(treeOrbColor(0)).toBe('#94a3b8');
   });
 });

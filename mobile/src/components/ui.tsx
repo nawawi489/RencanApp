@@ -665,22 +665,46 @@ export function ProgressOrb({
 
 // ---------------------------------------------------------------- TreeProgressOrb (spec §10)
 
-/** Warna orb tree terkunci spec §10: good/risk/bad. */
+/**
+ * Warna orb tree terkunci spec §10: good/risk/bad/null.
+ * - 0% → netral (`muted`): barusaja dibuat / target belum diisi, BUKAN kondisi "buruk".
+ *   Merah hanya untuk 1–34% yang artinya sudah ada upaya tapi masih rendah.
+ * - 1–34% → bad (merah)
+ * - 35–69% → risk (amber)
+ * - 70–100% → good (hijau)
+ */
 export function treeOrbColor(value: number): string {
   const v = Math.max(0, Math.min(100, Math.round(value)));
   if (v >= 70) return '#14845c'; // good green
   if (v >= 35) return '#b76b00'; // risk amber
-  return '#c93434'; // bad red
+  if (v >= 1) return '#c93434'; // bad red
+  return '#94a3b8'; // neutral — "belum mulai" (bukan kesalahan)
 }
 
+export const TREE_PROGRESS_ORB_SIZE = 50;
+export const TREE_PROGRESS_ORB_COMPACT_SIZE = 38;
+
 /**
- * Orb progress varian tree (§10, WSA-15): 50×50, angka + "%" di tengah, label visual di bawah
- * (`Capaian` untuk Goal/KPI Area, `Progress` untuk lainnya). Ring SVG dgn warna good/risk/bad.
+ * Orb progress varian tree (§10, WSA-15): default 50×50, mode compact 42×42, angka + "%" di
+ * tengah, label visual di bawah (`Capaian` untuk Goal/KPI Area, `Progress` untuk lainnya).
+ * Ring SVG dgn warna good/risk/bad.
  */
-export function TreeProgressOrb({ value, label }: { value: number; label: string }) {
+export function TreeProgressOrb({
+  value,
+  label,
+  compact = false,
+}: {
+  value: number;
+  label: string;
+  compact?: boolean;
+}) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
-  const size = 50;
-  const stroke = 6;
+  const size = compact ? TREE_PROGRESS_ORB_COMPACT_SIZE : TREE_PROGRESS_ORB_SIZE;
+  const stroke = compact ? 4 : 6;
+  const numberSize = compact ? 9 : 12;
+  // UI-S-W09: label compact minimal 10px (DESIGN §4.5 — readable di mobile). Sebelumnya 8px
+  // menyulitkan identifikasi status ring (Capaian/Progress) di Dynamic Type & dark mode.
+  const labelSize = compact ? 10 : 11;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const offset = c * (1 - pct / 100);
@@ -690,7 +714,8 @@ export function TreeProgressOrb({ value, label }: { value: number; label: string
   const trackColor = effective === 'dark' ? '#334155' : '#d9e2ec';
   return (
     <View
-      className="items-center gap-0.5"
+      style={{ minWidth: size }}
+      className="items-center gap-0"
       accessible
       accessibilityRole="progressbar"
       accessibilityLabel={`${label} ${pct} persen`}
@@ -711,11 +736,15 @@ export function TreeProgressOrb({ value, label }: { value: number; label: string
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
           />
         </Svg>
-        <Text className="font-extrabold text-black dark:text-white" style={{ fontSize: 12 }}>
+        <Text className="font-extrabold text-black dark:text-white" style={{ fontSize: numberSize }}>
           {pct}%
         </Text>
       </View>
-      <Text className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">{label}</Text>
+      <Text
+        className="font-semibold text-neutral-500 dark:text-neutral-400"
+        style={{ fontSize: labelSize }}>
+        {label}
+      </Text>
     </View>
   );
 }

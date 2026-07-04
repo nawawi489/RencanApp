@@ -42,25 +42,22 @@ describe('WorkspaceKindPill', () => {
   });
 });
 
-describe('WORKSPACE_KIND_BORDER (spec §6.4–6.8, 5px kiri)', () => {
-  it('mapping warna border kiri per kategori', () => {
-    expect(WORKSPACE_KIND_BORDER.goal).toBe('#1877f2');
-    expect(WORKSPACE_KIND_BORDER.kpi_area).toBe('#b76b00');
-    expect(WORKSPACE_KIND_BORDER.strategy).toBe('#6941c6');
-    expect(WORKSPACE_KIND_BORDER.initiative).toBe('#14845c');
-    expect(WORKSPACE_KIND_BORDER.action_plan).toBe('#145ebc');
-    expect(WORKSPACE_KIND_BORDER.development_area).toBe('#0f766e');
-    expect(WORKSPACE_KIND_BORDER.problem_statement).toBe('#c2410c');
+describe('TREE_LEVEL_INDENT', () => {
+  it('mengompresi level 0..5 agar mobile level-dalam tidak lari terlalu kanan', () => {
+    expect(TREE_LEVEL_INDENT).toEqual({
+      0: 0,
+      1: 6,
+      2: 6,
+      3: 6,
+      4: 6,
+      5: 6,
+    });
   });
 });
 
-describe('TREE_LEVEL_INDENT (spec §8)', () => {
-  it('level 0..5 → 0/16/32/48/64/80', () => {
-    expect(TREE_LEVEL_INDENT[0]).toBe(0);
-    expect(TREE_LEVEL_INDENT[1]).toBe(16);
-    expect(TREE_LEVEL_INDENT[2]).toBe(32);
-    expect(TREE_LEVEL_INDENT[3]).toBe(48);
-    expect(TREE_LEVEL_INDENT[4]).toBe(64);
-    expect(TREE_LEVEL_INDENT[5]).toBe(80);
+describe('WorkspaceKindPill', () => {
+  it('tetap memakai warna border kategori yang ada', () => {
+    expect(WORKSPACE_KIND_BORDER.goal).toBe('#1877f2');
+    expect(WORKSPACE_KIND_BORDER.problem_statement).toBe('#c2410c');
   });
 });

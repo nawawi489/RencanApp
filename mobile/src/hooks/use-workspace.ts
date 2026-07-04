@@ -2,6 +2,7 @@
 // @/lib/goals, @/lib/kpi-areas, @/lib/strategies, @/lib/cards. Query keys TERKUNCI (lihat kontrak):
 // ['goals'], ['goal', id], ['kpi_areas', goalId], ['strategies', kpiAreaId], ['initiatives','flat'],
 // ['goal_templates']. Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -76,15 +77,20 @@ import { fetchCardProgress } from '@/lib/workspace-progress';
  * fetch / error / tak terlihat RLS) → null → UI render '—' (bukan angka palsu). 0 tetap 0.
  */
 export function useCardProgress(ids: string[]) {
-  const sortedIds = [...ids].sort();
+  const idsKey = ids.join('|');
+  const normalizedIds = useMemo(() => [...new Set(ids)].sort(), [idsKey]);
   const q = useQuery({
-    queryKey: ['workspace_card_progress', sortedIds],
-    queryFn: () => fetchCardProgress(sortedIds),
-    enabled: ids.length > 0,
+    queryKey: ['workspace_card_progress', normalizedIds],
+    queryFn: () => fetchCardProgress(normalizedIds),
+    enabled: normalizedIds.length > 0,
   });
   const map = q.data;
+  const progressOf = useMemo(
+    () => (id: string): number | null => (map && map.has(id) ? (map.get(id) as number) : null),
+    [map],
+  );
   return {
-    progressOf: (id: string): number | null => (map && map.has(id) ? (map.get(id) as number) : null),
+    progressOf,
     isLoading: q.isLoading,
     isError: q.isError,
   };

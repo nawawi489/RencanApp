@@ -17,14 +17,14 @@ export const WORKSPACE_KIND_BORDER: Record<
   problem_statement: '#c2410c',
 };
 
-/** Level tree → margin kiri sesuai spec §8. Level 0 = root (0px). */
+/** Level tree → margin kiri compact untuk mobile (§8). Level 0 = root (0px). */
 export const TREE_LEVEL_INDENT: Record<0 | 1 | 2 | 3 | 4 | 5, number> = {
   0: 0,
-  1: 16,
-  2: 32,
-  3: 48,
-  4: 64,
-  5: 80,
+  1: 6,
+  2: 10,
+  3: 12,
+  4: 12,
+  5: 14,
 };
 
 export type WorkspaceKind =

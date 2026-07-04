@@ -23,6 +23,129 @@ export const WS_COPY = {
   archivePeriodMsg: 'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
 } as const;
 
+function compactValue(value: string | null | undefined, fallback = 'belum ada') {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : fallback;
+}
+
+function compactCount(count: number | null | undefined, label: string) {
+  return count == null ? `${label} belum dihitung` : `${count} ${label}`;
+}
+
+function compactJoin(parts: Array<string | null | undefined>) {
+  return parts.filter((part): part is string => !!part && part.trim().length > 0).join(' · ');
+}
+
+export const WS_TREE_COMPACT_COPY = {
+  periodState: (past: boolean) => (past ? 'Periode lewat' : 'Aktif'),
+  statusState: (value: string | null | undefined, past: boolean) =>
+    past ? 'Periode lewat' : compactValue(value, 'aktif'),
+  target: (value: string | null | undefined) => `Target ${compactValue(value)}`,
+  outcome: (value: string | null | undefined) => `Hasil ${compactValue(value)}`,
+  risk: (value: string | null | undefined) => `Risiko ${compactValue(value)}`,
+  impact: (value: string | null | undefined) => `Impact ${compactValue(value)}`,
+  evidence: (value: string | null | undefined) => `Bukti ${compactValue(value)}`,
+  contribution: (value: string | null | undefined) => `Kontribusi ${compactValue(value)}`,
+  status: (value: string | null | undefined) => `Status ${compactValue(value)}`,
+  deadline: (value: string | null | undefined) => `Deadline ${compactValue(value)}`,
+  reviewer: (value: string | null | undefined) => `Review ${compactValue(value)}`,
+  childCount: (count: number | null | undefined, label: string) => compactCount(count, label),
+  needChild: (count: number | null | undefined, label: string) =>
+    count == null ? `${label} belum dihitung` : count === 0 ? `Butuh 1 ${label}` : `${count} ${label}`,
+  goalMeta: ({
+    past,
+    statusLabel,
+    target,
+  }: {
+    past: boolean;
+    statusLabel?: string | null | undefined;
+    target?: string | null | undefined;
+  }) => [
+    compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.target(target)]),
+  ],
+  kpiMeta: ({
+    past,
+    statusLabel,
+    target,
+    outcome,
+  }: {
+    past: boolean;
+    statusLabel?: string | null | undefined;
+    target?: string | null | undefined;
+    outcome?: string | null | undefined;
+  }) => [
+    compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.target(target)]),
+    outcome ? WS_TREE_COMPACT_COPY.outcome(outcome) : null,
+  ],
+  strategyMeta: ({
+    past,
+    statusLabel,
+    contribution,
+    risk,
+  }: {
+    past: boolean;
+    statusLabel?: string | null | undefined;
+    contribution?: string | null | undefined;
+    risk?: string | null | undefined;
+  }) => [
+    compactJoin([
+      WS_TREE_COMPACT_COPY.periodState(past),
+      WS_TREE_COMPACT_COPY.contribution(contribution),
+    ]),
+    risk ? WS_TREE_COMPACT_COPY.risk(risk) : null,
+  ],
+  initiativeMeta: ({
+    past,
+    statusLabel,
+    target,
+  }: {
+    past: boolean;
+    statusLabel?: string | null | undefined;
+    target?: string | null | undefined;
+  }) => [
+    compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.target(target)]),
+    null,
+  ],
+  actionPlanMeta: ({
+    past,
+    statusLabel,
+    deadline,
+    reviewer,
+  }: {
+    past: boolean;
+    statusLabel?: string | null | undefined;
+    deadline?: string | null | undefined;
+    reviewer?: string | null | undefined;
+  }) => [
+    WS_TREE_COMPACT_COPY.deadline(deadline),
+    reviewer ? WS_TREE_COMPACT_COPY.reviewer(reviewer) : null,
+  ],
+  developmentAreaMeta: ({
+    past,
+    statusLabel,
+  }: {
+    past: boolean;
+    statusLabel?: string | null | undefined;
+  }) => [
+    WS_TREE_COMPACT_COPY.periodState(past),
+  ],
+  problemStatementMeta: ({
+    past,
+    statusLabel,
+    impact,
+    evidence,
+  }: {
+    past: boolean;
+    statusLabel?: string | null | undefined;
+    impact?: string | null | undefined;
+    evidence?: string | null | undefined;
+  }) => [
+    compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.impact(impact)]),
+    evidence ? WS_TREE_COMPACT_COPY.evidence(evidence) : null,
+  ],
+  join: (...parts: Array<string | null | undefined>) => compactJoin(parts),
+} as const;
+
 /** UI-N-002 Stage 2 — Hub view (lobby) di tab Workspace. 2 hub-card + back-to-hub button. */
 export const WS_HUB_COPY = {
   title: 'Workspace',
