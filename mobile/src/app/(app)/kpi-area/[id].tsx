@@ -28,8 +28,6 @@ import { guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { alertFriendlyError } from '@/lib/errors';
 import { usePerson, useStrategies } from '@/hooks/use-workspace';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeKpiAreaDetailScreen from '@/prototype/screens/kpi-area-detail';
 import {
   PLANNING_STATUS_LABEL,
   STATUS_TONE,
@@ -390,5 +388,5 @@ export function LiveKpiAreaDetailScreen() {
 }
 
 export default function KpiAreaDetailRoute() {
-  return <StackScreenAdapter live={LiveKpiAreaDetailScreen} prototype={PrototypeKpiAreaDetailScreen} />;
+  return <LiveKpiAreaDetailScreen />;
 }

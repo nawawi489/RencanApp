@@ -1,4 +1,4 @@
-// UI Fase 8 — layar lifecycle: DCR, Cancellation, Evaluation, Search.
+// UI Fase 8 — layar lifecycle: DCR, Evaluation, Search.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -17,14 +17,12 @@ jest.mock('@/hooks/use-profile', () => ({
 const mockUseDcrRequests = jest.fn();
 const mockCreateRequest = jest.fn();
 const mockReviewRequest = jest.fn();
-const mockCancel = jest.fn();
 const mockUseEvaluation = jest.fn();
 const mockRecord = jest.fn();
 jest.mock('@/hooks/use-governance-admin', () => ({
   __esModule: true,
   useDeadlineChangeRequests: (...a: unknown[]) => mockUseDcrRequests(...a),
   useDeadlineChangeActions: () => ({ createRequest: mockCreateRequest, reviewRequest: mockReviewRequest, isPending: false }),
-  useCancellationActions: () => ({ cancel: mockCancel, approveCancellation: jest.fn(), isPending: false }),
   useEvaluation: (...a: unknown[]) => mockUseEvaluation(...a),
   useEvaluationActions: () => ({ record: mockRecord, isPending: false }),
 }));
@@ -45,8 +43,6 @@ jest.mock('expo-router', () => ({
 // eslint-disable-next-line import/first
 import DeadlineChangeRequestScreen from '../deadline-change-request';
 // eslint-disable-next-line import/first
-import CancellationScreen from '../cancellation';
-// eslint-disable-next-line import/first
 import EvaluationScreen from '../evaluation';
 // eslint-disable-next-line import/first
 import SearchScreen from '../search';
@@ -63,7 +59,6 @@ beforeEach(() => {
   mockUseDcrRequests.mockReset().mockReturnValue({ requests: [], isLoading: false, enabled: true });
   mockCreateRequest.mockReset().mockResolvedValue('dcr1');
   mockReviewRequest.mockReset().mockResolvedValue(undefined);
-  mockCancel.mockReset().mockResolvedValue('c1');
   mockUseEvaluation.mockReset().mockReturnValue({ evaluation: null, isLoading: false, enabled: true });
   mockRecord.mockReset().mockResolvedValue('e1');
   mockUseSearch.mockReset().mockReturnValue({ results: [], isLoading: false, enabled: false });
@@ -129,41 +124,6 @@ describe('deadline-change-request', () => {
     });
     view.rerender(<DeadlineChangeRequestScreen />);
     await waitFor(() => expect(screen.queryByLabelText('Setujui permintaan req1')).toBeNull());
-  });
-});
-
-describe('cancellation', () => {
-  it('[F8-UI-15] error child aktif saat RPC gagal', async () => {
-    mockParams.current = { entityType: 'goal', entityId: 'g1' };
-    mockCancel.mockRejectedValue(new Error('Terdapat 2 card turunan yang masih aktif.'));
-    await render(<CancellationScreen />, { wrapper: wrapper() });
-    const reason = screen.getByLabelText(/Alasan pembatalan/i);
-    fireEvent.changeText(reason, 'x');
-    await waitFor(() => expect(reason.props.value).toBe('x'));
-    fireEvent.press(screen.getByLabelText('Batalkan Card'));
-    expect(await screen.findByText(/card turunan/i)).toBeTruthy();
-  });
-
-  it('[F8-UI-16a] CEO flow: feedback langsung berhasil dibatalkan', async () => {
-    mockParams.current = { entityType: 'initiative', entityId: 'i1' };
-    mockProfile.role_level = 'ceo';
-    await render(<CancellationScreen />, { wrapper: wrapper() });
-    const reason = screen.getByLabelText(/Alasan pembatalan/i);
-    fireEvent.changeText(reason, 'x');
-    await waitFor(() => expect(reason.props.value).toBe('x'));
-    fireEvent.press(screen.getByLabelText('Batalkan Card'));
-    expect(await screen.findByText(/berhasil dibatalkan/i)).toBeTruthy();
-  });
-
-  it('[F8-UI-16b] non-CEO flow: feedback menunggu persetujuan', async () => {
-    mockParams.current = { entityType: 'initiative', entityId: 'i1' };
-    mockProfile.role_level = 'staff';
-    await render(<CancellationScreen />, { wrapper: wrapper() });
-    const reason = screen.getByLabelText(/Alasan pembatalan/i);
-    fireEvent.changeText(reason, 'x');
-    await waitFor(() => expect(reason.props.value).toBe('x'));
-    fireEvent.press(screen.getByLabelText('Batalkan Card'));
-    expect(await screen.findByText(/menunggu persetujuan/i)).toBeTruthy();
   });
 });
 

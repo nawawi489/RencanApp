@@ -98,42 +98,6 @@ export function guardActivationFields(
 }
 
 /**
- * §7.5 / §12.3 — Guard Minimum Breakdown Rule saat klik "+ Tambah X".
- *
- * WSA-04: guard fail-CLOSED dan TIDAK membuka form.
- * - Compliant → `onProceed()` langsung tanpa popup.
- * - Belum compliant → popup kalimat spec §12.3 dengan SATU tombol "Tutup"; `onProceed`
- *   tidak pernah dipanggil (klik tidak membuka form; server tetap penegak akhir).
- * - Data compliance belum ada (undefined) → fail-closed: popup "tunggu", `onProceed`
- *   tidak dipanggil (dulu fail-open — memungkinkan bypass guard).
- */
-export function confirmAddDescendantIfIncomplete(opts: {
-  compliance: MbrCompliance | undefined;
-  parentLabel: string;
-  childLabel: string;
-  onProceed: () => void;
-  alertImpl?: AlertFn;
-}): void {
-  const { compliance, parentLabel, childLabel, onProceed, alertImpl } = opts;
-  const alert = alertImpl ?? (Alert.alert as AlertFn);
-  if (compliance?.is_compliant) {
-    onProceed();
-    return;
-  }
-  if (!compliance) {
-    // Fail-closed: belum tahu kepatuhan → jangan buka form.
-    alert('Mengecek kelengkapan', 'Data kelengkapan belum siap. Coba lagi sebentar.', [
-      { text: 'Tutup', style: 'cancel' },
-    ]);
-    return;
-  }
-  alert(mbrIncompleteMessage(parentLabel, childLabel, compliance).title,
-    mbrIncompleteMessage(parentLabel, childLabel, compliance).message, [
-      { text: 'Tutup', style: 'cancel' },
-    ]);
-}
-
-/**
  * Kalimat guard MBR §12.3 untuk tombol "+ <next>" di tree (terkunci spec §6.6/§12.3):
  * "<ParentType> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu,
  *  baru tombol + <NextButton> aktif."
@@ -154,24 +118,5 @@ export function mbrBreakdownGuardMessage(
     message:
       `${parentTypeLabel} ini baru punya ${compliance.child_count} dari ${compliance.min_count} ${childLabel}. ` +
       `Tambahkan ${remaining} ${childLabel} lagi dulu, baru tombol + ${nextButtonLabel} aktif.`,
-  };
-}
-
-/**
- * Kalimat guard MBR §12.3 (terkunci spec). `childLabel` = jenis turunan yang dihitung
- * (mis. "Strategy"); pesan mengikuti pola:
- * "<Parent> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu, …".
- */
-export function mbrIncompleteMessage(
-  parentLabel: string,
-  childLabel: string,
-  compliance: MbrCompliance,
-): { title: string; message: string } {
-  const remaining = Math.max(compliance.min_count - compliance.child_count, 0);
-  return {
-    title: 'Kelengkapan Perencanaan',
-    message:
-      `${parentLabel} ini baru punya ${compliance.child_count} dari ${compliance.min_count} ${childLabel}. ` +
-      `Tambahkan ${remaining} ${childLabel} lagi dulu, baru turunan berikutnya bisa dibuat.`,
   };
 }

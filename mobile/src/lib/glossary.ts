@@ -74,11 +74,6 @@ const ENTRIES: Record<GlossaryTopic, GlossaryEntry> = {
   },
 };
 
-const FALLBACK: GlossaryEntry = {
-  title: 'Bantuan',
-  body: 'Penjelasan untuk item ini belum tersedia.',
-};
-
 export function glossaryFor(topic: GlossaryTopic): GlossaryEntry {
-  return ENTRIES[topic] ?? FALLBACK;
+  return ENTRIES[topic];
 }

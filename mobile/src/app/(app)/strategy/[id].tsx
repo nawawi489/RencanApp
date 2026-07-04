@@ -13,9 +13,6 @@ import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateStrategy, getStrategy } from '@/lib/strategies';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeStrategyDetailScreen from '@/prototype/screens/strategy-detail';
-
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
     <SectionCard onPress={onPress}>
@@ -172,5 +169,5 @@ export function LiveStrategyDetailScreen() {
 }
 
 export default function StrategyDetailRoute() {
-  return <StackScreenAdapter live={LiveStrategyDetailScreen} prototype={PrototypeStrategyDetailScreen} />;
+  return <LiveStrategyDetailScreen />;
 }

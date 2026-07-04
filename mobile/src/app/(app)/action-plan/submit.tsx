@@ -30,8 +30,6 @@ import {
 import { pickEvidenceFiles } from '@/lib/file-picker';
 import { getInstance, submitInstance } from '@/lib/repeat';
 import { classifyKind, type LocalFile } from '@/lib/storage';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeActionPlanSubmitScreen from '@/prototype/screens/action-plan-submit';
 
 const EVIDENCE_KINDS = ['text_note', 'report', 'link_doc', 'link_gdrive', 'link_generic'] as const;
 const VALUE_TYPES = ['number', 'currency', 'percentage', 'boolean', 'text', 'link'] as const;
@@ -447,5 +445,5 @@ export function LiveActionPlanSubmitScreen() {
 }
 
 export default function ActionPlanSubmitRoute() {
-  return <StackScreenAdapter live={LiveActionPlanSubmitScreen} prototype={PrototypeActionPlanSubmitScreen} />;
+  return <LiveActionPlanSubmitScreen />;
 }

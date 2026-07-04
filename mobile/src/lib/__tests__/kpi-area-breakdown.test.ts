@@ -6,8 +6,6 @@ import {
   MONTH_KEYS,
   quarterOfMonthKey,
   sumOf,
-  validateQuarter100,
-  validateMonth100PerQuarter,
   indexQuarterRows,
   indexMonthRowsPerQuarter,
   type BreakdownRow,
@@ -58,34 +56,6 @@ describe('sumOf', () => {
     expect(sumOf([10, NaN, 20])).toBe(30);
     expect(sumOf([10, Infinity, 20])).toBe(30);
     expect(sumOf([])).toBe(0);
-  });
-});
-
-describe('validateQuarter100', () => {
-  it('4 entri Σ=100 → true', () => {
-    expect(validateQuarter100([25, 25, 25, 25])).toBe(true);
-    expect(validateQuarter100([33.333, 33.333, 33.334, 0])).toBe(true);
-  });
-  it('jumlah ≠ 100 → false', () => {
-    expect(validateQuarter100([25, 25, 25, 26])).toBe(false);
-    expect(validateQuarter100([100, 0, 0, 0])).toBe(true); // 100 di satu Q valid
-  });
-  it('jumlah entri ≠ 4 → false', () => {
-    expect(validateQuarter100([50, 50])).toBe(false);
-    expect(validateQuarter100([25, 25, 25, 25, 0])).toBe(false);
-  });
-});
-
-describe('validateMonth100PerQuarter', () => {
-  it('3 entri Σ=100 → true', () => {
-    expect(validateMonth100PerQuarter([33.333, 33.333, 33.334])).toBe(true);
-    expect(validateMonth100PerQuarter([100, 0, 0])).toBe(true);
-  });
-  it('jumlah entri ≠ 3 → false', () => {
-    expect(validateMonth100PerQuarter([50, 50])).toBe(false);
-  });
-  it('Σ ≠ 100 → false', () => {
-    expect(validateMonth100PerQuarter([30, 30, 30])).toBe(false);
   });
 });
 

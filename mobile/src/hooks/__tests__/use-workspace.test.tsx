@@ -26,11 +26,9 @@ const mockGetPersonRef = jest.fn();
 
 // Fase 6 — Development Workspace mocks
 const mockListDevelopmentAreas = jest.fn();
-const mockGetDevelopmentArea = jest.fn();
 const mockCreateDevelopmentArea = jest.fn();
 const mockActivateDevelopmentArea = jest.fn();
 const mockListProblemStatements = jest.fn();
-const mockGetProblemStatement = jest.fn();
 const mockCreateProblemStatement = jest.fn();
 const mockActivateProblemStatement = jest.fn();
 
@@ -63,14 +61,12 @@ jest.mock('@/lib/cards', () => ({
 
 jest.mock('@/lib/development-areas', () => ({
   listDevelopmentAreas: (...a: unknown[]) => mockListDevelopmentAreas(...a),
-  getDevelopmentArea: (...a: unknown[]) => mockGetDevelopmentArea(...a),
   createDevelopmentArea: (...a: unknown[]) => mockCreateDevelopmentArea(...a),
   activateDevelopmentArea: (...a: unknown[]) => mockActivateDevelopmentArea(...a),
 }));
 
 jest.mock('@/lib/problem-statements', () => ({
   listProblemStatements: (...a: unknown[]) => mockListProblemStatements(...a),
-  getProblemStatement: (...a: unknown[]) => mockGetProblemStatement(...a),
   createProblemStatement: (...a: unknown[]) => mockCreateProblemStatement(...a),
   activateProblemStatement: (...a: unknown[]) => mockActivateProblemStatement(...a),
 }));
@@ -90,17 +86,14 @@ jest.mock('@/lib/workspace-progress', () => ({
 
 // eslint-disable-next-line import/first -- jest.mock must precede the imports it mocks
 import {
-  useDevelopmentArea,
   useDevelopmentAreaActions,
   useDevelopmentAreas,
-  useFlatInitiatives,
   useGoal,
   useGoalActions,
   useGoals,
   useKpiAreaActions,
   useKpiAreas,
   usePerson,
-  useProblemStatement,
   useProblemStatementActions,
   useProblemStatementInitiatives,
   useProblemStatements,
@@ -133,11 +126,9 @@ beforeEach(() => {
   mockActivateStrategy.mockResolvedValue(undefined);
   mockListInitiatives.mockResolvedValue([{ id: 'i1' }]);
   mockListDevelopmentAreas.mockResolvedValue([{ id: 'd1', name: 'Org Dev' }]);
-  mockGetDevelopmentArea.mockResolvedValue({ id: 'd1', name: 'Org Dev' });
   mockCreateDevelopmentArea.mockResolvedValue({ id: 'd-new' });
   mockActivateDevelopmentArea.mockResolvedValue(undefined);
   mockListProblemStatements.mockResolvedValue([{ id: 'p1' }]);
-  mockGetProblemStatement.mockResolvedValue({ id: 'p1' });
   mockCreateProblemStatement.mockResolvedValue({ id: 'p-new' });
   mockActivateProblemStatement.mockResolvedValue(undefined);
   mockFetchCardProgress.mockResolvedValue(new Map());
@@ -168,15 +159,6 @@ describe('useKpiAreas / useStrategies (enabled gate)', () => {
     expect(mockListKpiAreas).toHaveBeenCalledTimes(1);
     expect(mockListKpiAreas).toHaveBeenCalledWith('g1');
     expect(mockListStrategies).not.toHaveBeenCalled();
-  });
-});
-
-describe('useFlatInitiatives', () => {
-  it('[3] memanggil listInitiatives({ strategyId: null, problemStatementId: null }) — exclude Development', async () => {
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useFlatInitiatives(), { wrapper });
-    await waitFor(() => expect(result.current.initiatives.length).toBe(1));
-    expect(mockListInitiatives).toHaveBeenCalledWith({ strategyId: null, problemStatementId: null });
   });
 });
 
@@ -271,35 +253,28 @@ describe('useStrategyActions', () => {
 
 // ---------------------------------------------------------------- Fase 6: Development hooks
 
-describe('useDevelopmentAreas / useDevelopmentArea (Fase 6)', () => {
-  it('[F6-1] useDevelopmentArea("") tidak fetch; useDevelopmentAreas memanggil listDevelopmentAreas', async () => {
+describe('useDevelopmentAreas (Fase 6)', () => {
+  it('[F6-1] useDevelopmentAreas memanggil listDevelopmentAreas', async () => {
     const { wrapper } = makeWrapper();
-    const { result } = await renderHook(
-      () => ({ d: useDevelopmentArea(''), ds: useDevelopmentAreas() }),
-      { wrapper },
-    );
-    await waitFor(() => expect(result.current.ds.developmentAreas.length).toBe(1));
+    const { result } = await renderHook(() => useDevelopmentAreas(), { wrapper });
+    await waitFor(() => expect(result.current.developmentAreas.length).toBe(1));
     expect(mockListDevelopmentAreas).toHaveBeenCalled();
-    expect(mockGetDevelopmentArea).not.toHaveBeenCalled();
-    expect(result.current.d.developmentArea).toBeUndefined();
   });
 });
 
-describe('useProblemStatements / useProblemStatement (enabled gate)', () => {
+describe('useProblemStatements (enabled gate)', () => {
   it('[F6-2] id kosong tidak fetch; useProblemStatements("d1") memanggil listProblemStatements("d1")', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(
       () => ({
         empty: useProblemStatements(''),
         listed: useProblemStatements('d1'),
-        one: useProblemStatement(''),
       }),
       { wrapper },
     );
     await waitFor(() => expect(result.current.listed.problemStatements.length).toBe(1));
     expect(mockListProblemStatements).toHaveBeenCalledTimes(1);
     expect(mockListProblemStatements).toHaveBeenCalledWith('d1');
-    expect(mockGetProblemStatement).not.toHaveBeenCalled();
   });
 });
 

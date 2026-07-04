@@ -25,8 +25,6 @@ import {
 } from '@/lib/problem-statements';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeProblemStatementDetailScreen from '@/prototype/screens/problem-statement-detail';
 
 function InitiativeRow({ item, onPress }: { item: Initiative; onPress: () => void }) {
   return (
@@ -188,10 +186,5 @@ export function LiveProblemStatementDetailScreen() {
 }
 
 export default function ProblemStatementDetailRoute() {
-  return (
-    <StackScreenAdapter
-      live={LiveProblemStatementDetailScreen}
-      prototype={PrototypeProblemStatementDetailScreen}
-    />
-  );
+  return <LiveProblemStatementDetailScreen />;
 }

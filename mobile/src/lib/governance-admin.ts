@@ -5,8 +5,6 @@ import type { Tables } from './database.types';
 import { supabase } from './supabase';
 
 export type DeadlineChangeRequest = Tables<'deadline_change_requests'>;
-export type DeadlineChangeLog = Tables<'deadline_change_logs'>;
-export type Cancellation = Tables<'cancellations'>;
 export type Evaluation = Tables<'evaluations'>;
 
 /** Tipe entity card yang bisa dibatalkan/diarsipkan/dicari. */
@@ -25,13 +23,6 @@ export type SearchResult = { id: string; entity_type: string; name: string; stat
 
 export const DCR_STATUS_LABEL: Record<string, string> = {
   pending: 'Menunggu Review',
-  approved: 'Disetujui',
-  rejected: 'Ditolak',
-};
-
-export const CANCELLATION_APPROVAL_STATUS_LABEL: Record<string, string> = {
-  auto_approved: 'Disetujui Otomatis',
-  pending: 'Menunggu Persetujuan',
   approved: 'Disetujui',
   rejected: 'Ditolak',
 };
@@ -87,39 +78,6 @@ export async function reviewDeadlineChange(
     p_reason: reason ?? '',
   });
   if (error) throw error;
-}
-
-// ---------------------------------------------------------------- Cancellation
-
-export async function cancelCard(
-  entityType: CardEntityType,
-  entityId: string,
-  reason: string,
-): Promise<string> {
-  const { data, error } = await supabase.rpc('cancel_card', {
-    p_entity_type: entityType,
-    p_entity_id: entityId,
-    p_reason: reason,
-  });
-  if (error) throw error;
-  return data as string;
-}
-
-export async function approveCancellation(cancellationId: string): Promise<void> {
-  const { error } = await supabase.rpc('approve_cancellation', {
-    p_cancellation_id: cancellationId,
-  });
-  if (error) throw error;
-}
-
-export async function listCancellations(entityId: string): Promise<Cancellation[]> {
-  const { data, error } = await supabase
-    .from('cancellations')
-    .select('*')
-    .eq('entity_id', entityId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Cancellation[];
 }
 
 // ---------------------------------------------------------------- Evaluation

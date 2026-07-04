@@ -1,20 +1,16 @@
-// Hooks Fase 8 — Governance & Admin lifecycle (DCR, Cancellation, Evaluation, Archive).
-// Query keys: ['deadline_change_requests', entityId], ['cancellations', entityId],
-// ['evaluations', initiativeId]. Mutasi invalidate key terkait via mutation variables.
+// Hooks Fase 8 — Governance & Admin lifecycle (DCR, Evaluation, Archive).
+// Query keys: ['deadline_change_requests', entityId], ['evaluations', initiativeId].
+// Mutasi invalidate key terkait via mutation variables.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
-  approveCancellation,
   archiveCard,
-  cancelCard,
   createDeadlineChangeRequest,
   getEvaluation,
-  listCancellations,
   listDeadlineChangeRequests,
   recordEvaluation,
   reviewDeadlineChange,
   type CardEntityType,
-  type Cancellation,
   type DeadlineChangeRequest,
   type Evaluation,
   type NewDeadlineChangeRequest,
@@ -58,38 +54,6 @@ export function useDeadlineChangeActions() {
     reviewRequest: (input: { requestId: string; decision: 'approved' | 'rejected'; reason?: string; entityId?: string }) =>
       reviewM.mutateAsync(input),
     isPending: createM.isPending || reviewM.isPending,
-  };
-}
-
-// ---------------------------------------------------------------- Cancellation
-
-export function useCancellations(entityId: string | null | undefined) {
-  const enabled = !!entityId;
-  const q = useQuery({
-    queryKey: ['cancellations', entityId],
-    queryFn: () => listCancellations(entityId as string),
-    enabled,
-  });
-  return { cancellations: (q.data ?? []) as Cancellation[], isLoading: q.isLoading, enabled };
-}
-
-export function useCancellationActions() {
-  const qc = useQueryClient();
-  const cancelM = useMutation({
-    mutationFn: (input: { entityType: CardEntityType; entityId: string; reason: string }) =>
-      cancelCard(input.entityType, input.entityId, input.reason),
-    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['cancellations', vars.entityId] }),
-  });
-  const approveM = useMutation({
-    mutationFn: (input: { cancellationId: string; entityId?: string }) => approveCancellation(input.cancellationId),
-    // entityId opsional & tidak dipakai server; invalidate prefix supaya list cancellations refresh
-    // tanpa bergantung pada caller mengirim entityId.
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cancellations'] }),
-  });
-  return {
-    cancel: (input: { entityType: CardEntityType; entityId: string; reason: string }) => cancelM.mutateAsync(input),
-    approveCancellation: (input: { cancellationId: string; entityId?: string }) => approveM.mutateAsync(input),
-    isPending: cancelM.isPending || approveM.isPending,
   };
 }
 

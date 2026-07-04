@@ -37,8 +37,6 @@ import {
   useUserScore,
 } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypePeopleProfileScreen from '@/prototype/screens/people-profile';
 
 type Person = NonNullable<PersonRef>;
 
@@ -367,5 +365,5 @@ export function LivePeopleProfileScreen() {
 }
 
 export default function PeopleProfileRoute() {
-  return <StackScreenAdapter live={LivePeopleProfileScreen} prototype={PrototypePeopleProfileScreen} />;
+  return <LivePeopleProfileScreen />;
 }

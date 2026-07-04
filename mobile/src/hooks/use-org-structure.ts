@@ -7,14 +7,12 @@ import {
   createTeam,
   listDepartments,
   listPositions,
-  listTeamMembers,
   listTeams,
   type Department,
   type NewTeam,
   type NewTeamMember,
   type Position,
   type Team,
-  type TeamMember,
 } from '@/lib/org-structure';
 import { createPosition, createRoleTemplate } from '@/lib/governance-admin';
 import { supabase } from '@/lib/supabase';
@@ -77,21 +75,6 @@ export function useRoleTemplates() {
     roleTemplates: (q.data ?? []) as RoleTemplate[],
     isLoading: q.isLoading,
     isError: q.isError,
-  };
-}
-
-export function useTeamMembers(teamId: string | null | undefined) {
-  const enabled = !!teamId;
-  const q = useQuery({
-    queryKey: ['org_structure', 'team_members', teamId],
-    queryFn: () => listTeamMembers(teamId as string),
-    enabled,
-  });
-  return {
-    members: (q.data ?? []) as TeamMember[],
-    isLoading: q.isLoading,
-    isError: q.isError,
-    enabled,
   };
 }
 

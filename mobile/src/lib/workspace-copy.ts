@@ -6,18 +6,12 @@ export const WS_COPY = {
   title: 'Workspace',
   subtitle: 'Performance — Goal, KPI Area, Strategy, Initiative & Action Plan.',
   sectionStrategis: 'Hierarki Strategis',
-  sectionTanpaGoal: 'Initiative Tanpa Goal',
   // WSA-12 — CTA terkunci spec §6.3: "+ Goal" (bukan "+ Goal Baru").
   btnGoalBaru: '+ Goal',
-  /** Indikator count-only (bukan X/N — MBR kuantitatif ditunda Fase 5). */
-  kpiCount: (n: number) => `KPI Area: ${n}`,
-  /** Boundary: count error/undefined → '—', bukan '0'. */
-  kpiCountUnknown: 'KPI Area: —',
   // WSA-12 — empty state terkunci spec §17.
   emptyGoalTitle: 'Belum ada Goal aktif di periode ini.',
   emptyGoalDescCan: 'Buat Goal pertama lewat Wizard, lalu pecah jadi KPI Area, Strategy, dan Initiative.',
   emptyGoalDescView: 'Anda akan melihat Goal di sini begitu menjadi PIC atau Reviewer sebuah card.',
-  emptyFlatInitiative: 'Tidak ada Initiative tanpa Goal.',
   // WSA-12 — toast periode-lewat terkunci spec §12.4 (satu kalimat, dipecah title/message untuk Alert).
   archivePeriodTitle: 'Periode ini sudah menjadi Archive',
   archivePeriodMsg: 'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
@@ -28,28 +22,20 @@ function compactValue(value: string | null | undefined, fallback = 'belum ada') 
   return trimmed ? trimmed : fallback;
 }
 
-function compactCount(count: number | null | undefined, label: string) {
-  return count == null ? `${label} belum dihitung` : `${count} ${label}`;
-}
-
 function compactJoin(parts: Array<string | null | undefined>) {
   return parts.filter((part): part is string => !!part && part.trim().length > 0).join(' · ');
 }
 
 export const WS_TREE_COMPACT_COPY = {
   periodState: (past: boolean) => (past ? 'Periode lewat' : 'Aktif'),
-  statusState: (value: string | null | undefined, past: boolean) =>
-    past ? 'Periode lewat' : compactValue(value, 'aktif'),
   target: (value: string | null | undefined) => `Target ${compactValue(value)}`,
   outcome: (value: string | null | undefined) => `Hasil ${compactValue(value)}`,
   risk: (value: string | null | undefined) => `Risiko ${compactValue(value)}`,
   impact: (value: string | null | undefined) => `Impact ${compactValue(value)}`,
   evidence: (value: string | null | undefined) => `Bukti ${compactValue(value)}`,
   contribution: (value: string | null | undefined) => `Kontribusi ${compactValue(value)}`,
-  status: (value: string | null | undefined) => `Status ${compactValue(value)}`,
   deadline: (value: string | null | undefined) => `Deadline ${compactValue(value)}`,
   reviewer: (value: string | null | undefined) => `Review ${compactValue(value)}`,
-  childCount: (count: number | null | undefined, label: string) => compactCount(count, label),
   needChild: (count: number | null | undefined, label: string) =>
     count == null ? `${label} belum dihitung` : count === 0 ? `Butuh 1 ${label}` : `${count} ${label}`,
   goalMeta: ({
@@ -143,7 +129,6 @@ export const WS_TREE_COMPACT_COPY = {
     compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.impact(impact)]),
     evidence ? WS_TREE_COMPACT_COPY.evidence(evidence) : null,
   ],
-  join: (...parts: Array<string | null | undefined>) => compactJoin(parts),
 } as const;
 
 /** UI-N-002 Stage 2 — Hub view (lobby) di tab Workspace. 2 hub-card + back-to-hub button. */
@@ -151,7 +136,6 @@ export const WS_HUB_COPY = {
   title: 'Workspace',
   // WSA-12 — section title kanan "2 ruang" (spec §4.1), menggantikan subtitle kalimat.
   sectionCount: '2 ruang',
-  backToHub: '← Workspace',
   perf: {
     kicker: 'Performance',
     title: 'Target Kinerja',
@@ -206,7 +190,6 @@ export const WS_DEV_COPY = {
   btnDevAreaBaru: '+ Development Area',
   /** Indikator count-only (PS per DA). */
   problemCount: (n: number) => `Problem Statement: ${n}`,
-  problemCountUnknown: 'Problem Statement: —',
   // WSA-12 — empty state terkunci spec §17.
   emptyDevAreaTitle: 'Belum ada Development Area aktif di periode ini.',
   emptyDevAreaDescCan:

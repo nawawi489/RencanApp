@@ -1,4 +1,4 @@
-// Hooks Fase 8 — use-governance-admin (DCR, Cancellation, Evaluation, Archive). Mock @/lib/governance-admin.
+// Hooks Fase 8 — use-governance-admin (DCR, Evaluation, Archive). Mock @/lib/governance-admin.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { PropsWithChildren } from 'react';
@@ -8,9 +8,6 @@ const mockGov = {
   listDeadlineChangeRequests: jest.fn(),
   createDeadlineChangeRequest: jest.fn(),
   reviewDeadlineChange: jest.fn(),
-  cancelCard: jest.fn(),
-  approveCancellation: jest.fn(),
-  listCancellations: jest.fn(),
   getEvaluation: jest.fn(),
   recordEvaluation: jest.fn(),
   archiveCard: jest.fn(),
@@ -20,9 +17,6 @@ jest.mock('@/lib/governance-admin', () => ({
   listDeadlineChangeRequests: (...a: unknown[]) => mockGov.listDeadlineChangeRequests(...a),
   createDeadlineChangeRequest: (...a: unknown[]) => mockGov.createDeadlineChangeRequest(...a),
   reviewDeadlineChange: (...a: unknown[]) => mockGov.reviewDeadlineChange(...a),
-  cancelCard: (...a: unknown[]) => mockGov.cancelCard(...a),
-  approveCancellation: (...a: unknown[]) => mockGov.approveCancellation(...a),
-  listCancellations: (...a: unknown[]) => mockGov.listCancellations(...a),
   getEvaluation: (...a: unknown[]) => mockGov.getEvaluation(...a),
   recordEvaluation: (...a: unknown[]) => mockGov.recordEvaluation(...a),
   archiveCard: (...a: unknown[]) => mockGov.archiveCard(...a),
@@ -31,7 +25,6 @@ jest.mock('@/lib/governance-admin', () => ({
 // eslint-disable-next-line import/first
 import {
   useArchiveActions,
-  useCancellationActions,
   useDeadlineChangeActions,
   useDeadlineChangeRequests,
   useEvaluation,
@@ -50,9 +43,6 @@ beforeEach(() => {
   mockGov.listDeadlineChangeRequests.mockResolvedValue([{ id: 'dcr1' }]);
   mockGov.createDeadlineChangeRequest.mockResolvedValue('dcr1');
   mockGov.reviewDeadlineChange.mockResolvedValue(undefined);
-  mockGov.cancelCard.mockResolvedValue('c1');
-  mockGov.approveCancellation.mockResolvedValue(undefined);
-  mockGov.listCancellations.mockResolvedValue([]);
   mockGov.getEvaluation.mockResolvedValue({ id: 'e1' });
   mockGov.recordEvaluation.mockResolvedValue('e1');
   mockGov.archiveCard.mockResolvedValue(undefined);
@@ -124,38 +114,6 @@ describe('deadline change requests', () => {
       resolveFn();
       await p;
     });
-  });
-});
-
-describe('cancellation', () => {
-  it('[F8-H13] cancel meneruskan entityType+entityId+reason', async () => {
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useCancellationActions(), { wrapper });
-    await act(async () => {
-      await result.current.cancel({ entityType: 'initiative', entityId: 'i1', reason: 'x' });
-    });
-    expect(mockGov.cancelCard).toHaveBeenCalledWith('initiative', 'i1', 'x');
-  });
-
-  it('[F8-H14] cancel child aktif error propagasi', async () => {
-    mockGov.cancelCard.mockRejectedValue(new Error('child aktif'));
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useCancellationActions(), { wrapper });
-    await expect(
-      result.current.cancel({ entityType: 'goal', entityId: 'g1', reason: 'x' }),
-    ).rejects.toThrow('child aktif');
-  });
-
-  it('[F8-H15] approveCancellation invalidate cancellations key', async () => {
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useCancellationActions(), { wrapper });
-    await act(async () => {
-      await result.current.approveCancellation({ cancellationId: 'c1', entityId: 'i1' });
-    });
-    expect(mockGov.approveCancellation).toHaveBeenCalledWith('c1');
-    // Invalidate via prefix (entityId opsional & tidak dipakai server).
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['cancellations'] });
   });
 });
 

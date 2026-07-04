@@ -10,8 +10,6 @@ import { Pressable, Text, View } from 'react-native-css/components';
 import { Avatar, EmptyState, ErrorState, ScoreBadge, ScoreLegend, SkeletonList } from '@/components/ui';
 import { listOrgProfiles, type PersonRef } from '@/lib/cards';
 import { useLatestClosedPeriod, useRanking } from '@/hooks/use-people-score';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypePeopleRankingScreen from '@/prototype/screens/people-ranking';
 
 type Person = NonNullable<PersonRef>;
 
@@ -124,5 +122,5 @@ export function LivePeopleRankingScreen() {
 }
 
 export default function PeopleRankingRoute() {
-  return <StackScreenAdapter live={LivePeopleRankingScreen} prototype={PrototypePeopleRankingScreen} />;
+  return <LivePeopleRankingScreen />;
 }

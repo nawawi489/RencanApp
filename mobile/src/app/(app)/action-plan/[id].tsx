@@ -28,8 +28,6 @@ import {
   INSTANCE_STATUS_TONE,
   type InstanceWithSubmissions,
 } from '@/lib/repeat';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeActionPlanDetailScreen from '@/prototype/screens/action-plan-detail';
 
 // ---------- UI-S-AP1 — Panduan Selesai (checklist 5-langkah PIC journey) ----------
 // Centang otomatis: Draft→0/5, Aktif/Assigned→1/5, In Progress→2/5, Submitted→3/5,
@@ -594,5 +592,5 @@ export function LiveActionPlanDetailScreen() {
 }
 
 export default function ActionPlanDetailRoute() {
-  return <StackScreenAdapter live={LiveActionPlanDetailScreen} prototype={PrototypeActionPlanDetailScreen} />;
+  return <LiveActionPlanDetailScreen />;
 }

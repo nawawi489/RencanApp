@@ -17,8 +17,6 @@ jest.mock('../supabase', () => ({
 import {
   FORMULA_STATUS_LABEL,
   METRIC_LABEL,
-  PERIOD_STATUS_LABEL,
-  RESULT_KIND_LABEL,
   activateScoreFormulaVersion,
   assignScoreFormula,
   calculatePeriodScores,
@@ -76,22 +74,10 @@ beforeEach(() => {
 
 // ============================================================ label maps (pure)
 describe('people-score label maps', () => {
-  it('[1] PERIOD_STATUS_LABEL — bahasa Indonesia, 3 status', () => {
-    expect(PERIOD_STATUS_LABEL.draft).toBeDefined();
-    expect(PERIOD_STATUS_LABEL.active).toBeDefined();
-    expect(PERIOD_STATUS_LABEL.closed).toBeDefined();
-    expect(PERIOD_STATUS_LABEL.draft).not.toBe(PERIOD_STATUS_LABEL.active);
-  });
-
   it('[2] FORMULA_STATUS_LABEL — 3 status formula', () => {
     expect(FORMULA_STATUS_LABEL.draft).toBeDefined();
     expect(FORMULA_STATUS_LABEL.active).toBeDefined();
     expect(FORMULA_STATUS_LABEL.archived).toBeDefined();
-  });
-
-  it('[3] RESULT_KIND_LABEL — auto vs override', () => {
-    expect(RESULT_KIND_LABEL.auto).toBeDefined();
-    expect(RESULT_KIND_LABEL.override).toBeDefined();
   });
 
   it('[4] METRIC_LABEL — 6 metric Fase 7 V1 (D4: result_achievement keluar)', () => {

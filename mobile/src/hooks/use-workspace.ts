@@ -1,6 +1,6 @@
 // Hooks Fase 4 — Workspace (Goal → KPI Area → Strategy → Initiative). Pemanggil tipis di atas
 // @/lib/goals, @/lib/kpi-areas, @/lib/strategies, @/lib/cards. Query keys TERKUNCI (lihat kontrak):
-// ['goals'], ['goal', id], ['kpi_areas', goalId], ['strategies', kpiAreaId], ['initiatives','flat'],
+// ['goals'], ['goal', id], ['kpi_areas', goalId], ['strategies', kpiAreaId],
 // ['goal_templates']. Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -51,16 +51,13 @@ import {
 import {
   activateDevelopmentArea,
   createDevelopmentArea,
-  getDevelopmentArea,
   listDevelopmentAreas,
-  type DevelopmentArea,
   type DevelopmentAreaWithProblemCount,
   type NewDevelopmentArea,
 } from '@/lib/development-areas';
 import {
   activateProblemStatement,
   createProblemStatement,
-  getProblemStatement,
   listProblemStatements,
   type NewProblemStatement,
   type ProblemStatement,
@@ -86,7 +83,7 @@ export function useCardProgress(ids: string[]) {
   });
   const map = q.data;
   const progressOf = useMemo(
-    () => (id: string): number | null => (map && map.has(id) ? (map.get(id) as number) : null),
+    () => (id: string): number | null => map?.get(id) ?? null,
     [map],
   );
   return {
@@ -159,21 +156,6 @@ export function useStrategies(kpiAreaId: string, enabled = true) {
 
   return {
     strategies: (q.data ?? []) as Strategy[],
-    isLoading: q.isLoading,
-    isError: q.isError,
-    refetch: q.refetch,
-  };
-}
-
-/** Initiative datar (tanpa Strategy DAN tanpa Problem Statement). */
-export function useFlatInitiatives() {
-  const q = useQuery({
-    queryKey: ['initiatives', 'flat'],
-    queryFn: () => listInitiatives({ strategyId: null, problemStatementId: null }),
-  });
-
-  return {
-    initiatives: (q.data ?? []) as Initiative[],
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,
@@ -393,21 +375,6 @@ export function useDevelopmentAreas() {
   };
 }
 
-/** Satu Development Area. */
-export function useDevelopmentArea(id: string) {
-  const q = useQuery({
-    queryKey: ['development_area', id],
-    queryFn: () => getDevelopmentArea(id),
-    enabled: !!id,
-  });
-  return {
-    developmentArea: q.data as DevelopmentArea | undefined,
-    isLoading: q.isLoading,
-    isError: q.isError,
-    refetch: q.refetch,
-  };
-}
-
 /** Problem Statement di bawah satu Development Area. */
 export function useProblemStatements(developmentAreaId: string, enabled = true) {
   const q = useQuery({
@@ -417,21 +384,6 @@ export function useProblemStatements(developmentAreaId: string, enabled = true) 
   });
   return {
     problemStatements: (q.data ?? []) as ProblemStatement[],
-    isLoading: q.isLoading,
-    isError: q.isError,
-    refetch: q.refetch,
-  };
-}
-
-/** Satu Problem Statement. */
-export function useProblemStatement(id: string) {
-  const q = useQuery({
-    queryKey: ['problem_statement', id],
-    queryFn: () => getProblemStatement(id),
-    enabled: !!id,
-  });
-  return {
-    problemStatement: q.data as ProblemStatement | undefined,
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,

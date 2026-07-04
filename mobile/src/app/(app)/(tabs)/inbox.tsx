@@ -11,9 +11,6 @@ import { Screen } from '@/components/screen';
 import { Avatar, Badge, EmptyState, ErrorState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useInboxRooms } from '@/hooks/use-inbox';
 import type { ChatRoom } from '@/lib/inbox';
-import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
-import PrototypeInboxScreen from '@/prototype/screens/inbox';
-
 type Filter = 'all' | 'unread';
 
 function formatLast(iso: string | null): string {
@@ -197,5 +194,5 @@ export function LiveInboxScreen() {
 }
 
 export default function InboxRoute() {
-  return <TabScreenAdapter live={LiveInboxScreen} prototype={PrototypeInboxScreen} />;
+  return <LiveInboxScreen />;
 }

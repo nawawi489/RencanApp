@@ -7,8 +7,6 @@ import { useMemo, useState } from 'react';
 import { SectionList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
-import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
-import PrototypeNotificationsScreen from '@/prototype/screens/notifications';
 import { Screen } from '@/components/screen';
 import {
   Badge,
@@ -254,5 +252,5 @@ export function LiveNotificationsScreen() {
 }
 
 export default function NotificationsRoute() {
-  return <TabScreenAdapter live={LiveNotificationsScreen} prototype={PrototypeNotificationsScreen} />;
+  return <LiveNotificationsScreen />;
 }

@@ -7,14 +7,12 @@ import { createElement } from 'react';
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockListDepartments = jest.fn();
-const mockListTeamMembers = jest.fn();
 const mockCreateDepartment = jest.fn();
 const mockCreateTeam = jest.fn();
 const mockAssignTeamMember = jest.fn();
 
 jest.mock('@/lib/org-structure', () => ({
   listDepartments: (...a: unknown[]) => mockListDepartments(...a),
-  listTeamMembers: (...a: unknown[]) => mockListTeamMembers(...a),
   createDepartment: (...a: unknown[]) => mockCreateDepartment(...a),
   createTeam: (...a: unknown[]) => mockCreateTeam(...a),
   assignTeamMember: (...a: unknown[]) => mockAssignTeamMember(...a),
@@ -30,7 +28,7 @@ jest.mock('@/lib/governance-admin', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import { useOrgActions, useOrgStructure, useTeamMembers } from '../use-org-structure';
+import { useOrgActions, useOrgStructure } from '../use-org-structure';
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -41,7 +39,6 @@ function makeWrapper() {
 
 beforeEach(() => {
   mockListDepartments.mockReset().mockResolvedValue([{ id: 'd1', name: 'Ops' }]);
-  mockListTeamMembers.mockReset().mockResolvedValue([{ id: 'tm1' }]);
   mockCreateDepartment.mockReset().mockResolvedValue('new-id');
   mockCreateTeam.mockReset().mockResolvedValue('team-id');
   mockAssignTeamMember.mockReset().mockResolvedValue('tm-id');
@@ -67,20 +64,6 @@ describe('useOrgStructure', () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useOrgStructure(), { wrapper });
     expect(result.current.departments).toEqual([]);
-  });
-
-  it('[F8-H4] useTeamMembers enabled:false saat teamId kosong', async () => {
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useTeamMembers(''), { wrapper });
-    await waitFor(() => expect(result.current.enabled).toBe(false));
-    expect(mockListTeamMembers).not.toHaveBeenCalled();
-  });
-
-  it('[F8-H5] useTeamMembers fetch saat teamId terisi, meneruskan teamId', async () => {
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useTeamMembers('t1'), { wrapper });
-    await waitFor(() => expect(result.current.members).toHaveLength(1));
-    expect(mockListTeamMembers).toHaveBeenCalledWith('t1');
   });
 });
 

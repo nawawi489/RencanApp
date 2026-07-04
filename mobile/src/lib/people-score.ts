@@ -15,21 +15,10 @@ export type ScoreFormulaAssignment = Tables<'score_formula_assignments'>;
 
 // ---------------------------------------------------------------- label maps
 
-export const PERIOD_STATUS_LABEL: Record<string, string> = {
-  draft: 'Draft',
-  active: 'Aktif',
-  closed: 'Tertutup',
-};
-
 export const FORMULA_STATUS_LABEL: Record<string, string> = {
   draft: 'Draft',
   active: 'Aktif',
   archived: 'Diarsipkan',
-};
-
-export const RESULT_KIND_LABEL: Record<string, string> = {
-  auto: 'Otomatis',
-  override: 'Override Manual',
 };
 
 /** 6 metric Fase 7 V1 — D4: result_achievement keluar (no data source). */

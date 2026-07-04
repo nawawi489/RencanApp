@@ -40,18 +40,6 @@ export function sumOf(values: number[]): number {
   return values.reduce((s, v) => s + (Number.isFinite(v) ? v : 0), 0);
 }
 
-/** Validasi 4 entri Quarter Σ=100 (toleransi 0.001 sama dgn DB). */
-export function validateQuarter100(pcts: number[]): boolean {
-  if (pcts.length !== 4) return false;
-  return Math.abs(sumOf(pcts) - 100) <= 0.001;
-}
-
-/** Validasi 3 entri Month dalam SATU quarter Σ=100. */
-export function validateMonth100PerQuarter(pcts: number[]): boolean {
-  if (pcts.length !== 3) return false;
-  return Math.abs(sumOf(pcts) - 100) <= 0.001;
-}
-
 /** Group rows oleh period_type → map period_key → contribution_pct. */
 export function indexQuarterRows(rows: BreakdownRow[]): Record<QuarterKey, number> {
   const out = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 } as Record<QuarterKey, number>;

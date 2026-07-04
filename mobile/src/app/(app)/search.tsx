@@ -7,9 +7,6 @@ import { Text, TextInput, View } from 'react-native-css/components';
 import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import type { SearchResult } from '@/lib/governance-admin';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeGlobalSearchScreen from '@/prototype/screens/global-search';
-
 const ENTITY_LABEL: Record<string, string> = {
   goal: 'Goal',
   kpi_area: 'KPI Area',
@@ -85,5 +82,5 @@ export function LiveSearchScreen() {
 }
 
 export default function SearchRoute() {
-  return <StackScreenAdapter live={LiveSearchScreen} prototype={PrototypeGlobalSearchScreen} />;
+  return <LiveSearchScreen />;
 }

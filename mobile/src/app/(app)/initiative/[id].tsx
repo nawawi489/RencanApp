@@ -22,8 +22,6 @@ import {
 import { personLabel } from '@/components/user-picker';
 import { listTeams } from '@/lib/org-structure';
 import { guardActivationFields } from '@/lib/activation-check';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeInitiativeDetailScreen from '@/prototype/screens/initiative-detail';
 
 // ---------- UI-S-ID2 — Ruang Eksekusi & Tim/Akses Otomatis ----------
 type ExecCounts = {
@@ -379,5 +377,5 @@ export function LiveInitiativeDetailScreen() {
 }
 
 export default function InitiativeDetailRoute() {
-  return <StackScreenAdapter live={LiveInitiativeDetailScreen} prototype={PrototypeInitiativeDetailScreen} />;
+  return <LiveInitiativeDetailScreen />;
 }

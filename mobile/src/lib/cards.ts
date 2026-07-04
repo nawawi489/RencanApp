@@ -254,19 +254,6 @@ export async function getOrgProfileDetail(id: string): Promise<OrgProfileDetail 
   };
 }
 
-export type Guidance = Tables<'card_guidance_contents'>;
-export async function getGuidance(cardType: string): Promise<Guidance | null> {
-  const { data, error } = await supabase
-    .from('card_guidance_contents')
-    .select('*')
-    .eq('card_type', cardType)
-    .order('organization_id', { ascending: true, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
-
 /** Action plan di mana user adalah Reviewer & status menunggu review (untuk Home). */
 export async function listPendingReviews(): Promise<ActionPlanWithPeople[]> {
   const { data: auth } = await supabase.auth.getUser();
@@ -481,21 +468,6 @@ export async function listKpiAreaCandidates(actionPlanId: string): Promise<KpiAr
   });
   if (error) throw error;
   return (data ?? []) as KpiAreaCandidate[];
-}
-
-/**
- * @deprecated Pakai 2-phase: `createSubmissionDraft()` → upload via `uploadEvidenceFile()` → `finalizeSubmission()`.
- * Stub ini menjaga TS compile sebelum submit.tsx di-refactor di Fase E. Jangan dipanggil.
- */
-export async function submitActionPlan(_args: {
-  actionPlanId: string;
-  note: string | null;
-  evidence: EvidenceInput[];
-  resultValues: ResultValueInput[];
-}): Promise<string> {
-  throw new Error(
-    'submitActionPlan deprecated. Pakai createSubmissionDraft → uploadEvidenceFile → finalizeSubmission (2-phase commit, addendum §10.2 ER-2).',
-  );
 }
 
 /** Read current aggregate value untuk KPI Area (sumber "nilai lama" di UI DeltaArrow). */

@@ -22,8 +22,6 @@ import {
 import { listOrgProfilesWithRoles, type OrgProfileWithRole } from '@/lib/cards';
 import { METRIC_LABEL, effectiveScore } from '@/lib/people-score';
 import { useActivePeriod, useLatestClosedPeriod, useMyScore, useMyScoreHistory, useRanking } from '@/hooks/use-people-score';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypePeopleScreen from '@/prototype/screens/people';
 
 type Person = OrgProfileWithRole & { score?: number | null };
 
@@ -315,5 +313,5 @@ export function LivePeopleScreen() {
 }
 
 export default function PeopleRoute() {
-  return <StackScreenAdapter live={LivePeopleScreen} prototype={PrototypePeopleScreen} />;
+  return <LivePeopleScreen />;
 }

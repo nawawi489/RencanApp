@@ -12,9 +12,6 @@ import type { KpiArea } from '@/lib/kpi-areas';
 import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeGoalDetailScreen from '@/prototype/screens/goal-detail';
-
 function KpiAreaRow({ item, onPress }: { item: KpiArea; onPress: () => void }) {
   return (
     <SectionCard onPress={onPress}>
@@ -182,5 +179,5 @@ export function LiveGoalDetailScreen() {
 }
 
 export default function GoalDetailRoute() {
-  return <StackScreenAdapter live={LiveGoalDetailScreen} prototype={PrototypeGoalDetailScreen} />;
+  return <LiveGoalDetailScreen />;
 }

@@ -10,9 +10,6 @@ const mockGetMyScore = jest.fn();
 const mockListRanking = jest.fn();
 const mockListScoreFormulaVersions = jest.fn();
 const mockListScoreFormulaTemplates = jest.fn();
-const mockOpenPeriodSnapshot = jest.fn();
-const mockCalculatePeriodScores = jest.fn();
-const mockClosePeriodSnapshot = jest.fn();
 const mockOverrideUserScore = jest.fn();
 const mockUpsertScoreFormulaVersion = jest.fn();
 const mockActivateScoreFormulaVersion = jest.fn();
@@ -29,9 +26,6 @@ jest.mock('@/lib/people-score', () => ({
   listRanking: (...a: unknown[]) => mockListRanking(...a),
   listScoreFormulaVersions: (...a: unknown[]) => mockListScoreFormulaVersions(...a),
   listScoreFormulaTemplates: (...a: unknown[]) => mockListScoreFormulaTemplates(...a),
-  openPeriodSnapshot: (...a: unknown[]) => mockOpenPeriodSnapshot(...a),
-  calculatePeriodScores: (...a: unknown[]) => mockCalculatePeriodScores(...a),
-  closePeriodSnapshot: (...a: unknown[]) => mockClosePeriodSnapshot(...a),
   overrideUserScore: (...a: unknown[]) => mockOverrideUserScore(...a),
   upsertScoreFormulaVersion: (...a: unknown[]) => mockUpsertScoreFormulaVersion(...a),
   activateScoreFormulaVersion: (...a: unknown[]) => mockActivateScoreFormulaVersion(...a),
@@ -47,7 +41,6 @@ import {
   useLatestClosedPeriod,
   useMyScore,
   useMyScoreHistory,
-  usePeriodActions,
   useRanking,
   useScoreFormulaTemplates,
   useScoreFormulaVersions,
@@ -70,9 +63,6 @@ beforeEach(() => {
   mockListRanking.mockResolvedValue([{ rank_number: 1 }]);
   mockListScoreFormulaVersions.mockResolvedValue([{ version_number: 1 }]);
   mockListScoreFormulaTemplates.mockResolvedValue([{ id: 't1', level: 'staff' }]);
-  mockOpenPeriodSnapshot.mockResolvedValue('p-new');
-  mockCalculatePeriodScores.mockResolvedValue(5);
-  mockClosePeriodSnapshot.mockResolvedValue(3);
   mockOverrideUserScore.mockResolvedValue('r-over');
   mockUpsertScoreFormulaVersion.mockResolvedValue('v-new');
   mockActivateScoreFormulaVersion.mockResolvedValue(undefined);
@@ -147,12 +137,12 @@ describe('useRanking', () => {
 });
 
 describe('useScoreFormulaTemplates', () => {
-  it('[6b] fetch + queryKey [score_formula_templates, level|all]', async () => {
+  it('[6b] fetch + queryKey [score_formula_templates]', async () => {
     const { qc, wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useScoreFormulaTemplates('staff'), { wrapper });
+    const { result } = await renderHook(() => useScoreFormulaTemplates(), { wrapper });
     await waitFor(() => expect(result.current.templates.length).toBe(1));
-    expect(mockListScoreFormulaTemplates).toHaveBeenCalledWith('staff');
-    expect(qc.getQueryData(['score_formula_templates', 'staff'])).toBeTruthy();
+    expect(mockListScoreFormulaTemplates).toHaveBeenCalledWith();
+    expect(qc.getQueryData(['score_formula_templates'])).toBeTruthy();
   });
 });
 
@@ -166,52 +156,6 @@ describe('useScoreFormulaVersions', () => {
     await waitFor(() => expect(result.current.v.versions.length).toBe(1));
     expect(mockListScoreFormulaVersions).toHaveBeenCalledTimes(1);
     expect(mockListScoreFormulaVersions).toHaveBeenCalledWith('t1');
-  });
-});
-
-describe('usePeriodActions — open / calculate / close + invalidasi', () => {
-  it('[7] open() → openPeriodSnapshot; invalidasi [active_period]', async () => {
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => usePeriodActions(), { wrapper });
-    await act(async () => {
-      await result.current.open({ periodName: 'Q1', periodStart: '2026-01-01', periodEnd: '2026-03-31' });
-    });
-    expect(mockOpenPeriodSnapshot).toHaveBeenCalledWith({
-      periodName: 'Q1', periodStart: '2026-01-01', periodEnd: '2026-03-31',
-    });
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['active_period'] });
-  });
-
-  it('[8] calculate(p1) → invalidasi [my_score] semua + [ranking, p1]', async () => {
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => usePeriodActions(), { wrapper });
-    await act(async () => {
-      await result.current.calculate('p1');
-    });
-    expect(mockCalculatePeriodScores).toHaveBeenCalledWith('p1');
-    const keys = spy.mock.calls.map(c => JSON.stringify(c[0]));
-    expect(keys).toEqual(expect.arrayContaining([
-      JSON.stringify({ queryKey: ['my_score'] }),
-      JSON.stringify({ queryKey: ['ranking', 'p1'] }),
-    ]));
-  });
-
-  it('[9] close(p1) → invalidasi [active_period] + [ranking, p1] + [my_score]', async () => {
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => usePeriodActions(), { wrapper });
-    await act(async () => {
-      await result.current.close('p1');
-    });
-    expect(mockClosePeriodSnapshot).toHaveBeenCalledWith('p1');
-    const keys = spy.mock.calls.map(c => JSON.stringify(c[0]));
-    expect(keys).toEqual(expect.arrayContaining([
-      JSON.stringify({ queryKey: ['active_period'] }),
-      JSON.stringify({ queryKey: ['ranking', 'p1'] }),
-      JSON.stringify({ queryKey: ['my_score'] }),
-    ]));
   });
 });
 

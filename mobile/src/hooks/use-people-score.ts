@@ -14,8 +14,6 @@ import {
   type CreateScoreFormulaDraftInput,
   type UpdateFormulaVersionWeightsInput,
   assignScoreFormula,
-  calculatePeriodScores,
-  closePeriodSnapshot,
   getActivePeriod,
   getLatestClosedPeriod,
   getMyScore,
@@ -24,12 +22,10 @@ import {
   listRanking,
   listScoreFormulaTemplates,
   listScoreFormulaVersions,
-  openPeriodSnapshot,
   overrideUserScore,
   upsertScoreFormulaVersion,
   type AssignScoreFormulaInput,
   type FormulaCategory,
-  type OpenPeriodSnapshotInput,
   type PeriodSnapshot,
   type RankingSnapshot,
   type ScoreFormulaTemplate,
@@ -123,11 +119,11 @@ export function useRanking(periodId: string) {
   };
 }
 
-/** Daftar template formula (D13 transparan org). Filter level opsional. */
-export function useScoreFormulaTemplates(level?: string) {
+/** Daftar template formula (D13 transparan org). */
+export function useScoreFormulaTemplates() {
   const q = useQuery({
-    queryKey: ['score_formula_templates', level ?? 'all'],
-    queryFn: () => listScoreFormulaTemplates(level),
+    queryKey: ['score_formula_templates'],
+    queryFn: () => listScoreFormulaTemplates(),
   });
   return {
     templates: (q.data ?? []) as ScoreFormulaTemplate[],
@@ -150,48 +146,6 @@ export function useScoreFormulaVersions(templateId: string) {
 }
 
 // ---------------------------------------------------------------- actions (mutations)
-
-export function usePeriodActions() {
-  const qc = useQueryClient();
-
-  const openM = useMutation({
-    mutationFn: (input: OpenPeriodSnapshotInput) => openPeriodSnapshot(input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['active_period'] });
-    },
-  });
-
-  const calculateM = useMutation({
-    mutationFn: (periodId: string) => calculatePeriodScores(periodId),
-    onSuccess: (_data, periodId) => {
-      qc.invalidateQueries({ queryKey: ['my_score'] });
-      qc.invalidateQueries({ queryKey: ['ranking', periodId] });
-      // Recalculation mengubah histori per-user → sparkline Trend basi tanpa invalidasi ini.
-      qc.invalidateQueries({ queryKey: ['my_score_history'] });
-    },
-  });
-
-  const closeM = useMutation({
-    mutationFn: (periodId: string) => closePeriodSnapshot(periodId),
-    onSuccess: (_data, periodId) => {
-      qc.invalidateQueries({ queryKey: ['active_period'] });
-      qc.invalidateQueries({ queryKey: ['ranking', periodId] });
-      qc.invalidateQueries({ queryKey: ['my_score'] });
-      // Periode tertutup baru → People ScoreBadge (sumbernya getLatestClosedPeriod) jadi basi.
-      qc.invalidateQueries({ queryKey: ['latest_closed_period'] });
-      qc.invalidateQueries({ queryKey: ['my_score_history'] });
-    },
-  });
-
-  return {
-    open: (input: OpenPeriodSnapshotInput) => openM.mutateAsync(input),
-    calculate: (periodId: string) => calculateM.mutateAsync(periodId),
-    close: (periodId: string) => closeM.mutateAsync(periodId),
-    isPending: openM.isPending || calculateM.isPending || closeM.isPending,
-    calculatePending: calculateM.isPending,
-    closePending: closeM.isPending,
-  };
-}
 
 export type ScoreOverrideArgs = {
   userId: string;

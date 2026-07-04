@@ -27,8 +27,6 @@ import type { ProblemStatement } from '@/lib/problem-statements';
 import { ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeDevelopmentAreaDetailScreen from '@/prototype/screens/development-area-detail';
 
 function ProblemStatementRow({ item, onPress }: { item: ProblemStatement; onPress: () => void }) {
   return (
@@ -233,10 +231,5 @@ export function LiveDevelopmentAreaDetailScreen() {
 }
 
 export default function DevelopmentAreaDetailRoute() {
-  return (
-    <StackScreenAdapter
-      live={LiveDevelopmentAreaDetailScreen}
-      prototype={PrototypeDevelopmentAreaDetailScreen}
-    />
-  );
+  return <LiveDevelopmentAreaDetailScreen />;
 }

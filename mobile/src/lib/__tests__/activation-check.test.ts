@@ -2,7 +2,6 @@
 jest.mock('../supabase', () => ({ supabase: {} }));
 
 import {
-  confirmAddDescendantIfIncomplete,
   guardActivationFields,
   mbrBreakdownGuardMessage,
   missingRequiredFor,
@@ -100,74 +99,5 @@ describe('mbrBreakdownGuardMessage', () => {
     expect(message).toBe(
       'KPI Area ini baru punya 2 dari 3 Strategy. Tambahkan 1 Strategy lagi dulu, baru tombol + Initiative aktif.',
     );
-  });
-});
-
-describe('confirmAddDescendantIfIncomplete', () => {
-  const compliantMbr: MbrCompliance = {
-    child_card_type: 'kpi_area',
-    child_count: 3,
-    min_count: 3,
-    enforcement_mode: 'hanya_peringatan',
-    is_compliant: true,
-  };
-  const incompleteMbr: MbrCompliance = {
-    child_card_type: 'kpi_area',
-    child_count: 2,
-    min_count: 3,
-    enforcement_mode: 'hanya_peringatan',
-    is_compliant: false,
-  };
-
-  it('compliant → langsung onProceed (no popup)', () => {
-    const onProceed = jest.fn();
-    const alertSpy = jest.fn();
-    confirmAddDescendantIfIncomplete({
-      compliance: compliantMbr,
-      parentLabel: 'Goal A',
-      childLabel: 'KPI Area',
-      onProceed,
-      alertImpl: alertSpy,
-    });
-    expect(onProceed).toHaveBeenCalledTimes(1);
-    expect(alertSpy).not.toHaveBeenCalled();
-  });
-
-  // WSA-04 — fail-CLOSED: data compliance belum ada → JANGAN buka form; tampilkan
-  // pesan tunggu, onProceed tidak dipanggil (spec §12.3: klik tidak membuka form).
-  it('compliance undefined (fail-closed) → onProceed TIDAK dipanggil + popup tunggu', () => {
-    const onProceed = jest.fn();
-    const alertSpy = jest.fn();
-    confirmAddDescendantIfIncomplete({
-      compliance: undefined,
-      parentLabel: 'Goal',
-      childLabel: 'KPI Area',
-      onProceed,
-      alertImpl: alertSpy,
-    });
-    expect(onProceed).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledTimes(1);
-  });
-
-  // WSA-04 — non-compliant: pesan spec §12.3, TANPA CTA proceed (hanya "Tutup"),
-  // onProceed tidak pernah dipanggil.
-  it('non-compliant → popup spec §12.3, hanya "Tutup", onProceed tak pernah dipanggil', () => {
-    const onProceed = jest.fn();
-    const alertSpy = jest.fn();
-    confirmAddDescendantIfIncomplete({
-      compliance: incompleteMbr,
-      parentLabel: 'Goal A',
-      childLabel: 'KPI Area',
-      onProceed,
-      alertImpl: alertSpy,
-    });
-    expect(alertSpy).toHaveBeenCalledTimes(1);
-    const [, msg, buttons] = alertSpy.mock.calls[0];
-    expect(msg).toContain('Goal A ini baru punya 2 dari 3 KPI Area');
-    expect(msg).toContain('Tambahkan 1 KPI Area lagi dulu');
-    // Hanya 1 tombol "Tutup"; tidak ada CTA yang membuka form.
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0].text).toBe('Tutup');
-    expect(onProceed).not.toHaveBeenCalled();
   });
 });
