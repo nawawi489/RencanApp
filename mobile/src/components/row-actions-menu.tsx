@@ -1,21 +1,17 @@
 // RowActionsMenu (UI-G-009) — bottom-sheet Modal generik untuk aksi sekunder per-card
 // (Arsipkan, Ubah, Salin, Hapus draft, dst). Parent kontrol open via state.
 //
-// Pola DESIGN.md §4 — touch ≥44px; varian dark; destructive pakai red-600/red-400; disabled non-Pressable.
+// Pola DESIGN.md §4 — touch ≥44px; varian dark; destructive pakai red-600/red-400.
 import { Modal } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 export type RowAction = {
-  /** Label aksi. Juga jadi accessibilityLabel default. */
+  /** Label aksi. Juga jadi accessibilityLabel. */
   label: string;
   /** Callback aksi. Menu otomatis menutup SEBELUM onPress dipanggil (parent reset state). */
   onPress: () => void;
   /** Tampilkan dengan warna red (untuk Hapus/Arsipkan kalau destructive). */
   destructive?: boolean;
-  /** Disabled → row jadi non-Pressable + tone muted. */
-  disabled?: boolean;
-  /** Override accessibilityLabel (mis. menambah konteks card). */
-  accessibilityLabel?: string;
 };
 
 export function RowActionsMenu({
@@ -45,35 +41,23 @@ export function RowActionsMenu({
           ) : null}
 
           {items.map((it, i) => {
-            const labelCls = it.disabled
-              ? 'text-neutral-400 dark:text-neutral-600'
-              : it.destructive
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-black dark:text-white';
+            const labelCls = it.destructive
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-black dark:text-white';
             const border = i > 0 ? 'border-t border-neutral-100 dark:border-neutral-800' : '';
-            const row = (
-              <View className={`min-h-[44px] items-start justify-center px-4 py-3 ${border}`}>
-                <Text className={`text-base font-medium ${labelCls}`}>{it.label}</Text>
-              </View>
-            );
-            if (it.disabled) {
-              return (
-                <View key={`${it.label}-${i}`} accessibilityLabel={it.accessibilityLabel ?? it.label}>
-                  {row}
-                </View>
-              );
-            }
             return (
               <Pressable
                 key={`${it.label}-${i}`}
                 accessibilityRole="button"
-                accessibilityLabel={it.accessibilityLabel ?? it.label}
+                accessibilityLabel={it.label}
                 className="active:opacity-70"
                 onPress={() => {
                   onClose();
                   it.onPress();
                 }}>
-                {row}
+                <View className={`min-h-[44px] items-start justify-center px-4 py-3 ${border}`}>
+                  <Text className={`text-base font-medium ${labelCls}`}>{it.label}</Text>
+                </View>
               </Pressable>
             );
           })}

@@ -10,10 +10,9 @@ import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { SubmissionCard } from '@/components/submission-card';
-import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
-import { getActionPlan } from '@/lib/cards';
+import { getActionPlan, personLabel } from '@/lib/cards';
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,

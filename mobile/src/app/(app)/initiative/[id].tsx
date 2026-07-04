@@ -17,9 +17,9 @@ import {
   activateInitiative,
   getInitiative,
   listActionPlans,
+  personLabel,
   type ActionPlanWithPeople,
 } from '@/lib/cards';
-import { personLabel } from '@/components/user-picker';
 import { listTeams } from '@/lib/org-structure';
 import { guardActivationFields } from '@/lib/activation-check';
 
@@ -145,10 +145,6 @@ function collectRoster(plans: ActionPlanWithPeople[], initiativePicId: string | 
 
 type PersonRefLike = { id: string; full_name: string | null; email: string | null } | null;
 
-function rosterLabel(r: RosterEntry): string {
-  return (r.full_name && r.full_name.trim()) || r.email || 'Tanpa nama';
-}
-
 function RosterCard({ entries }: { entries: RosterEntry[] }) {
   return (
     <SectionCard>
@@ -167,10 +163,10 @@ function RosterCard({ entries }: { entries: RosterEntry[] }) {
         <View className="gap-2 pt-1">
           {entries.map((r) => (
             <View key={r.id} className="flex-row items-center gap-3">
-              <Avatar name={rosterLabel(r)} seed={r.id} />
+              <Avatar name={personLabel(r)} seed={r.id} />
               <View className="flex-1 gap-0.5">
                 <Text className="text-sm font-semibold text-black dark:text-white" numberOfLines={1}>
-                  {rosterLabel(r)}
+                  {personLabel(r)}
                 </Text>
                 <View className="flex-row flex-wrap gap-1">
                   {Array.from(r.roles).map((role) => (

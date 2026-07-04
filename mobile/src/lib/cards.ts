@@ -11,6 +11,11 @@ export type ResultValue = Tables<'action_plan_result_values'>;
 
 export type PersonRef = { id: string; full_name: string | null; email: string | null } | null;
 
+/** Nama tampil orang — full_name → email → fallback. Aman untuk PersonRef nullable. */
+export function personLabel(p: PersonRef | undefined, fallback = 'Tanpa nama'): string {
+  return p?.full_name?.trim() || p?.email || fallback;
+}
+
 export type ActionPlanWithPeople = ActionPlan & {
   pic: PersonRef;
   reviewer: PersonRef;

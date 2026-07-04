@@ -15,7 +15,8 @@ import {
 } from '@/lib/activity-governance';
 import { useGovernanceViolations } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
-import { resolveGovernanceViolation } from '@/lib/governance-admin';
+import { resolveGovernanceViolation, type CardEntityType } from '@/lib/governance-admin';
+import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 
 const STATUS_LABEL: Record<string, string> = {
   open: 'Belum diselesaikan',
@@ -29,16 +30,6 @@ const STATUS_CHIPS: { key: 'semua' | 'open' | 'resolved' | 'dismissed'; label: s
   { key: 'resolved', label: 'Selesai' },
   { key: 'dismissed', label: 'Diabaikan' },
 ];
-
-const ENTITY_ROUTE: Record<string, string> = {
-  goal: '/goal',
-  kpi_area: '/kpi-area',
-  strategy: '/strategy',
-  initiative: '/initiative',
-  action_plan: '/action-plan',
-  development_area: '/development-area',
-  problem_statement: '/problem-statement',
-};
 
 export default function SettingsGovernanceViolationScreen() {
   const router = useRouter();
@@ -119,7 +110,8 @@ export default function SettingsGovernanceViolationScreen() {
                 const status = (v as typeof v & { resolution_status?: string }).resolution_status ?? 'open';
                 const isOpen = status === 'open';
                 const entityType = v.entity_type ?? '';
-                const entityRoute = ENTITY_ROUTE[entityType];
+                const segment = ENTITY_ROUTE_SEGMENT[entityType as CardEntityType];
+                const entityRoute = segment ? `/${segment}` : undefined;
                 return (
                   <SectionCard key={v.id}>
                     <View className="flex-row items-center justify-between gap-2">

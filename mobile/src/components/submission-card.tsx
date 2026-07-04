@@ -3,8 +3,7 @@
 import { Text, View } from 'react-native-css/components';
 
 import { SectionCard, Badge } from '@/components/ui';
-import { personLabel } from '@/components/user-picker';
-import { EVIDENCE_KIND_LABEL, RESULT_VALUE_TYPE_LABEL, type EvidenceFile, type ResultValue, type SubmissionDetail } from '@/lib/cards';
+import { EVIDENCE_KIND_LABEL, RESULT_VALUE_TYPE_LABEL, personLabel, type EvidenceFile, type ResultValue, type SubmissionDetail } from '@/lib/cards';
 
 export function formatDateTime(iso: string): string {
   return iso.replace('T', ' ').slice(0, 16);

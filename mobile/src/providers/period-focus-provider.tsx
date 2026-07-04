@@ -29,8 +29,6 @@ type PeriodFocusContextValue = {
   setFocus: (next: PeriodFocus) => void;
   /** Pindah mode tanpa kehilangan year; otomatis pilih bulan/quarter "sekarang" di year tsb. */
   setMode: (mode: PeriodMode) => void;
-  /** True saat sudah membaca AsyncStorage (UI bisa skeleton bila perlu). */
-  hydrated: boolean;
 };
 
 const PeriodFocusContext = createContext<PeriodFocusContextValue | undefined>(undefined);
@@ -44,7 +42,6 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
   // Mount-time default (bukan re-evaluated tiap render). Test injects `now`.
   const [initialNow] = useState(() => now ?? new Date());
   const [focus, setFocusState] = useState<PeriodFocus>(() => defaultFocus(initialNow));
-  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,11 +50,8 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
         if (cancelled) return;
         const parsed = parseFocusJson(raw);
         if (parsed) setFocusState(parsed);
-        setHydrated(true);
       })
-      .catch(() => {
-        if (!cancelled) setHydrated(true);
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -86,8 +80,8 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
   );
 
   const value = useMemo<PeriodFocusContextValue>(
-    () => ({ focus, setFocus, setMode, hydrated }),
-    [focus, setFocus, setMode, hydrated],
+    () => ({ focus, setFocus, setMode }),
+    [focus, setFocus, setMode],
   );
 
   return <PeriodFocusContext.Provider value={value}>{children}</PeriodFocusContext.Provider>;
@@ -105,6 +99,5 @@ export function usePeriodFocus(): PeriodFocusContextValue {
     focus: defaultFocus(new Date()),
     setFocus: () => {},
     setMode: () => {},
-    hydrated: true,
   };
 }

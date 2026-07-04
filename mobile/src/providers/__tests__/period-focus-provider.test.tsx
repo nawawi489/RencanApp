@@ -6,7 +6,7 @@ import { Text } from 'react-native-css/components';
 import { PeriodFocusProvider, usePeriodFocus } from '../period-focus-provider';
 
 function Probe() {
-  const { focus, setFocus, setMode, hydrated } = usePeriodFocus();
+  const { focus, setFocus, setMode } = usePeriodFocus();
   const label =
     focus.mode === 'month'
       ? `M${focus.year}-${focus.month}`
@@ -14,7 +14,6 @@ function Probe() {
   return (
     <>
       <Text testID="label">{label}</Text>
-      <Text testID="hydrated">{hydrated ? 'yes' : 'no'}</Text>
       <Text testID="setFocus" onPress={() => setFocus({ mode: 'quarter', year: 2026, quarter: 3 })}>
         setFocus
       </Text>
@@ -39,7 +38,6 @@ describe('PeriodFocusProvider', () => {
       );
     });
     expect(screen.getByTestId('label')).toHaveTextContent('M2026-6');
-    expect(screen.getByTestId('hydrated')).toHaveTextContent('yes');
   });
 
   it('[2] hydrate dari AsyncStorage menimpa default', async () => {
@@ -98,6 +96,5 @@ describe('PeriodFocusProvider', () => {
     });
     // Default berbasis new Date() lokal — kita cek bentuk, bukan nilai eksak.
     expect(screen.getByTestId('label').props.children).toMatch(/^M\d{4}-\d{1,2}$/);
-    expect(screen.getByTestId('hydrated').props.children).toBe('yes');
   });
 });

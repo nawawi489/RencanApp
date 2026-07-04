@@ -2,6 +2,7 @@
 // Achievement Score per user dari data eksekusi Fase 1-6, ber-versi, ranking ter-freeze per periode,
 // manual override single-actor (D10 revisi). Pemanggil tipis: otorisasi server (RLS read + RPC tulis).
 // Reuse score.ts (scoreBand/SCORE_*) di UI — JANGAN duplikasi semantik band di sini.
+import type { ScoreBreakdownMetric } from '@/components/ui';
 import type { Tables } from './database.types';
 import { supabase } from './supabase';
 
@@ -30,6 +31,17 @@ export const METRIC_LABEL: Record<string, string> = {
   development_contribution: 'Development Contribution',
   governance_discipline: 'Governance Discipline',
 };
+
+/** metric_breakdown JSONB (skala 0–100) → metrik berlabel untuk ScoreBreakdown. */
+export function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
+  if (!breakdown || typeof breakdown !== 'object') return [];
+  const out: ScoreBreakdownMetric[] = [];
+  for (const [code, raw] of Object.entries(breakdown as Record<string, unknown>)) {
+    const value = typeof raw === 'number' ? raw : Number(raw);
+    if (Number.isFinite(value)) out.push({ label: METRIC_LABEL[code] ?? code, value });
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------- helpers
 

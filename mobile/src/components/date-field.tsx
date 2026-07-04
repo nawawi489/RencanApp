@@ -17,13 +17,6 @@ export function parseISODate(s: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export function formatISODate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 // Lazy require supaya jest yang tidak punya native bridge tetap aman.
 function getDateTimePicker():
   | React.ComponentType<{
@@ -31,8 +24,6 @@ function getDateTimePicker():
       mode?: 'date' | 'time' | 'datetime';
       display?: 'default' | 'spinner' | 'compact' | 'inline' | 'calendar' | 'clock';
       presentation?: 'inline' | 'dialog';
-      minimumDate?: Date;
-      maximumDate?: Date;
       onValueChange?: (event: unknown, date: Date) => void;
       onDismiss?: () => void;
     }>
@@ -54,9 +45,6 @@ type Props = {
   onChange: (v: string) => void;
   required?: boolean;
   placeholder?: string;
-  minimumDate?: Date;
-  maximumDate?: Date;
-  testID?: string;
 };
 
 export function DateField({
@@ -65,9 +53,6 @@ export function DateField({
   onChange,
   required,
   placeholder = 'Pilih tanggal',
-  minimumDate,
-  maximumDate,
-  testID,
 }: Props) {
   const [show, setShow] = useState(false);
   const placeholderColor = usePlaceholderColor();
@@ -83,7 +68,6 @@ export function DateField({
           {required ? <Text className="text-red-500"> *</Text> : null}
         </Text>
         <TextInput
-          testID={testID}
           accessibilityLabel={label}
           className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
           placeholder="YYYY-MM-DD"
@@ -103,7 +87,6 @@ export function DateField({
         {required ? <Text className="text-red-500"> *</Text> : null}
       </Text>
       <Pressable
-        testID={testID}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${value || placeholder}`}
         onPress={() => setShow(true)}
@@ -125,9 +108,7 @@ export function DateField({
               value={current}
               mode="date"
               display="inline"
-              minimumDate={minimumDate}
-              maximumDate={maximumDate}
-              onValueChange={(_e: unknown, d: Date) => onChange(formatISODate(d))}
+              onValueChange={(_e: unknown, d: Date) => onChange(d.toLocaleDateString('en-CA'))}
             />
             <Pressable
               onPress={() => setShow(false)}
@@ -145,10 +126,8 @@ export function DateField({
           value={current}
           mode="date"
           presentation="dialog"
-          minimumDate={minimumDate}
-          maximumDate={maximumDate}
           onValueChange={(_e: unknown, d: Date) => {
-            onChange(formatISODate(d));
+            onChange(d.toLocaleDateString('en-CA'));
             setShow(false);
           }}
           onDismiss={() => setShow(false)}

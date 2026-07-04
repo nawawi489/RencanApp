@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Badge, Button, LabeledInput, SectionCard } from '@/components/ui';
+import { DATE_RE } from '@/lib/date';
 import { DCR_STATUS_LABEL } from '@/lib/governance-admin';
 import { useDeadlineChangeActions, useDeadlineChangeRequests } from '@/hooks/use-governance-admin';
 import { useProfile } from '@/hooks/use-profile';
@@ -29,7 +30,6 @@ export default function DeadlineChangeRequestScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const canReview = can('review_deadline_changes');
-  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
   async function handleSubmit() {
     if (isPending) return; // anti double-submit

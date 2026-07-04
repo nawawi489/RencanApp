@@ -56,16 +56,14 @@ export async function getArchiveMetadata(
 export async function listEntityActivityLog(
   entityType: string,
   entityId: string,
-  opts?: { limit?: number },
 ): Promise<ActivityLog[]> {
-  const limit = opts?.limit ?? 25;
   const { data, error } = await supabase
     .from('activity_logs')
     .select('*')
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(25);
   if (error) throw error;
   return (data ?? []) as ActivityLog[];
 }

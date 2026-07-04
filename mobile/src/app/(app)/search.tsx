@@ -7,15 +7,7 @@ import { Text, TextInput, View } from 'react-native-css/components';
 import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import type { SearchResult } from '@/lib/governance-admin';
-const ENTITY_LABEL: Record<string, string> = {
-  goal: 'Goal',
-  kpi_area: 'KPI Area',
-  strategy: 'Strategy',
-  initiative: 'Initiative',
-  action_plan: 'Action Plan',
-  development_area: 'Development Area',
-  problem_statement: 'Problem Statement',
-};
+import { CARD_TYPE_LABEL, type CardType } from '@/lib/settings-mbr';
 
 export function LiveSearchScreen() {
   const [query, setQuery] = useState('');
@@ -62,7 +54,7 @@ export function LiveSearchScreen() {
     <SectionCard>
       <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
       <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-        {ENTITY_LABEL[r.entity_type] ?? r.entity_type}
+        {CARD_TYPE_LABEL[r.entity_type as CardType] ?? r.entity_type}
       </Text>
     </SectionCard>
   );

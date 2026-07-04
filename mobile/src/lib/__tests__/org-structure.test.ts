@@ -44,19 +44,11 @@ describe('org-structure reads', () => {
     await expect(listDepartments()).rejects.toEqual({ message: 'boom' });
   });
 
-  it('[7] listPositions meneruskan filter department_id via eq', async () => {
-    const { builder, calls } = makeQueryThenable({ data: [], error: null });
-    mockFrom.mockReturnValue(builder);
-    await listPositions({ departmentId: 'dept1' });
-    expect(mockFrom).toHaveBeenCalledWith('positions');
-    expect(someCall(calls, 'eq', (a) => a[0] === 'department_id' && a[1] === 'dept1')).toBe(true);
-  });
-
-  it('[8] listPositions tanpa opts tidak memanggil eq department_id', async () => {
-    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+  it('[8] listPositions memanggil positions.select', async () => {
+    const { builder } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
     await listPositions();
-    expect(someCall(calls, 'eq', (a) => a[0] === 'department_id')).toBe(false);
+    expect(mockFrom).toHaveBeenCalledWith('positions');
   });
 
   it('[8b] listPositions propagasi error', async () => {

@@ -7,7 +7,6 @@ import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-nati
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { SubmissionCard } from '@/components/submission-card';
-import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
 import { computeActionPlanProgress } from '@/lib/progress';
@@ -18,6 +17,7 @@ import {
   activateActionPlan,
   getActionPlan,
   listSubmissions,
+  personLabel,
   reviewSubmission,
   startActionPlan,
   type ActionPlanWithPeople,

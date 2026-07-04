@@ -17,7 +17,6 @@ import {
   ScoreSparkline,
   SectionCard,
   SkeletonCard,
-  type ScoreBreakdownMetric,
 } from '@/components/ui';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -25,10 +24,11 @@ import {
   getOrgProfileDetail,
   listActionPlansByPic,
   listOrgProfiles,
+  personLabel,
   type ActionPlanWithPeople,
   type PersonRef,
 } from '@/lib/cards';
-import { METRIC_LABEL, effectiveScore } from '@/lib/people-score';
+import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
 import {
   useActivePeriod,
   useLatestClosedPeriod,
@@ -40,10 +40,6 @@ import { useProfile } from '@/hooks/use-profile';
 
 type Person = NonNullable<PersonRef>;
 
-function personLabel(p: Person | undefined): string {
-  return p?.full_name?.trim() || p?.email || 'Anggota';
-}
-
 const ROLE_LEVEL_LABEL: Record<string, string> = {
   staff: 'Staff', management: 'Management', c_level: 'C-Level', ceo: 'CEO',
 };
@@ -53,17 +49,6 @@ function formatJoinDate(iso: string | null | undefined): string | null {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-/** metric_breakdown JSONB (skala 0–100) → metrik berlabel untuk ScoreBreakdown. */
-function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
-  if (!breakdown || typeof breakdown !== 'object') return [];
-  const out: ScoreBreakdownMetric[] = [];
-  for (const [code, raw] of Object.entries(breakdown as Record<string, unknown>)) {
-    const value = typeof raw === 'number' ? raw : Number(raw);
-    if (Number.isFinite(value)) out.push({ label: METRIC_LABEL[code] ?? code, value });
-  }
-  return out;
 }
 
 export function LivePeopleProfileScreen() {
@@ -123,7 +108,7 @@ export function LivePeopleProfileScreen() {
     return [];
   }, [activeScore, closedEntry]);
 
-  const label = personLabel(person);
+  const label = personLabel(person, 'Anggota');
   const scoreSourceLabel = activeEffective != null ? active?.period_name : closed?.period_name;
 
   if (profilesLoading) {
@@ -174,7 +159,7 @@ export function LivePeopleProfileScreen() {
           </View>
         </View>
 
-        {/* UI-S-PR2 — Action row: Chat (ke Inbox) + ⋯ aksi sekunder. Tidak tampil utk diri sendiri. */}
+        {/* UI-S-PR2 — Action row: Chat (ke Inbox). Tidak tampil utk diri sendiri. */}
         {!isSelf ? (
           <View className="flex-row gap-2">
             <Button
@@ -182,15 +167,6 @@ export function LivePeopleProfileScreen() {
               variant="secondary"
               onPress={() => router.push('/(tabs)/inbox' as Href)}
             />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Aksi lain"
-              onPress={() =>
-                router.push(`/(tabs)/inbox` as Href)
-              }
-              className="min-h-[44px] w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700">
-              <Text className="text-base font-bold text-black dark:text-white">⋯</Text>
-            </Pressable>
           </View>
         ) : null}
 

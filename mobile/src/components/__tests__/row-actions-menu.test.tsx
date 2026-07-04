@@ -41,17 +41,4 @@ describe('RowActionsMenu', () => {
     expect(order).toEqual(['close', 'press']);
   });
 
-  it('[3] disabled item TIDAK Pressable (tak ada accessibilityRole=button)', async () => {
-    const onPress = jest.fn();
-    const items: RowAction[] = [
-      { label: 'Belum tersedia', onPress, disabled: true },
-    ];
-    await render(<Harness items={items} />);
-    // Label tetap muncul, tapi getByRole('button', {name: 'Belum tersedia'}) tak ada.
-    expect(screen.getByText('Belum tersedia')).toBeTruthy();
-    // Pastikan tekan label tak memanggil onPress.
-    const node = screen.getByLabelText('Belum tersedia');
-    fireEvent.press(node);
-    expect(onPress).not.toHaveBeenCalled();
-  });
 });

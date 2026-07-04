@@ -28,7 +28,6 @@ export type ChatMessage = {
 
 /** Ukuran halaman listChatMessages. Diekspor agar hook (`useChatMessages`) menghitung `hasMore` dari `batch === CHAT_PAGE_SIZE` tanpa konstanta duplikat. */
 export const CHAT_PAGE_SIZE = 30;
-const PAGE_SIZE = CHAT_PAGE_SIZE;
 
 // ---------------------------------------------------------------- queries
 
@@ -42,13 +41,13 @@ export async function listChatRooms(): Promise<ChatRoom[]> {
 /** Pesan dalam room, terbaru dulu, paginasi via offset. RLS menolak non-anggota. */
 export async function listChatMessages(roomId: string, page = 0): Promise<ChatMessage[]> {
   if (!roomId) return [];
-  const from = page * PAGE_SIZE;
+  const from = page * CHAT_PAGE_SIZE;
   const { data, error } = await supabase
     .from('chat_messages')
     .select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email)')
     .eq('chat_room_id', roomId)
     .order('created_at', { ascending: false })
-    .range(from, from + PAGE_SIZE - 1);
+    .range(from, from + CHAT_PAGE_SIZE - 1);
   if (error) throw error;
   return (data ?? []) as unknown as ChatMessage[];
 }

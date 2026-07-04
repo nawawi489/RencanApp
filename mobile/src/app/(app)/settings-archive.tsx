@@ -10,16 +10,7 @@ import { Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } fr
 import { useSearchCards } from '@/hooks/use-search';
 import { getArchiveMetadata } from '@/lib/activity-governance';
 import { restoreCard, type CardEntityType } from '@/lib/governance-admin';
-
-const ENTITY_LABEL: Record<string, string> = {
-  goal: 'Goal',
-  kpi_area: 'KPI Area',
-  strategy: 'Strategy',
-  initiative: 'Initiative',
-  action_plan: 'Action Plan',
-  development_area: 'Development Area',
-  problem_statement: 'Problem Statement',
-};
+import { CARD_TYPE_LABEL, type CardType } from '@/lib/settings-mbr';
 
 const FILTER_CHIPS: { key: 'semua' | CardEntityType; label: string }[] = [
   { key: 'semua', label: 'Semua' },
@@ -129,7 +120,7 @@ export default function SettingsArchiveScreen() {
                 <View className="flex-1 gap-0.5">
                   <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
                   <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {ENTITY_LABEL[r.entity_type] ?? r.entity_type} · Diarsipkan
+                    {CARD_TYPE_LABEL[r.entity_type as CardType] ?? r.entity_type} · Diarsipkan
                   </Text>
                   {archivedAtLabel ? (
                     <Text className="text-xs text-neutral-400">

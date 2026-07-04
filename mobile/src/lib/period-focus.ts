@@ -179,13 +179,8 @@ export function enumerateQuarters(year: number, now: Date): PeriodOption[] {
  */
 type AlertFn = (title: string, message?: string) => void;
 
-export function showPastPeriodAlert(
-  cardLabel?: string,
-  alertImpl?: AlertFn,
-): void {
-  // WSA-12 — copy terkunci spec §12.4. `cardLabel` dibiarkan sebagai parameter agar
-  // pemanggil lama tak berubah, tapi pesan tidak lagi menyisipkan label (sesuai spec).
-  void cardLabel;
+export function showPastPeriodAlert(alertImpl?: AlertFn): void {
+  // WSA-12 — copy terkunci spec §12.4.
   const title = WS_COPY.archivePeriodTitle;
   const msg = WS_COPY.archivePeriodMsg;
   if (alertImpl) {

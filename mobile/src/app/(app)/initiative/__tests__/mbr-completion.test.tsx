@@ -21,6 +21,8 @@ jest.mock('@/lib/cards', () => ({
   ACTION_PLAN_STATUS_LABEL: { draft: 'Draft' },
   PRIORITY_LABEL: { low: 'Rendah', medium: 'Sedang', high: 'Tinggi', urgent: 'Urgent' },
   STATUS_TONE: { draft: 'neutral', active: 'info', done: 'success', archived: 'neutral' },
+  personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
+    p?.full_name?.trim() || p?.email || fallback,
 }));
 
 jest.mock('@/hooks/use-profile', () => ({

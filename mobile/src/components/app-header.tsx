@@ -13,7 +13,7 @@ import { useThemePreference } from '@/providers/theme-provider';
  *    1. `router.canGoBack()` true (push dari pane sebelumnya), atau
  *    2. route saat ini adalah sub-route Workspace deep-link (Performance/Development)
  *       — fallback ke `router.replace('/workspace')` agar back selalu afordan. */
-export function AppHeader({ kicker, title }: { kicker?: string; title?: string }) {
+export function AppHeader({ kicker }: { kicker?: string }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   // useSegments() infers a strict literal tuple from typed routes; we only need string membership
@@ -43,8 +43,8 @@ export function AppHeader({ kicker, title }: { kicker?: string; title?: string }
     else if (isWorkspaceSubroute) router.replace('/workspace' as never);
   };
 
-  let headerTitle = title;
-  if (!headerTitle && isWorkspaceSubroute) {
+  let headerTitle: string | undefined;
+  if (isWorkspaceSubroute) {
     if (segments.includes('performance')) headerTitle = 'Performance';
     else if (segments.includes('development')) headerTitle = 'Development';
   }
