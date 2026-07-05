@@ -39,6 +39,7 @@ Hasil ringkas:
 3. `MENU-03` gagal: toggle tema `Gelap` tidak terapkan mode gelap.
    - Di Menu, klik opsi `Gelap`.
    - Tampilan tetap berada di mode terang; screenshot visual juga menunjukkan `Terang` yang aktif.
+   - **INVESTIGATED 2026-07-05 — tidak tereproduksi di HEAD.** Root cause probe via `preview_inspect` (AC-THEME01-1) menunjukkan: kandidat `:where(.dark, .dark *)` specificity-0 di `global.css:7` BUKAN akar masalah — cascade dark variant bekerja normal. Setelah `localStorage.setItem('rencanaapp:theme','dark')` + reload di web preview `localhost:8091`: `document.documentElement` mendapat class `dark`, computed `background-color` surface utama `lab(7.78 …)` (neutral-900 gelap), screenshot menunjukkan UI gelap penuh. Perbaikan dark-mode + a11y sudah landed di commit `acbaf14 fix(design): dark-mode + a11y AA consistency pass across mobile screens` sebelum laporan ini. Kemungkinan bug asli laporan = Metro cache / stale bundle saat sesi test. Regression net ditambahkan (`theme-provider.test.tsx` — 7 kasus AC-THEME01-2..7) untuk menjaga wiring dari regresi future. Jika laporan berulang di sesi baru, lakukan hard reload (Ctrl+Shift+R) dan clear localStorage terlebih dahulu.
 
 4. `PPL-02` dan `PPL-06` gagal: layar People dan Profile belum memenuhi struktur skenario.
    - `People` belum menampilkan tab `Ranking / Bulan ini / Quarter / Admin`.
@@ -86,9 +87,9 @@ Hasil ringkas:
 | PPL-06 | Fail | CEO | Profil orang masih terlalu minimal dibanding kebutuhan skenario. |
 | MENU-01 | Pass | CEO | Isi Menu untuk CEO lengkap sesuai kategori utama. |
 | MENU-02 | Pass | Staff vs Management vs C-Level vs CEO | Perbedaan gating terlihat jelas: `staff` hanya menampilkan subset ringkas; `manager` dan `c-level` menampilkan `Organisasi` tetapi tetap tidak menampilkan `User & Permission`, `Status & Prioritas`, `Notifications Rule`, `Score Formula`, `Governance Violation`, `Confidential Access`; `ceo` menampilkan seluruh item admin. |
-| MENU-03 | Fail | CEO | Toggle `Gelap` tidak mengubah app ke dark mode. |
+| MENU-03 | **Not Reproducible** (probed 2026-07-05, tests locked di `theme-provider.test.tsx`) | CEO | Toggle `Gelap` sebenarnya bekerja — kemungkinan laporan asli dari Metro cache. Regression tests menjaga wiring. |
 | MENU-04 | Blocked | CEO | Collapse/expand grup tidak diuji spesifik. |
-| THEME-01 | Blocked | CEO | Karena toggle `Gelap` gagal, sapuan dark mode lintas layar belum bisa diverifikasi valid. |
+| THEME-01 | Partial (probed 2026-07-05) | CEO | Toggle dark mode terverifikasi apply lintas layar via preview_inspect + screenshot; sapuan visual lintas layar detail belum full pass. |
 | ROLE-01 | Partial | Staff / Management / C-Level / CEO | Baseline role comparison sudah dijalankan pada empat akun untuk login, Menu, dan Workspace surface. Matriks aksi detail seperti create Strategy/Initiative/AP, review DCR, dan override permission masih butuh pass lanjutan. |
 
 ## Bukti Eksekusi
