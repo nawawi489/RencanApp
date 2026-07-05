@@ -1308,3 +1308,20 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **Spec update:** `docs/spec-ui-testfix-2026-07-05.md` §8 (OQ-4 RESOLVED block) + §9 handoff (THEME-01: isolasi SELESAI, fix HOLD sampai reproducible).
 - **Learning trap (mengganggu awal):** saya sempat menjalankan `document.documentElement.classList.remove('dark')` di eval investigasi, lalu heran kenapa docClass empty di eval berikutnya. Pelajaran: gunakan mutation observer untuk track state; jangan gunakan classList.remove untuk test hipotesis tanpa restore konsisten. Setelah fresh reload observasi jadi bersih dan hipotesis terbukti refuted.
 - **Tidak ada code change hari ini:** hanya spec + wiki update (`docs/spec-ui-testfix-2026-07-05.md`, `wiki/log.md`). AC-THEME01-2..N fix implementation ditahan sampai bug tereproduksi ulang.
+
+## [2026-07-05] investigate | THEME-01 post-login verification — bug tidak tereproduksi lintas layar
+
+- **Trigger:** Owner memberi kredensial dev (`docs/kredensial-login.md`) untuk verifikasi post-login yang di PR #30 sebelumnya HOLD.
+- **Method:** login CEO (`ceo@rencan.local`) → navigasi `/menu` → toggle theme → `/workspace` → `/people`. Semua verifikasi via `preview_eval` (state class + computed style + hardcoded color leak scan).
+- **Findings:**
+  1. `/menu` (tempat toggle Sistem/Terang/Gelap):
+     - Sebelum: `docClass="dark"`, `storage="dark"`, Gelap button `bg-brand-dark` (selected).
+     - Click "Terang" → `docClass="light"`, `storage="light"`, heading `text-black dark:text-white` computed `rgb(0, 0, 0)`.
+     - Click "Gelap" → `docClass="dark"`, `storage="dark"`, heading computed `rgb(255, 255, 255)`.
+     - **Toggle round-trip Terang↔Gelap bekerja penuh. Storage persist. Computed color berubah sesuai.**
+  2. `/workspace`: 49 elemen `text-black`, 0 tanpa `dark:text-*` pair. 18 elemen `bg-white`, 1 tanpa `dark:bg-*` — yaitu `bg-white/20` (overlay transparan intentional). **0 hardcoded leak.**
+  3. `/people`: 12 elemen `text-black` + 4 `bg-white`, semua punya `dark:*` pair. **0 leak.**
+- **Kesimpulan:** THEME-01 bug **tidak tereproduksi** di dev preview pada seluruh layar yang dites (pra-login + post-login lintas Menu/Workspace/People). Kemungkinan besar sudah ter-fix inadvertently oleh commit `a1de95b test(theme): lock theme-provider behavior + document MENU-03 finding` yang landed sebelum PPL work.
+- **Status THEME-01:** CLOSED (pending konfirmasi manual testing ulang). AC-THEME01-2..N tidak dijadwalkan.
+- **Spec update:** `docs/spec-ui-testfix-2026-07-05.md` §8 (OQ-4 RESOLVED block diperluas dgn Fase 2 post-login) + §9 handoff status.
+- **Amend PR #30:** tambah commit follow-up dgn Fase 2 verification pada branch `investigate/theme-01-root-cause`.

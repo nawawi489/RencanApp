@@ -178,11 +178,19 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR yang TERSISA 
 - **OQ-9 (PPL-02 tab Admin) → Entry-point ke layar admin eksisting.** Isi tab = daftar link ke layar admin yang sudah ada, gate `manage_score_formula`; tanpa surface baru. → FR-PPL02.5.
 
 **RESOLVED — THEME-01 runtime verification session 2026-07-05 (`preview_eval` di ems-web):**
-- **OQ-4 (THEME-01 root cause) → `:where()` cascade hypothesis REFUTED.** Verifikasi runtime pada `/login`:
+- **OQ-4 (THEME-01 root cause) → `:where()` cascade hypothesis REFUTED + THEME-01 bug tidak tereproduksi post-login.** Verifikasi lengkap 2 fase:
+
+  **Fase 1 — pra-login (/login):**
   - Fresh load: `document.documentElement.className = "dark"` (dari `storage.theme = "dark"`) — theme-provider apply() bekerja.
   - Elemen dgn class `text-[#092753] dark:text-white` (title "Rencanaapp"): tanpa `.dark` → color `rgb(9, 39, 83)`; dgn `.dark` → color `rgb(255, 255, 255)`. **Dark variant menang atas base — cascade `:where()` TIDAK mengalahkan `dark:` di dev preview.**
   - Login page tidak memiliki elemen `text-black`/`bg-white` tanpa pasangan `dark:*` (0 leak).
-- **Konsekuensi:** AC-THEME01-1 (isolasi root cause runtime) → **TERTUTUP** dgn kesimpulan hipotesis refuted. Bug awal "toggle Gelap tidak apply" (laporan manual testing 2026-07-05) **tidak tereproduksi pada login screen** di dev preview. Kemungkinan (a) bug pada layar post-login (butuh auth untuk verifikasi), (b) sudah ter-fix inadvertently oleh commit `a1de95b test(theme): lock theme-provider behavior`, atau (c) intermittent/environment-specific. AC-THEME01-2..N (fix implementation) tidak dijadwalkan sampai bug tereproduksi ulang dengan skenario spesifik.
+
+  **Fase 2 — post-login (login CEO `ceo@rencan.local`, navigasi lintas layar):**
+  - `/menu` (tempat theme toggle Sistem/Terang/Gelap berada): click "Terang" → `docClass="light"`, `storage="light"`, heading `text-black dark:text-white` → `rgb(0, 0, 0)`. Click "Gelap" → `docClass="dark"`, `storage="dark"`, heading → `rgb(255, 255, 255)`. **Toggle round-trip bekerja penuh; storage persist; computed color transisi terverifikasi.**
+  - `/workspace`: 49 elemen `text-black`, semua punya pasangan `dark:text-*` (0 leak). 18 elemen `bg-white`, hanya 1 tanpa `dark:bg-*` — yaitu `bg-white/20` (overlay transparan, intentional).
+  - `/people`: 12 elemen `text-black` + 4 elemen `bg-white`, semua punya pasangan `dark:*` (0 leak).
+
+- **Konsekuensi:** AC-THEME01-1 (isolasi root cause runtime) → **TERTUTUP** dgn kesimpulan hipotesis refuted DAN bug tidak tereproduksi di dev preview lintas layar. Kemungkinan bug asli sudah ter-fix inadvertently oleh commit `a1de95b test(theme): lock theme-provider behavior` sebelum PPL work, atau environment-specific pada saat manual testing. AC-THEME01-2..N (fix implementation) **TIDAK DIJADWALKAN** — tidak ada bug untuk di-fix. THEME-01 dianggap **CLOSED** pending konfirmasi manual testing ulang.
 
 ---
 
@@ -192,7 +200,7 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR yang TERSISA 
 1. **AUTH-02b** (paling terisolasi; unit/komponen murni, konstanta baru).
 2. **CFG-01** (config, unit `resolveSupabaseUrl` + smoke) — buka jalan QA batch berikutnya.
 3. **WS-04** (helper murni `focusPeriodStatus` unit dulu → komponen gating → AC-WS04-7 gap-doc). **Blok pada OQ-1** untuk memutuskan apakah AC-WS04-8 masuk.
-4. **THEME-01** (AC-THEME01-1 isolasi runtime **SELESAI**: hipotesis `:where()` cascade REFUTED lewat `preview_eval` 2026-07-05 pada `/login`. Dark variant menang atas base; theme-provider apply `.dark` bekerja normal. Fix implementation DIHOLD sampai bug tereproduksi ulang di layar post-login atau skenario spesifik).
+4. **THEME-01** (AC-THEME01-1 isolasi runtime **SELESAI**: verifikasi 2 fase — pra-login (`/login`) DAN post-login (login CEO → `/menu` toggle round-trip Terang↔Gelap terverifikasi; `/workspace` + `/people` 0 hardcoded color leak). Hipotesis `:where()` cascade REFUTED. Bug **tidak tereproduksi** — kemungkinan sudah ter-fix inadvertently oleh commit `a1de95b`. **CLOSED pending konfirmasi manual testing ulang.** AC-THEME01-2..N tidak dijadwalkan).
 5. **PPL-02** (tab + anti-regresi; tab Quarter = placeholder DEFER [OQ-7]; tab Admin = entry-point ke layar admin eksisting, gate `manage_score_formula` [OQ-9]). **Tidak ada blocker tersisa.**
 6. **PPL-06** (ranking/breakdown/null-vs-0/not-found; Kontribusi = jumlah AP selesai periode aktif [OQ-6]; riwayat cross-user via `listUserScoreHistory(userId)` RLS-gated [OQ-5]). **Tidak ada blocker tersisa.**
 
