@@ -18,10 +18,12 @@ const mockCreateScoreFormulaDraft = jest.fn();
 const mockUpdateFormulaVersionWeights = jest.fn();
 
 const mockListMyScoreHistory = jest.fn();
+const mockListUserScoreHistory = jest.fn();
 jest.mock('@/lib/people-score', () => ({
   getActivePeriod: (...a: unknown[]) => mockGetActivePeriod(...a),
   getLatestClosedPeriod: (...a: unknown[]) => mockGetLatestClosedPeriod(...a),
   listMyScoreHistory: (...a: unknown[]) => mockListMyScoreHistory(...a),
+  listUserScoreHistory: (...a: unknown[]) => mockListUserScoreHistory(...a),
   getMyScore: (...a: unknown[]) => mockGetMyScore(...a),
   listRanking: (...a: unknown[]) => mockListRanking(...a),
   listScoreFormulaVersions: (...a: unknown[]) => mockListScoreFormulaVersions(...a),
@@ -45,6 +47,7 @@ import {
   useScoreFormulaTemplates,
   useScoreFormulaVersions,
   useScoreOverride,
+  useUserScoreHistory,
 } from '../use-people-score';
 
 function makeWrapper() {
@@ -59,6 +62,7 @@ beforeEach(() => {
   mockGetActivePeriod.mockResolvedValue({ id: 'p-active', status: 'active' });
   mockGetLatestClosedPeriod.mockResolvedValue({ id: 'p-closed', status: 'closed' });
   mockListMyScoreHistory.mockResolvedValue([{ id: 'h1', auto_calculated_score: 75 }]);
+  mockListUserScoreHistory.mockResolvedValue([{ id: 'uh1', auto_calculated_score: 82 }]);
   mockGetMyScore.mockResolvedValue({ id: 'r1', auto_calculated_score: 75 });
   mockListRanking.mockResolvedValue([{ rank_number: 1 }]);
   mockListScoreFormulaVersions.mockResolvedValue([{ version_number: 1 }]);
@@ -96,6 +100,41 @@ describe('useMyScoreHistory', () => {
     await waitFor(() => expect(result.current.history.length).toBe(1));
     expect(mockListMyScoreHistory).toHaveBeenCalledWith(6);
     expect(qc.getQueryData(['my_score_history', 6])).toBeTruthy();
+  });
+});
+
+describe('useUserScoreHistory — cross-user RLS-gated (PPL-06 / OQ-5)', () => {
+  it('[B1] userId kosong → tanpa fetch (enabled=!!userId), history=[]', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useUserScoreHistory('', 6), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mockListUserScoreHistory).not.toHaveBeenCalled();
+    expect(result.current.history).toEqual([]);
+  });
+
+  it('[B2] userId+limit → fetch, queryKey [user_score_history, userId, limit], passthrough', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useUserScoreHistory('u2', 6), { wrapper });
+    await waitFor(() => expect(result.current.history.length).toBe(1));
+    expect(mockListUserScoreHistory).toHaveBeenCalledWith('u2', 6);
+    expect(qc.getQueryData(['user_score_history', 'u2', 6])).toBeTruthy();
+  });
+
+  it('[B3] RLS deny (mock resolve []) → history=[], isError=false', async () => {
+    mockListUserScoreHistory.mockResolvedValueOnce([]);
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useUserScoreHistory('u-hidden', 6), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.history).toEqual([]);
+    expect(result.current.isError).toBe(false);
+  });
+
+  it('[B4] default limit=6 saat argumen tak diberi', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useUserScoreHistory('u2'), { wrapper });
+    await waitFor(() => expect(result.current.history.length).toBe(1));
+    expect(mockListUserScoreHistory).toHaveBeenCalledWith('u2', 6);
+    expect(qc.getQueryData(['user_score_history', 'u2', 6])).toBeTruthy();
   });
 });
 
@@ -172,11 +211,14 @@ describe('useScoreOverride — single-actor', () => {
     });
     const keys = spy.mock.calls.map(c => JSON.stringify(c[0]));
     // Override pada periode closed juga mempengaruhi badge People; invalidate prefix 'ranking'.
-    // History juga ikut basi → invalidate 'my_score_history'.
+    // History (self + cross-user) juga ikut basi → invalidate 'my_score_history' + 'user_score_history'.
     expect(keys).toEqual(expect.arrayContaining([
       JSON.stringify({ queryKey: ['my_score'] }),
       JSON.stringify({ queryKey: ['ranking'] }),
       JSON.stringify({ queryKey: ['my_score_history'] }),
+      // [B5] PPL-06 / OQ-5: cross-user history dari useUserScoreHistory juga harus refresh
+      // saat manage_score_formula meng-override skor user target.
+      JSON.stringify({ queryKey: ['user_score_history'] }),
     ]));
   });
 

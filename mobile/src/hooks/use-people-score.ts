@@ -20,6 +20,7 @@ import {
   getUserScore,
   listMyScoreHistory,
   listRanking,
+  listUserScoreHistory,
   listScoreFormulaTemplates,
   listScoreFormulaVersions,
   overrideUserScore,
@@ -66,6 +67,24 @@ export function useMyScoreHistory(limit: number = 6) {
   const q = useQuery({
     queryKey: ['my_score_history', limit],
     queryFn: () => listMyScoreHistory(limit),
+  });
+  return {
+    history: (q.data ?? []) as UserScoreResult[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
+}
+
+/**
+ * Histori skor user tertentu (PPL-06 / OQ-5 cross-user). RLS server-side menyaring
+ * viewer (self OR manage_score_formula OR view_all_workspace OR is_supervisor_of).
+ * Disabled saat userId kosong → history=[] tanpa fetch.
+ */
+export function useUserScoreHistory(userId: string, limit: number = 6) {
+  const q = useQuery({
+    queryKey: ['user_score_history', userId, limit],
+    queryFn: () => listUserScoreHistory(userId, limit),
+    enabled: !!userId,
   });
   return {
     history: (q.data ?? []) as UserScoreResult[],
@@ -165,6 +184,8 @@ export function useScoreOverride(periodId: string) {
       // Invalidate semua ranking (override pada periode closed mempengaruhi badge People juga).
       qc.invalidateQueries({ queryKey: ['ranking'] });
       qc.invalidateQueries({ queryKey: ['my_score_history'] });
+      // Cross-user history (PPL-06 / OQ-5): profil orang lain juga ikut basi.
+      qc.invalidateQueries({ queryKey: ['user_score_history'] });
     },
   });
   return {

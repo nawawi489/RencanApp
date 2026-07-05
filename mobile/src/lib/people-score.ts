@@ -22,6 +22,19 @@ export const FORMULA_STATUS_LABEL: Record<string, string> = {
   archived: 'Diarsipkan',
 };
 
+/**
+ * PPL-02 tab labels + placeholder (OQ-7/OQ-9 diputuskan 2026-07-05).
+ * Quarter: DEFER placeholder sampai data quarterly-rollup skoring ada (Fase 7 aktivasi).
+ * Admin: gate `manage_score_formula`, isi = entry-point ke layar admin eksisting.
+ */
+export const PEOPLE_TAB_COPY = {
+  monthly: 'Bulan ini',
+  quarterly: 'Quarter',
+  ranking: 'Ranking',
+  admin: 'Admin',
+  quarterlyPlaceholder: 'Laporan Quarter menyusul setelah periode ditutup.',
+} as const;
+
 /** 6 metric Fase 7 V1 — D4: result_achievement keluar (no data source). */
 export const METRIC_LABEL: Record<string, string> = {
   action_plan_completion: 'Action Plan Completion',
@@ -177,6 +190,33 @@ export async function listMyScoreHistory(limit: number = 6): Promise<UserScoreRe
     const da = a.period_snapshots?.period_start ?? '';
     const db = b.period_snapshots?.period_start ?? '';
     return db.localeCompare(da); // DESC newest first
+  });
+  return rows as unknown as UserScoreResult[];
+}
+
+/**
+ * Histori skor user TERTENTU (PPL-06 / OQ-5 cross-user). Pola sama dengan listMyScoreHistory
+ * tapi tanpa auth.getUser: RLS server-side (0013:799-815) menyaring viewer berdasarkan
+ * self OR manage_score_formula OR view_all_workspace OR is_supervisor_of(user_id).
+ * Viewer di luar scope → [] graceful (0 baris dari RLS deny, bukan error).
+ * userId kosong → [] tanpa fetch. Limit default 6.
+ */
+export async function listUserScoreHistory(userId: string, limit: number = 6): Promise<UserScoreResult[]> {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('user_score_results')
+    .select('*, period_snapshots!period_snapshot_id(period_start)')
+    .eq('user_id', userId)
+    .eq('is_current', true)
+    .order('period_start', { ascending: false, foreignTable: 'period_snapshots' })
+    .limit(limit);
+  if (error) throw error;
+  const rows = (data ?? []) as Array<UserScoreResult & { period_snapshots: { period_start: string } | null }>;
+  // Safety net client-side sort (foreignTable order kadang tidak menyortir baris induk).
+  rows.sort((a, b) => {
+    const da = a.period_snapshots?.period_start ?? '';
+    const db = b.period_snapshots?.period_start ?? '';
+    return db.localeCompare(da);
   });
   return rows as unknown as UserScoreResult[];
 }

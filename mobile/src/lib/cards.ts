@@ -510,3 +510,34 @@ export async function reviewSubmission(args: {
   });
   if (error) throw error;
 }
+
+// ---------------------------------------------------------------- PPL-06 Kontribusi (OQ-6)
+
+/**
+ * Jumlah Action Plan yang telah selesai (status='done') oleh PIC pada rentang periode aktif.
+ * PPL-06 / OQ-6 diputuskan 2026-07-05: metrik "Kontribusi bulan ini" = count AP done PIC pada periode.
+ *
+ * SEMANTIK APPROKSIMASI: idealnya filter pakai kolom `completed_at`, tapi schema tak punya kolom
+ * itu dan spec §NG-5 tidak mengizinkan migrasi baru untuk bug UI. Pakai `updated_at` sebagai
+ * approksimasi — untuk AP `done` yang tidak diedit setelahnya, updated_at ≈ completed_at.
+ *
+ * RLS `action_plans` menyaring visibility per organisasi + permission. Viewer di luar scope →
+ * `[]` graceful (count=0, bukan error). Konsumen UI HARUS membedakan 0-nyata vs RLS-hidden.
+ *
+ * Guard: userId kosong atau period null → 0 tanpa fetch (dan tanpa auth.getUser).
+ */
+export async function countCompletedActionPlansInPeriod(
+  userId: string,
+  period: { period_start: string; period_end: string } | null | undefined,
+): Promise<number> {
+  if (!userId || !period) return 0;
+  const { data, error } = await supabase
+    .from('action_plans')
+    .select('id')
+    .eq('pic_id', userId)
+    .eq('status', 'done')
+    .gte('updated_at', period.period_start)
+    .lte('updated_at', period.period_end);
+  if (error) throw error;
+  return (data ?? []).length;
+}

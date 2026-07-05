@@ -17,6 +17,7 @@ jest.mock('../supabase', () => ({
 import {
   FORMULA_STATUS_LABEL,
   METRIC_LABEL,
+  PEOPLE_TAB_COPY,
   activateScoreFormulaVersion,
   assignScoreFormula,
   calculatePeriodScores,
@@ -29,6 +30,7 @@ import {
   listRanking,
   listScoreFormulaTemplates,
   listScoreFormulaVersions,
+  listUserScoreHistory,
   openPeriodSnapshot,
   overrideUserScore,
   createScoreFormulaDraft,
@@ -244,6 +246,85 @@ describe('listRanking', () => {
 });
 
 // ============================================================ listScoreFormulaVersions
+// ============================================================ PEOPLE_TAB_COPY (PPL-02 constant lock)
+describe('PEOPLE_TAB_COPY — konstanta label tab People (PPL-02)', () => {
+  it('[TC1] mengunci 4 label tab + placeholder quarterly', () => {
+    expect(PEOPLE_TAB_COPY.monthly).toBe('Bulan ini');
+    expect(PEOPLE_TAB_COPY.quarterly).toBe('Quarter');
+    expect(PEOPLE_TAB_COPY.ranking).toBe('Ranking');
+    expect(PEOPLE_TAB_COPY.admin).toBe('Admin');
+    // OQ-7 diputuskan 2026-07-05: tab Quarter render placeholder sampai data quarterly-rollup ada.
+    expect(PEOPLE_TAB_COPY.quarterlyPlaceholder).toMatch(/quarter|kuartal/i);
+  });
+});
+
+// ============================================================ listUserScoreHistory (PPL-06 cross-user, OQ-5)
+describe('listUserScoreHistory — cross-user RLS-gated (PPL-06 / OQ-5)', () => {
+  it('[UH1] userId kosong → [] tanpa fetch dan tanpa auth.getUser', async () => {
+    let called = false;
+    mockFrom.mockImplementation(() => {
+      called = true;
+      return makeQueryThenable({ data: [], error: null }).builder;
+    });
+    const rows = await listUserScoreHistory('');
+    expect(rows).toEqual([]);
+    expect(called).toBe(false);
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('[UH2] query shape: eq(user_id,userId) + eq(is_current,true) + limit(n) — TIDAK panggil auth.getUser', async () => {
+    const { builder, calls } = makeQueryThenable({
+      data: [
+        { id: 'h1', period_snapshots: { period_start: '2026-01-01' } },
+        { id: 'h2', period_snapshots: { period_start: '2026-03-01' } },
+      ],
+      error: null,
+    });
+    mockFrom.mockReturnValue(builder);
+    await listUserScoreHistory('u2', 6);
+    expect(mockFrom).toHaveBeenCalledWith('user_score_results');
+    const eqCalls = (builder.eq as jest.Mock).mock.calls;
+    expect(eqCalls).toEqual(expect.arrayContaining([['user_id', 'u2'], ['is_current', true]]));
+    expect(calls.limit).toEqual([6]);
+    // Cross-user: RLS server-side yang menyaring (self OR supervisor OR manage_score_formula OR view_all_workspace).
+    // Client tidak perlu auth.getUser (viewer identity ada di JWT), berbeda dari listMyScoreHistory.
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('[UH3] sort DESC by period_start (join period_snapshots) — h2 (Mar) sebelum h1 (Jan)', async () => {
+    const { builder } = makeQueryThenable({
+      data: [
+        { id: 'h1', period_snapshots: { period_start: '2026-01-01' } },
+        { id: 'h2', period_snapshots: { period_start: '2026-03-01' } },
+      ],
+      error: null,
+    });
+    mockFrom.mockReturnValue(builder);
+    const rows = await listUserScoreHistory('u2', 6);
+    expect((rows as Array<{ id: string }>).map((r) => r.id)).toEqual(['h2', 'h1']);
+  });
+
+  it('[UH4] RLS deny (viewer di luar scope) → [] graceful, bukan error', async () => {
+    const { builder } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    const rows = await listUserScoreHistory('u-hidden', 6);
+    expect(rows).toEqual([]);
+  });
+
+  it('[UH5] default limit=6 saat argumen tak diberi', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listUserScoreHistory('u2');
+    expect(calls.limit).toEqual([6]);
+  });
+
+  it('[UH6] propagasi error dari Supabase', async () => {
+    const { builder } = makeQueryThenable({ data: null, error: { message: 'network' } });
+    mockFrom.mockReturnValue(builder);
+    await expect(listUserScoreHistory('u2', 6)).rejects.toEqual({ message: 'network' });
+  });
+});
+
 describe('listMyScoreHistory', () => {
   it('[H1] eq user_id + is_current=true + join period_start + limit n, sort desc by period_start', async () => {
     // Impl mengurutkan client-side by period_start (join), recalculation-safe (commit fase7).
