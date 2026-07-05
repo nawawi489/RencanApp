@@ -56,13 +56,12 @@ describe('resolveSupabaseUrl (AC-CFG01-1..2)', () => {
       expect(resolveSupabaseUrl('web', 'http://localhost:54321')).toBe('http://localhost:54321');
     });
 
-    it('[10] web: trailing slash tidak menambah/mengurangi slash', () => {
-      // Kontrak: URL constructor mempertahankan path "/"; hasil tetap valid.
-      const result = resolveSupabaseUrl('web', 'http://127.0.0.1:54321/');
-      expect(result.startsWith('http://localhost:54321')).toBe(true);
-      // Kunci: tidak double-slash, tidak drop path.
-      expect(result).not.toMatch(/\/\//);
-      // (URL polyfill akan mempertahankan trailing slash — accept apa adanya, yang penting host benar.)
+    it('[10] web: input trailing slash → output tanpa trailing slash (kanonik Supabase)', () => {
+      // Kontrak: normalize ke bentuk tanpa "/" di akhir, konsisten dengan
+      // konvensi createClient() Supabase; tidak memunculkan double-slash di path.
+      expect(resolveSupabaseUrl('web', 'http://127.0.0.1:54321/')).toBe(
+        'http://localhost:54321',
+      );
     });
 
     it('[11] raw URL invalid → dikembalikan apa adanya (fallback aman, tidak throw)', () => {
