@@ -1287,3 +1287,24 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 | **Total** | **PPL-02 + PPL-06 closed** | **+31 test net, 0 regresi** |
 
 Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set identik: pre-existing `workspace.test.tsx`, `tree-progress-orb.test.tsx`, `workspace-screen.tsx`). Semua tsc error di baseline pre-existing.
+
+## [2026-07-05] investigate | THEME-01 runtime root-cause (OQ-4) — `:where()` cascade hypothesis REFUTED
+
+- **Trigger:** OQ-4 pending — spec §THEME-01 minta runtime verification hipotesis `global.css:7` `@custom-variant dark (&:where(.dark, .dark *))` (specificity 0) menjelaskan "toggle Gelap tidak apply".
+- **Method:** `preview_start ems-web` → `preview_eval` untuk introspection `document.documentElement.className`, `getComputedStyle()`, `localStorage`, dan `matchMedia('(prefers-color-scheme: dark)')` pada `/login`.
+- **Findings (fresh page load, urutan waktu):**
+  1. `localStorage.getItem('rencanaapp:theme') === 'dark'` (user preference tersimpan).
+  2. `matchMedia('(prefers-color-scheme: dark)').matches === true` (OS dark).
+  3. Immediately post-mount + 2.75s window: `document.documentElement.className === 'dark'` (konstan). **Theme-provider apply() bekerja normal.**
+  4. Sample element `<Text className="text-3xl font-extrabold text-[#092753] dark:text-white">Rencanaapp</Text>`:
+     - Tanpa `.dark` di root: `getComputedStyle(el).color === 'rgb(9, 39, 83)'` (= `#092753`, base variant).
+     - Dengan `.dark` di root: `getComputedStyle(el).color === 'rgb(255, 255, 255)'` (= white, dark variant menang).
+     - Delta konfirmasi: dark variant BERHASIL override base — cascade `:where()` bekerja normal di dev preview.
+  5. Login page: 0 elemen `text-black` tanpa pasangan `dark:text-*`, 0 elemen `bg-white` tanpa `dark:bg-*` (tidak ada hardcoded color leak).
+- **Kesimpulan (OQ-4 RESOLVED):**
+  - Hipotesis `:where()` cascade → **REFUTED** di runtime pada `/login`.
+  - Bug awal "toggle Gelap tidak apply" (report `docs/testing-report-2026-07-05-ui.md`) **tidak tereproduksi** pada login screen di dev preview.
+  - Kemungkinan tersisa: (a) bug pada layar post-login (perlu credential), (b) sudah ter-fix inadvertently oleh `a1de95b test(theme): lock theme-provider behavior`, (c) intermittent atau environment-specific.
+- **Spec update:** `docs/spec-ui-testfix-2026-07-05.md` §8 (OQ-4 RESOLVED block) + §9 handoff (THEME-01: isolasi SELESAI, fix HOLD sampai reproducible).
+- **Learning trap (mengganggu awal):** saya sempat menjalankan `document.documentElement.classList.remove('dark')` di eval investigasi, lalu heran kenapa docClass empty di eval berikutnya. Pelajaran: gunakan mutation observer untuk track state; jangan gunakan classList.remove untuk test hipotesis tanpa restore konsisten. Setelah fresh reload observasi jadi bersih dan hipotesis terbukti refuted.
+- **Tidak ada code change hari ini:** hanya spec + wiki update (`docs/spec-ui-testfix-2026-07-05.md`, `wiki/log.md`). AC-THEME01-2..N fix implementation ditahan sampai bug tereproduksi ulang.
