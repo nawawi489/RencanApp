@@ -8,13 +8,16 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import {
+  ContributionSection,
+  TrendSection,
+} from '@/components/people-profile-sections';
+import {
   Avatar,
   Badge,
   Button,
   GuidanceNote,
   ScoreBadge,
   ScoreBreakdown,
-  ScoreSparkline,
   SectionCard,
   SkeletonCard,
 } from '@/components/ui';
@@ -233,12 +236,7 @@ export function LivePeopleProfileScreen() {
                   <Text className="text-xs text-neutral-400">· {scoreSourceLabel}</Text>
                 ) : null}
               </View>
-              {sparkPoints.length ? (
-                <View className="gap-1.5">
-                  <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tren</Text>
-                  <ScoreSparkline points={sparkPoints} />
-                </View>
-              ) : null}
+              <TrendSection points={sparkPoints} />
             </View>
           ) : (
             <GuidanceNote
@@ -249,25 +247,11 @@ export function LivePeopleProfileScreen() {
         </SectionCard>
 
         {/* PPL-06 Kontribusi bulan ini (OQ-6). Sembunyikan bila !isSelf && count=0. */}
-        {active && showContribution ? (
-          <SectionCard>
-            <Text className="text-base font-semibold text-black dark:text-white">
-              Kontribusi bulan ini
-            </Text>
-            {contributionQ.isLoading ? (
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat kontribusi…</Text>
-            ) : contributionCount > 0 ? (
-              <Text className="text-sm text-black dark:text-white">
-                {contributionCount} tugas selesai bulan ini
-              </Text>
-            ) : (
-              <GuidanceNote
-                title="Skor menyusul"
-                body="Belum ada AP selesai bulan ini pada periode aktif."
-              />
-            )}
-          </SectionCard>
-        ) : null}
+        <ContributionSection
+          show={!!active && showContribution}
+          isLoading={contributionQ.isLoading}
+          count={contributionCount}
+        />
 
         {/* Breakdown metrik */}
         {breakdown.length ? (
