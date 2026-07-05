@@ -9,6 +9,8 @@
 !.env.example
 !mobile/.env.example
 *.local
+# Kredensial dev — jangan di-commit
+docs/kredensial-login.md
 
 # OS / editor
 .DS_Store

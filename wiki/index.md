@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-07-02
+updated: 2026-07-05
 ---
 
 # RencanApp Wiki — Index
@@ -39,6 +39,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[ui-prototype-gap]] — Backlog UI ber-ID dari perbandingan `design.html` (46 layar) vs implementasi `mobile/`. Spec turunan pertama: `specs/inbox-chat-ui.md` (UI-S-IN1/IN2, dari sdd-plan 2026-06-26)
 - [[workspace-lock-audit]] — Audit `mobile/` vs prototype final Workspace (spec lock V1.82 kini dihapus): 20 PASS · 7 PARTIAL · 8 FAIL dari 35 AC; temuan ber-ID WSA-01..20
 - [[workspace-lock-sprint-plan]] — Lima sprint eksekusi perbaikan temuan WSA: copy lock → guard/permission → anatomi tree card → overview/header/switcher → route & tree lengkap
+- [[ws-04-governance-debt]] — WS-04 archive-period gating UI-only (2026-07-05 OQ-1 Opsi A); `.insert()` langsung ber-RLS tanpa cek periode; kondisi kapan wajib re-open backend hardening
 
 ## Sources
 

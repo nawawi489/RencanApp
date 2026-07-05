@@ -1,6 +1,6 @@
 # Spec — Perbaikan Bug UI (testing-report 2026-07-05-ui)
 
-Status: siap disambung ke `tdd-plan`. PPL-02/PPL-06 **tidak lagi terblokir** — OQ-5/OQ-6/OQ-7/OQ-9 diputuskan owner pada spec+design session 2026-07-05 (lihat §8 RESOLVED). Pemblokir tersisa hanya **OQ-1** (scope server WS-04) dan **OQ-4** (root cause THEME-01), keduanya di luar PPL.
+Status: **semua 6 bug fase eksekusi UI selesai atau di-hold dengan alasan tercatat.** OQ-1/4/5/6/7/9 diputuskan owner pada session-session 2026-07-05 (lihat §8 RESOLVED). PPL-02/PPL-06 fully closed lewat PR #28 + #29. AUTH-02b/CFG-01 closed di commit terdahulu. THEME-01 CLOSED pending konfirmasi manual (verifikasi runtime 2026-07-05 tidak reproducible di dev preview). WS-04 UI landed; server hardening di-defer sebagai governance debt tercatat (OQ-1 Opsi A).
 
 Sumber kebenaran: PRD V1.8.2 (repo root) + `prd/*`, `DESIGN.md` (token & a11y §4), `specs/fase-7-people-score.md`, wiki (`concepts/*`, `entities/*`), workspace-lock a11y amendment (2026-07-03). Semua klaim implementasi di bawah diverifikasi langsung terhadap kode.
 
@@ -169,7 +169,7 @@ Catatan pengikat lintas AC:
 
 ## 8. Open Questions (pemblokir ditandai)
 
-Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR yang TERSISA sebelum tdd-plan menutup case terkait: **OQ-1** (scope server WS-04).
+Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). **Semua OQ pemblokir sudah RESOLVED** — tidak ada blocker owner tersisa untuk fase eksekusi UI batch 2026-07-05.
 
 **RESOLVED — spec+design session 2026-07-05 (owner):**
 - **OQ-5 (PPL-06 riwayat cross-user) → Cross-user, RLS-gated.** Tambah `listUserScoreHistory(userId)` RLS-gated; profil orang lain menampilkan tren bila viewer berhak; di luar scope → `[]`. Tidak ada migrasi. → FR-PPL06.4.
@@ -192,6 +192,9 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR yang TERSISA 
 
 - **Konsekuensi:** AC-THEME01-1 (isolasi root cause runtime) → **TERTUTUP** dgn kesimpulan hipotesis refuted DAN bug tidak tereproduksi di dev preview lintas layar. Kemungkinan bug asli sudah ter-fix inadvertently oleh commit `a1de95b test(theme): lock theme-provider behavior` sebelum PPL work, atau environment-specific pada saat manual testing. AC-THEME01-2..N (fix implementation) **TIDAK DIJADWALKAN** — tidak ada bug untuk di-fix. THEME-01 dianggap **CLOSED** pending konfirmasi manual testing ulang.
 
+**RESOLVED — WS-04 governance session 2026-07-05 (owner):**
+- **OQ-1 (WS-04 scope server) → Opsi A: UI-only + governance debt tercatat.** Enforcement archive-period gating **hanya di client** (`workspace-screen.tsx` gate via `focusPeriodStatus` helper). Create card path tetap pakai `.insert()` langsung ber-RLS di `cards.ts`; RLS INSERT policy (0005/0010/0012) **tidak** memeriksa periode fokus/parent — hanya validasi `organization_id + created_by + has_permission(create_*)`. Bypass path via akses Supabase langsung (script/devtools) TIDAK di-block. Governance debt dicatat di [[ws-04-governance-debt]] beserta signal kapan wajib re-open backend hardening. AC-WS04-8 (server-side test) → **TIDAK DIJADWALKAN** (governance debt, bukan gap AC).
+
 ---
 
 ## 9. Handoff ke TDD
@@ -199,7 +202,7 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR yang TERSISA 
 **Feature (untuk `tdd-plan`):** lihat `tdd_handoff.feature`. Urutan disarankan:
 1. **AUTH-02b** (paling terisolasi; unit/komponen murni, konstanta baru).
 2. **CFG-01** (config, unit `resolveSupabaseUrl` + smoke) — buka jalan QA batch berikutnya.
-3. **WS-04** (helper murni `focusPeriodStatus` unit dulu → komponen gating → AC-WS04-7 gap-doc). **Blok pada OQ-1** untuk memutuskan apakah AC-WS04-8 masuk.
+3. **WS-04** (helper murni `focusPeriodStatus` unit → komponen gating → AC-WS04-7 gap-doc **SELESAI** di commit `6037a7f`). OQ-1 diputuskan Opsi A (UI-only + governance debt); AC-WS04-8 (server-side test) **TIDAK DIJADWALKAN**. Governance debt tercatat di [[ws-04-governance-debt]] dengan signal kapan wajib re-open.
 4. **THEME-01** (AC-THEME01-1 isolasi runtime **SELESAI**: verifikasi 2 fase — pra-login (`/login`) DAN post-login (login CEO → `/menu` toggle round-trip Terang↔Gelap terverifikasi; `/workspace` + `/people` 0 hardcoded color leak). Hipotesis `:where()` cascade REFUTED. Bug **tidak tereproduksi** — kemungkinan sudah ter-fix inadvertently oleh commit `a1de95b`. **CLOSED pending konfirmasi manual testing ulang.** AC-THEME01-2..N tidak dijadwalkan).
 5. **PPL-02** (tab + anti-regresi; tab Quarter = placeholder DEFER [OQ-7]; tab Admin = entry-point ke layar admin eksisting, gate `manage_score_formula` [OQ-9]). **Tidak ada blocker tersisa.**
 6. **PPL-06** (ranking/breakdown/null-vs-0/not-found; Kontribusi = jumlah AP selesai periode aktif [OQ-6]; riwayat cross-user via `listUserScoreHistory(userId)` RLS-gated [OQ-5]). **Tidak ada blocker tersisa.**
@@ -208,7 +211,7 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR yang TERSISA 
 - `is_supervisor_of` SUDAH ADA (`supabase/migrations/0013_fase7_people_score.sql:199`) — bukan blocker, jangan buat ulang.
 - Visibility skor lebih luas dari "self+supervisor": tambahkan `manage_score_formula` dan `view_all_workspace`.
 - Supabase menegakkan panjang password saat sign-UP, bukan sign-IN — jangan tulis AC server re-validasi panjang di login.
-- WS-04 tidak punya gate server saat ini (create = `.insert()`) — jangan tulis AC server rejection sebagai green tanpa OQ-1=hardening.
+- WS-04 tidak punya gate server (create = `.insert()` ber-RLS tanpa cek periode) — OQ-1 diputuskan **Opsi A UI-only + governance debt** (lihat [[ws-04-governance-debt]]). AC server rejection tidak dijadwalkan sampai ada trigger re-open backend hardening.
 
 **Paths (kemungkinan tersentuh):** lihat `tdd_handoff.paths`.
 
