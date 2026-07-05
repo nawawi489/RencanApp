@@ -1120,3 +1120,170 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 - Connector dipendekkan dan cluster `orb + chevron` dirapatkan supaya subtree terlihat lebih seperti kartu bertumpuk daripada lorong sempit.
 - Copy meta dibersihkan dari status teknis yang berulang; fokusnya sekarang ke target, risiko, bukti, deadline, dan kebutuhan child.
 - Spacing vertical antarblok di tiap card dipadatkan lagi agar lebih banyak level yang muat dalam satu viewport mobile.
+
+## [2026-07-05] update | spec+design session — resolve PPL-02/PPL-06 blockers (OQ-5/6/7/9)
+
+- Owner decisions on the four open questions gating PPL-02/PPL-06 in `docs/spec-ui-testfix-2026-07-05.md`:
+  - **OQ-5** (PPL-06 riwayat cross-user) → **Cross-user, RLS-gated**: add `listUserScoreHistory(userId)`; RLS eksisting (0013:799–805) sudah mengizinkan self/supervisor/manage_score_formula/view_all_workspace — no migration. Out-of-scope viewer → `[]`.
+  - **OQ-6** (PPL-06 "Kontribusi bulan ini") → **jumlah Action Plan `completed` periode aktif**; sengaja beda makna dari Achievement Score/Rincian Score. Kosong → GuidanceNote "Skor menyusul".
+  - **OQ-7** (PPL-02 tab Quarter) → **DEFER (placeholder)** sampai data quarterly-rollup skoring ada (Fase 7 aktivasi); anti-conflation PeriodFocus ≠ period_snapshots tetap mengikat.
+  - **OQ-9** (PPL-02 tab Admin) → **entry-point ke layar admin eksisting** (link ke User & Permission, Score Formula, dst.), gate `manage_score_formula`; tanpa surface baru.
+- Pages updated: `docs/spec-ui-testfix-2026-07-05.md` (FR-PPL02.3/.5, FR-PPL06.2/.4, §8 RESOLVED block, §9 handoff, AC-PPL06-2, status header).
+- Result: PPL-02 & PPL-06 **tidak lagi terblokir** untuk `tdd-plan`. Pemblokir tersisa hanya OQ-1 (WS-04 server scope) & OQ-4 (THEME-01 root cause), keduanya di luar PPL.
+
+## [2026-07-05] update | tdd-plan PPL-02 & PPL-06 (multi-agent workflow)
+
+- **Trigger:** `/tdd-plan` workflow (8 agents, 90 tool calls, ~10 menit) setelah OQ-5/6/7/9 resolved (session sebelumnya di [log.md] hari yang sama).
+- **Output:** `docs/tdd-plan-ppl02-ppl06-2026-07-05.md` — 12 langkah red→green→refactor terbagi 5 fase (Data → Hooks → UI People → UI People-Profile → Refactor pasca-hijau).
+- **Test files direncanakan:**
+  - `mobile/src/lib/__tests__/people-score.test.ts` (+13 kasus data: `listUserScoreHistory`, `countCompletedActionPlansInPeriod`, `PEOPLE_TAB_COPY`).
+  - `mobile/src/hooks/__tests__/use-people-score.test.tsx` (+5 kasus: `useUserScoreHistory`, invalidation `override → user_score_history`).
+  - `mobile/src/app/(app)/menu/__tests__/people.test.tsx` (+8 kasus PPL-02-1..8).
+  - `mobile/src/app/(app)/menu/__tests__/people-profile.test.tsx` (+7 kasus PPL-06-1..7).
+- **API baru (tanpa migrasi):**
+  - `listUserScoreHistory(userId, limit=6)` di `mobile/src/lib/people-score.ts` — RLS eksisting 0013:799-815 sudah izinkan self/supervisor/manage_score_formula/view_all_workspace.
+  - `countCompletedActionPlansInPeriod(userId, period)` di `mobile/src/lib/cards.ts` — metrik "Kontribusi bulan ini".
+  - Konstanta `PEOPLE_TAB_COPY` + `ADMIN_TAB_ENTRIES`.
+  - Hook `useUserScoreHistory(userId, limit)` + perluasan `useScoreOverride` invalidation.
+- **Critic verdict:** `perlu-perbaikan` — 21 missing cases + 18 concerns.
+  - **Top blocker semantik:** OQ-6 belum kunci apakah "AP selesai bulan ini" = filter `deadline` window atau `completed_at` window (SEMANTIC-D9 + Missing M3/M4). Filter `deadline` mengeksklusi late completions dan AP tanpa deadline — kemungkinan salah semantik produk. **Butuh keputusan owner sebelum RED D9.**
+  - **Top blocker security:** RLS 0013:799-815 sebagai kontrak visibility PPL-06 tidak diuji unit (mock tidak cukup) — plan tidak menjadwalkan pgTAP/psql smoke. Rekomendasi tambah `supabase/tests/*.sql` untuk kontrak `listUserScoreHistory` RLS.
+  - **Top blocker UX cross-user:** M2 — viewer di luar scope RLS action_plans → count return 0 → UI render "0" LITERAL, ambigu vs "0 nyata". Butuh disambiguation (GuidanceNote "Skor menyusul untuk viewer di luar scope").
+- **Next actions dianjurkan sebelum jalankan RED:**
+  1. Owner konfirmasi semantik OQ-6: filter `deadline` atau `completed_at`?
+  2. Owner konfirmasi UX untuk RLS-deny 0 vs 0 nyata (Missing M2).
+  3. Ekstrak `makeQueryThenable` helper ke shared file (STRATEGI-MOCK-1) sebelum RED.
+  4. Refactor `useRouter` mock di `people.test.tsx` ke top-level `mockPush` (STRATEGI-MOCK EXPO-ROUTER-MOCK).
+
+## [2026-07-05] update | Fase A subset RED→GREEN (listUserScoreHistory + PEOPLE_TAB_COPY)
+
+- **Scope:** subset aman dari Fase A tdd-plan — D1–D6 (`listUserScoreHistory`) + TC1 (`PEOPLE_TAB_COPY`). Defer D7–D11 (`countCompletedActionPlansInPeriod`) sampai owner mengunci OQ-6 detail (deadline window vs completed_at window; UX RLS-deny 0 vs 0 nyata).
+- **Files edited:**
+  - `mobile/src/lib/__tests__/people-score.test.ts` — tambah 7 RED test (TC1 + UH1–UH6), reuse `makeQueryThenable` file-local (STRATEGI-MOCK-1 di-address dengan reuse-in-place, tanpa extract helper — file lain tidak butuh).
+  - `mobile/src/lib/people-score.ts` — tambah konstanta `PEOPLE_TAB_COPY` + fungsi `listUserScoreHistory(userId, limit=6)` pola mirror `listMyScoreHistory` tanpa `auth.getUser()` (RLS server-side yang menyaring).
+- **Verifikasi:**
+  - RED: sebelum implementasi, 7 test fail dengan `TypeError: not a function` / undefined untuk symbol persis yang di-import — proper RED bukan import error spurious.
+  - GREEN: `npx jest --testPathPattern=people-score` → 59/59 pass (52 lama + 7 baru).
+  - Regresi full-suite: 6 fail / 859 pass di 3 file yang **tidak** aku sentuh (`workspace.test.tsx`, `tree-progress-orb.test.tsx`, `workspace-screen.tsx`). Diverifikasi pre-existing via `git stash` baseline — 6 fail identik di baseline.
+  - `npx tsc --noEmit` → 5 error identik di baseline (workspace/tree-progress-orb/workspace-screen), semua di file yang tak aku sentuh.
+- **Kontrak baru yang dikunci test:**
+  - `listUserScoreHistory('')` → `[]` tanpa fetch, tanpa `auth.getUser` (guard input).
+  - `listUserScoreHistory('u', n)` → `.from('user_score_results').eq('user_id', 'u').eq('is_current', true).limit(n)`, TIDAK panggil `auth.getUser` (RLS server-side yang menyaring viewer).
+  - Sort DESC by `period_start` (safety-net client-side untuk foreignTable order).
+  - RLS deny → `[]` graceful (bukan error), default `limit=6`, propagasi error apa adanya.
+  - `PEOPLE_TAB_COPY = {monthly:'Bulan ini', quarterly:'Quarter', ranking:'Ranking', admin:'Admin', quarterlyPlaceholder:/quarter|kuartal/i}`.
+- **Blocker berikutnya (untuk lanjut Fase A):** owner memutuskan OQ-6 detail (deadline vs completed_at window) + Missing-M2 (UX untuk RLS-deny 0 vs 0 nyata). Setelah itu D7–D11 bisa RED di `cards.test.ts`.
+- **Rekomendasi lanjut tanpa blocker OQ-6:** langsung ke Fase B (hooks layer — `useUserScoreHistory` + `useScoreOverride` invalidation `user_score_history`) karena tidak bergantung pada `countCompletedActionPlansInPeriod`.
+
+## [2026-07-05] update | Fase B RED→GREEN (useUserScoreHistory hook + override invalidation)
+
+- **Scope:** Fase B tdd-plan step 4–5. Layer hooks di atas `listUserScoreHistory` yang landed Fase A. Tetap aman dari blocker OQ-6 karena tidak menyentuh `countCompletedActionPlansInPeriod`.
+- **Files edited:**
+  - `mobile/src/hooks/__tests__/use-people-score.test.tsx` — tambah 4 RED test (B1–B4 useUserScoreHistory) + perluas assertion test [10] useScoreOverride (B5) untuk memasukkan `['user_score_history']` di invalidation list. Mock `listUserScoreHistory` ditambahkan ke `jest.mock('@/lib/people-score', ...)`.
+  - `mobile/src/hooks/use-people-score.ts` — tambah hook `useUserScoreHistory(userId, limit=6)` (queryKey `['user_score_history', userId, limit]`, `enabled: !!userId`, pola mirror `useMyScoreHistory`) + perluas `useScoreOverride` `onSuccess` dengan `invalidateQueries({ queryKey: ['user_score_history'] })` (append, existing 4 invalidasi dipertahankan).
+- **Verifikasi:**
+  - RED: 5 test fail sebelum GREEN — 4 dgn `TypeError: useUserScoreHistory is not a function`, 1 dgn diff jelas menunjukkan `['user_score_history']` absen dari `spy.mock.calls`. 14 test lama pass tanpa regresi.
+  - GREEN: `npx jest --testPathPattern="use-people-score|people-score"` → 63/63 pass (dua suite: 44 hook + 59 data, kombinasi).
+  - Full-suite: 6 fail / 863 pass / 869 total. Baseline setelah Fase A: 6 fail / 859 pass / 865 total. Delta = +4 pass (B1–B4, sesuai). Fail-set identik dengan baseline (workspace.test.tsx / tree-progress-orb.test.tsx / workspace-screen.tsx pre-existing).
+  - `npx tsc --noEmit` → 5 error identik baseline.
+- **Kontrak baru yang dikunci test:**
+  - `useUserScoreHistory('', n)` → `enabled=false`, tidak fetch, `history=[]`.
+  - `useUserScoreHistory(userId, n)` → `queryKey ['user_score_history', userId, n]`, passthrough `listUserScoreHistory(userId, n)`.
+  - RLS deny (mock resolve `[]`) → `history=[]`, `isError=false` (graceful).
+  - Default `limit=6` saat argumen tak diberi.
+  - `useScoreOverride(...).override(...)` `onSuccess` → invalidate ALL of `['my_score']`, `['user_score']`, `['ranking']`, `['my_score_history']`, `['user_score_history']`.
+- **Sisa Fase A/B pending:** hanya D7–D11 (`countCompletedActionPlansInPeriod`) yang blocked pada keputusan owner OQ-6 detail. Tidak menghalangi Fase C (UI People) atau Fase D (UI Profile) selama seksi Kontribusi bulan ini di-DEFER dulu sampai OQ-6 terkunci.
+
+## [2026-07-05] update | Fase C RED→GREEN (PPL-02 tab structure di people.tsx)
+
+- **Scope:** Fase C tdd-plan step 6–7. Tab structure Bulan ini / Quarter / Ranking / Admin di layar People. Quarter = placeholder DEFER (OQ-7). Admin = entry-point ke layar admin eksisting, gate `manage_score_formula` (OQ-9). PPL-02 ditutup di suite ini.
+- **Files edited:**
+  - `mobile/src/app/(app)/__tests__/people.test.tsx` — tambah 8 RED test (PPL-02-1..PPL-02-8). Preemptive addressing kritik:
+    - EXPO-ROUTER-MOCK: refactor mock `useRouter` ke top-level `mockPush = jest.fn()` (bukan factory per-render).
+    - STRATEGI-MOCK-2: mock `@/hooks/use-profile` dgn default `{ profile: null, can: () => false }` di `beforeEach` supaya test lama tidak crash saat implementasi baru panggil `useProfile()`.
+    - TAB-A11Y-RN: pakai `getByLabelText` untuk identifikasi tab (bukan `getByRole('tab')` yang fickle di RN + `react-native-css`).
+    - TAB-DEFAULT-CONTENT-LEAK: assert eksplisit `queryByText('Rina Jaya')` = null saat tab Quarter aktif (mount/unmount, bukan `display:none`).
+  - `mobile/src/app/(app)/people.tsx` — refactor:
+    - Import `useProfile`, konstanta `PEOPLE_TAB_COPY`.
+    - State `activeTab` default `'monthly'`.
+    - Konstanta `ADMIN_TAB_ENTRIES` inline di file people.tsx (bukan di `people-score.ts`, sesuai kritik TAB-ADMIN-ENTRIES-COUPLING supaya UI route tidak mencampur data-layer scoring). 2 entry: Score Formula (`/settings-score-formula`) + Governance Violation (`/settings-governance-violation`).
+    - Komponen `tablist`: 4 Pressable dgn `accessibilityRole='tab'` + `accessibilityLabel` dari PEOPLE_TAB_COPY + `accessibilityState.selected`. Admin di-gate `can('manage_score_formula')`. Solid+white pakai `bg-brand-dark` (DESIGN §4 a11y).
+    - Conditional render per tab (early return, mount/unmount):
+      - `monthly` = konten eksisting (Skor saya + search + roster FlatList).
+      - `quarterly` = `<GuidanceNote>` dgn `PEOPLE_TAB_COPY.quarterlyPlaceholder`.
+      - `ranking` = fallback GuidanceNote saat `latestClosed=null`; else FlatList `ranking` di-join dgn roster untuk display name + ScoreBadge.
+      - `admin` = list Pressable `ADMIN_TAB_ENTRIES` dgn `accessibilityLabel="Buka {label}"`.
+- **Verifikasi:**
+  - RED (sebelum GREEN): 7 test fail (PPL-02-2..PPL-02-8), 25 pass. PPL-02-1 (anti-regression default tab) sudah pass di kondisi awal — proper karena default state = kontennya persis eksisting.
+  - Iterasi kecil: PPL-02-7 (assert `accessibilityState.selected` setelah press) awalnya fail karena sync `getByLabelText` membaca state sebelum React flush. Fix: tambah `await screen.findByText(/quarter|kuartal/i)` sebagai gate flush sebelum assert (bukan mengubah impl).
+  - GREEN: `jest people.test` → **22/22 pass** (4 fondasi + 8 Fase 7 + 8 PPL-02 + 2 noop placeholder).
+  - Full-suite: 6 fail / 873 pass / 879 total. Baseline post-Fase-B: 6 fail / 863 pass / 869 total. Delta = **+10 pass** (8 PPL-02 + 2 noop). Fail-set identik baseline (workspace/tree-progress-orb pre-existing).
+  - tsc: 5 error identik baseline.
+- **Kontrak baru yang dikunci test:**
+  - Default `activeTab='monthly'`; konten eksisting (Skor saya / search / roster) tetap render.
+  - 4 tab visible saat `can('manage_score_formula')=true`; Admin absent saat false.
+  - Press Quarter → placeholder tampil + roster/search unmount (bukan `display:none`).
+  - Press Ranking tanpa `latestClosed` → GuidanceNote; dengan `latestClosed` + ranking data → FlatList dgn ScoreBadge.
+  - Press Admin → list entry Pressable ke rute eksisting; `press('Buka Score Formula')` → `router.push('/settings-score-formula')`.
+  - `accessibilityState.selected` sinkron dgn `activeTab`.
+- **PPL-02 status:** DITUTUP. Fase A subset + Fase B + Fase C sudah landed. PPL-06 (Fase D) tersisa.
+
+## [2026-07-05] update | Fase D subset RED→GREEN (PPL-06 Not-found + Tren cross-user)
+
+- **Scope:** Fase D subset dari tdd-plan step 8–9 — 3 dari 4 kontrak PPL-06: Not-found state, Tren cross-user (`useUserScoreHistory`), Rules-of-hooks. **DEFER** seksi Kontribusi bulan ini (blocked OQ-6 detail semantik).
+- **Files edited:**
+  - `mobile/src/app/(app)/__tests__/people-profile.test.tsx` — tambah 4 RED (PPL-06-Q1..Q4) + mock `useUserScoreHistory` di jest.mock + default `{ history: [], ... }` di beforeEach.
+  - `mobile/src/app/(app)/people-profile/[id].tsx` — refactor:
+    - Import `useUserScoreHistory`.
+    - Kedua hook `useMyScoreHistory` + `useUserScoreHistory(id, 6)` dipanggil unconditionally per render (rules-of-hooks — kritik STRATEGI-MOCK-3). `useUserScoreHistory` `enabled=!!userId` intern jadi tidak spam network saat id kosong.
+    - `history = isSelf ? myHistory : userHistory`. `sparkPoints` selalu compute dari `history` (bukan lagi conditional `isSelf ? ... : []`).
+    - Not-found state: `if (!profilesLoading && !person) return <GuidanceNote title="Anggota tidak ditemukan" .../>`. Cegah render header 'Anggota' + seksi kosong yang membingungkan.
+- **Verifikasi:**
+  - RED: 4 fail (Q1 not-found belum ada, Q2/Q3 tren cross-user, Q4 mock useUserScoreHistory belum di-panggil). 6 existing pass.
+  - Iterasi test-only: (1) delta sparkline dihitung `last - previous` bukan `last - first` (lock via existing F7-8) → koreksi Q2 dari `+22` ke `+12`; (2) band score 82 = `Stabil` bukan `On track` → koreksi Q3.
+  - GREEN: `jest people-profile` → **10/10 pass** (6 existing + 4 PPL-06-Q1..Q4).
+  - Full-suite: 6 fail / 877 pass / 883 total. Baseline post-Fase-C: 6 fail / 873 pass / 879 total. Delta = **+4 pass, zero regresi**.
+  - tsc: 5 error identik baseline.
+- **Kontrak baru yang dikunci test:**
+  - `id` tak match anggota org → GuidanceNote "Anggota tidak ditemukan" (email/breakdown/override tidak render).
+  - Profil orang lain + `useUserScoreHistory` non-empty → seksi Tren + `ScoreSparkline` render (delta = last-prev).
+  - Profil orang lain + `useUserScoreHistory` empty → seksi Tren tersembunyi (bukan error).
+  - Kedua `useMyScoreHistory` + `useUserScoreHistory` dipanggil per render tanpa peduli isSelf (rules-of-hooks stabil).
+  - Existing 6 kontrak (skor null/aktif, override gate wewenang/self) tidak regresi.
+- **PPL-06 status:** 3/4 sub-kontrak DITUTUP. Sisa: seksi "Kontribusi bulan ini" (blocked OQ-6 semantik: `deadline` window vs `completed_at` window; UX viewer out-of-scope: literal 0 vs GuidanceNote).
+
+## [2026-07-05] update | Fase A/D tail — OQ-6 landed, PPL-06 FULLY CLOSED
+
+- **Trigger:** OQ-6 diputuskan owner: (sub-1) semantik filter = `completed_at` window (ideal); (sub-2) UX viewer out-of-scope = sembunyikan seksi bila count=0 & bukan isSelf.
+- **Schema check:** `action_plans` tidak punya kolom `completed_at`; spec §NG-5 tidak mengizinkan migrasi kolom baru untuk bug UI. Approksimasi terpakai: **`updated_at` window** — untuk AP `done` yang tidak diedit setelahnya, `updated_at` ≈ `completed_at`. Dokumentasi approksimasi ditulis di doc-comment.
+- **Files edited (5 file, 2 area):**
+  - **Data layer (Fase A tail):**
+    - `mobile/src/lib/__tests__/cards.test.ts` — extend `makeQueryThenable` (+`gte`,`lte`) + tambah 5 RED (D7–D11).
+    - `mobile/src/lib/cards.ts` — tambah `countCompletedActionPlansInPeriod(userId, period)` (~15 baris) dgn guard input kosong → 0.
+  - **UI layer (Fase D tail):**
+    - `mobile/src/app/(app)/__tests__/people-profile.test.tsx` — mock `countCompletedActionPlansInPeriod` + tambah 3 RED (PPL-06-K1..K3).
+    - `mobile/src/app/(app)/people-profile/[id].tsx` — import fungsi + `useQuery` contribution + SectionCard "Kontribusi bulan ini" dgn 3 branch (isSelf+count>0, isSelf+count=0 GuidanceNote, !isSelf+count=0 HIDDEN).
+- **Verifikasi:**
+  - RED tahap 1 (data): 5 fail TypeError → GREEN 28/28 pass di cards.test.ts.
+  - RED tahap 2 (UI): 2 fail K1/K2, 1 pass K3 (kebetulan absen = kontrak). GREEN 13/13 pass di people-profile.test.tsx.
+  - Full-suite: 6 fail / **885 pass / 891 total**. Baseline post-Fase-D-subset: 6 fail / 877 pass / 883 total. Delta = **+8 pass, zero regresi**.
+  - tsc: 5 error identik baseline.
+- **Kontrak baru yang dikunci test:**
+  - `countCompletedActionPlansInPeriod('', period)` = 0 tanpa fetch.
+  - `countCompletedActionPlansInPeriod('u', null)` = 0 tanpa fetch.
+  - Query: `from('action_plans').select('id').eq('pic_id',u).eq('status','done').gte('updated_at',start).lte('updated_at',end)`.
+  - `data.length` = count; propagasi error.
+  - UI seksi Kontribusi: isSelf + count>0 → "N tugas selesai bulan ini"; isSelf + count=0 → GuidanceNote; !isSelf + count=0 → HIDDEN (OQ-6 sub-2 anti-ambiguitas).
+- **PPL-02/PPL-06 status: FULLY CLOSED.** Semua sub-kontrak dari spec `docs/spec-ui-testfix-2026-07-05.md` untuk kedua bug landed.
+
+### Grand summary (satu hari kerja test-first)
+
+| Fase | Deliverable | Delta test |
+|------|-------------|-----------|
+| A | `listUserScoreHistory` + `PEOPLE_TAB_COPY` + `countCompletedActionPlansInPeriod` | +12 |
+| B | `useUserScoreHistory` + `useScoreOverride` invalidation extension | +4 |
+| C | PPL-02 tab structure (Bulan ini/Quarter/Ranking/Admin) | +8 |
+| D | PPL-06 not-found + tren cross-user + Kontribusi bulan ini | +7 |
+| **Total** | **PPL-02 + PPL-06 closed** | **+31 test net, 0 regresi** |
+
+Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set identik: pre-existing `workspace.test.tsx`, `tree-progress-orb.test.tsx`, `workspace-screen.tsx`). Semua tsc error di baseline pre-existing.

@@ -1,6 +1,6 @@
 # Spec — Perbaikan Bug UI (testing-report 2026-07-05-ui)
 
-Status: siap disambung ke `tdd-plan`, dengan 3 open question PEMBLOKIR (OQ-1, OQ-4, dan pasangan OQ-5/OQ-6/OQ-7) yang butuh keputusan owner sebelum sebagian AC dapat ditutup hijau.
+Status: siap disambung ke `tdd-plan`. PPL-02/PPL-06 **tidak lagi terblokir** — OQ-5/OQ-6/OQ-7/OQ-9 diputuskan owner pada spec+design session 2026-07-05 (lihat §8 RESOLVED). Pemblokir tersisa hanya **OQ-1** (scope server WS-04) dan **OQ-4** (root cause THEME-01), keduanya di luar PPL.
 
 Sumber kebenaran: PRD V1.8.2 (repo root) + `prd/*`, `DESIGN.md` (token & a11y §4), `specs/fase-7-people-score.md`, wiki (`concepts/*`, `entities/*`), workspace-lock a11y amendment (2026-07-03). Semua klaim implementasi di bawah diverifikasi langsung terhadap kode.
 
@@ -85,17 +85,17 @@ Peran mengikuti [[permission-model]] (berbasis tanggung jawab, ditegakkan RLS).
 ### FR-PPL02 — People tab structure
 - **FR-PPL02.1** Tambah segmented/tab dengan label terkunci di konstanta `PEOPLE_TAB_COPY`: Bulan ini / Quarter / Ranking / Admin (Admin bersyarat permission). **Struktur ini ABSEN saat ini** (requirement keras PRD).
 - **FR-PPL02.2** `[anti-regresi]` Konten eksisting (Skor saya, Papan peringkat, search, roster, ScoreLegend) tidak pecah.
-- **FR-PPL02.3** Tab "Bulan ini" → periode aktif (`useActivePeriod`). Tab "Quarter" → **tunda hingga OQ-7** (sumber data quarter belum ada); jangan mencampur Period Focus (kalender) dengan period_snapshots (skoring).
+- **FR-PPL02.3** Tab "Bulan ini" → periode aktif (`useActivePeriod`). Tab "Quarter" → **DEFER (OQ-7 diputuskan 2026-07-05):** render placeholder/GuidanceNote sampai data quarterly-rollup skoring ada (Fase 7 aktivasi). **Dilarang** mencampur Period Focus (kalender) dengan period_snapshots (skoring). Tab lain tetap fungsional.
 - **FR-PPL02.4** `[D9]` Tab "Ranking" hanya periode closed (`ranking_snapshots`); belum ada closed → GuidanceNote.
-- **FR-PPL02.5** `[permission]` Tab "Admin" hanya `manage_score_formula`/CEO; non-admin → tab tidak dirender. Isi tab = OQ-9.
+- **FR-PPL02.5** `[permission]` Tab "Admin" hanya `manage_score_formula`/CEO; non-admin → tab tidak dirender. **Isi tab (OQ-9 diputuskan 2026-07-05):** daftar link/entry-point ke layar admin eksisting (mis. User & Permission, Score Formula, dst.) — reuse, TANPA surface admin baru; gate `manage_score_formula`.
 - **FR-PPL02.6** `[RLS — kontrak yang benar]` Visibility = `user_id=self OR has_permission('manage_score_formula') OR has_permission('view_all_workspace') OR is_supervisor_of(user_id)` (terverifikasi 0013:799–805). Pemegang `view_all_workspace` melihat SEMUA orang. Di luar scope → 0 baris (roster render, badge absen), bukan error. UI tidak memfilter permission sisi klien.
 - **FR-PPL02.7** `[a11y]` Tab role/tab, state terpilih eksplisit, ≥44px.
 
 ### FR-PPL06 — People Profile lengkap
 - **FR-PPL06.1** Ranking (`rank_number` periode closed); absen bila tak ada closed (D9).
-- **FR-PPL06.2** Seksi "Kontribusi bulan ini" (PRD §33 #7) — **field/metrik = OQ-6** (deferred hingga diputuskan). null → "Skor menyusul".
+- **FR-PPL06.2** Seksi "Kontribusi bulan ini" (PRD §33 #7) — **metrik (OQ-6 diputuskan 2026-07-05):** jumlah Action Plan `completed` pada periode aktif (mis. "7 tugas selesai bulan ini"); metrik ini SENGAJA berbeda makna dari Achievement Score/Rincian Score. Belum ada AP selesai / periode aktif kosong → GuidanceNote "Skor menyusul".
 - **FR-PPL06.3** Rincian Score = breakdown per kategori (nama + persentase, **tanpa** label bobot; skala 0–100); periode aktif, fallback closed.
-- **FR-PPL06.4** Riwayat/tren — **OQ-5**: jika cross-user in-scope, tambah `listUserScoreHistory(userId)` RLS-gated (RLS eksisting sudah mengizinkan supervisor/manage/view_all_workspace — **tidak perlu migrasi**); out-of-scope → `[]` graceful. Jika self-only by design, koreksi FR/AC dan tampilkan disclosure di profil orang lain.
+- **FR-PPL06.4** Riwayat/tren — **cross-user IN-scope (OQ-5 diputuskan 2026-07-05):** tambah `listUserScoreHistory(userId)` RLS-gated (RLS eksisting sudah mengizinkan self/supervisor/`manage_score_formula`/`view_all_workspace` — **tidak perlu migrasi**). Viewer di luar scope → `[]` graceful (bukan error). Profil orang lain menampilkan tren bila viewer punya visibilitas.
 - **FR-PPL06.5** `[RLS]` Semua skor/riwayat/kontribusi RLS-gated dengan predikat lengkap (§FR-PPL02.6).
 - **FR-PPL06.6** null → "Skor menyusul"; 0 nyata → band attention.
 - **FR-PPL06.7** `[anti-self D10]` Override hanya `manage_score_formula` AND `!isSelf` AND periode aktif; server `override_user_score` tetap raise saat `p_user_id=auth.uid()` (0013:687).
@@ -152,7 +152,7 @@ Catatan pengikat lintas AC:
 - AC-WS04-7 (gap-documentation) WAJIB ada agar absennya server gate terlihat; AC-WS04-8 bersyarat OQ-1.
 - AC-THEME01-1 (isolasi root cause) adalah deliverable pertama; AC perbaikan menyusul.
 - AC-PPL02-7 & AC-PPL06-6 memakai predikat RLS **lengkap** (termasuk `view_all_workspace`), dan menambahkan skenario pemegang `view_all_workspace` melihat semua orang.
-- AC-PPL06-2 (Kontribusi) & AC-PPL06-4 (riwayat) & tab Quarter di-DEFER hingga OQ-6/OQ-5/OQ-7 diputuskan.
+- AC-PPL06-2 (Kontribusi = jumlah AP selesai periode aktif) & AC-PPL06-4 (riwayat cross-user RLS-gated) **AKTIF** (OQ-6/OQ-5 diputuskan 2026-07-05). Tab Quarter tetap DEFER sebagai placeholder (OQ-7 diputuskan).
 
 ---
 
@@ -169,7 +169,13 @@ Catatan pengikat lintas AC:
 
 ## 8. Open Questions (pemblokir ditandai)
 
-Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR sebelum tdd-plan menutup case terkait: **OQ-1** (scope server WS-04), **OQ-4** (root cause THEME-01), **OQ-5** (riwayat cross-user PPL-06), **OQ-6** (definisi Kontribusi bulan ini), **OQ-7** (sumber data tab Quarter).
+Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR yang TERSISA sebelum tdd-plan menutup case terkait: **OQ-1** (scope server WS-04), **OQ-4** (root cause THEME-01).
+
+**RESOLVED — spec+design session 2026-07-05 (owner):**
+- **OQ-5 (PPL-06 riwayat cross-user) → Cross-user, RLS-gated.** Tambah `listUserScoreHistory(userId)` RLS-gated; profil orang lain menampilkan tren bila viewer berhak; di luar scope → `[]`. Tidak ada migrasi. → FR-PPL06.4.
+- **OQ-6 (PPL-06 "Kontribusi bulan ini") → Jumlah AP `completed` periode aktif.** Metrik = count Action Plan selesai pada periode aktif; sengaja beda makna dari Achievement Score. → FR-PPL06.2, AC-PPL06-2 tidak lagi DEFER.
+- **OQ-7 (PPL-02 tab Quarter) → DEFER (placeholder).** Tab Quarter render placeholder/GuidanceNote hingga data quarterly-rollup skoring ada (Fase 7 aktivasi); dilarang mencampur PeriodFocus (kalender) dengan period_snapshots (skoring). → FR-PPL02.3.
+- **OQ-9 (PPL-02 tab Admin) → Entry-point ke layar admin eksisting.** Isi tab = daftar link ke layar admin yang sudah ada, gate `manage_score_formula`; tanpa surface baru. → FR-PPL02.5.
 
 ---
 
@@ -180,8 +186,8 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR sebelum tdd-p
 2. **CFG-01** (config, unit `resolveSupabaseUrl` + smoke) — buka jalan QA batch berikutnya.
 3. **WS-04** (helper murni `focusPeriodStatus` unit dulu → komponen gating → AC-WS04-7 gap-doc). **Blok pada OQ-1** untuk memutuskan apakah AC-WS04-8 masuk.
 4. **THEME-01** (AC-THEME01-1 isolasi runtime dulu; **blok pada OQ-4** sebelum fix).
-5. **PPL-02** (tab + anti-regresi; tab Quarter **blok OQ-7**; Admin **blok OQ-9**).
-6. **PPL-06** (ranking/breakdown/null-vs-0/not-found dulu; Kontribusi **blok OQ-6**; riwayat cross-user **blok OQ-5**).
+5. **PPL-02** (tab + anti-regresi; tab Quarter = placeholder DEFER [OQ-7]; tab Admin = entry-point ke layar admin eksisting, gate `manage_score_formula` [OQ-9]). **Tidak ada blocker tersisa.**
+6. **PPL-06** (ranking/breakdown/null-vs-0/not-found; Kontribusi = jumlah AP selesai periode aktif [OQ-6]; riwayat cross-user via `listUserScoreHistory(userId)` RLS-gated [OQ-5]). **Tidak ada blocker tersisa.**
 
 **Koreksi faktual yang WAJIB dipatuhi tdd-plan** (jangan jadwalkan pekerjaan yang salah):
 - `is_supervisor_of` SUDAH ADA (`supabase/migrations/0013_fase7_people_score.sql:199`) — bukan blocker, jangan buat ulang.
@@ -242,7 +248,7 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR sebelum tdd-p
 - AC-PPL02-6 (komponen, null vs 0): Given user level-atas tanpa formula aktif (D7) atau skor belum dihitung (null), Then tab bergantung-skor menampilkan GuidanceNote 'Skor menyusul' (bukan 0 / kosong / error); skor 0 nyata tampil band 'Perlu perhatian'.
 - AC-PPL02-7 (integrasi RLS, kontrak visibility yang benar): Given skor per-user dimuat, Then hanya baris yang lolos RLS user_score_results_select (user_id=self OR manage_score_formula OR view_all_workspace OR is_supervisor_of(user_id), terverifikasi 0013:799-805) yang terlihat; pemegang view_all_workspace melihat SEMUA orang (bukan hanya supervisor chain); di luar scope = 0 baris (roster tetap render, badge skor absen), bukan error. UI TIDAK memfilter permission sisi klien.
 - AC-PPL06-1 (komponen): Given profil dibuka dan ada periode closed dengan ranking_snapshots untuk orang itu, Then kartu Ranking #N (rank_number periode closed terbaru) tampil; tanpa periode closed, kartu ranking absen (D9).
-- AC-PPL06-2 (komponen, bergantung OQ-6): Given definisi 'Kontribusi bulan ini' sudah dikunci sebagai data contract (OQ-6), When profil dibuka pada periode aktif, Then seksi 'Kontribusi bulan ini' menampilkan field yang ditetapkan; bila skor periode aktif belum ada → GuidanceNote 'Skor menyusul'. Jika OQ-6 belum diputuskan, seksi ini DEFER.
+- AC-PPL06-2 (komponen, OQ-6 diputuskan = jumlah AP selesai periode aktif): Given metrik 'Kontribusi bulan ini' = count Action Plan `completed` pada periode aktif, When profil dibuka pada periode aktif, Then seksi 'Kontribusi bulan ini' menampilkan jumlah AP selesai (mis. '7 tugas selesai bulan ini'), nilai yang SENGAJA berbeda dari Achievement Score/Rincian Score; bila belum ada AP selesai / periode aktif kosong → GuidanceNote 'Skor menyusul'.
 - AC-PPL06-3 (komponen): Given metric_breakdown tersedia, Then seksi Rincian Score menampilkan breakdown per kategori (nama kategori + persentase, TANPA label bobot; skala 0-100) dari periode aktif, fallback ke breakdown periode closed.
 - AC-PPL06-4 (komponen + integrasi, bergantung OQ-5): Given riwayat/tren skor. Jika OQ-5 memutuskan cross-user in-scope: tambah listUserScoreHistory(userId) RLS-gated; profil orang lain menampilkan tren bila RLS mengizinkan (self OR manage_score_formula OR view_all_workspace OR supervisor), bila di luar scope → [] graceful (bukan tren parsial bocor, bukan error diam). Jika OQ-5 memutuskan self-only by design: FR/AC dikoreksi sehingga riwayat hanya untuk profil sendiri dan profil orang lain menampilkan disclosure eksplisit 'Riwayat tidak tersedia untuk profil ini'.
 - AC-PPL06-5 (komponen, null vs 0): Given skor null (belum dihitung / level tanpa formula), Then GuidanceNote 'Skor menyusul' dan seksi ranking/breakdown/tren tersembunyi, DENGAN satu note ringkas yang menjelaskan mengapa (bukan halaman nyaris kosong tanpa konteks); skor 0 nyata → band attention.
@@ -271,7 +277,7 @@ Lihat daftar `open_questions` terstruktur (OQ-1..OQ-10). PEMBLOKIR sebelum tdd-p
 - Tab Ranking hanya render dari ranking_snapshots periode closed (D9); belum ada closed → GuidanceNote; tab Admin hanya untuk manage_score_formula.
 - Visibility skor mengikuti RLS user_score_results_select yang benar: self OR manage_score_formula OR view_all_workspace OR is_supervisor_of; pemegang view_all_workspace melihat semua; di luar scope → roster render tanpa badge skor, bukan error.
 - People Profile menampilkan Ranking (#N periode closed), Rincian Score (breakdown tanpa bobot), null→'Skor menyusul' vs 0→band attention, not-found state untuk id invalid, override gating anti-self.
-- Riwayat score profil: perilaku sesuai keputusan OQ-5 (cross-user listUserScoreHistory RLS-gated ATAU self-only + disclosure).
+- Riwayat score profil: cross-user `listUserScoreHistory(userId)` RLS-gated (OQ-5 diputuskan 2026-07-05); viewer berhak melihat tren orang lain, di luar scope → `[]` graceful.
 - Resolusi host Supabase memilih host reachable per Platform.OS (web=localhost:54321) tanpa meregresi native; env.ts guard dipertahankan; .env.example mendokumentasikan host per-platform.
 
 ## D. Open Questions (10)
