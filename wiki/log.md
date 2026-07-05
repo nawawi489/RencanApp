@@ -1288,6 +1288,32 @@ Sisa item dalam lingkup PRD V1.8.2 yang tersisa relatif kecil:
 
 Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set identik: pre-existing `workspace.test.tsx`, `tree-progress-orb.test.tsx`, `workspace-screen.tsx`). Semua tsc error di baseline pre-existing.
 
+## [2026-07-05] update | Fase E refactor — extract sub-components (post-green)
+
+- **Trigger:** tdd-plan step 10 refactor pasca-hijau. Setelah PPL-02/PPL-06 di-close di PR #28, ekstrak sub-komponen supaya `people.tsx` dan `people-profile/[id].tsx` lebih coherent tanpa mengubah test.
+- **Files added (2):**
+  - `mobile/src/components/people-tabs.tsx` — 4 komponen + 1 konstanta:
+    - `PeopleTabs` (tablist 4 Pressable + accessibilityRole/State/Label + gate canAdmin).
+    - `PeopleQuarterlyTab` (GuidanceNote placeholder DEFER).
+    - `PeopleRankingTab` (fallback GuidanceNote saat `latestClosed` null; FlatList ranking dgn join roster).
+    - `PeopleAdminTab` (list Pressable ke `ADMIN_TAB_ENTRIES`).
+    - Konstanta `ADMIN_TAB_ENTRIES` pindah ke sini (bukan `people-score.ts` — kritik TAB-ADMIN-ENTRIES-COUPLING dipatuhi: UI navigation ≠ data-layer scoring).
+  - `mobile/src/components/people-profile-sections.tsx` — 2 komponen:
+    - `TrendSection` — render null bila `points` kosong.
+    - `ContributionSection` — 3-branch (loading/count>0/GuidanceNote), gate `show` prop untuk OQ-6 sub-2 anti-ambiguitas.
+- **Files edited (2):**
+  - `mobile/src/app/(app)/people.tsx` — hapus 5 blok inline (tab type + ADMIN_TAB_ENTRIES + tablist JSX + 3 branch), import 4 komponen dari `people-tabs.tsx`. Baris menyusut dari ~370 → ~250. Hapus import `Badge` yang tak lagi terpakai.
+  - `mobile/src/app/(app)/people-profile/[id].tsx` — hapus 2 blok inline (TrendSection + ContributionSection), import 2 komponen dari `people-profile-sections.tsx`. Hapus import `ScoreSparkline` yang tak lagi terpakai.
+- **Verifikasi:**
+  - `jest people.test` → 22/22 pass (tidak ada perubahan test).
+  - `jest people-profile.test` → 13/13 pass.
+  - Full-suite: 6 fail / 885 pass / 891 total — identik post-Fase-D-tail. **Zero regresi.**
+  - tsc: 5 error identik baseline.
+  - Preview ems-web: bundle Metro compile bersih.
+- **Kritik yang di-address:**
+  - TAB-ADMIN-ENTRIES-COUPLING: `ADMIN_TAB_ENTRIES` di file UI (`people-tabs.tsx`), bukan data-layer (`people-score.ts`).
+- **Refactor scope:** kode-organisasi only. Semua kontrak a11y/routing/gate tetap sama; test PPL-02-1..8 dan PPL-06-Q1..Q4+K1..K3 tetap hijau tanpa modifikasi.
+
 ## [2026-07-05] investigate | THEME-01 runtime root-cause (OQ-4) — `:where()` cascade hypothesis REFUTED
 
 - **Trigger:** OQ-4 pending — spec §THEME-01 minta runtime verification hipotesis `global.css:7` `@custom-variant dark (&:where(.dark, .dark *))` (specificity 0) menjelaskan "toggle Gelap tidak apply".
