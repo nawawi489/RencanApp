@@ -4,14 +4,16 @@ import { useCallback, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { DetailChildRow } from '@/components/detail-child-row';
+import { DetailField } from '@/components/detail-field';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
+import { StatTile } from '@/components/stat-tile';
 import {
   Badge,
   Button,
   EmptyState,
   ErrorState,
   MetaGrid,
-  SectionCard,
   SkeletonList,
 } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
@@ -27,33 +29,6 @@ import type { ProblemStatement } from '@/lib/problem-statements';
 import { ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeDevelopmentAreaDetailScreen from '@/prototype/screens/development-area-detail';
-
-function ProblemStatementRow({ item, onPress }: { item: ProblemStatement; onPress: () => void }) {
-  return (
-    <SectionCard onPress={onPress}>
-      <View className="flex-row items-start justify-between gap-3">
-        <Text className="flex-1 text-base font-semibold text-black dark:text-white">{item.name}</Text>
-        <Badge label={PLANNING_STATUS_LABEL[item.status] ?? item.status} tone={STATUS_TONE[item.status]} />
-      </View>
-    </SectionCard>
-  );
-}
-
-function SummaryTile({ label, value, containerCls, textCls }: {
-  label: string;
-  value: string;
-  containerCls: string;
-  textCls: string;
-}) {
-  return (
-    <View className={`flex-1 gap-0.5 rounded-lg px-3 py-2 ${containerCls}`}>
-      <Text className={`text-[10px] ${textCls}`}>{label}</Text>
-      <Text className={`text-base font-bold ${textCls}`}>{value}</Text>
-    </View>
-  );
-}
 
 /** UI-S-DA2 — Progress (Problem Statement selesai), jumlah Problem Statement, jumlah Initiative turunan. */
 function DevAreaSummaryStrip({
@@ -66,34 +41,28 @@ function DevAreaSummaryStrip({
   const progress = ratioDoneOfChildren(problemStatements);
   return (
     <View className="flex-row gap-2">
-      <SummaryTile
+      <StatTile
+        size="md"
         label="Progress"
         value={`${progress}%`}
         containerCls="bg-blue-100 dark:bg-blue-950"
         textCls="text-blue-700 dark:text-blue-300"
       />
-      <SummaryTile
+      <StatTile
+        size="md"
         label="Problem Statement"
         value={String(problemStatements.length)}
         containerCls="bg-neutral-100 dark:bg-neutral-800"
         textCls="text-neutral-700 dark:text-neutral-300"
       />
-      <SummaryTile
+      <StatTile
+        size="md"
         label="Initiative"
         value={String(initiativeCount)}
         containerCls="bg-emerald-100 dark:bg-emerald-950"
         textCls="text-emerald-700 dark:text-emerald-300"
       />
     </View>
-  );
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <SectionCard>
-      <Text className="text-sm font-bold text-black dark:text-white">{label}</Text>
-      <Text className="text-base text-black dark:text-white">{value}</Text>
-    </SectionCard>
   );
 }
 
@@ -210,9 +179,11 @@ export function LiveDevelopmentAreaDetailScreen() {
                 <ErrorState onRetry={() => refetchPs()} />
               ) : problemStatements.length > 0 ? (
                 problemStatements.map((item) => (
-                  <ProblemStatementRow
+                  <DetailChildRow
                     key={item.id}
-                    item={item}
+                    name={item.name}
+                    statusLabel={PLANNING_STATUS_LABEL[item.status] ?? item.status}
+                    statusTone={STATUS_TONE[item.status]}
                     onPress={() => router.push(`/problem-statement/${item.id}` as Href)}
                   />
                 ))
@@ -233,10 +204,5 @@ export function LiveDevelopmentAreaDetailScreen() {
 }
 
 export default function DevelopmentAreaDetailRoute() {
-  return (
-    <StackScreenAdapter
-      live={LiveDevelopmentAreaDetailScreen}
-      prototype={PrototypeDevelopmentAreaDetailScreen}
-    />
-  );
+  return <LiveDevelopmentAreaDetailScreen />;
 }

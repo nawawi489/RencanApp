@@ -35,23 +35,21 @@ function formatTimestamp(iso: string | null | undefined): string {
 /**
  * Panel "Log Aktivitas" collapsible untuk satu entity card.
  * Default collapsed — fetch hanya saat user expand (lazy via `enabled`).
- * `maxItems` membatasi tampilan (sisanya bisa dilihat di `/settings-activity-log`).
+ * Menampilkan 10 entri terbaru (sisanya bisa dilihat di `/settings-activity-log`).
  */
 export function ActivityLogPanel({
   entityType,
   entityId,
-  maxItems = 10,
 }: {
   entityType: string;
   entityId: string | null | undefined;
-  maxItems?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { logs, isLoading, isError } = useEntityActivityLog(entityType, entityId, expanded);
 
   if (!entityId) return null;
-  const shown = logs.slice(0, maxItems);
-  const truncated = logs.length > maxItems;
+  const shown = logs.slice(0, 10);
+  const truncated = logs.length > 10;
 
   return (
     <SectionCard>
@@ -97,7 +95,7 @@ export function ActivityLogPanel({
             ))}
             {truncated ? (
               <Text className="px-1 text-xs text-neutral-400">
-                {logs.length - maxItems} entri lain tersembunyi — buka Activity Log di Pengaturan untuk
+                {logs.length - 10} entri lain tersembunyi — buka Activity Log di Pengaturan untuk
                 melihat semua.
               </Text>
             ) : null}

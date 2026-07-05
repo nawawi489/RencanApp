@@ -8,14 +8,10 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createActionPlan, getInitiative, type PersonRef } from '@/lib/cards';
+import { DATE_HINT, DATE_RE } from '@/lib/date';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeActionPlanFormScreen from '@/prototype/screens/action-plan-form';
-
 type Person = NonNullable<PersonRef>;
 
-const DATE_HINT = 'Format: YYYY-MM-DD';
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 const FREQUENCIES = ['daily', 'weekly', 'monthly', 'custom'] as const;
@@ -405,5 +401,5 @@ export function LiveNewActionPlanScreen() {
 }
 
 export default function NewActionPlanRoute() {
-  return <StackScreenAdapter live={LiveNewActionPlanScreen} prototype={PrototypeActionPlanFormScreen} />;
+  return <LiveNewActionPlanScreen />;
 }

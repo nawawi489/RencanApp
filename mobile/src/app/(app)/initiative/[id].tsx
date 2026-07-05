@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { StatTile } from '@/components/stat-tile';
 import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { alertFriendlyError } from '@/lib/errors';
@@ -17,13 +18,11 @@ import {
   activateInitiative,
   getInitiative,
   listActionPlans,
+  personLabel,
   type ActionPlanWithPeople,
 } from '@/lib/cards';
-import { personLabel } from '@/components/user-picker';
 import { listTeams } from '@/lib/org-structure';
 import { guardActivationFields } from '@/lib/activation-check';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeInitiativeDetailScreen from '@/prototype/screens/initiative-detail';
 
 // ---------- UI-S-ID2 — Ruang Eksekusi & Tim/Akses Otomatis ----------
 type ExecCounts = {
@@ -47,25 +46,6 @@ function computeExecCounts(plans: ActionPlanWithPeople[]): ExecCounts {
   return c;
 }
 
-function ExecTile({
-  label,
-  value,
-  containerCls,
-  textCls,
-}: {
-  label: string;
-  value: number;
-  containerCls: string;
-  textCls: string;
-}) {
-  return (
-    <View className={`rounded-lg px-3 py-1.5 ${containerCls}`}>
-      <Text className={`text-[10px] ${textCls}`}>{label}</Text>
-      <Text className={`text-sm font-semibold ${textCls}`}>{value}</Text>
-    </View>
-  );
-}
-
 function ExecSpaceCard({
   counts,
   onOpenChat,
@@ -83,31 +63,31 @@ function ExecSpaceCard({
         Status pekerjaan di bawah Initiative ini.
       </Text>
       <View className="flex-row flex-wrap gap-2 pt-1">
-        <ExecTile
+        <StatTile
           label="Aktif"
           value={counts.active}
           containerCls="bg-blue-100 dark:bg-blue-950"
           textCls="text-blue-700 dark:text-blue-300"
         />
-        <ExecTile
+        <StatTile
           label="Review"
           value={counts.submitted}
           containerCls="bg-amber-100 dark:bg-amber-950"
           textCls="text-amber-700 dark:text-amber-300"
         />
-        <ExecTile
+        <StatTile
           label="Selesai"
           value={counts.done}
           containerCls="bg-emerald-100 dark:bg-emerald-950"
           textCls="text-emerald-700 dark:text-emerald-300"
         />
-        <ExecTile
+        <StatTile
           label="Revisi"
           value={counts.revision}
           containerCls="bg-red-100 dark:bg-red-950"
           textCls="text-red-700 dark:text-red-300"
         />
-        <ExecTile
+        <StatTile
           label="Draft"
           value={counts.draft}
           containerCls="bg-neutral-100 dark:bg-neutral-800"
@@ -147,10 +127,6 @@ function collectRoster(plans: ActionPlanWithPeople[], initiativePicId: string | 
 
 type PersonRefLike = { id: string; full_name: string | null; email: string | null } | null;
 
-function rosterLabel(r: RosterEntry): string {
-  return (r.full_name && r.full_name.trim()) || r.email || 'Tanpa nama';
-}
-
 function RosterCard({ entries }: { entries: RosterEntry[] }) {
   return (
     <SectionCard>
@@ -169,10 +145,10 @@ function RosterCard({ entries }: { entries: RosterEntry[] }) {
         <View className="gap-2 pt-1">
           {entries.map((r) => (
             <View key={r.id} className="flex-row items-center gap-3">
-              <Avatar name={rosterLabel(r)} seed={r.id} />
+              <Avatar name={personLabel(r)} seed={r.id} />
               <View className="flex-1 gap-0.5">
                 <Text className="text-sm font-semibold text-black dark:text-white" numberOfLines={1}>
-                  {rosterLabel(r)}
+                  {personLabel(r)}
                 </Text>
                 <View className="flex-row flex-wrap gap-1">
                   {Array.from(r.roles).map((role) => (
@@ -379,5 +355,5 @@ export function LiveInitiativeDetailScreen() {
 }
 
 export default function InitiativeDetailRoute() {
-  return <StackScreenAdapter live={LiveInitiativeDetailScreen} prototype={PrototypeInitiativeDetailScreen} />;
+  return <LiveInitiativeDetailScreen />;
 }

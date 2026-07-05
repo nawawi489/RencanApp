@@ -5,8 +5,15 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/c
 
 import { BRAND_TAGLINE, BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui';
+import { AUTH_COPY } from '@/lib/auth-copy';
 import { supabase } from '@/lib/supabase';
 import { useThemePreference } from '@/providers/theme-provider';
+
+// AUTH-02b: Supabase Auth menegakkan panjang password saat sign-UP, bukan sign-IN.
+// Karena app ini login-only (PRD §39), client adalah SOLE signal panjang password
+// di jalur login. Server tetap re-validate email/kredensial, jadi ini tidak
+// menciptakan risiko keamanan baru — hanya UX yang lebih jelas.
+const PASSWORD_MIN_LENGTH = 6;
 
 type Feedback = { kind: 'error' | 'success'; message: string };
 
@@ -16,7 +23,7 @@ function translateAuthError(message: string): string {
   if (m.includes('invalid login credentials')) return 'Email atau kata sandi salah.';
   if (m.includes('email not confirmed')) return 'Email belum diverifikasi. Periksa kotak masuk Anda.';
   if (m.includes('user already registered')) return 'Email sudah terdaftar. Silakan masuk.';
-  if (m.includes('password should be at least')) return 'Kata sandi minimal 6 karakter.';
+  if (m.includes('password should be at least')) return AUTH_COPY.passwordTooShort;
   if (m.includes('rate limit')) return 'Terlalu banyak percobaan. Coba lagi sebentar.';
   if (m.includes('network')) return 'Koneksi bermasalah. Periksa jaringan Anda.';
   return message;
@@ -34,6 +41,12 @@ export default function LoginScreen() {
     setFeedback(null);
     if (!email.trim() || !password) {
       setFeedback({ kind: 'error', message: 'Email dan kata sandi wajib diisi.' });
+      return;
+    }
+    // AUTH-02b: password TIDAK di-trim (spasi boleh bagian password); email tetap di-trim.
+    // Field-empty menang urutan; guard length hanya jalan jika password non-kosong.
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setFeedback({ kind: 'error', message: AUTH_COPY.passwordTooShort });
       return;
     }
     setLoading(true);

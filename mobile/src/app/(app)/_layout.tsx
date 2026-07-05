@@ -110,10 +110,6 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'Perubahan Deadline', presentation: 'modal' }}
       />
       <Stack.Screen
-        name="cancellation"
-        options={{ headerShown: true, title: 'Batalkan Card', presentation: 'modal' }}
-      />
-      <Stack.Screen
         name="evaluation"
         options={{ headerShown: true, title: 'Evaluasi', presentation: 'modal' }}
       />

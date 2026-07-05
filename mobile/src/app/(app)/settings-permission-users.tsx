@@ -17,15 +17,11 @@ import {
   useUserPermissionsAdmin,
 } from '@/hooks/use-permissions-admin';
 import { useProfile } from '@/hooks/use-profile';
-import { listOrgProfiles, type PersonRef } from '@/lib/cards';
+import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
 import type { AdminPermissionRow } from '@/lib/permissions-admin';
 
 type Person = NonNullable<PersonRef>;
 const REASON_MAX = 500;
-
-function personLabel(p: Person): string {
-  return p.full_name?.trim() || p.email || 'Tanpa nama';
-}
 
 const SCOPE_OPTIONS: { value: 'own' | 'team' | 'dept' | 'org'; label: string }[] = [
   { value: 'own', label: 'Own' },

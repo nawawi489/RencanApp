@@ -4,22 +4,13 @@ import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
-import { Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { Button, EmptyState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import { getArchiveMetadata } from '@/lib/activity-governance';
 import { restoreCard, type CardEntityType } from '@/lib/governance-admin';
-
-const ENTITY_LABEL: Record<string, string> = {
-  goal: 'Goal',
-  kpi_area: 'KPI Area',
-  strategy: 'Strategy',
-  initiative: 'Initiative',
-  action_plan: 'Action Plan',
-  development_area: 'Development Area',
-  problem_statement: 'Problem Statement',
-};
+import { CARD_TYPE_LABEL, type CardType } from '@/lib/settings-mbr';
 
 const FILTER_CHIPS: { key: 'semua' | CardEntityType; label: string }[] = [
   { key: 'semua', label: 'Semua' },
@@ -79,34 +70,7 @@ export default function SettingsArchiveScreen() {
           onChangeText={setQuery}
           accessibilityLabel="Kotak pencarian arsip"
         />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Filter tipe arsip"
-          contentContainerStyle={{ gap: 8 }}>
-          {FILTER_CHIPS.map((c) => {
-            const active = chip === c.key;
-            return (
-              <Pressable
-                key={c.key}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`Filter ${c.label}`}
-                onPress={() => setChip(c.key)}
-                className={`min-h-[44px] items-center justify-center rounded-full px-3 ${
-                  active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
-                } active:opacity-70`}>
-                <Text
-                  className={`text-xs font-semibold ${
-                    active ? 'text-white' : 'text-black dark:text-white'
-                  }`}>
-                  {c.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <TabBar tabs={FILTER_CHIPS} active={chip} onChange={setChip} />
 
         {!enabled ? (
           <EmptyState title="Cari arsip" description="Ketik kata kunci untuk menemukan card terarsip." />
@@ -129,7 +93,7 @@ export default function SettingsArchiveScreen() {
                 <View className="flex-1 gap-0.5">
                   <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
                   <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {ENTITY_LABEL[r.entity_type] ?? r.entity_type} · Diarsipkan
+                    {CARD_TYPE_LABEL[r.entity_type as CardType] ?? r.entity_type} · Diarsipkan
                   </Text>
                   {archivedAtLabel ? (
                     <Text className="text-xs text-neutral-400">

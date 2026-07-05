@@ -11,8 +11,6 @@ import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
 import type { PersonRef } from '@/lib/cards';
 import { getKpiArea } from '@/lib/kpi-areas';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeStrategyFormScreen from '@/prototype/screens/strategy-form';
 
 type Person = NonNullable<PersonRef>;
 
@@ -130,5 +128,5 @@ export function LiveNewStrategyScreen() {
 }
 
 export default function NewStrategyRoute() {
-  return <StackScreenAdapter live={LiveNewStrategyScreen} prototype={PrototypeStrategyFormScreen} />;
+  return <LiveNewStrategyScreen />;
 }

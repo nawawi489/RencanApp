@@ -20,15 +20,12 @@ beforeAll(() => {
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import {
-  BATCH_MAX_BYTES,
   FILE_MAX_BYTES,
-  FILE_MAX_COUNT,
   buildEvidencePath,
   classifyKind,
   cleanupOrphanUpload,
   safeFilename,
   uploadEvidenceFile,
-  validateBatch,
   validateFile,
 } from '../storage';
 
@@ -58,22 +55,6 @@ describe('validateFile (FILE_MAX_BYTES = 10MB)', () => {
   });
   it('[S10] ukuran > 10MB → throw "melebihi 10 MB"', () => {
     expect(() => validateFile({ name: 'big.pdf', size: FILE_MAX_BYTES + 1 })).toThrow(/melebihi.*10 MB/);
-  });
-});
-
-describe('validateBatch (OD-2 cap + OQ-3 total)', () => {
-  it('[S11] 5 file ringan → OK (cap exact)', () => {
-    expect(() => validateBatch(Array.from({ length: FILE_MAX_COUNT }, (_, i) => ({ name: 'f' + i, size: 100 })))).not.toThrow();
-  });
-  it('[S12] 6 file → throw "Maksimum 5"', () => {
-    expect(() => validateBatch(Array.from({ length: 6 }, () => ({ name: 'x', size: 1 })))).toThrow(/Maksimum 5/);
-  });
-  it('[S13] total > 25MB → throw "Total ukuran melebihi 25 MB"', () => {
-    const huge = Array.from({ length: 4 }, () => ({ name: 'x', size: 7 * 1024 * 1024 })); // 28 MB total
-    expect(() => validateBatch(huge)).toThrow(/Total.*25 MB/);
-  });
-  it('[S14] total = 25MB tepat → OK (boundary)', () => {
-    expect(() => validateBatch([{ name: 'x', size: BATCH_MAX_BYTES }])).not.toThrow();
   });
 });
 

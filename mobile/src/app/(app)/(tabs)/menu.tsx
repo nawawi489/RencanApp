@@ -2,13 +2,10 @@
 // dan seluruh seksi admin (gated permission). Konten kanonik di ../settings; di-tab-kan ulang di sini.
 import SettingsScreen from '../settings';
 
-import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
-import PrototypeMenuScreen from '@/prototype/screens/menu';
-
 export function LiveMenuScreen() {
   return <SettingsScreen />;
 }
 
 export default function MenuRoute() {
-  return <TabScreenAdapter live={LiveMenuScreen} prototype={PrototypeMenuScreen} />;
+  return <LiveMenuScreen />;
 }

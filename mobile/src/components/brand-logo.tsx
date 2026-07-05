@@ -34,6 +34,4 @@ export function BrandLogo({ size = 40 }: { size?: number }) {
   );
 }
 
-/** Wordmark "Rencana" + "app" hijau — dipakai di login & header. */
-export const BRAND_NAME = 'Rencanaapp';
 export const BRAND_TAGLINE = 'Rencanakan. Jalankan. Tuntaskan.';

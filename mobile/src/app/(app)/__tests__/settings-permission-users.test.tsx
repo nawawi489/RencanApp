@@ -11,6 +11,8 @@ const mockListOrgProfiles = jest.fn();
 jest.mock('@/lib/cards', () => ({
   __esModule: true,
   listOrgProfiles: () => mockListOrgProfiles(),
+  personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
+    p?.full_name?.trim() || p?.email || fallback,
 }));
 
 const mockCan = jest.fn();

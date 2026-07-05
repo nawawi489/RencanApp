@@ -5,16 +5,18 @@
 import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList } from 'react-native';
-import { Pressable, Text, TextInput, View } from 'react-native-css/components';
+import { Text, TextInput, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
-import { Avatar, Badge, EmptyState, ErrorState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { Avatar, Badge, EmptyState, ErrorState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useInboxRooms } from '@/hooks/use-inbox';
 import type { ChatRoom } from '@/lib/inbox';
-import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
-import PrototypeInboxScreen from '@/prototype/screens/inbox';
-
 type Filter = 'all' | 'unread';
+
+const FILTER_TABS: { key: Filter; label: string }[] = [
+  { key: 'all', label: 'Semua' },
+  { key: 'unread', label: 'Belum dibaca' },
+];
 
 function formatLast(iso: string | null): string {
   if (!iso) return 'Belum ada pesan';
@@ -46,23 +48,6 @@ export function clampUnread(n: number): string | null {
   return `${n} baru`;
 }
 
-function FilterChip({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={`min-h-[44px] flex-row items-center rounded-full px-4 py-2 ${
-        active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
-      } active:opacity-70`}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={label}>
-      <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-black dark:text-white'}`}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 function InboxHeader({
   q,
   setQ,
@@ -89,14 +74,7 @@ function InboxHeader({
         accessibilityLabel="Cari Initiative"
         className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
       />
-      <View className="flex-row gap-2">
-        <FilterChip active={filter === 'all'} label="Semua" onPress={() => setFilter('all')} />
-        <FilterChip
-          active={filter === 'unread'}
-          label="Belum dibaca"
-          onPress={() => setFilter('unread')}
-        />
-      </View>
+      <TabBar tabs={FILTER_TABS} active={filter} onChange={setFilter} />
     </View>
   );
 }
@@ -197,5 +175,5 @@ export function LiveInboxScreen() {
 }
 
 export default function InboxRoute() {
-  return <TabScreenAdapter live={LiveInboxScreen} prototype={PrototypeInboxScreen} />;
+  return <LiveInboxScreen />;
 }

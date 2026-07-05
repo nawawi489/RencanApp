@@ -265,6 +265,84 @@ describe('WorkspaceScreen', () => {
     expect(screen.queryByText('+ Goal')).toBeNull();
   });
 
+  // WS-04 — archive period gating: saat periode fokus arsip, tombol section
+  // "+ Goal" dan empty-state action harus disabled+redup, dan tetap tampil.
+  // NOW anchor = Juni 2026; seed AsyncStorage focus = Januari 2026 (past).
+  describe('[WS-04] archive-period gating', () => {
+    beforeEach(async () => {
+      await AsyncStorage.setItem(
+        'rencanaapp:period-focus',
+        JSON.stringify({ mode: 'month', year: 2026, month: 1 }),
+      );
+    });
+
+    it('[WS-04·1] AC-WS04-2: fokus arsip → "+ Goal" section-level accessibilityState.disabled=true + tetap tampil', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
+      await renderScreen();
+      // Tombol tetap tampil (label a11y menyebut alasan arsip).
+      const btn = await screen.findByLabelText('+ Goal (periode arsip — nonaktif)');
+      expect(btn).toBeTruthy();
+      expect(btn.props.accessibilityState?.disabled).toBe(true);
+    });
+
+    it('[WS-04·2] AC-WS04-3: press "+ Goal" saat arsip → showPastPeriodAlert(), TIDAK router.push', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('+ Goal (periode arsip — nonaktif)'));
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Periode ini sudah menjadi Archive',
+        'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
+      );
+      expect(mockPush).not.toHaveBeenCalledWith('/goal-wizard');
+      alertSpy.mockRestore();
+    });
+
+    it('[WS-04·3] AC-WS04-2: empty-state action juga terkunci ("+ Goal" empty-state)', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult()); // goals empty → EmptyState render
+      await renderScreen();
+      // Ada 2 tombol dengan label "arsip" — satu di section header, satu di
+      // EmptyState. Keduanya harus disabled.
+      const btns = await screen.findAllByLabelText(/periode arsip — nonaktif/);
+      expect(btns.length).toBeGreaterThanOrEqual(2);
+      for (const b of btns) {
+        expect(b.props.accessibilityState?.disabled).toBe(true);
+      }
+    });
+
+    it('[WS-04·4] AC-WS04-5 (regresi negatif): fokus current → "+ Goal" tidak locked, push goal-wizard', async () => {
+      await AsyncStorage.clear();
+      // Kembali ke fokus default (Juni 2026, current di anchor NOW).
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
+      await renderScreen();
+      const btn = await screen.findByLabelText('+ Goal');
+      expect(btn.props.accessibilityState?.disabled).toBeFalsy();
+      fireEvent.press(btn);
+      expect(mockPush).toHaveBeenCalledWith('/goal-wizard');
+    });
+  });
+
+  // WS-04 — governance debt (AC-WS04-7): jalur create card memakai .insert() langsung
+  // tanpa RPC/cek periode. Test ini MENDOKUMENTASIKAN gap secara eksplisit: gate archive
+  // adalah UI-only saat ini (OQ-1 = a), server-side hardening menunggu batch berikutnya.
+  it('[WS-04·gov-debt] AC-WS04-7: cards.ts memakai .insert() tanpa cek periode server', () => {
+    // Static assertion: `cards.ts` tidak mengekspor RPC create_goal/create_kpi/dsb.
+    // Test ini "gap doc" — memaksa developer sadar bahwa gating archive saat
+    // ini UI-only (OQ-1=a); menghapus gate client tanpa menambah gate server
+    // akan membuka kembali WS-04. Referensi audit: cards.ts:325/355 memakai
+    // supabase.from(...).insert(...) langsung.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const cardsModule = require('@/lib/cards');
+    const exports = Object.keys(cardsModule);
+    expect(exports).not.toContain('create_goal');
+    expect(exports).not.toContain('create_kpi_area');
+    expect(exports).not.toContain('create_strategy');
+  });
+
   it('[compact-meta] Goal merender meta ringkas alih-alih count lama', async () => {
     mockUseGoals.mockReturnValue(
       goalsResult({

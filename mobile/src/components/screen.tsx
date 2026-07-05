@@ -22,13 +22,3 @@ export function Screen({ title, subtitle, children }: ScreenProps) {
     </ScrollView>
   );
 }
-
-/** Kartu placeholder untuk shell Fase 0. */
-export function PlaceholderCard({ title, description }: { title: string; description: string }) {
-  return (
-    <View className="gap-1 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
-      <Text className="text-base font-semibold text-black dark:text-white">{title}</Text>
-      <Text className="text-sm text-neutral-500 dark:text-neutral-400">{description}</Text>
-    </View>
-  );
-}

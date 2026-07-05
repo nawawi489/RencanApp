@@ -11,8 +11,6 @@ import { useKpiAreaActions, usePerson } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
 import { getGoal, listKpiAreaTemplates, type KpiAreaTemplate } from '@/lib/goals';
 import type { PersonRef } from '@/lib/kpi-areas';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeKpiAreaFormScreen from '@/prototype/screens/kpi-area-form';
 
 type Person = NonNullable<PersonRef>;
 
@@ -261,5 +259,5 @@ export function LiveNewKpiAreaScreen() {
 }
 
 export default function NewKpiAreaRoute() {
-  return <StackScreenAdapter live={LiveNewKpiAreaScreen} prototype={PrototypeKpiAreaFormScreen} />;
+  return <LiveNewKpiAreaScreen />;
 }

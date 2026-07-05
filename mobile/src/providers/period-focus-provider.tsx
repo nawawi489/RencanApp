@@ -29,8 +29,8 @@ type PeriodFocusContextValue = {
   setFocus: (next: PeriodFocus) => void;
   /** Pindah mode tanpa kehilangan year; otomatis pilih bulan/quarter "sekarang" di year tsb. */
   setMode: (mode: PeriodMode) => void;
-  /** True saat sudah membaca AsyncStorage (UI bisa skeleton bila perlu). */
-  hydrated: boolean;
+  /** Anchor waktu mount-time (untuk gating past/future yang deterministik di test). */
+  now: Date;
 };
 
 const PeriodFocusContext = createContext<PeriodFocusContextValue | undefined>(undefined);
@@ -44,7 +44,6 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
   // Mount-time default (bukan re-evaluated tiap render). Test injects `now`.
   const [initialNow] = useState(() => now ?? new Date());
   const [focus, setFocusState] = useState<PeriodFocus>(() => defaultFocus(initialNow));
-  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,11 +52,8 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
         if (cancelled) return;
         const parsed = parseFocusJson(raw);
         if (parsed) setFocusState(parsed);
-        setHydrated(true);
       })
-      .catch(() => {
-        if (!cancelled) setHydrated(true);
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -86,8 +82,8 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
   );
 
   const value = useMemo<PeriodFocusContextValue>(
-    () => ({ focus, setFocus, setMode, hydrated }),
-    [focus, setFocus, setMode, hydrated],
+    () => ({ focus, setFocus, setMode, now: initialNow }),
+    [focus, setFocus, setMode, initialNow],
   );
 
   return <PeriodFocusContext.Provider value={value}>{children}</PeriodFocusContext.Provider>;
@@ -101,10 +97,11 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
 export function usePeriodFocus(): PeriodFocusContextValue {
   const ctx = useContext(PeriodFocusContext);
   if (ctx) return ctx;
+  const now = new Date();
   return {
-    focus: defaultFocus(new Date()),
+    focus: defaultFocus(now),
     setFocus: () => {},
     setMode: () => {},
-    hydrated: true,
+    now,
   };
 }

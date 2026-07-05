@@ -16,10 +16,8 @@ export async function listDepartments(): Promise<Department[]> {
   return (data ?? []) as Department[];
 }
 
-export async function listPositions(opts?: { departmentId?: string }): Promise<Position[]> {
-  let q = supabase.from('positions').select('*').order('name');
-  if (opts?.departmentId) q = q.eq('department_id', opts.departmentId);
-  const { data, error } = await q;
+export async function listPositions(): Promise<Position[]> {
+  const { data, error } = await supabase.from('positions').select('*').order('name');
   if (error) throw error;
   return (data ?? []) as Position[];
 }

@@ -7,9 +7,6 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { UserPicker } from '@/components/user-picker';
 import { useGoalActions } from '@/hooks/use-workspace';
 import { type PersonRef } from '@/lib/goals';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeGoalFormScreen from '@/prototype/screens/goal-form';
-
 type Person = NonNullable<PersonRef>;
 
 const YEAR_RE = /^\d{4}$/;
@@ -97,5 +94,5 @@ export function LiveNewGoalScreen() {
 }
 
 export default function NewGoalRoute() {
-  return <StackScreenAdapter live={LiveNewGoalScreen} prototype={PrototypeGoalFormScreen} />;
+  return <LiveNewGoalScreen />;
 }

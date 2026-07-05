@@ -3,13 +3,9 @@ import { useState } from 'react';
 import { Modal } from 'react-native';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { listOrgProfiles, type PersonRef } from '@/lib/cards';
+import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
 
 type Person = NonNullable<PersonRef>;
-
-function personLabel(p: Person): string {
-  return p.full_name?.trim() || p.email || 'Tanpa nama';
-}
 
 /** Form field pemilih satu anggota org (untuk PIC / Reviewer). */
 export function UserPicker({
@@ -112,4 +108,3 @@ export function UserPicker({
   );
 }
 
-export { personLabel };

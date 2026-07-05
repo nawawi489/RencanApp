@@ -8,16 +8,10 @@ import { FlatList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { Avatar, EmptyState, ErrorState, ScoreBadge, ScoreLegend, SkeletonList } from '@/components/ui';
-import { listOrgProfiles, type PersonRef } from '@/lib/cards';
+import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
 import { useLatestClosedPeriod, useRanking } from '@/hooks/use-people-score';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypePeopleRankingScreen from '@/prototype/screens/people-ranking';
 
 type Person = NonNullable<PersonRef>;
-
-function personLabel(p: Person | undefined, fallback: string): string {
-  return p?.full_name?.trim() || p?.email || fallback;
-}
 
 export function LivePeopleRankingScreen() {
   const router = useRouter();
@@ -124,5 +118,5 @@ export function LivePeopleRankingScreen() {
 }
 
 export default function PeopleRankingRoute() {
-  return <StackScreenAdapter live={LivePeopleRankingScreen} prototype={PrototypePeopleRankingScreen} />;
+  return <LivePeopleRankingScreen />;
 }

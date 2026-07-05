@@ -3,6 +3,7 @@
 // lifecycle & template). Mirror pola createInitiative (cards.ts) byte-for-byte.
 import { STATUS_TONE, type PersonRef } from './cards';
 import type { Tables } from './database.types';
+import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type Goal = Tables<'goals'>;
@@ -93,18 +94,10 @@ export type NewGoal = {
 };
 
 export async function createGoal(input: NewGoal): Promise<Goal> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not authenticated');
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', uid)
-    .single();
-  if (!profile?.organization_id) throw new Error('Organization not found');
+  const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('goals')
-    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
+    .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;

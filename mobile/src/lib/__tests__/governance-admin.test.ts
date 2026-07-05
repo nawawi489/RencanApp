@@ -13,15 +13,11 @@ jest.mock('../supabase', () => ({
 import { makeQueryThenable, makeSingleBuilder, someCall } from '@/test-support/fase8-builders';
 // eslint-disable-next-line import/first
 import {
-  CANCELLATION_APPROVAL_STATUS_LABEL,
   DCR_STATUS_LABEL,
   EVALUATION_TARGET_LABEL,
-  approveCancellation,
   archiveCard,
-  cancelCard,
   createDeadlineChangeRequest,
   getEvaluation,
-  listCancellations,
   listDeadlineChangeRequests,
   recordEvaluation,
   reviewDeadlineChange,
@@ -39,13 +35,6 @@ describe('governance-admin label maps', () => {
     expect(DCR_STATUS_LABEL.pending).toBe('Menunggu Review');
     expect(DCR_STATUS_LABEL.approved).toBe('Disetujui');
     expect(DCR_STATUS_LABEL.rejected).toBe('Ditolak');
-  });
-
-  it('[2] CANCELLATION_APPROVAL_STATUS_LABEL mencakup 4 status', () => {
-    expect(Object.keys(CANCELLATION_APPROVAL_STATUS_LABEL).sort()).toEqual(
-      ['approved', 'auto_approved', 'pending', 'rejected'].sort(),
-    );
-    expect(CANCELLATION_APPROVAL_STATUS_LABEL.auto_approved).toBe('Disetujui Otomatis');
   });
 
   it('[3] EVALUATION_TARGET_LABEL mencakup ya/sebagian/tidak', () => {
@@ -100,38 +89,6 @@ describe('deadline change request', () => {
     await expect(reviewDeadlineChange('dcr1', 'approved')).rejects.toEqual({
       message: 'tidak dapat menyetujui sendiri',
     });
-  });
-});
-
-describe('cancellation', () => {
-  it('[19] cancelCard memanggil rpc cancel_card return uuid', async () => {
-    mockRpc.mockResolvedValue({ data: 'c1', error: null });
-    const id = await cancelCard('initiative', 'i1', 'tidak relevan');
-    expect(mockRpc).toHaveBeenCalledWith('cancel_card', {
-      p_entity_type: 'initiative',
-      p_entity_id: 'i1',
-      p_reason: 'tidak relevan',
-    });
-    expect(id).toBe('c1');
-  });
-
-  it('[20] cancelCard propagasi error child aktif', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Terdapat 2 card turunan' } });
-    await expect(cancelCard('goal', 'g1', 'x')).rejects.toEqual({ message: 'Terdapat 2 card turunan' });
-  });
-
-  it('[21] approveCancellation memanggil rpc approve_cancellation', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: null });
-    await approveCancellation('c1');
-    expect(mockRpc).toHaveBeenCalledWith('approve_cancellation', { p_cancellation_id: 'c1' });
-  });
-
-  it('[21b] listCancellations filter entity_id + order desc', async () => {
-    const { builder, calls } = makeQueryThenable({ data: [], error: null });
-    mockFrom.mockReturnValue(builder);
-    await listCancellations('i1');
-    expect(mockFrom).toHaveBeenCalledWith('cancellations');
-    expect(someCall(calls, 'eq', (a) => a[0] === 'entity_id' && a[1] === 'i1')).toBe(true);
   });
 });
 

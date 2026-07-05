@@ -1,6 +1,7 @@
 // Data layer Fase 1 — Card Engine + Loop Eksekusi.
 // Semua otorisasi ditegakkan di server (RLS + RPC); fungsi di sini hanya pemanggil tipis.
 import type { Tables } from './database.types';
+import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type Initiative = Tables<'initiatives'>;
@@ -10,6 +11,11 @@ export type EvidenceFile = Tables<'evidence_files'>;
 export type ResultValue = Tables<'action_plan_result_values'>;
 
 export type PersonRef = { id: string; full_name: string | null; email: string | null } | null;
+
+/** Nama tampil orang — full_name → email → fallback. Aman untuk PersonRef nullable. */
+export function personLabel(p: PersonRef | undefined, fallback = 'Tanpa nama'): string {
+  return p?.full_name?.trim() || p?.email || fallback;
+}
 
 export type ActionPlanWithPeople = ActionPlan & {
   pic: PersonRef;
@@ -254,19 +260,6 @@ export async function getOrgProfileDetail(id: string): Promise<OrgProfileDetail 
   };
 }
 
-export type Guidance = Tables<'card_guidance_contents'>;
-export async function getGuidance(cardType: string): Promise<Guidance | null> {
-  const { data, error } = await supabase
-    .from('card_guidance_contents')
-    .select('*')
-    .eq('card_type', cardType)
-    .order('organization_id', { ascending: true, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
-
 /** Action plan di mana user adalah Reviewer & status menunggu review (untuk Home). */
 export async function listPendingReviews(): Promise<ActionPlanWithPeople[]> {
   const { data: auth } = await supabase.auth.getUser();
@@ -330,20 +323,10 @@ export type NewInitiative = {
 };
 
 export async function createInitiative(input: NewInitiative): Promise<Initiative> {
-  const { data: auth, error: authErr } = await supabase.auth.getUser();
-  if (authErr) throw authErr;
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not authenticated');
-  const { data: profile, error: profErr } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', uid)
-    .single();
-  if (profErr) throw profErr;
-  if (!profile?.organization_id) throw new Error('Organization not found');
+  const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('initiatives')
-    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
+    .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;
@@ -370,20 +353,10 @@ export type NewActionPlan = {
 };
 
 export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan> {
-  const { data: auth, error: authErr } = await supabase.auth.getUser();
-  if (authErr) throw authErr;
-  const uid = auth.user?.id;
-  if (!uid) throw new Error('Not authenticated');
-  const { data: profile, error: profErr } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', uid)
-    .single();
-  if (profErr) throw profErr;
-  if (!profile?.organization_id) throw new Error('Organization not found');
+  const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('action_plans')
-    .insert({ ...input, organization_id: profile.organization_id, created_by: uid })
+    .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
   if (error) throw error;
@@ -481,21 +454,6 @@ export async function listKpiAreaCandidates(actionPlanId: string): Promise<KpiAr
   });
   if (error) throw error;
   return (data ?? []) as KpiAreaCandidate[];
-}
-
-/**
- * @deprecated Pakai 2-phase: `createSubmissionDraft()` → upload via `uploadEvidenceFile()` → `finalizeSubmission()`.
- * Stub ini menjaga TS compile sebelum submit.tsx di-refactor di Fase E. Jangan dipanggil.
- */
-export async function submitActionPlan(_args: {
-  actionPlanId: string;
-  note: string | null;
-  evidence: EvidenceInput[];
-  resultValues: ResultValueInput[];
-}): Promise<string> {
-  throw new Error(
-    'submitActionPlan deprecated. Pakai createSubmissionDraft → uploadEvidenceFile → finalizeSubmission (2-phase commit, addendum §10.2 ER-2).',
-  );
 }
 
 /** Read current aggregate value untuk KPI Area (sumber "nilai lama" di UI DeltaArrow). */

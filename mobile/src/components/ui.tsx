@@ -249,23 +249,21 @@ export function GuidanceNote({ title, body }: { title: string; body: string }) {
 // ---------------------------------------------------------------- EmptyState
 
 /**
- * State kosong sebagai fitur: ikon opsional, nada (neutral/success), chip meta,
- * dan satu aksi. Backward-compatible — pemanggilan lama (title+description) tetap jalan.
+ * State kosong sebagai fitur: ikon opsional, nada (neutral/success), dan satu aksi.
+ * Backward-compatible — pemanggilan lama (title+description) tetap jalan.
  */
 export function EmptyState({
   title,
   description,
   icon,
   tone = 'neutral',
-  meta,
   action,
 }: {
   title: string;
   description: string;
   icon?: ReactNode;
   tone?: 'neutral' | 'success';
-  meta?: ReactNode;
-  action?: { label: string; onPress: () => void };
+  action?: { label: string; onPress: () => void; disabled?: boolean };
 }) {
   const ring =
     tone === 'success'
@@ -285,9 +283,16 @@ export function EmptyState({
         {title}
       </Text>
       <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">{description}</Text>
-      {meta ? <View className="mt-1 flex-row flex-wrap justify-center gap-2">{meta}</View> : null}
       {action ? (
-        <View className="mt-3">
+        // WS-04: opacity dim + label a11y mengindikasikan periode arsip; onPress
+        // tetap wired (parent memilih handler alert vs push).
+        <View
+          className="mt-3"
+          style={{ opacity: action.disabled ? 0.4 : 1 }}
+          accessibilityState={{ disabled: !!action.disabled }}
+          accessibilityLabel={
+            action.disabled ? `${action.label} (periode arsip — nonaktif)` : undefined
+          }>
           <Button label={action.label} onPress={action.onPress} variant="secondary" />
         </View>
       ) : null}
@@ -331,12 +336,10 @@ export function Skeleton({
   width = '100%',
   height = 12,
   radius = 8,
-  style,
 }: {
-  width?: number | string;
+  width?: number | `${number}%`;
   height?: number;
   radius?: number;
-  style?: object;
 }) {
   const { effective } = useThemePreference();
   const base = effective === 'dark' ? '#27272a' : '#e2e8f0';
@@ -355,7 +358,7 @@ export function Skeleton({
   }, [opacity]);
   return (
     <Animated.View
-      style={[{ width, height, borderRadius: radius, backgroundColor: base, opacity }, style]}
+      style={{ width, height, borderRadius: radius, backgroundColor: base, opacity }}
     />
   );
 }
@@ -466,11 +469,11 @@ export function ScoreLegend() {
  * Graceful saat <2 titik: render single bar atau placeholder; tidak crash.
  * Implementasi bar-based (tanpa SVG) agar tidak menambah dependency.
  */
-export function ScoreSparkline({ points, label }: { points: number[]; label?: string }) {
+export function ScoreSparkline({ points }: { points: number[] }) {
   if (!points.length) {
     return (
       <Text className="text-xs text-neutral-400">
-        {label ?? 'Tren skor menyusul setelah ≥1 periode tertutup.'}
+        Tren skor menyusul setelah ≥1 periode tertutup.
       </Text>
     );
   }
@@ -606,23 +609,54 @@ export function orbToneFor(value: number): OrbTone {
   return 'danger';
 }
 
+/** Ring SVG (track + progress arc) untuk ProgressOrb & TreeProgressOrb. */
+function RingSvg({
+  size,
+  stroke,
+  color,
+  track,
+  pct,
+}: {
+  size: number;
+  stroke: number;
+  color: string;
+  track: string;
+  pct: number;
+}) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  return (
+    <Svg width={size} height={size} style={{ position: 'absolute' }}>
+      <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={stroke} fill="none" />
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke={color}
+        strokeWidth={stroke}
+        fill="none"
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+    </Svg>
+  );
+}
+
 export function ProgressOrb({
   value,
   size = 56,
-  tone,
   sublabel,
 }: {
   value: number;
   size?: OrbSize;
-  tone?: OrbTone;
   sublabel?: string;
 }) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
-  const resolvedTone = tone ?? orbToneFor(pct);
+  const resolvedTone = orbToneFor(pct);
   const stroke = size === 72 ? 8 : 6;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const offset = c * (1 - pct / 100);
   const color = ORB_COLOR[resolvedTone];
   const numberSize = size === 72 ? 20 : 16;
   // Track ring wajib theme-aware: #e2e8f0 terang menyala di atas surface gelap (DESIGN §12).
@@ -639,21 +673,7 @@ export function ProgressOrb({
       accessibilityRole="progressbar"
       accessibilityLabel={a11y}
       accessibilityValue={{ now: pct, min: 0, max: 100 }}>
-      <Svg width={size} height={size} style={{ position: 'absolute' }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={color}
-          strokeWidth={stroke}
-          fill="none"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
+      <RingSvg size={size} stroke={stroke} color={color} track={trackColor} pct={pct} />
       <Text
         className="font-extrabold text-black dark:text-white"
         style={{ fontSize: numberSize, lineHeight: numberSize + 2 }}>
@@ -705,9 +725,6 @@ export function TreeProgressOrb({
   // UI-S-W09: label compact minimal 10px (DESIGN §4.5 — readable di mobile). Sebelumnya 8px
   // menyulitkan identifikasi status ring (Capaian/Progress) di Dynamic Type & dark mode.
   const labelSize = compact ? 10 : 11;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const offset = c * (1 - pct / 100);
   const color = treeOrbColor(pct);
   // Track ring theme-aware (warna value good/risk/bad tetap terkunci spec §10; hanya track).
   const { effective } = useThemePreference();
@@ -721,21 +738,7 @@ export function TreeProgressOrb({
       accessibilityLabel={`${label} ${pct} persen`}
       accessibilityValue={{ now: pct, min: 0, max: 100 }}>
       <View style={{ width: size, height: size }} className="items-center justify-center">
-        <Svg width={size} height={size} style={{ position: 'absolute' }}>
-          <Circle cx={size / 2} cy={size / 2} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            stroke={color}
-            strokeWidth={stroke}
-            fill="none"
-            strokeDasharray={c}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          />
-        </Svg>
+        <RingSvg size={size} stroke={stroke} color={color} track={trackColor} pct={pct} />
         <Text className="font-extrabold text-black dark:text-white" style={{ fontSize: numberSize }}>
           {pct}%
         </Text>
@@ -777,10 +780,15 @@ const PRIORITY_CLASS: Record<PriorityTone, string> = {
   warn: 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40',
   info: 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40',
 };
-const PRIORITY_ICON_CLASS: Record<PriorityTone, string> = {
-  danger: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
-  warn: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
-  info: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+const PRIORITY_ICON_BG: Record<PriorityTone, string> = {
+  danger: 'bg-red-100 dark:bg-red-900',
+  warn: 'bg-amber-100 dark:bg-amber-900',
+  info: 'bg-blue-100 dark:bg-blue-900',
+};
+const PRIORITY_ICON_TEXT: Record<PriorityTone, string> = {
+  danger: 'text-red-700 dark:text-red-300',
+  warn: 'text-amber-700 dark:text-amber-300',
+  info: 'text-blue-700 dark:text-blue-300',
 };
 
 /** Kartu prioritas Home (Lewat deadline / Butuh Review / Gap KPI). */
@@ -804,8 +812,8 @@ export function PriorityCard({
       onPress={onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={onPress ? `${title}. ${subtitle}` : undefined}>
-      <View className={`h-7 w-7 items-center justify-center rounded-lg ${PRIORITY_ICON_CLASS[tone]}`}>
-        <Text className={`text-xs font-bold ${PRIORITY_ICON_CLASS[tone].split(' ').filter((c) => c.startsWith('text-') || c.startsWith('dark:text-')).join(' ')}`}>
+      <View className={`h-7 w-7 items-center justify-center rounded-lg ${PRIORITY_ICON_BG[tone]}`}>
+        <Text className={`text-xs font-bold ${PRIORITY_ICON_TEXT[tone]}`}>
           {icon}
         </Text>
       </View>

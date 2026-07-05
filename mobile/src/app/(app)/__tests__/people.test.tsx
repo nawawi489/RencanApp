@@ -15,6 +15,8 @@ jest.mock('@/lib/cards', () => ({
   // UI-S-PP2 — sibling baru yang dipakai PeopleScreen; default ke listOrgProfiles supaya test lama
   // tidak perlu mock dua-duanya. Mock entry per test boleh override.
   listOrgProfilesWithRoles: () => mockListOrgProfiles(),
+  personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
+    p?.full_name?.trim() || p?.email || fallback,
 }));
 
 jest.mock('expo-router', () => ({

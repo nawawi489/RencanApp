@@ -17,19 +17,12 @@ import {
   ScoreSparkline,
   SkeletonList,
   usePlaceholderColor,
-  type ScoreBreakdownMetric,
 } from '@/components/ui';
-import { listOrgProfilesWithRoles, type OrgProfileWithRole } from '@/lib/cards';
-import { METRIC_LABEL, effectiveScore } from '@/lib/people-score';
+import { listOrgProfilesWithRoles, personLabel, type OrgProfileWithRole } from '@/lib/cards';
+import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
 import { useActivePeriod, useLatestClosedPeriod, useMyScore, useMyScoreHistory, useRanking } from '@/hooks/use-people-score';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypePeopleScreen from '@/prototype/screens/people';
 
 type Person = OrgProfileWithRole & { score?: number | null };
-
-function personLabel(p: Person): string {
-  return p.full_name?.trim() || p.email || 'Tanpa nama';
-}
 
 // UI-S-PP2 — subhead: position + role bila ada, fallback email.
 function personSubhead(p: Person): string {
@@ -40,32 +33,10 @@ function personSubhead(p: Person): string {
   return parts.join(' · ');
 }
 
-// UI-S-PP1 — tabs sederhana (V1: Ranking/Bulan/Quarter — Admin ditunda).
-const PEOPLE_TABS = ['ranking', 'bulan', 'quarter'] as const;
-type PeopleTab = (typeof PEOPLE_TABS)[number];
-const PEOPLE_TAB_LABEL: Record<PeopleTab, string> = {
-  ranking: 'Ranking',
-  bulan: 'Bulan',
-  quarter: 'Quarter',
-};
-
-function breakdownToMetrics(breakdown: unknown): ScoreBreakdownMetric[] {
-  if (!breakdown || typeof breakdown !== 'object') return [];
-  const obj = breakdown as Record<string, unknown>;
-  const items: ScoreBreakdownMetric[] = [];
-  for (const [code, raw] of Object.entries(obj)) {
-    const label = METRIC_LABEL[code] ?? code;
-    const value = typeof raw === 'number' ? raw : Number(raw);
-    if (Number.isFinite(value)) items.push({ label, value });
-  }
-  return items;
-}
-
 export function LivePeopleScreen() {
   const router = useRouter();
   const placeholderColor = usePlaceholderColor();
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<PeopleTab>('ranking');
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['org-profiles-with-roles'],
     queryFn: listOrgProfilesWithRoles,
@@ -218,7 +189,7 @@ export function LivePeopleScreen() {
         </Pressable>
       ) : null}
 
-      {/* UI-S-PP1 — search + tabs */}
+      {/* UI-S-PP1 — search */}
       <View className="gap-3">
         <TextInput
           accessibilityLabel="Cari anggota"
@@ -229,27 +200,6 @@ export function LivePeopleScreen() {
           onChangeText={setSearch}
           autoCapitalize="none"
         />
-        <View className="flex-row flex-wrap gap-2">
-          {PEOPLE_TABS.map((k) => {
-            const active = tab === k;
-            return (
-              <Pressable
-                key={k}
-                onPress={() => setTab(k)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`Tab ${PEOPLE_TAB_LABEL[k]}`}
-                className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}>
-                <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
-                  {PEOPLE_TAB_LABEL[k]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {tab !== 'ranking' ? (
-          <Badge label="V1: filter periode menyusul" tone="neutral" />
-        ) : null}
       </View>
 
       <View className="flex-row items-center justify-between">
@@ -315,5 +265,5 @@ export function LivePeopleScreen() {
 }
 
 export default function PeopleRoute() {
-  return <StackScreenAdapter live={LivePeopleScreen} prototype={PrototypePeopleScreen} />;
+  return <LivePeopleScreen />;
 }

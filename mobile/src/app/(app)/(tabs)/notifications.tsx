@@ -7,8 +7,6 @@ import { useMemo, useState } from 'react';
 import { SectionList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
-import { TabScreenAdapter } from '@/prototype/adapters/tab-screen-adapter';
-import PrototypeNotificationsScreen from '@/prototype/screens/notifications';
 import { Screen } from '@/components/screen';
 import {
   Badge,
@@ -156,14 +154,8 @@ export function LiveNotificationsScreen() {
 
   const sections = useMemo(() => groupByRecency(notifications), [notifications]);
 
-  const header = (
-    <View className="gap-5 pb-3">
-      <View className="gap-1">
-        <Text className="text-2xl font-bold text-black dark:text-white">Notifications</Text>
-        <Text className="text-base text-neutral-500 dark:text-neutral-400">
-          Notifikasi resmi dan respons.
-        </Text>
-      </View>
+  const controls = (
+    <>
       {count > 0 ? (
         <Pressable
           onPress={() => markAllRead()}
@@ -176,24 +168,25 @@ export function LiveNotificationsScreen() {
         </Pressable>
       ) : null}
       <TabBar tabs={tabs} active={tab} onChange={setTab} />
+    </>
+  );
+
+  const header = (
+    <View className="gap-5 pb-3">
+      <View className="gap-1">
+        <Text className="text-2xl font-bold text-black dark:text-white">Notifications</Text>
+        <Text className="text-base text-neutral-500 dark:text-neutral-400">
+          Notifikasi resmi dan respons.
+        </Text>
+      </View>
+      {controls}
     </View>
   );
 
   if (isLoading) {
     return (
       <Screen title="Notifications" subtitle="Notifikasi resmi dan respons.">
-        {count > 0 ? (
-          <Pressable
-            onPress={() => markAllRead()}
-            className="min-h-[44px] items-center justify-center self-start rounded-xl border border-neutral-300 px-4 py-2.5 active:opacity-70 dark:border-neutral-700"
-            accessibilityRole="button"
-            accessibilityLabel="Tandai semua dibaca">
-            <Text className="text-sm font-semibold text-black dark:text-white">
-              Tandai semua dibaca
-            </Text>
-          </Pressable>
-        ) : null}
-        <TabBar tabs={tabs} active={tab} onChange={setTab} />
+        {controls}
         <SkeletonList count={4} />
       </Screen>
     );
@@ -202,18 +195,7 @@ export function LiveNotificationsScreen() {
   if (isError) {
     return (
       <Screen title="Notifications" subtitle="Notifikasi resmi dan respons.">
-        {count > 0 ? (
-          <Pressable
-            onPress={() => markAllRead()}
-            className="min-h-[44px] items-center justify-center self-start rounded-xl border border-neutral-300 px-4 py-2.5 active:opacity-70 dark:border-neutral-700"
-            accessibilityRole="button"
-            accessibilityLabel="Tandai semua dibaca">
-            <Text className="text-sm font-semibold text-black dark:text-white">
-              Tandai semua dibaca
-            </Text>
-          </Pressable>
-        ) : null}
-        <TabBar tabs={tabs} active={tab} onChange={setTab} />
+        {controls}
         <ErrorState
           title="Gagal memuat notifikasi"
           description="Periksa koneksi lalu coba lagi."
@@ -254,5 +236,5 @@ export function LiveNotificationsScreen() {
 }
 
 export default function NotificationsRoute() {
-  return <TabScreenAdapter live={LiveNotificationsScreen} prototype={PrototypeNotificationsScreen} />;
+  return <LiveNotificationsScreen />;
 }

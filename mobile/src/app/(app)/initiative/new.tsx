@@ -13,8 +13,6 @@ import { periodError } from '@/lib/date';
 import { getStrategy } from '@/lib/strategies';
 import { getProblemStatement } from '@/lib/problem-statements';
 import { listTeams } from '@/lib/org-structure';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeInitiativeFormScreen from '@/prototype/screens/initiative-form';
 
 type Person = NonNullable<PersonRef>;
 
@@ -171,5 +169,5 @@ export function LiveNewInitiativeScreen() {
 }
 
 export default function NewInitiativeRoute() {
-  return <StackScreenAdapter live={LiveNewInitiativeScreen} prototype={PrototypeInitiativeFormScreen} />;
+  return <LiveNewInitiativeScreen />;
 }

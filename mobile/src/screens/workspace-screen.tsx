@@ -8,21 +8,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import {
+  Fragment,
   memo,
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
-  type PropsWithChildren,
   type ReactNode,
 } from 'react';
-import { Alert, FlatList } from 'react-native';
+import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import {
   Badge,
-  Button,
   EmptyState,
   ErrorState,
   SectionCard,
@@ -48,6 +45,7 @@ import { useArchiveActions } from '@/hooks/use-governance-admin';
 import { mbrBreakdownGuardMessage } from '@/lib/activation-check';
 import type { MbrCompliance } from '@/lib/settings-mbr';
 import type { CardEntityType } from '@/lib/governance-admin';
+import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 import { alertFriendlyError } from '@/lib/errors';
 import type { RowAction } from '@/components/row-actions-menu';
 import { PLANNING_STATUS_LABEL, kpiCountOf, type GoalWithKpiCount } from '@/lib/goals';
@@ -67,6 +65,7 @@ import {
 import {
   MONTH_LABELS_ID,
   cardPeriodStatus,
+  focusPeriodStatus,
   formatPeriodLabel,
   quarterOfMonth,
   showPastPeriodAlert,
@@ -109,34 +108,10 @@ type TreeCardDates = {
 };
 
 /**
- * Garis vertikal lurus di gutter antar level tree (spec §8). Overlay dekoratif non-interaktif
- * yang membentang sepanjang sisi kiri card anak. Geometri compact untuk mobile: absolute,
- * left -10, top 0 → bottom 0 (full height), lebar 1.5px, warna `#cfd8e5`. Dirender di dalam
- * card anak (yang punya marginLeft indent) sehingga garis jatuh di gutter, menyatu rapi
- * dengan border kiri 5px card.
- */
-function TreeConnector() {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left: -10,
-        top: 0,
-        bottom: 0,
-        width: 1.5,
-        backgroundColor: '#cfd8e5',
-        borderRadius: 1,
-      }}
-    />
-  );
-}
-
-/**
  * Garis kontinu yang membentang di sepanjang daftar sibling card (spesifik §8 polish).
- * Berbeda dengan `TreeConnector` (per-card), `SiblingTreeLine` dipasang sekali di wrapper
- * yang membungkus list anak, sehingga garis TIDAK putus di antara card-card level yang
- * sama. `offsetLeft` = posisi absolut garis di dalam wrapper (gutter relatif thd child).
+ * Dipasang sekali di wrapper yang membungkus list anak, sehingga garis TIDAK putus di antara
+ * card-card level yang sama. `offsetLeft` = posisi absolut garis di dalam wrapper (gutter
+ * relatif thd child).
  */
 function SiblingTreeLine({ offsetLeft }: { offsetLeft: number }) {
   return (
@@ -203,16 +178,19 @@ function compactDate(value: string | null | undefined) {
   return value?.trim() ? value.slice(0, 10) : null;
 }
 
-function parseDateOnly(value: string | null | undefined) {
+type YMD = { iso: string; year: number; month: number; day: number };
+
+function parseDateOnly(value: string | null | undefined): YMD | null {
   if (!value?.trim()) return null;
   const iso = value.slice(0, 10);
-  const [year, month, day] = iso.split('-').map((part) => Number(part));
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
+  const [y, m, d] = iso.split('-').map((part) => Number(part));
+  if (!y || !m || !d) return null;
+  return { iso, year: y, month: m, day: d };
 }
 
-function endOfMonth(year: number, monthIndex: number) {
-  return new Date(year, monthIndex + 1, 0, 0, 0, 0, 0).getDate();
+function endOfMonthDay(year: number, month1: number) {
+  // Satu-satunya `new Date` yang tersisa: last-day-of-month via day-0 trick.
+  return new Date(year, month1, 0).getDate();
 }
 
 function treePeriodPillLabel(
@@ -223,34 +201,29 @@ function treePeriodPillLabel(
   const end = parseDateOnly(card.period_end ?? card.deadline);
   if (!start || !end) return formatPeriodLabel(fallbackFocus);
 
-  if (
-    start.getFullYear() === end.getFullYear() &&
-    start.getMonth() === 0 &&
-    start.getDate() === 1 &&
-    end.getMonth() === 11 &&
-    end.getDate() === 31
-  ) {
-    return `${start.getFullYear()}`;
+  // Full year: YYYY-01-01..YYYY-12-31.
+  if (start.year === end.year && start.iso.slice(5) === '01-01' && end.iso.slice(5) === '12-31') {
+    return `${start.year}`;
   }
 
-  if (start.getFullYear() === end.getFullYear()) {
-    const startQuarter = quarterOfMonth(start.getMonth() + 1);
-    const endQuarter = quarterOfMonth(end.getMonth() + 1);
-    const quarterStartMonth = (startQuarter - 1) * 3;
+  if (start.year === end.year) {
+    const startQuarter = quarterOfMonth(start.month);
+    const endQuarter = quarterOfMonth(end.month);
+    const quarterStartMonth = (startQuarter - 1) * 3 + 1;
     const quarterEndMonth = quarterStartMonth + 2;
     if (
       startQuarter === endQuarter &&
-      start.getMonth() === quarterStartMonth &&
-      start.getDate() === 1 &&
-      end.getMonth() === quarterEndMonth &&
-      end.getDate() === endOfMonth(end.getFullYear(), end.getMonth())
+      start.month === quarterStartMonth &&
+      start.day === 1 &&
+      end.month === quarterEndMonth &&
+      end.day === endOfMonthDay(end.year, end.month)
     ) {
-      return `Q${startQuarter} ${start.getFullYear()}`;
+      return `Q${startQuarter} ${start.year}`;
     }
   }
 
-  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return `${MONTH_LABELS_ID[start.getMonth() + 1]} ${start.getFullYear()}`;
+  if (start.year === end.year && start.month === end.month) {
+    return `${MONTH_LABELS_ID[start.month]} ${start.year}`;
   }
 
   return formatPeriodLabel(fallbackFocus);
@@ -300,24 +273,6 @@ function CompactHeaderPills({
       <Badge label={periodLabel} tone="neutral" />
     </View>
   );
-}
-
-/**
- * UI-S-W08 — dim "periode lewat" single-layer: hanya node past TERATAS yang di-dim.
- * Tanpa ini opacity-50 bertumpuk multiplikatif di tree bersarang (0.5³ = 0.125 di level-3)
- * dan merusak jaminan kontras AA (DESIGN §4). Inline style, bukan class NativeWind —
- * flatten deterministik di jest (pola SendButton, DESIGN §7).
- */
-function PastDim({
-  past,
-  ancestorPast = false,
-  children,
-}: {
-  past: boolean;
-  ancestorPast?: boolean;
-  children: ReactNode;
-}) {
-  return <View>{children}</View>;
 }
 
 function TreeToggleButton({
@@ -467,7 +422,7 @@ function CompactActionRow({
           accessibilityLabel={addLabel ?? 'Tambah turunan'}
           accessibilityState={{ disabled: addDimmed ?? past }}
           onPress={() =>
-            onAddPress ? onAddPress() : past ? showPastPeriodAlert(cardLabel) : onAdd?.()
+            onAddPress ? onAddPress() : past ? showPastPeriodAlert() : onAdd?.()
           }>
           <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : (isDark ? '#5eead4' : '#0f766e'), fontSize: 11, fontWeight: '900' }}>
             {addButtonLabel ?? '+'}
@@ -477,17 +432,6 @@ function CompactActionRow({
     </View>
   );
 }
-
-// WSA-14 — path detail per jenis card (Ubah membuka detail page tempat edit/aktivasi).
-const ENTITY_ROUTE_SEGMENT: Record<CardEntityType, string> = {
-  goal: 'goal',
-  kpi_area: 'kpi-area',
-  strategy: 'strategy',
-  initiative: 'initiative',
-  action_plan: 'action-plan',
-  development_area: 'development-area',
-  problem_statement: 'problem-statement',
-};
 
 /**
  * WSA-14 — aksi sekunder card tree yang FUNGSIONAL (spec §12.2): `Ubah` → detail page,
@@ -542,12 +486,10 @@ function useTreeRowActions(
  */
 const StrategySubRow = memo(function StrategySubRow({
   strategy,
-  ancestorPast = false,
   parentCompliance,
   progress,
 }: {
   strategy: Strategy;
-  ancestorPast?: boolean;
   /** Kepatuhan MBR kpi_area→strategy (parent). Non-compliant → "+ Initiative" ter-guard (WSA-04). */
   parentCompliance?: MbrCompliance;
   progress: number | null;
@@ -590,7 +532,7 @@ const StrategySubRow = memo(function StrategySubRow({
       return;
     }
     if (past) {
-      showPastPeriodAlert(strategy.name);
+      showPastPeriodAlert();
       return;
     }
     router.push(`/initiative/new?strategyId=${strategy.id}` as Href);
@@ -599,7 +541,7 @@ const StrategySubRow = memo(function StrategySubRow({
   const addDimmed = past || mbrGuarded;
 
   return (
-    <PastDim past={past} ancestorPast={ancestorPast}>
+    <View>
       <View
         className="gap-2"
         style={{ marginLeft: TREE_LEVEL_INDENT[3] }}>
@@ -656,7 +598,6 @@ const StrategySubRow = memo(function StrategySubRow({
                 <InitiativeSubRow
                   key={i.id}
                   item={i}
-                  ancestorPast={ancestorPast || past}
                   progress={initProgressOf(i.id)}
                 />
               ))}
@@ -670,7 +611,7 @@ const StrategySubRow = memo(function StrategySubRow({
         title={strategy.name}
         items={rowActions}
       />
-    </PastDim>
+    </View>
   );
 });
 
@@ -680,11 +621,9 @@ const StrategySubRow = memo(function StrategySubRow({
  */
 const KpiAreaSubRow = memo(function KpiAreaSubRow({
   kpi,
-  ancestorPast = false,
   progress,
 }: {
   kpi: KpiArea;
-  ancestorPast?: boolean;
   progress: number | null;
 }) {
   const router = useRouter();
@@ -725,7 +664,7 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
-    <PastDim past={past} ancestorPast={ancestorPast}>
+    <View>
       <View
         className="gap-2"
         style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
@@ -778,7 +717,6 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
                 <StrategySubRow
                   key={s.id}
                   strategy={s}
-                  ancestorPast={ancestorPast || past}
                   parentCompliance={mbrCompliance}
                   progress={stratProgressOf(s.id)}
                 />
@@ -793,7 +731,7 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
         title={kpi.name}
         items={rowActions}
       />
-    </PastDim>
+    </View>
   );
 });
 
@@ -837,7 +775,7 @@ const GoalRow = memo(function GoalRow({
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
-    <PastDim past={past}>
+    <View>
       {/* Spec §6.4 + §8: level-0 (indent 0), border kiri 5px warna kategori Goal. */}
       <View className="gap-2" style={{ marginLeft: TREE_LEVEL_INDENT[0] }}>
         <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16 }}>
@@ -893,7 +831,6 @@ const GoalRow = memo(function GoalRow({
                 <KpiAreaSubRow
                   key={k.id}
                   kpi={k}
-                  ancestorPast={past}
                   progress={kpiProgressOf(k.id)}
                 />
               ))}
@@ -907,7 +844,7 @@ const GoalRow = memo(function GoalRow({
         title={goal.name}
         items={rowActions}
       />
-    </PastDim>
+    </View>
   );
 });
 
@@ -917,11 +854,9 @@ const GoalRow = memo(function GoalRow({
  */
 const ActionPlanSubRow = memo(function ActionPlanSubRow({
   item,
-  ancestorPast = false,
   level,
 }: {
   item: ActionPlanWithPeople;
-  ancestorPast?: boolean;
   level: 4 | 5;
 }) {
   const router = useRouter();
@@ -947,7 +882,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
   );
 
   return (
-    <PastDim past={past} ancestorPast={ancestorPast}>
+    <View>
       <View
         className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan, marginLeft: TREE_LEVEL_INDENT[level] }}>
@@ -979,7 +914,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
         title={item.name}
         items={rowActions}
       />
-    </PastDim>
+    </View>
   );
 });
 
@@ -990,12 +925,10 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
  */
 const InitiativeSubRow = memo(function InitiativeSubRow({
   item,
-  ancestorPast = false,
   level = 4,
   progress,
 }: {
   item: Initiative;
-  ancestorPast?: boolean;
   /** Level tree Initiative: 4 di Performance (bawah Strategy), 3 di Development (bawah PS). */
   level?: 3 | 4;
   progress: number | null;
@@ -1030,7 +963,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
-    <PastDim past={past} ancestorPast={ancestorPast}>
+    <View>
       <View
         className="gap-2"
         style={{ marginLeft: TREE_LEVEL_INDENT[level] }}>
@@ -1083,7 +1016,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
             <View className="gap-2" style={{ position: 'relative' }}>
               <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[5] - 10} />
               {actionPlans.map((ap) => (
-                <ActionPlanSubRow key={ap.id} item={ap} ancestorPast={ancestorPast || past} level={childLevel} />
+                <ActionPlanSubRow key={ap.id} item={ap} level={childLevel} />
               ))}
             </View>
           )
@@ -1095,7 +1028,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
         title={item.name}
         items={rowActions}
       />
-    </PastDim>
+    </View>
   );
 });
 
@@ -1105,11 +1038,9 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
  */
 const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
   ps,
-  ancestorPast = false,
   progress,
 }: {
   ps: ProblemStatement;
-  ancestorPast?: boolean;
   progress: number | null;
 }) {
   const router = useRouter();
@@ -1147,7 +1078,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
-    <PastDim past={past} ancestorPast={ancestorPast}>
+    <View>
       <View
         className="gap-2"
         style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
@@ -1198,7 +1129,6 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
                 <InitiativeSubRow
                   key={i.id}
                   item={i}
-                  ancestorPast={ancestorPast || past}
                   level={3}
                   progress={initProgressOf(i.id)}
                 />
@@ -1213,7 +1143,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
         title={ps.name}
         items={rowActions}
       />
-    </PastDim>
+    </View>
   );
 });
 
@@ -1263,7 +1193,7 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
-    <PastDim past={past}>
+    <View>
       {/* Spec §7.3 + §8: level-0 Dev pane, border kiri 5px warna Development Area (#0f766e). */}
       <View className="gap-2" style={{ marginLeft: TREE_LEVEL_INDENT[0] }}>
         <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16 }}>
@@ -1319,7 +1249,7 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
             <View className="gap-2" style={{ position: 'relative' }}>
               <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[2] - 10} />
               {problemStatements.map((p) => (
-                <ProblemStatementSubRow key={p.id} ps={p} ancestorPast={past} progress={psProgressOf(p.id)} />
+                <ProblemStatementSubRow key={p.id} ps={p} progress={psProgressOf(p.id)} />
               ))}
             </View>
           )
@@ -1331,7 +1261,7 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
         title={devArea.name}
         items={rowActions}
       />
-    </PastDim>
+    </View>
   );
 });
 
@@ -1339,11 +1269,15 @@ function PaneSectionHeader({
   title,
   primaryLabel,
   onPrimary,
+  pastLocked,
 }: {
   title: string;
   /** Tombol primary di kanan section header (mis. "+ Goal" / "+ Development Area"). */
   primaryLabel?: string;
   onPrimary?: () => void;
+  /** WS-04: periode fokus arsip — tombol tetap terlihat tapi redup+disabled a11y,
+   *  press → showPastPeriodAlert() (bukan onPrimary). */
+  pastLocked?: boolean;
 }) {
   // Pola "section header + section action" — konsisten dengan section lain di app. Brand-dark
   // fill, radius 12, tinggi 32 (compact — kartu pertama juga punya tombol sendiri, jadi bukan
@@ -1358,9 +1292,20 @@ function PaneSectionHeader({
       {primaryLabel && onPrimary ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={primaryLabel}
-          onPress={onPrimary}
-          style={{ height: 32, borderRadius: 12, backgroundColor: '#1564b3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel={
+            pastLocked ? `${primaryLabel} (periode arsip — nonaktif)` : primaryLabel
+          }
+          accessibilityState={{ disabled: !!pastLocked }}
+          onPress={pastLocked ? () => showPastPeriodAlert() : onPrimary}
+          style={{
+            height: 32,
+            borderRadius: 12,
+            backgroundColor: '#1564b3',
+            paddingHorizontal: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pastLocked ? 0.4 : 1,
+          }}
           className="active:opacity-70">
           <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>{primaryLabel}</Text>
         </Pressable>
@@ -1452,140 +1397,111 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
   );
 }
 
-function PerformancePane() {
+/**
+ * Pane workspace (Performance / Development) — hierarki Goal atau Development Area
+ * dengan pattern identik: header + PeriodSwitcher + section + list. Beda hanya
+ * sumber data, izin, copy, tombol, dan row component (lihat 2 call site di bawah).
+ * WSA-15/-16: orb capaian root dihitung 1 RPC untuk semua item terlihat.
+ */
+type PaneConfig<T extends { id: string }> = {
+  kicker: string;
+  subtitle: string;
+  sectionTitle: string;
+  btnLabel: string;
+  emptyTitle: string;
+  emptyDescCan: string;
+  emptyDescView: string;
+  permission: string;
+  newRoute: string;
+  periodSpace?: 'performance' | 'development';
+  useItems: () => { items: T[]; isLoading: boolean; isError: boolean; refetch: () => void };
+  renderRow: (item: T, progress: number | null) => ReactNode;
+};
+
+function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
   const router = useRouter();
   const { can } = useProfile();
-  const goalsQ = useGoals();
-  const canCreate = can('create_goal');
+  const q = config.useItems();
+  const canCreate = can(config.permission);
+  // WS-04: gating archive gate section-level & empty-state action. Periode
+  // future default TIDAK dikunci (OQ-2 default). Server-side gate belum ada
+  // (OQ-1 = a: UI-only, governance debt tercatat di docs/spec-ui-testfix).
+  // Pakai `now` dari provider agar deterministik saat test menginjeksi anchor.
+  const { focus, now: nowRef } = usePeriodFocus();
+  const pastLocked = focusPeriodStatus(focus, nowRef) === 'past';
 
   useFocusEffect(
     useCallback(() => {
-      goalsQ.refetch();
+      q.refetch();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
-  const header = (
-    <View className="gap-5 pb-3">
-      <View className="gap-1">
-        <Text
-          accessibilityRole="header"
-          className="text-2xl font-bold text-black dark:text-white">
-          {WS_HUB_COPY.perf.kicker}
-        </Text>
-        <Text className="text-base text-neutral-500 dark:text-neutral-400">
-          {WS_COPY.subtitle}
-        </Text>
-      </View>
-      <PeriodSwitcher />
-      <PaneSectionHeader
-        title={WS_COPY.sectionStrategis}
-        primaryLabel={canCreate ? WS_COPY.btnGoalBaru : undefined}
-        onPrimary={canCreate ? () => router.push('/goal-wizard' as Href) : undefined}
-      />
-      {goalsQ.isLoading ? <SkeletonList count={3} /> : null}
-      {goalsQ.isError ? <ErrorState onRetry={() => goalsQ.refetch()} /> : null}
-    </View>
-  );
+  const items = q.isLoading || q.isError ? [] : q.items;
+  const showEmpty = !q.isLoading && !q.isError && q.items.length === 0;
+  const { progressOf } = useCardProgress(items.map((i) => i.id));
 
-  // WSA-16 — section "Initiative Tanpa Goal" dihapus dari pane (di luar spec §6). Initiative
-  // yatim tetap dapat diakses lewat Search (route /search) & Menu; pane fokus ke hierarki Goal.
-
-  const goalsData = goalsQ.isLoading || goalsQ.isError ? [] : goalsQ.goals;
-  const showEmpty = !goalsQ.isLoading && !goalsQ.isError && goalsQ.goals.length === 0;
-
-  // WSA-15 — orb capaian Goal root: 1 RPC untuk semua Goal terlihat (bukan per row).
-  const { progressOf: goalProgressOf } = useCardProgress(goalsData.map((g) => g.id));
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-black">
       <ScrollView contentContainerStyle={{ gap: 12, padding: 20 }}>
-        {header}
+        <View className="gap-5 pb-3">
+          <View className="gap-1">
+            <Text
+              accessibilityRole="header"
+              className="text-2xl font-bold text-black dark:text-white">
+              {config.kicker}
+            </Text>
+            <Text className="text-base text-neutral-500 dark:text-neutral-400">
+              {config.subtitle}
+            </Text>
+          </View>
+          <PeriodSwitcher space={config.periodSpace} />
+          <PaneSectionHeader
+            title={config.sectionTitle}
+            primaryLabel={canCreate ? config.btnLabel : undefined}
+            onPrimary={canCreate ? () => router.push(config.newRoute as Href) : undefined}
+            pastLocked={pastLocked}
+          />
+          {q.isLoading ? <SkeletonList count={3} /> : null}
+          {q.isError ? <ErrorState onRetry={() => q.refetch()} /> : null}
+        </View>
         {showEmpty ? (
           <EmptyState
-            title={WS_COPY.emptyGoalTitle}
-            description={canCreate ? WS_COPY.emptyGoalDescCan : WS_COPY.emptyGoalDescView}
+            title={config.emptyTitle}
+            description={canCreate ? config.emptyDescCan : config.emptyDescView}
             action={
               canCreate
-                ? { label: WS_COPY.btnGoalBaru, onPress: () => router.push('/goal-wizard' as Href) }
+                ? {
+                    label: config.btnLabel,
+                    onPress: pastLocked
+                      ? () => showPastPeriodAlert()
+                      : () => router.push(config.newRoute as Href),
+                    disabled: pastLocked,
+                  }
                 : undefined
             }
           />
         ) : null}
-        {goalsData.map((goal) => (
-          <GoalRow key={goal.id} goal={goal} progress={goalProgressOf(goal.id)} />
+        {items.map((item) => (
+          <Fragment key={item.id}>{config.renderRow(item, progressOf(item.id))}</Fragment>
         ))}
       </ScrollView>
     </View>
   );
 }
 
-function DevelopmentPane() {
-  const router = useRouter();
-  const { can } = useProfile();
-  const devQ = useDevelopmentAreas();
-  const canCreate = can('create_development_area');
-
-  useFocusEffect(
-    useCallback(() => {
-      devQ.refetch();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
-  );
-
-  const header = (
-    <View className="gap-5 pb-3">
-      <View className="gap-1">
-        <Text
-          accessibilityRole="header"
-          className="text-2xl font-bold text-black dark:text-white">
-          {WS_HUB_COPY.dev.kicker}
-        </Text>
-        <Text className="text-base text-neutral-500 dark:text-neutral-400">
-          {WS_DEV_COPY.subtitle}
-        </Text>
-      </View>
-      <PeriodSwitcher space="development" />
-      <PaneSectionHeader
-        title={WS_DEV_COPY.sectionDevAreas}
-        primaryLabel={canCreate ? WS_DEV_COPY.btnDevAreaBaru : undefined}
-        onPrimary={canCreate ? () => router.push('/development-area/new' as Href) : undefined}
-      />
-      {devQ.isLoading ? <SkeletonList count={3} /> : null}
-      {devQ.isError ? <ErrorState onRetry={() => devQ.refetch()} /> : null}
-    </View>
-  );
-
-  const devData = devQ.isLoading || devQ.isError ? [] : devQ.developmentAreas;
-  const showEmpty = !devQ.isLoading && !devQ.isError && devQ.developmentAreas.length === 0;
-
-  // WSA-15 — orb capaian Development Area root: 1 RPC untuk semua DA terlihat.
-  const { progressOf: devProgressOf } = useCardProgress(devData.map((d) => d.id));
-  return (
-    <View className="flex-1 bg-neutral-50 dark:bg-black">
-      <ScrollView contentContainerStyle={{ gap: 12, padding: 20 }}>
-        {header}
-        {showEmpty ? (
-          <EmptyState
-            title={WS_DEV_COPY.emptyDevAreaTitle}
-            description={
-              canCreate ? WS_DEV_COPY.emptyDevAreaDescCan : WS_DEV_COPY.emptyDevAreaDescView
-            }
-            action={
-              canCreate
-                ? {
-                    label: WS_DEV_COPY.btnDevAreaBaru,
-                    onPress: () => router.push('/development-area/new' as Href),
-                  }
-                : undefined
-            }
-          />
-        ) : null}
-        {devData.map((d) => (
-          <DevelopmentAreaRow key={d.id} devArea={d} progress={devProgressOf(d.id)} />
-        ))}
-      </ScrollView>
-    </View>
-  );
+function usePerformanceItems() {
+  const q = useGoals();
+  return { items: q.goals, isLoading: q.isLoading, isError: q.isError, refetch: q.refetch };
+}
+function useDevelopmentItems() {
+  const q = useDevelopmentAreas();
+  return {
+    items: q.developmentAreas,
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
 }
 
 // WSA-19 — pane Workspace kini route deep-linkable di dalam nested stack tab (bukan state lokal).
@@ -1601,10 +1517,39 @@ export function HubScreen() {
 
 /** Route `/workspace/performance` — pane Performance. Back button di AppHeader. */
 export function PerformanceScreen() {
-  return <PerformancePane />;
+  return (
+    <WorkspacePane
+      kicker={WS_HUB_COPY.perf.kicker}
+      subtitle={WS_COPY.subtitle}
+      sectionTitle={WS_COPY.sectionStrategis}
+      btnLabel={WS_COPY.btnGoalBaru}
+      emptyTitle={WS_COPY.emptyGoalTitle}
+      emptyDescCan={WS_COPY.emptyGoalDescCan}
+      emptyDescView={WS_COPY.emptyGoalDescView}
+      permission="create_goal"
+      newRoute="/goal-wizard"
+      useItems={usePerformanceItems}
+      renderRow={(goal, progress) => <GoalRow goal={goal} progress={progress} />}
+    />
+  );
 }
 
 /** Route `/workspace/development` — pane Development. Back button di AppHeader. */
 export function DevelopmentScreen() {
-  return <DevelopmentPane />;
+  return (
+    <WorkspacePane
+      kicker={WS_HUB_COPY.dev.kicker}
+      subtitle={WS_DEV_COPY.subtitle}
+      sectionTitle={WS_DEV_COPY.sectionDevAreas}
+      btnLabel={WS_DEV_COPY.btnDevAreaBaru}
+      emptyTitle={WS_DEV_COPY.emptyDevAreaTitle}
+      emptyDescCan={WS_DEV_COPY.emptyDevAreaDescCan}
+      emptyDescView={WS_DEV_COPY.emptyDevAreaDescView}
+      permission="create_development_area"
+      newRoute="/development-area/new"
+      periodSpace="development"
+      useItems={useDevelopmentItems}
+      renderRow={(d, progress) => <DevelopmentAreaRow devArea={d} progress={progress} />}
+    />
+  );
 }

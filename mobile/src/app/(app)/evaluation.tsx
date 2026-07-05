@@ -9,9 +9,6 @@ import { Button, LabeledInput, SectionCard } from '@/components/ui';
 import { EVALUATION_TARGET_LABEL } from '@/lib/governance-admin';
 import { useEvaluation, useEvaluationActions } from '@/hooks/use-governance-admin';
 import { useProfile } from '@/hooks/use-profile';
-import { StackScreenAdapter } from '@/prototype/adapters/stack-screen-adapter';
-import PrototypeEvaluationFlowScreen from '@/prototype/screens/evaluation-flow';
-
 const TARGETS = ['ya', 'sebagian', 'tidak'] as const;
 
 /** Checkbox sederhana dengan touch target ≥44px (a11y) dan state visual jelas. */
@@ -184,5 +181,5 @@ export function LiveEvaluationScreen() {
 }
 
 export default function EvaluationRoute() {
-  return <StackScreenAdapter live={LiveEvaluationScreen} prototype={PrototypeEvaluationFlowScreen} />;
+  return <LiveEvaluationScreen />;
 }

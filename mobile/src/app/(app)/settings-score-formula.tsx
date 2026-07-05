@@ -5,13 +5,11 @@
 // Permission gate: manage_score_formula. Defense-in-depth (gate juga di RPC server).
 import { Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, View, Pressable } from 'react-native-css/components';
+import { ScrollView, Text, TextInput, View, Pressable } from 'react-native-css/components';
 
 import {
   Badge,
-  EmptyState,
   GuidanceNote,
-  LabeledInput,
   ScoreLegend,
   SectionCard,
   SkeletonCard,
@@ -22,7 +20,6 @@ import {
   useFormulaActions,
   useScoreFormulaTemplates,
   useScoreFormulaVersions,
-  useScoreOverride,
 } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
 import {
@@ -302,12 +299,10 @@ function FormulaTemplateSection({
   templateId,
   templateName,
   templateLevel,
-  canManage,
 }: {
   templateId: string;
   templateName: string;
   templateLevel: string;
-  canManage: boolean;
 }) {
   const { versions, isLoading } = useScoreFormulaVersions(templateId);
   const { activate, createDraft, isCreatingDraft, isPending } = useFormulaActions(templateId);
@@ -371,17 +366,13 @@ function FormulaTemplateSection({
       ) : (
         <View className="gap-2">
           {draftVersion ? (
-            canManage ? (
-              <DraftEditor
-                key={`${draftVersion.id}:${JSON.stringify(draftVersion.categories)}`}
-                version={draftVersion}
-                templateId={templateId}
-                onActivate={handleActivate}
-              />
-            ) : (
-              <FormulaVersionCardReadOnly version={draftVersion} />
-            )
-          ) : canManage ? (
+            <DraftEditor
+              key={`${draftVersion.id}:${JSON.stringify(draftVersion.categories)}`}
+              version={draftVersion}
+              templateId={templateId}
+              onActivate={handleActivate}
+            />
+          ) : (
             <View className="gap-2 rounded-xl border border-dashed border-neutral-300 p-3 dark:border-neutral-700">
               <Text className="text-xs text-neutral-500 dark:text-neutral-400">
                 Belum ada draft untuk level <Text className="font-semibold">{activeLevel}</Text>.
@@ -410,7 +401,7 @@ function FormulaTemplateSection({
                 </Text>
               </Pressable>
             </View>
-          ) : null}
+          )}
 
           {otherVersions.length > 0 ? (
             <View className="gap-2">
@@ -421,10 +412,6 @@ function FormulaTemplateSection({
                 <FormulaVersionCardReadOnly key={v.id} version={v} />
               ))}
             </View>
-          ) : null}
-
-          {levelVersions.length === 0 && !canManage ? (
-            <Text className="text-sm text-neutral-400">Belum ada versi formula.</Text>
           ) : null}
         </View>
       )}
@@ -442,17 +429,9 @@ function FormulaTemplateSection({
 }
 
 export default function SettingsScoreFormulaScreen() {
-  const { profile, isLoading: profileLoading, can } = useProfile();
+  const { isLoading: profileLoading, can } = useProfile();
   const { period, isLoading: periodLoading } = useActivePeriod();
-  const periodId = period?.id ?? '';
-  const { override, isPending } = useScoreOverride(periodId);
-  const canManage = can('manage_score_formula');
   const { templates } = useScoreFormulaTemplates();
-
-  const [targetUserId, setTargetUserId] = useState('');
-  const [manualScore, setManualScore] = useState('');
-  const [reason, setReason] = useState('');
-  const [inlineError, setInlineError] = useState<string | null>(null);
 
   if (profileLoading) return <SkeletonCard />;
 
@@ -465,42 +444,6 @@ export default function SettingsScoreFormulaScreen() {
         </Text>
       </View>
     );
-  }
-
-  async function submitOverride() {
-    setInlineError(null);
-    const trimmedReason = reason.trim();
-    if (!trimmedReason) {
-      setInlineError('Alasan override wajib diisi.');
-      return;
-    }
-    if (!targetUserId.trim()) {
-      setInlineError('Target user wajib diisi.');
-      return;
-    }
-    if (targetUserId.trim() === profile?.id) {
-      setInlineError('Anda tidak bisa mengubah score Anda sendiri.');
-      return;
-    }
-    const scoreNum = Number(manualScore);
-    if (!Number.isFinite(scoreNum)) {
-      setInlineError('Skor manual harus angka.');
-      return;
-    }
-    if (scoreNum < 0 || scoreNum > 100) {
-      setInlineError('Skor manual harus dalam rentang 0–100.');
-      return;
-    }
-    try {
-      await override({ userId: targetUserId.trim(), manualScore: scoreNum, reason: trimmedReason });
-      Alert.alert('Berhasil', 'Override skor tersimpan.');
-      setTargetUserId('');
-      setManualScore('');
-      setReason('');
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Gagal menyimpan override.';
-      setInlineError(msg);
-    }
   }
 
   return (
@@ -543,66 +486,10 @@ export default function SettingsScoreFormulaScreen() {
                 templateId={t.id}
                 templateName={t.name}
                 templateLevel={t.level}
-                canManage={canManage}
               />
             ))}
           </View>
         ) : null}
-
-        <SectionCard>
-          <Text className="text-base font-semibold text-black dark:text-white">
-            Manual Override Skor
-          </Text>
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-            Single-actor. Anti-self ditegakkan. Auto score tetap disimpan utuh (append-only).
-          </Text>
-          {!period ? (
-            <EmptyState
-              title="Tidak ada periode aktif"
-              description="Override hanya bisa pada periode aktif."
-            />
-          ) : (
-            <View className="gap-3">
-              <LabeledInput
-                label="User ID target"
-                value={targetUserId}
-                onChangeText={setTargetUserId}
-                placeholder="uuid user"
-              />
-              <LabeledInput
-                label="Skor manual (0-100)"
-                value={manualScore}
-                onChangeText={setManualScore}
-                placeholder="contoh: 82"
-                keyboardType="numeric"
-              />
-              <LabeledInput
-                label="Alasan override"
-                value={reason}
-                onChangeText={setReason}
-                placeholder="koreksi data, dll"
-                multiline
-              />
-              {inlineError ? (
-                <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
-                  {inlineError}
-                </Text>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Simpan Override"
-                disabled={isPending}
-                className={`min-h-[44px] items-center justify-center rounded-xl px-4 py-3 ${
-                  isPending ? 'bg-neutral-300 dark:bg-neutral-700' : 'bg-brand-dark active:opacity-80'
-                }`}
-                onPress={submitOverride}>
-                <Text className="text-base font-semibold text-white">
-                  {isPending ? 'Menyimpan…' : 'Simpan Override'}
-                </Text>
-              </Pressable>
-            </View>
-          )}
-        </SectionCard>
       </View>
     </ScrollView>
   );

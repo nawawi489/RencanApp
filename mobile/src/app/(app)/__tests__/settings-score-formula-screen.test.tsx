@@ -79,37 +79,9 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     expect(screen.queryByLabelText('Simpan Override')).toBeNull();
   });
 
-  it('[2] tanpa periode aktif → form override BLOK (EmptyState)', async () => {
-    mockCan.mockReturnValue(true);
-    mockUseActivePeriod.mockReturnValue({ period: null, isLoading: false, isError: false });
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Tidak ada periode aktif')).toBeTruthy();
-    expect(screen.queryByLabelText('Simpan Override')).toBeNull();
-  });
-
-  it('[3] pre-flight: reason kosong → inline error, override RPC tidak dipanggil', async () => {
-    mockCan.mockReturnValue(true);
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByLabelText('Simpan Override'));
-    await waitFor(() => expect(screen.getByText('Alasan override wajib diisi.')).toBeTruthy());
-    expect(mockOverride).not.toHaveBeenCalled();
-  });
-
-  it('[4] pre-flight anti-self: target = profile.id → inline error, RPC tidak dipanggil', async () => {
-    mockCan.mockReturnValue(true);
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('User ID target', undefined, { timeout: 10000 })).toBeTruthy();
-    await act(async () => {
-      fireEvent.changeText(screen.getByPlaceholderText('uuid user'), 'me');
-      fireEvent.changeText(screen.getByPlaceholderText('contoh: 82'), '99');
-      fireEvent.changeText(screen.getByPlaceholderText('koreksi data, dll'), 'self attempt');
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Simpan Override'));
-    });
-    expect(screen.getByText(/tidak bisa mengubah score Anda sendiri/i)).toBeTruthy();
-    expect(mockOverride).not.toHaveBeenCalled();
-  });
+  // [2]-[5] dihapus: seksi "Manual Override Skor" di layar ini dihapus (ponytail sweep) —
+  // fungsi override dijalankan lewat rute dedikasi `/manual-score-override` (prefill dari
+  // People Profile), yang punya suite test terpisah.
 
   it('[F-1] template + versi aktif (level staff) → render kategori + bobot + Total 100%', async () => {
     mockCan.mockReturnValue(true);
@@ -289,21 +261,4 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     );
   });
 
-  it('[5] RPC reject (mis. 100% atau ditolak server) → pesan server dirender inline', async () => {
-    mockCan.mockReturnValue(true);
-    mockOverride.mockRejectedValueOnce(new Error('Periode ini sudah ditutup dan tidak bisa diubah.'));
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('User ID target', undefined, { timeout: 10000 })).toBeTruthy();
-    await act(async () => {
-      fireEvent.changeText(screen.getByPlaceholderText('uuid user'), 'other-uid');
-      fireEvent.changeText(screen.getByPlaceholderText('contoh: 82'), '82');
-      fireEvent.changeText(screen.getByPlaceholderText('koreksi data, dll'), 'koreksi');
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Simpan Override'));
-    });
-    expect(mockOverride).toHaveBeenCalledTimes(1);
-    expect(mockOverride).toHaveBeenCalledWith({ userId: 'other-uid', manualScore: 82, reason: 'koreksi' });
-    await waitFor(() => expect(screen.getByText(/Periode ini sudah ditutup/i)).toBeTruthy());
-  });
 });

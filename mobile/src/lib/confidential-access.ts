@@ -2,7 +2,6 @@
 // (user di-grant / pemberi / pengelola); grant hanya via RPC (manage_confidential_access).
 import type { Tables } from './database.types';
 import { supabase } from './supabase';
-import type { CardEntityType } from './governance-admin';
 
 export type ConfidentialAccessRule = Tables<'confidential_access_rules'>;
 
@@ -47,5 +46,3 @@ export async function grantConfidentialAccess(input: GrantConfidentialAccessInpu
   if (error) throw error;
   return data as string;
 }
-
-export type { CardEntityType };

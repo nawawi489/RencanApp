@@ -1,7 +1,7 @@
 // Data layer Fase 5 — Minimum Breakdown Rule (MBR) + Kelengkapan Perencanaan.
 // Pemanggil tipis: otorisasi & validasi di server (RLS SELECT, RPC SECURITY DEFINER untuk tulis
 // & pemeriksaan kepatuhan). Klien hanya mem-map camelCase→p_* dan menormalisasi bentuk return.
-import { STATUS_TONE } from './cards';
+import type { Tone } from '@/components/ui';
 import { supabase } from './supabase';
 
 /** Jenis kartu yang relevan untuk rule MBR (mengikuti PRD §39–43). */
@@ -69,7 +69,7 @@ export const ENFORCEMENT_MODES: EnforcementMode[] = [
 ];
 
 /** Tone visual: ikut palet STATUS_TONE Fase 1. */
-export const ENFORCEMENT_MODE_TONE: Record<EnforcementMode, (typeof STATUS_TONE)[keyof typeof STATUS_TONE]> = {
+export const ENFORCEMENT_MODE_TONE: Record<EnforcementMode, Tone> = {
   hanya_peringatan: 'warn',
   blokir_aktivasi: 'danger',
   blokir_akses_turunan: 'danger',

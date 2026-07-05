@@ -4,16 +4,17 @@
 // detail instance + approve/reject untuk reviewer. Anti-self-approval ditegakkan server + UI.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
+import { StatTile } from '@/components/stat-tile';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
 import { SubmissionCard } from '@/components/submission-card';
-import { personLabel } from '@/components/user-picker';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
-import { getActionPlan } from '@/lib/cards';
+import { getActionPlan, personLabel } from '@/lib/cards';
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,
@@ -26,9 +27,6 @@ export default function ActionPlanInstanceDetailScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { profile } = useProfile();
-  const placeholderColor = usePlaceholderColor();
-  const [rejecting, setRejecting] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
 
   const instQ = useQuery({ queryKey: ['instance', id], queryFn: () => getInstance(id) });
   const inst = instQ.data;
@@ -59,11 +57,7 @@ export default function ActionPlanInstanceDetailScreen() {
         decision: args.decision,
         reason: args.reason,
       }),
-    onSuccess: () => {
-      setRejecting(false);
-      setRejectReason('');
-      refresh();
-    },
+    onSuccess: refresh,
     onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.'),
   });
 
@@ -140,36 +134,36 @@ export default function ActionPlanInstanceDetailScreen() {
                   <Badge label={`Hari Ini ${todayDone}/${todayInstances.length}`} tone="info" />
                 </View>
                 <View className="flex-row flex-wrap gap-2 pt-1">
-                  <View className="rounded-lg bg-neutral-100 px-3 py-1 dark:bg-neutral-800">
-                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Target</Text>
-                    <Text className="text-sm font-semibold text-black dark:text-white">
-                      {todayInstances.length}
-                    </Text>
-                  </View>
-                  <View className="rounded-lg bg-emerald-100 px-3 py-1 dark:bg-emerald-950">
-                    <Text className="text-[10px] text-emerald-700 dark:text-emerald-300">Selesai</Text>
-                    <Text className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                      {todayDone}
-                    </Text>
-                  </View>
-                  <View className="rounded-lg bg-amber-100 px-3 py-1 dark:bg-amber-950">
-                    <Text className="text-[10px] text-amber-700 dark:text-amber-300">Submitted</Text>
-                    <Text className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                      {todaySubmitted}
-                    </Text>
-                  </View>
-                  <View className="rounded-lg bg-red-100 px-3 py-1 dark:bg-red-950">
-                    <Text className="text-[10px] text-red-700 dark:text-red-300">Terlewat</Text>
-                    <Text className="text-sm font-semibold text-red-700 dark:text-red-300">
-                      {todayMissed}
-                    </Text>
-                  </View>
-                  <View className="rounded-lg bg-orange-100 px-3 py-1 dark:bg-orange-950">
-                    <Text className="text-[10px] text-orange-700 dark:text-orange-300">Grace</Text>
-                    <Text className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                      {todayGrace}
-                    </Text>
-                  </View>
+                  <StatTile
+                    label="Target"
+                    value={todayInstances.length}
+                    containerCls="bg-neutral-100 dark:bg-neutral-800"
+                    textCls="text-neutral-700 dark:text-neutral-300"
+                  />
+                  <StatTile
+                    label="Selesai"
+                    value={todayDone}
+                    containerCls="bg-emerald-100 dark:bg-emerald-950"
+                    textCls="text-emerald-700 dark:text-emerald-300"
+                  />
+                  <StatTile
+                    label="Submitted"
+                    value={todaySubmitted}
+                    containerCls="bg-amber-100 dark:bg-amber-950"
+                    textCls="text-amber-700 dark:text-amber-300"
+                  />
+                  <StatTile
+                    label="Terlewat"
+                    value={todayMissed}
+                    containerCls="bg-red-100 dark:bg-red-950"
+                    textCls="text-red-700 dark:text-red-300"
+                  />
+                  <StatTile
+                    label="Grace"
+                    value={todayGrace}
+                    containerCls="bg-orange-100 dark:bg-orange-950"
+                    textCls="text-orange-700 dark:text-orange-300"
+                  />
                 </View>
                 {repeatQ.compliancePercent != null ? (
                   <Text className="text-[11px] text-neutral-400">
@@ -200,47 +194,10 @@ export default function ActionPlanInstanceDetailScreen() {
 
             {/* Reviewer: review flow (mockup 24) — anti-self ditegakkan server. */}
             {actions.canReview && inst.current_submission_id ? (
-              <View className="gap-2 rounded-2xl border border-amber-200 p-4 dark:border-amber-900">
-                <Text className="text-sm font-semibold text-black dark:text-white">
-                  Review submission terbaru
-                </Text>
-                {rejecting ? (
-                  <View className="gap-2">
-                    <TextInput
-                      className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-                      placeholder="Alasan penolakan (wajib)"
-                      placeholderTextColor={placeholderColor}
-                      value={rejectReason}
-                      onChangeText={setRejectReason}
-                      multiline
-                      textAlignVertical="top"
-                    />
-                    <Button
-                      label="Kirim Penolakan"
-                      variant="danger"
-                      loading={reviewM.isPending}
-                      onPress={() => {
-                        if (!rejectReason.trim()) {
-                          Alert.alert('Alasan wajib', 'Isi alasan penolakan terlebih dahulu.');
-                          return;
-                        }
-                        reviewM.mutate({ decision: 'reject', reason: rejectReason.trim() });
-                      }}
-                    />
-                    <Button label="Batal" variant="secondary" onPress={() => setRejecting(false)} />
-                  </View>
-                ) : (
-                  <View className="gap-2">
-                    <Button
-                      label="Setujui (Selesai)"
-                      variant="success"
-                      loading={reviewM.isPending}
-                      onPress={() => reviewM.mutate({ decision: 'approve', reason: null })}
-                    />
-                    <Button label="Tolak (Minta Revisi)" variant="danger" onPress={() => setRejecting(true)} />
-                  </View>
-                )}
-              </View>
+              <ReviewSubmissionPanel
+                onDecide={(args) => reviewM.mutate(args)}
+                isPending={reviewM.isPending}
+              />
             ) : null}
 
             {actions.isReviewer && actions.isSelfApproval && inst.status === 'submitted' ? (

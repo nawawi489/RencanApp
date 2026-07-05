@@ -6,6 +6,8 @@
 # Secrets / env
 .env
 .env.*
+!.env.example
+!mobile/.env.example
 *.local
 
 # OS / editor
@@ -17,7 +19,14 @@ Thumbs.db
 .obsidian/workspace-mobile.json
 .obsidian/cache
 .obsidian/plugins/*/data.json
+wiki/.obsidian/workspace.json
+wiki/.obsidian/graph.json
 
 # UI/UX screenshots & mockups — artefak lokal, tidak perlu di-repo
 ui/
 .gstack/
+
+# Session scratch (brainstorm output, throwaway uploads, layout variant sandboxes)
+.superpowers/
+.uploads/
+performance-layout-variants/
