@@ -15,6 +15,7 @@ import {
   ACTION_PLAN_STATUS_LABEL,
   INITIATIVE_STATUS_LABEL,
   STATUS_TONE,
+  countCompletedActionPlansInPeriod,
   createInitiative,
   getPersonRef,
   listInitiatives,
@@ -27,7 +28,7 @@ import {
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'is', 'in', 'order', 'limit']) {
+  for (const m of ['select', 'eq', 'is', 'in', 'order', 'limit', 'gte', 'lte']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -251,5 +252,71 @@ describe('getPersonRef (prefill PIC dari pic_id)', () => {
     const { builder } = makeSingleBuilder({ data: null, error: { message: 'x' } });
     mockFrom.mockReturnValue(builder);
     await expect(getPersonRef('p1')).rejects.toEqual({ message: 'x' });
+  });
+});
+
+// ============================================================ PPL-06 Kontribusi bulan ini (OQ-6)
+// Semantik "AP selesai bulan ini" (OQ-6 diputuskan 2026-07-05): idealnya `completed_at` window,
+// namun schema tak punya kolom itu dan spec §NG-5 tidak mengizinkan migrasi baru untuk bug ini.
+// Approksimasi: `updated_at` window. Untuk AP `done` yang tidak lagi diedit, updated_at ≈ completed_at.
+describe('countCompletedActionPlansInPeriod — PPL-06 Kontribusi (OQ-6, approksimasi updated_at)', () => {
+  const period = { period_start: '2026-07-01', period_end: '2026-07-31' };
+
+  it('[D7] userId kosong → 0 tanpa fetch dan tanpa auth.getUser', async () => {
+    let called = false;
+    mockFrom.mockImplementation(() => {
+      called = true;
+      return makeQueryThenable({ data: [], error: null }).builder;
+    });
+    const n = await countCompletedActionPlansInPeriod('', period);
+    expect(n).toBe(0);
+    expect(called).toBe(false);
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('[D8] period null → 0 tanpa fetch', async () => {
+    let called = false;
+    mockFrom.mockImplementation(() => {
+      called = true;
+      return makeQueryThenable({ data: [], error: null }).builder;
+    });
+    const n = await countCompletedActionPlansInPeriod('u1', null);
+    expect(n).toBe(0);
+    expect(called).toBe(false);
+  });
+
+  it('[D9] query shape: from(action_plans) eq(pic_id,userId) eq(status,done) gte(updated_at,start) lte(updated_at,end)', async () => {
+    const { builder } = makeQueryThenable({
+      data: [{ id: 'ap1' }, { id: 'ap2' }, { id: 'ap3' }],
+      error: null,
+    });
+    mockFrom.mockReturnValue(builder);
+    const n = await countCompletedActionPlansInPeriod('u1', period);
+    expect(mockFrom).toHaveBeenCalledWith('action_plans');
+    const eqCalls = (builder.eq as jest.Mock).mock.calls;
+    expect(eqCalls).toEqual(
+      expect.arrayContaining([
+        ['pic_id', 'u1'],
+        ['status', 'done'],
+      ]),
+    );
+    const gteCalls = (builder.gte as jest.Mock).mock.calls;
+    const lteCalls = (builder.lte as jest.Mock).mock.calls;
+    expect(gteCalls).toEqual(expect.arrayContaining([['updated_at', period.period_start]]));
+    expect(lteCalls).toEqual(expect.arrayContaining([['updated_at', period.period_end]]));
+    expect(n).toBe(3);
+  });
+
+  it('[D10] return data.length (belum ada AP selesai → 0)', async () => {
+    const { builder } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    const n = await countCompletedActionPlansInPeriod('u1', period);
+    expect(n).toBe(0);
+  });
+
+  it('[D11] propagasi error', async () => {
+    const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
+    mockFrom.mockReturnValue(builder);
+    await expect(countCompletedActionPlansInPeriod('u1', period)).rejects.toEqual({ message: 'boom' });
   });
 });

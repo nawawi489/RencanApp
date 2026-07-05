@@ -8,9 +8,11 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockListOrgProfiles = jest.fn();
+const mockCountCompletedActionPlansInPeriod = jest.fn();
 jest.mock('@/lib/cards', () => ({
   __esModule: true,
   listOrgProfiles: () => mockListOrgProfiles(),
+  countCompletedActionPlansInPeriod: (...a: unknown[]) => mockCountCompletedActionPlansInPeriod(...a),
   personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
     p?.full_name?.trim() || p?.email || fallback,
 }));
@@ -20,6 +22,7 @@ const mockUseUserScore = jest.fn();
 const mockUseLatestClosedPeriod = jest.fn();
 const mockUseRanking = jest.fn();
 const mockUseMyScoreHistory = jest.fn();
+const mockUseUserScoreHistory = jest.fn();
 jest.mock('@/hooks/use-people-score', () => {
   const actual = jest.requireActual('@/hooks/use-people-score');
   return {
@@ -30,6 +33,7 @@ jest.mock('@/hooks/use-people-score', () => {
     useLatestClosedPeriod: (...a: unknown[]) => mockUseLatestClosedPeriod(...a),
     useRanking: (...a: unknown[]) => mockUseRanking(...a),
     useMyScoreHistory: (...a: unknown[]) => mockUseMyScoreHistory(...a),
+    useUserScoreHistory: (...a: unknown[]) => mockUseUserScoreHistory(...a),
   };
 });
 
@@ -67,6 +71,7 @@ beforeEach(() => {
   mockUseLatestClosedPeriod.mockReset();
   mockUseRanking.mockReset();
   mockUseMyScoreHistory.mockReset();
+  mockUseUserScoreHistory.mockReset();
   mockCan.mockReset();
   mockPush.mockReset();
   mockParams.id = 'u-rina';
@@ -79,6 +84,9 @@ beforeEach(() => {
   mockUseLatestClosedPeriod.mockReturnValue({ period: null, isLoading: false, isError: false });
   mockUseRanking.mockReturnValue({ ranking: [], isLoading: false, isError: false, refetch: jest.fn() });
   mockUseMyScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
+  mockUseUserScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
+  mockCountCompletedActionPlansInPeriod.mockReset();
+  mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
   mockCan.mockReturnValue(false);
 });
 
@@ -149,5 +157,121 @@ describe('PeopleProfileScreen', () => {
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     await screen.findByText('Aku');
     expect(screen.queryByLabelText('Override Skor')).toBeNull();
+  });
+
+  // ================================================================ PPL-06 Fase D subset (OQ-5)
+  it('[PPL-06-Q1] id tidak match anggota org → GuidanceNote "Anggota tidak ditemukan" (not blank)', async () => {
+    mockParams.id = 'unknown-id';
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText(/anggota tidak ditemukan/i)).toBeTruthy();
+    // Konten profil (email, override, breakdown, dsb) TIDAK dirender pada not-found state.
+    expect(screen.queryByText('rina@n.id')).toBeNull();
+    expect(screen.queryByLabelText('Override Skor')).toBeNull();
+  });
+
+  it('[PPL-06-Q2] profil orang lain + useUserScoreHistory berisi 3 titik → seksi Tren + sparkline render', async () => {
+    // viewer = 'me', profil = 'u-rina' (bukan self)
+    mockParams.id = 'u-rina';
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseUserScore.mockReturnValue({
+      score: { auto_calculated_score: 82, manual_adjusted_score: null, metric_breakdown: {} },
+      isLoading: false,
+      isError: false,
+    });
+    // History DESC: terbaru first → reverse jadi kronologis 60, 70, 82.
+    mockUseUserScoreHistory.mockReturnValue({
+      history: [
+        { auto_calculated_score: 82, manual_adjusted_score: null },
+        { auto_calculated_score: 70, manual_adjusted_score: null },
+        { auto_calculated_score: 60, manual_adjusted_score: null },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    // Label "Tren" muncul (existing implementation self-only akan miss — proper RED).
+    expect(await screen.findByText('Tren')).toBeTruthy();
+    // Sparkline accessibilityLabel (3 titik kronologis: 60 → 70 → 82; delta = last - previous = +12).
+    expect(
+      screen.getByLabelText(/Tren skor 3 periode, terbaru 82, perubahan ↑ \+12/),
+    ).toBeTruthy();
+  });
+
+  it('[PPL-06-Q3] profil orang lain + useUserScoreHistory kosong → seksi Tren HIDDEN (graceful)', async () => {
+    mockParams.id = 'u-rina';
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseUserScore.mockReturnValue({
+      score: { auto_calculated_score: 82, manual_adjusted_score: null, metric_breakdown: {} },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseUserScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    await screen.findByText('Rina Jaya');
+    // Skor tampil tapi Tren tidak (RLS-deny history atau belum ada histori).
+    // Band 82 = Stabil (band range dari @/components/ui/ScoreBadge, sama dgn F7-4).
+    expect(screen.getByLabelText('Score 82 · Stabil')).toBeTruthy();
+    expect(screen.queryByText('Tren')).toBeNull();
+  });
+
+  it('[PPL-06-Q4] rules-of-hooks — kedua useMyScoreHistory & useUserScoreHistory dipanggil unconditionally per render', async () => {
+    // Profil orang lain: kedua hook TETAP dipanggil (bukan conditional) supaya urutan hooks stabil
+    // saat viewer berpindah dari profil self ke profil orang lain (STRATEGI-MOCK-3 kritik).
+    mockParams.id = 'u-rina';
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    await screen.findByText('Rina Jaya');
+    expect(mockUseMyScoreHistory).toHaveBeenCalled();
+    expect(mockUseUserScoreHistory).toHaveBeenCalled();
+  });
+
+  // ================================================================ PPL-06 Kontribusi bulan ini (OQ-6)
+  it('[PPL-06-K1] isSelf + count 5 → "5 tugas selesai bulan ini" render', async () => {
+    mockParams.id = 'me';
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active', period_start: '2026-07-01', period_end: '2026-07-31' },
+      isLoading: false,
+      isError: false,
+    });
+    mockCountCompletedActionPlansInPeriod.mockResolvedValue(5);
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    // Header 'Kontribusi bulan ini' + jumlah 5 tampil.
+    expect(await screen.findByText('Kontribusi bulan ini')).toBeTruthy();
+    expect(screen.getByText(/5 tugas selesai bulan ini/i)).toBeTruthy();
+  });
+
+  it('[PPL-06-K2] isSelf + count 0 → GuidanceNote "Belum ada AP selesai bulan ini"', async () => {
+    mockParams.id = 'me';
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active', period_start: '2026-07-01', period_end: '2026-07-31' },
+      isLoading: false,
+      isError: false,
+    });
+    mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    // Seksi tetap render untuk isSelf, tapi copy = 'Belum ada AP selesai bulan ini' (disambiguasi 0-nyata).
+    expect(await screen.findByText('Kontribusi bulan ini')).toBeTruthy();
+    expect(screen.getByText(/belum ada .* selesai bulan ini/i)).toBeTruthy();
+  });
+
+  it('[PPL-06-K3] !isSelf + count 0 → seksi HIDDEN (OQ-6 sub-2: hindari ambiguitas 0-nyata vs RLS-hidden)', async () => {
+    mockParams.id = 'u-rina';
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active', period_start: '2026-07-01', period_end: '2026-07-31' },
+      isLoading: false,
+      isError: false,
+    });
+    mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    await screen.findByText('Rina Jaya');
+    // Untuk profil orang lain + count=0: seksi TIDAK render (ambigu 0 nyata vs RLS-hidden).
+    expect(screen.queryByText('Kontribusi bulan ini')).toBeNull();
   });
 });

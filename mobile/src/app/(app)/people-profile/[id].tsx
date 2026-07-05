@@ -21,6 +21,7 @@ import {
 import {
   ACTION_PLAN_STATUS_LABEL,
   STATUS_TONE,
+  countCompletedActionPlansInPeriod,
   getOrgProfileDetail,
   listActionPlansByPic,
   listOrgProfiles,
@@ -35,6 +36,7 @@ import {
   useMyScoreHistory,
   useRanking,
   useUserScore,
+  useUserScoreHistory,
 } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -89,14 +91,28 @@ export function LivePeopleProfileScreen() {
 
   const isSelf = profile?.id === id;
   const canManage = can('manage_score_formula');
-  // Trend hanya untuk diri sendiri (lib histori = self-only). DESC → reverse jadi kronologis.
-  const { history } = useMyScoreHistory(6);
+
+  // PPL-06 Kontribusi bulan ini (OQ-6 diputuskan 2026-07-05): count AP done PIC pada periode aktif.
+  // Semantik pakai `updated_at` sbg approksimasi `completed_at` (schema tak punya kolom itu; §NG-5
+  // tidak mengizinkan migrasi baru). UX (OQ-6 sub-2): untuk profil orang lain, sembunyikan seksi
+  // bila count=0 untuk menghindari ambiguitas 0-nyata vs RLS-hidden.
+  const contributionQ = useQuery({
+    queryKey: ['contribution', id, active?.id ?? 'none'],
+    queryFn: () => countCompletedActionPlansInPeriod(id ?? '', active ?? null),
+    enabled: !!id && !!active,
+  });
+  const contributionCount = contributionQ.data ?? 0;
+  const showContribution = isSelf || contributionCount > 0;
+  // Trend cross-user (PPL-06 / OQ-5 diputuskan 2026-07-05): kedua hook DIPANGGIL unconditionally
+  // per render (rules-of-hooks — kritik STRATEGI-MOCK-3). Untuk profil orang lain, RLS server-side
+  // (0013:799-815) menyaring viewer (self OR manage_score_formula OR view_all_workspace OR
+  // is_supervisor_of). Viewer di luar scope → history=[] graceful → seksi Tren tidak render.
+  const { history: myHistory } = useMyScoreHistory(6);
+  const { history: userHistory } = useUserScoreHistory(id ?? '', 6);
+  const history = isSelf ? myHistory : userHistory;
   const sparkPoints = useMemo(
-    () =>
-      isSelf
-        ? [...history].reverse().map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0)
-        : [],
-    [isSelf, history],
+    () => [...history].reverse().map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0),
+    [history],
   );
 
   // Skor efektif: periode aktif diutamakan; jika belum dihitung, pakai snapshot ranking tertutup.
@@ -116,6 +132,20 @@ export function LivePeopleProfileScreen() {
       <View className="flex-1 bg-white p-5 dark:bg-black">
         <Stack.Screen options={{ title: 'Profil' }} />
         <SkeletonCard />
+      </View>
+    );
+  }
+
+  // PPL-06-Q1 (2026-07-05): not-found state — id deep-link tak match anggota org.
+  // Cegah render header 'Anggota' + seksi kosong yang membingungkan.
+  if (!person) {
+    return (
+      <View className="flex-1 bg-white p-5 dark:bg-black">
+        <Stack.Screen options={{ title: 'Profil' }} />
+        <GuidanceNote
+          title="Anggota tidak ditemukan"
+          body="Profil yang Anda cari mungkin sudah dihapus, non-aktif, atau di luar akses Anda."
+        />
       </View>
     );
   }
@@ -217,6 +247,27 @@ export function LivePeopleProfileScreen() {
             />
           )}
         </SectionCard>
+
+        {/* PPL-06 Kontribusi bulan ini (OQ-6). Sembunyikan bila !isSelf && count=0. */}
+        {active && showContribution ? (
+          <SectionCard>
+            <Text className="text-base font-semibold text-black dark:text-white">
+              Kontribusi bulan ini
+            </Text>
+            {contributionQ.isLoading ? (
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat kontribusi…</Text>
+            ) : contributionCount > 0 ? (
+              <Text className="text-sm text-black dark:text-white">
+                {contributionCount} tugas selesai bulan ini
+              </Text>
+            ) : (
+              <GuidanceNote
+                title="Skor menyusul"
+                body="Belum ada AP selesai bulan ini pada periode aktif."
+              />
+            )}
+          </SectionCard>
+        ) : null}
 
         {/* Breakdown metrik */}
         {breakdown.length ? (
