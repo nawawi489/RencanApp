@@ -5,6 +5,7 @@ import {
   defaultFocus,
   enumerateMonths,
   enumerateQuarters,
+  focusPeriodStatus,
   formatPeriodLabel,
   isSameFocus,
   parseFocusJson,
@@ -139,6 +140,45 @@ describe('enumerateQuarters', () => {
     const list = enumerateQuarters(2026, new Date(2026, 5, 15));
     expect(list.map((o) => o.status)).toEqual(['past', 'current', 'future', 'future']);
     expect(list[1].label).toBe('Q2');
+  });
+});
+
+describe('focusPeriodStatus (WS-04 AC-WS04-1)', () => {
+  const now = new Date(2026, 6, 5); // 5 Juli 2026 → bulan berjalan Juli, Q3
+
+  it('month: Januari 2026 di now=Juli 2026 → past (memungkinkan gating archive)', () => {
+    const focus: PeriodFocus = { mode: 'month', year: 2026, month: 1 };
+    expect(focusPeriodStatus(focus, now)).toBe('past');
+  });
+
+  it('month: Juli 2026 (bulan berjalan) → current', () => {
+    const focus: PeriodFocus = { mode: 'month', year: 2026, month: 7 };
+    expect(focusPeriodStatus(focus, now)).toBe('current');
+  });
+
+  it('month: Desember 2026 → future (belum dikunci per OQ-2 default)', () => {
+    const focus: PeriodFocus = { mode: 'month', year: 2026, month: 12 };
+    expect(focusPeriodStatus(focus, now)).toBe('future');
+  });
+
+  it('month: bulan mana pun di 2025 → past (tahun lampau)', () => {
+    const focus: PeriodFocus = { mode: 'month', year: 2025, month: 6 };
+    expect(focusPeriodStatus(focus, now)).toBe('past');
+  });
+
+  it('quarter: Q1 2026 di now=Juli (Q3) → past', () => {
+    const focus: PeriodFocus = { mode: 'quarter', year: 2026, quarter: 1 };
+    expect(focusPeriodStatus(focus, now)).toBe('past');
+  });
+
+  it('quarter: Q3 2026 → current', () => {
+    const focus: PeriodFocus = { mode: 'quarter', year: 2026, quarter: 3 };
+    expect(focusPeriodStatus(focus, now)).toBe('current');
+  });
+
+  it('quarter: Q4 2026 → future', () => {
+    const focus: PeriodFocus = { mode: 'quarter', year: 2026, quarter: 4 };
+    expect(focusPeriodStatus(focus, now)).toBe('future');
   });
 });
 

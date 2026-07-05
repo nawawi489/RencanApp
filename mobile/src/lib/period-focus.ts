@@ -141,6 +141,30 @@ export function isSameFocus(a: PeriodFocus, b: PeriodFocus): boolean {
   return false;
 }
 
+/**
+ * WS-04 — status periode FOKUS (bukan status per-card).
+ *
+ * `cardPeriodStatus` di atas menilai window MILIK CARD. Untuk mengunci aksi
+ * "+turunan" section-level dan empty-state di WorkspacePane, kita perlu status
+ * dari periode fokus yang sedang dipilih user (mis. Januari 2026 = arsip).
+ * Turunan langsung dari `enumerateMonths/enumerateQuarters` untuk mempertahankan
+ * kontrak status yang sama.
+ *
+ * Kartu Goal yang berperiode tahunan (PRD §17) tidak pernah terflag 'past' oleh
+ * `cardPeriodStatus` di dalam tahun berjalan — inilah kenapa WS-04 juga butuh
+ * status pada level fokus, bukan hanya card.
+ */
+export function focusPeriodStatus(focus: PeriodFocus, now: Date): CardPeriodStatus {
+  if (focus.mode === 'month') {
+    const opts = enumerateMonths(focus.year, now);
+    const found = opts.find((o) => o.month === focus.month);
+    return found?.status ?? 'current';
+  }
+  const opts = enumerateQuarters(focus.year, now);
+  const found = opts.find((o) => o.quarter === focus.quarter);
+  return found?.status ?? 'current';
+}
+
 export function enumerateMonths(year: number, now: Date): PeriodOption[] {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;

@@ -29,6 +29,8 @@ type PeriodFocusContextValue = {
   setFocus: (next: PeriodFocus) => void;
   /** Pindah mode tanpa kehilangan year; otomatis pilih bulan/quarter "sekarang" di year tsb. */
   setMode: (mode: PeriodMode) => void;
+  /** Anchor waktu mount-time (untuk gating past/future yang deterministik di test). */
+  now: Date;
 };
 
 const PeriodFocusContext = createContext<PeriodFocusContextValue | undefined>(undefined);
@@ -80,8 +82,8 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
   );
 
   const value = useMemo<PeriodFocusContextValue>(
-    () => ({ focus, setFocus, setMode }),
-    [focus, setFocus, setMode],
+    () => ({ focus, setFocus, setMode, now: initialNow }),
+    [focus, setFocus, setMode, initialNow],
   );
 
   return <PeriodFocusContext.Provider value={value}>{children}</PeriodFocusContext.Provider>;
@@ -95,9 +97,11 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
 export function usePeriodFocus(): PeriodFocusContextValue {
   const ctx = useContext(PeriodFocusContext);
   if (ctx) return ctx;
+  const now = new Date();
   return {
-    focus: defaultFocus(new Date()),
+    focus: defaultFocus(now),
     setFocus: () => {},
     setMode: () => {},
+    now,
   };
 }

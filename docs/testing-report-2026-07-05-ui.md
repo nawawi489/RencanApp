@@ -30,6 +30,7 @@ Hasil ringkas:
    - Tombol `+ Goal` tetap aktif.
    - Menekan tombol itu benar-benar membuka `goal-wizard`.
    - Ini bertentangan dengan ekspektasi skenario: periode archive harus redup dan aksi tambah turunan nonaktif dengan penjelasan.
+   - **RESOLVED 2026-07-05** (UI-only per OQ-1 opsi a): helper murni baru `focusPeriodStatus(focus, now)` di `mobile/src/lib/period-focus.ts` dipropagasikan ke `WorkspacePane`. Section header `+ Goal`/`+ Development Area` dan empty-state action sekarang `accessibilityState.disabled=true` + `opacity: 0.4` + label a11y mencantumkan "(periode arsip — nonaktif)" saat fokus arsip; menekan tombol memicu `showPastPeriodAlert()` dan TIDAK memanggil `router.push`. Detail card tetap read-only. Test coverage: 7 kasus helper unit + 5 kasus komponen di `workspace.test.tsx` (AC-WS04-1..7 termasuk gap-doc). **Governance debt tercatat (AC-WS04-7):** create card memakai `.insert()` langsung ber-RLS (`cards.ts:325/355`), tanpa RPC/cek periode server — enforcement server-side untuk archive gating BELUM ada. OQ-1 opsi b (backend hardening via RPC atau RLS `WITH CHECK`) di-defer sebagai follow-up ticket.
 
 2. `AUTH-02b` gagal: validasi minimum password tidak menahan request.
    - Password `123` dikirim dan menghasilkan pesan `Email atau kata sandi salah.`
@@ -78,7 +79,7 @@ Hasil ringkas:
 | WS-01 | Pass | CEO | Hub Workspace menampilkan pintu `Performance` dan `Development` dengan statistik ringkas. |
 | WS-02 | Pass | CEO | Panel periode aktif tampil: `Juli 2026` dengan tombol `Ubah`. |
 | WS-03 | Pass | CEO | Selector periode bulan/quarter tampil dengan label `Arsip`, `Aktif`, `Akan datang`; pilihan `Januari 2026` berhasil diterapkan. |
-| WS-04 | Fail | CEO | Setelah pilih periode arsip, tombol tambah masih aktif dan membuka `goal-wizard`. |
+| WS-04 | **Pass** (fixed 2026-07-05, UI-only per OQ-1a) | CEO | Section-level `+ Goal` dan empty-state action sekarang disabled+redup saat periode arsip; press memicu alert "Periode ini sudah menjadi Archive". Backend hardening di-defer sebagai follow-up. |
 | WS-05 | Pass | CEO / Manager / C-Level / Staff | Tree Performance menampilkan affordance terpisah untuk detail dan expand. Pada surface yang diuji, `staff`, `manager`, dan `c-level` tidak menampilkan tombol `+ Goal`, sementara CEO menampilkannya. |
 | INBOX-01 | Partial | CEO | Struktur dasar inbox ada, tetapi coverage belum penuh terhadap unread badge/timestamp/filter lanjutan. |
 | CHAT-01 | Partial | CEO | Kirim pesan satu arah berhasil di room Initiative; balasan dua arah belum diuji. |

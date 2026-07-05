@@ -65,6 +65,7 @@ import {
 import {
   MONTH_LABELS_ID,
   cardPeriodStatus,
+  focusPeriodStatus,
   formatPeriodLabel,
   quarterOfMonth,
   showPastPeriodAlert,
@@ -1268,11 +1269,15 @@ function PaneSectionHeader({
   title,
   primaryLabel,
   onPrimary,
+  pastLocked,
 }: {
   title: string;
   /** Tombol primary di kanan section header (mis. "+ Goal" / "+ Development Area"). */
   primaryLabel?: string;
   onPrimary?: () => void;
+  /** WS-04: periode fokus arsip — tombol tetap terlihat tapi redup+disabled a11y,
+   *  press → showPastPeriodAlert() (bukan onPrimary). */
+  pastLocked?: boolean;
 }) {
   // Pola "section header + section action" — konsisten dengan section lain di app. Brand-dark
   // fill, radius 12, tinggi 32 (compact — kartu pertama juga punya tombol sendiri, jadi bukan
@@ -1287,9 +1292,20 @@ function PaneSectionHeader({
       {primaryLabel && onPrimary ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={primaryLabel}
-          onPress={onPrimary}
-          style={{ height: 32, borderRadius: 12, backgroundColor: '#1564b3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel={
+            pastLocked ? `${primaryLabel} (periode arsip — nonaktif)` : primaryLabel
+          }
+          accessibilityState={{ disabled: !!pastLocked }}
+          onPress={pastLocked ? () => showPastPeriodAlert() : onPrimary}
+          style={{
+            height: 32,
+            borderRadius: 12,
+            backgroundColor: '#1564b3',
+            paddingHorizontal: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pastLocked ? 0.4 : 1,
+          }}
           className="active:opacity-70">
           <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>{primaryLabel}</Text>
         </Pressable>
@@ -1407,6 +1423,12 @@ function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
   const { can } = useProfile();
   const q = config.useItems();
   const canCreate = can(config.permission);
+  // WS-04: gating archive gate section-level & empty-state action. Periode
+  // future default TIDAK dikunci (OQ-2 default). Server-side gate belum ada
+  // (OQ-1 = a: UI-only, governance debt tercatat di docs/spec-ui-testfix).
+  // Pakai `now` dari provider agar deterministik saat test menginjeksi anchor.
+  const { focus, now: nowRef } = usePeriodFocus();
+  const pastLocked = focusPeriodStatus(focus, nowRef) === 'past';
 
   useFocusEffect(
     useCallback(() => {
@@ -1438,6 +1460,7 @@ function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
             title={config.sectionTitle}
             primaryLabel={canCreate ? config.btnLabel : undefined}
             onPrimary={canCreate ? () => router.push(config.newRoute as Href) : undefined}
+            pastLocked={pastLocked}
           />
           {q.isLoading ? <SkeletonList count={3} /> : null}
           {q.isError ? <ErrorState onRetry={() => q.refetch()} /> : null}
@@ -1448,7 +1471,13 @@ function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
             description={canCreate ? config.emptyDescCan : config.emptyDescView}
             action={
               canCreate
-                ? { label: config.btnLabel, onPress: () => router.push(config.newRoute as Href) }
+                ? {
+                    label: config.btnLabel,
+                    onPress: pastLocked
+                      ? () => showPastPeriodAlert()
+                      : () => router.push(config.newRoute as Href),
+                    disabled: pastLocked,
+                  }
                 : undefined
             }
           />

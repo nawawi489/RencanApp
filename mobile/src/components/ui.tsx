@@ -263,7 +263,7 @@ export function EmptyState({
   description: string;
   icon?: ReactNode;
   tone?: 'neutral' | 'success';
-  action?: { label: string; onPress: () => void };
+  action?: { label: string; onPress: () => void; disabled?: boolean };
 }) {
   const ring =
     tone === 'success'
@@ -284,7 +284,15 @@ export function EmptyState({
       </Text>
       <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">{description}</Text>
       {action ? (
-        <View className="mt-3">
+        // WS-04: opacity dim + label a11y mengindikasikan periode arsip; onPress
+        // tetap wired (parent memilih handler alert vs push).
+        <View
+          className="mt-3"
+          style={{ opacity: action.disabled ? 0.4 : 1 }}
+          accessibilityState={{ disabled: !!action.disabled }}
+          accessibilityLabel={
+            action.disabled ? `${action.label} (periode arsip — nonaktif)` : undefined
+          }>
           <Button label={action.label} onPress={action.onPress} variant="secondary" />
         </View>
       ) : null}
