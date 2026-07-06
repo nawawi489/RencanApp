@@ -115,7 +115,11 @@ describe('listInstances', () => {
     const selectArg = String(calls.select?.[0]);
     expect(selectArg).toContain('pic:pic_id');
     expect(selectArg).toContain('reviewer:reviewer_id');
-    expect(selectArg).toContain('action_plan_submissions');
+    // WS-3c: embed submissions WAJIB disambiguasi ke FK daftar. Tanpa `!...fkey`
+    // PostgREST balas 300 PGRST201 (ada 2 relasi ke action_plan_submissions).
+    expect(selectArg).toContain(
+      'action_plan_submissions!action_plan_submissions_action_plan_instance_id_fkey',
+    );
     expect(calls.eq).toEqual(['action_plan_id', 'ap-1']);
     expect(calls.order?.[0]).toBe('instance_date');
     expect(out).toBe(rows);
@@ -135,6 +139,11 @@ describe('getInstance', () => {
     mockFrom.mockReturnValue(builder);
     const out = await getInstance('i1');
     expect(mockFrom).toHaveBeenCalledWith('action_plan_instances');
+    // WS-3c: getInstance memakai INSTANCE_SELECT yang sama — embed submissions harus
+    // ber-FK eksplisit agar `.single()` tidak gagal 300 (layar instance blank).
+    expect(String(calls.select?.[0])).toContain(
+      'action_plan_submissions!action_plan_submissions_action_plan_instance_id_fkey',
+    );
     expect(calls.eq).toEqual(['id', 'i1']);
     expect(builder.single).toHaveBeenCalled();
     expect(out).toBe(row);

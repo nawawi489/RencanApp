@@ -36,10 +36,15 @@ export default function ActionPlanInstanceDetailScreen() {
     enabled: !!inst?.action_plan_id,
   });
 
+  // Depend pada `refetch` (identitas stabil react-query), BUKAN objek `instQ` yang
+  // berubah tiap render. Dengan `[instQ]`, sebuah fetch yang gagal memicu refetch →
+  // error → render → refetch tanpa henti, sehingga layar terkunci di skeleton
+  // (tampak "blank") alih-alih jatuh ke ErrorState. Lihat WS-3c.
+  const refetchInstance = instQ.refetch;
   useFocusEffect(
     useCallback(() => {
-      instQ.refetch();
-    }, [instQ]),
+      refetchInstance();
+    }, [refetchInstance]),
   );
 
   function refresh() {
