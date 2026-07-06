@@ -148,6 +148,15 @@ export default function LiveHomeScreen() {
   const { profile } = useProfile();
   const openActionPlan = (id: string) => router.push(`/action-plan/${id}` as Href);
   const openKpiArea = (id: string) => router.push(`/kpi-area/${id}` as Href);
+  // WS-3a (AP-03) — baris section campuran (Repeat/Terlewat/Deadline) memuat one-time AP
+  // DAN Repeat Instance. Instance harus membuka layar instance-nya sendiri; one-time AP
+  // membuka parent AP. Satu helper dipakai ketiga section agar routing konsisten.
+  const openHomeItem = (item: HomeItem) =>
+    router.push(
+      (item.kind === 'instance'
+        ? `/action-plan/instance/${item.id}`
+        : `/action-plan/${item.action_plan_id}`) as Href,
+    );
 
   const todayQ = useQuery({ queryKey: ['org-today'], queryFn: getOrgToday, staleTime: Infinity });
   const mineQ = useQuery({ queryKey: ['home-my-plans'], queryFn: listMyActionPlans });
@@ -328,7 +337,7 @@ export default function LiveHomeScreen() {
           emptyTitle="Tidak ada tugas rutin hari ini"
           emptyDesc="Instance Action Plan Repeat yang jatuh tempo hari ini akan muncul di sini.">
           {(todayRepeatQ.data ?? []).map((item) => (
-            <HomeItemRow key={item.id} item={item} onPress={() => openActionPlan(item.action_plan_id)} />
+            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
           ))}
         </Section>
 
@@ -354,7 +363,7 @@ export default function LiveHomeScreen() {
           emptyTitle="Tidak ada yang terlewat"
           emptyDesc="Action Plan & instance yang lewat deadline akan muncul di sini.">
           {(overdueQ.data ?? []).map((item) => (
-            <HomeItemRow key={item.id} item={item} onPress={() => openActionPlan(item.action_plan_id)} />
+            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
           ))}
         </Section>
 
@@ -367,7 +376,7 @@ export default function LiveHomeScreen() {
           emptyTitle="Tidak ada deadline mendekat"
           emptyDesc="Item dengan deadline dalam 3 hari ke depan akan muncul di sini.">
           {(nearQ.data ?? []).map((item) => (
-            <HomeItemRow key={item.id} item={item} onPress={() => openActionPlan(item.action_plan_id)} />
+            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
           ))}
         </Section>
 
