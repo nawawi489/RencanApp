@@ -25,7 +25,7 @@ function ThemeSwitch() {
       <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tampilan</Text>
       <View className="overflow-hidden rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
         <Text className="mb-2 text-sm text-neutral-500 dark:text-neutral-400">
-          Mode warna aplikasi. "Sistem" mengikuti pengaturan perangkat.
+          Mode warna aplikasi. &ldquo;Sistem&rdquo; mengikuti pengaturan perangkat.
         </Text>
         <View
           className="flex-row gap-2"

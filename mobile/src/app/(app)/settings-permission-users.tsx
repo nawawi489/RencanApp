@@ -283,7 +283,7 @@ export default function SettingsPermissionUsersScreen() {
               {pending.next ? 'Beri Hak Akses' : 'Cabut Hak Akses'}
             </Text>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              {pending.next ? 'Memberikan' : 'Mencabut'} "{pending.row.label}" untuk{' '}
+              {pending.next ? 'Memberikan' : 'Mencabut'} &ldquo;{pending.row.label}&rdquo; untuk{' '}
               {selected ? personLabel(selected) : 'anggota ini'}.
             </Text>
             <View className="gap-1.5">

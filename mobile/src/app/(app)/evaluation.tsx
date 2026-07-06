@@ -2,7 +2,7 @@
 // UPSERT: pre-fill bila evaluation sudah ada. Prompt hanya saat status 'done'/'active'.
 // UI-S-EV1: tambah checklist "Perlu jadi SOP?" + "Perlu rollout?" (loop balik ke Development) + catatan rollout.
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, LabeledInput, SectionCard } from '@/components/ui';
@@ -55,16 +55,21 @@ export function LiveEvaluationScreen() {
   const { evaluation } = useEvaluation(initiativeId);
   const { record, isPending } = useEvaluationActions();
 
-  const [target, setTarget] = useState<(typeof TARGETS)[number] | null>(null);
-  const [results, setResults] = useState('');
-  const [lessons, setLessons] = useState('');
-  const [shouldBecomeSop, setShouldBecomeSop] = useState(false);
-  const [rolloutNeeded, setRolloutNeeded] = useState(false);
-  const [rolloutNotes, setRolloutNotes] = useState('');
+  // pre-fill saat evaluation existing tersedia (UPSERT). Initial value dari evaluation (bila sudah cache),
+  // dan pola "adjusting state on prop change" (react.dev) untuk sinkronisasi jika evaluation berubah setelahnya.
+  const [target, setTarget] = useState<(typeof TARGETS)[number] | null>(
+    () => (evaluation?.target_achieved as (typeof TARGETS)[number] | null) ?? null,
+  );
+  const [results, setResults] = useState(() => evaluation?.results ?? '');
+  const [lessons, setLessons] = useState(() => evaluation?.lessons_learned ?? '');
+  const [shouldBecomeSop, setShouldBecomeSop] = useState(() => evaluation?.should_become_sop ?? false);
+  const [rolloutNeeded, setRolloutNeeded] = useState(() => evaluation?.rollout_needed ?? false);
+  const [rolloutNotes, setRolloutNotes] = useState(() => evaluation?.rollout_notes ?? '');
   const [error, setError] = useState<string | null>(null);
 
-  // pre-fill saat evaluation existing tersedia (UPSERT).
-  useEffect(() => {
+  const [prevEvaluation, setPrevEvaluation] = useState(evaluation);
+  if (evaluation !== prevEvaluation) {
+    setPrevEvaluation(evaluation);
     if (evaluation) {
       setTarget((evaluation.target_achieved as (typeof TARGETS)[number] | null) ?? null);
       setResults(evaluation.results ?? '');
@@ -73,7 +78,7 @@ export function LiveEvaluationScreen() {
       setRolloutNeeded(evaluation.rollout_needed ?? false);
       setRolloutNotes(evaluation.rollout_notes ?? '');
     }
-  }, [evaluation]);
+  }
 
   const isSelf = !!picId && profile?.id === picId;
   const isDone = status === 'done' || status === 'active';

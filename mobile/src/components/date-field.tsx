@@ -18,16 +18,17 @@ export function parseISODate(s: string): Date | null {
 }
 
 // Lazy require supaya jest yang tidak punya native bridge tetap aman.
-function getDateTimePicker():
-  | React.ComponentType<{
-      value: Date;
-      mode?: 'date' | 'time' | 'datetime';
-      display?: 'default' | 'spinner' | 'compact' | 'inline' | 'calendar' | 'clock';
-      presentation?: 'inline' | 'dialog';
-      onValueChange?: (event: unknown, date: Date) => void;
-      onDismiss?: () => void;
-    }>
-  | null {
+// Dievaluasi sekali saat module load (bukan saat render) — memenuhi react-hooks/static-components.
+type NativePicker = React.ComponentType<{
+  value: Date;
+  mode?: 'date' | 'time' | 'datetime';
+  display?: 'default' | 'spinner' | 'compact' | 'inline' | 'calendar' | 'clock';
+  presentation?: 'inline' | 'dialog';
+  onValueChange?: (event: unknown, date: Date) => void;
+  onDismiss?: () => void;
+}>;
+
+function loadDateTimePicker(): NativePicker | null {
   if (Platform.OS === 'web') return null;
   if (process.env.NODE_ENV === 'test') return null;
   try {
@@ -38,6 +39,8 @@ function getDateTimePicker():
     return null;
   }
 }
+
+const Picker: NativePicker | null = loadDateTimePicker();
 
 type Props = {
   label: string;
@@ -56,7 +59,6 @@ export function DateField({
 }: Props) {
   const [show, setShow] = useState(false);
   const placeholderColor = usePlaceholderColor();
-  const Picker = getDateTimePicker();
   const current = parseISODate(value) ?? new Date();
 
   // Fallback (web/test/native module hilang): TextInput pola lama.

@@ -9,7 +9,7 @@
 //   - Tab Month: 4 sub-section per Quarter, masing-masing 3 input (M01..M03 di Q1, dst).
 //   - Field "Alasan perubahan" wajib ≥ 8 char.
 //   - Save disabled bila Σ tidak valid atau reason kurang.
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Modal, TextInput } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
@@ -234,25 +234,29 @@ function BreakdownEditorModal({
   const placeholderColor = usePlaceholderColor();
   const { replace, isPending } = useKpiAreaBreakdownActions(kpiAreaId);
 
-  // Reset draft setiap kali modal dibuka — supaya menampilkan state DB terbaru.
-  useEffect(() => {
-    if (!open) return;
-    setQuarter({
-      Q1: pctToStr(initialQuarter.Q1), Q2: pctToStr(initialQuarter.Q2),
-      Q3: pctToStr(initialQuarter.Q3), Q4: pctToStr(initialQuarter.Q4),
-    });
-    const next = emptyMonthDraft();
-    for (const qk of QUARTER_KEYS) {
-      for (const mk of MONTH_KEYS) {
-        if (quarterOfMonthKey(mk) === qk) {
-          next[qk][mk] = pctToStr(initialMonth[qk][mk] ?? 0);
+  // Reset draft saat modal transisi tertutup → terbuka (pola "adjust state on prop change" react.dev).
+  // Selama modal terbuka, perubahan initialQuarter/initialMonth diabaikan agar tidak menimpa edit user.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setQuarter({
+        Q1: pctToStr(initialQuarter.Q1), Q2: pctToStr(initialQuarter.Q2),
+        Q3: pctToStr(initialQuarter.Q3), Q4: pctToStr(initialQuarter.Q4),
+      });
+      const next = emptyMonthDraft();
+      for (const qk of QUARTER_KEYS) {
+        for (const mk of MONTH_KEYS) {
+          if (quarterOfMonthKey(mk) === qk) {
+            next[qk][mk] = pctToStr(initialMonth[qk][mk] ?? 0);
+          }
         }
       }
+      setMonth(next);
+      setReason('');
+      setTab('quarter');
     }
-    setMonth(next);
-    setReason('');
-    setTab('quarter');
-  }, [open, initialQuarter, initialMonth]);
+  }
 
   const quarterSum = QUARTER_KEYS.reduce((s, k) => s + parsePct(quarter[k]), 0);
   const quarterOk = Math.abs(quarterSum - 100) <= 0.001;
