@@ -82,6 +82,31 @@ describe('useRepeatInstances', () => {
     expect(result.current.compliancePercent).toBeNull();
   });
 
+  // WS-3d (AP-03) — kontradiksi "Compliance 2/4" vs "Belum ada instance": query instances
+  // & compliance TERPISAH. Bila listInstances GAGAL (RLS/jaringan), instances jatuh ke []
+  // sementara compliance (query lain) tetap terisi → layar salah menampilkan "Belum ada
+  // instance". Hook harus mengekspos isError agar layar bisa membedakan gagal vs benar kosong.
+  it('[3d-1] listInstances gagal → isError true (bukan kosong menyesatkan); compliance tetap terisi', async () => {
+    mockListInstances.mockRejectedValue(new Error('rls/jaringan'));
+    mockGetRepeatCompliance.mockResolvedValue({
+      expected_count: 4, on_time_count: 2, missed_count: 2, done_count: 2, compliance: 0.5,
+    });
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useRepeatInstances('ap-1'), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.instances).toHaveLength(0); // kosong KARENA error, bukan benar-benar kosong
+    await waitFor(() => expect(result.current.compliancePercent).toBe(50)); // "2/4" tetap tampil
+  });
+
+  it('[3d-2] sukses & benar-benar kosong → isError false (dibedakan dari kasus gagal)', async () => {
+    mockListInstances.mockResolvedValue([]);
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useRepeatInstances('ap-1'), { wrapper });
+    await waitFor(() => expect(result.current.compliance).not.toBeUndefined());
+    expect(result.current.isError).toBe(false);
+    expect(result.current.instances).toHaveLength(0);
+  });
+
   it('[5] refresh() meng-invalidate query instances & compliance', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');

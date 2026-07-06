@@ -191,6 +191,19 @@ describe('[id].tsx — detail repeat', () => {
     expect(screen.queryByText('Submit Bukti & Nilai Hasil')).toBeNull();
   });
 
+  it('[3d] WS-3d: listInstances gagal → pesan gagal + "Coba lagi", BUKAN "Belum ada instance" (compliance tetap tampil)', async () => {
+    mockGetActionPlan.mockResolvedValue(REPEAT_AP);
+    mockListInstances.mockRejectedValue(new Error('rls/jaringan'));
+    // compliance (query terpisah) tetap sukses (default 28/30) → replikasi kontradiksi laporan.
+    await wrap(<ActionPlanDetailScreen />);
+    expect(await screen.findByText(/Gagal memuat daftar instance/)).toBeTruthy();
+    expect(screen.getByText('Coba lagi')).toBeTruthy();
+    // Kunci anti-regresi: JANGAN tampilkan empty-state menyesatkan saat sebenarnya gagal.
+    expect(screen.queryByText(/Belum ada instance/)).toBeNull();
+    // Compliance tetap terlihat → membuktikan kedua sumber independen.
+    expect(screen.getByTestId('compliance-metric')).toHaveTextContent('On-time: 28/30 (93%)');
+  });
+
   it('[9] action plan one_time menyembunyikan bagian instance & compliance', async () => {
     mockGetActionPlan.mockResolvedValue(ONE_TIME_AP);
     await wrap(<ActionPlanDetailScreen />);
