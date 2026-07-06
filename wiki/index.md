@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-07-05
+updated: 2026-07-06
 ---
 
 # RencanApp Wiki — Index
@@ -44,6 +44,7 @@ Master index of all wiki pages. Updated on every ingest.
 ## Sources
 
 - [[konsep-dan-fondasi]] — Ringkasan PRD 01: definisi EMS, scope, bahasa, status, makna card
+- [[kredensial-login]] — 6 akun uji Nyantuy Group (CEO/CMO/2 Manager/2 Staff) di Supabase lokal + peta ke case ADM/ROLE/SCORE/PPL-07
 - [[sistem-permission-data-governance]] — Ringkasan PRD 03: permission, surface, score, audit, DB
 - [[spesifikasi-card-dan-eksekusi]] — Ringkasan PRD 02: field card, loop eksekusi, MBR, lifecycle
 

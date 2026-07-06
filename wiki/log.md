@@ -1373,6 +1373,19 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
   - WS-04 ✅ UI-only closed + governance debt tercatat (PR ini).
 - **Tidak ada code change hari ini** — hanya spec + wiki + gitignore update. Governance debt adalah keputusan tercatat, bukan bug.
 
+## [2026-07-06] ingest | Kredensial Login Dev (Nyantuy Group)
+
+- **Source:** `docs/kredensial-login.md` (verifikasi 2026-07-06).
+- **Pages created (1):**
+  - `wiki/sources/kredensial-login.md` — ringkasan 6 akun uji Supabase lokal + peta ke case manual testing.
+- **Pages updated (1):**
+  - `wiki/index.md` — tambah entry `[[kredensial-login]]` di seksi Sources (alfabetis antara `konsep-dan-fondasi` dan `sistem-permission-data-governance`); bump `updated: 2026-07-06`.
+- **Key takeaways:**
+  - Password universal `rencan123` untuk semua `*@rencan.local` — lokal saja, jangan pakai di staging/prod.
+  - 6 akun menutup kasus manual-testing yang sebelumnya Blocked: ADM-01..15, ROLE-01 (semua baris), MENU-02, SCORE-02/02b/04, REV/DCR/NOTIF, CHAT/INBOX, EVD-01..05, AP-01..03, PPL-07 (D9), ADM-11 (Confidential Access), SRCH-02.
+  - Pairing dua-aktor SCORE-02: Dewi (mgr.sales) + Eko (mgr.ops) memenuhi "aktor 1 ≠ aktor 2"; CEO/CMO fallback.
+  - Seed catatan: `staff.finance@` masih member Tim Ops (bukan tim finance khusus) — cukup untuk uji role, kurang rapi untuk skenario lintas-departemen.
+
 ## [2026-07-06] update | WS-4 / DCR-05 "Minta Revisi" — eksekusi TDD selesai
 
 - **Sumber rencana:** `docs/spec-ws04-dcr-revision-2026-07-06.md` + `docs/tdd-plan-ws04-dcr-revision-2026-07-06.md` (owner-locked D1–D5 + resolusi OQ-8/OQ-9).
