@@ -36,12 +36,16 @@ export function Button({
   loading,
   disabled,
   variant = 'primary',
+  accessibilityLabel,
 }: {
   label: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
   variant?: ButtonVariant;
+  // Opsional: a11y label eksplisit (mis. menyebut nama entitas) bila teks tombol saja tak cukup.
+  // Default = `label` → backward-compatible dengan seluruh call-site existing.
+  accessibilityLabel?: string;
 }) {
   const inactive = disabled || loading;
   return (
@@ -51,7 +55,7 @@ export function Button({
       disabled={inactive}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}>
       {loading ? (
         <ActivityIndicator color={variant === 'primary' || variant === 'success' ? '#ffffff' : undefined} />

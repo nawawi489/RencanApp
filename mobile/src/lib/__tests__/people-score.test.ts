@@ -478,6 +478,30 @@ describe('calculatePeriodScores & closePeriodSnapshot', () => {
     expect(mockRpc).toHaveBeenCalledWith('close_period_snapshot', { p_period_id: 'p1' });
     expect(n).toBe(3);
   });
+  // WS-5: error RPC (Bahasa Indonesia) diteruskan APA ADANYA (tanpa wrapping) — modal menyurface langsung.
+  it('[WS5-L1] closePeriodSnapshot melempar error E1 "sudah ditutup" apa adanya', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Periode ini sudah ditutup dan tidak bisa diubah.' } });
+    await expect(closePeriodSnapshot('p1')).rejects.toEqual({
+      message: 'Periode ini sudah ditutup dan tidak bisa diubah.',
+    });
+    expect(mockRpc).toHaveBeenCalledWith('close_period_snapshot', { p_period_id: 'p1' });
+  });
+  it('[WS5-L2] closePeriodSnapshot melempar error E2 "tidak ditemukan" (cross-org/tak ada) apa adanya', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Periode tidak ditemukan.' } });
+    await expect(closePeriodSnapshot('p1')).rejects.toEqual({ message: 'Periode tidak ditemukan.' });
+  });
+  it('[WS5-L3] closePeriodSnapshot melempar error E3 unauthorized apa adanya', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Anda tidak berwenang mengelola Score Formula.' } });
+    await expect(closePeriodSnapshot('p1')).rejects.toEqual({
+      message: 'Anda tidak berwenang mengelola Score Formula.',
+    });
+  });
+  it('[WS5-L4] closePeriodSnapshot resolve number 0 saat tak ada skor (n=0 = sukses, bukan null/throw)', async () => {
+    mockRpc.mockResolvedValue({ data: 0, error: null });
+    const n = await closePeriodSnapshot('p1');
+    expect(n).toBe(0);
+    expect(typeof n).toBe('number');
+  });
 });
 
 // ============================================================ RPC: overrideUserScore

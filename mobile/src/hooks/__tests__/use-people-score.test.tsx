@@ -16,10 +16,12 @@ const mockActivateScoreFormulaVersion = jest.fn();
 const mockAssignScoreFormula = jest.fn();
 const mockCreateScoreFormulaDraft = jest.fn();
 const mockUpdateFormulaVersionWeights = jest.fn();
+const mockClosePeriodSnapshot = jest.fn();
 
 const mockListMyScoreHistory = jest.fn();
 const mockListUserScoreHistory = jest.fn();
 jest.mock('@/lib/people-score', () => ({
+  closePeriodSnapshot: (...a: unknown[]) => mockClosePeriodSnapshot(...a),
   getActivePeriod: (...a: unknown[]) => mockGetActivePeriod(...a),
   getLatestClosedPeriod: (...a: unknown[]) => mockGetLatestClosedPeriod(...a),
   listMyScoreHistory: (...a: unknown[]) => mockListMyScoreHistory(...a),
@@ -39,6 +41,7 @@ jest.mock('@/lib/people-score', () => ({
 // eslint-disable-next-line import/first
 import {
   useActivePeriod,
+  useClosePeriod,
   useFormulaActions,
   useLatestClosedPeriod,
   useMyScore,
@@ -71,6 +74,7 @@ beforeEach(() => {
   mockUpsertScoreFormulaVersion.mockResolvedValue('v-new');
   mockActivateScoreFormulaVersion.mockResolvedValue(undefined);
   mockAssignScoreFormula.mockResolvedValue('a1');
+  mockClosePeriodSnapshot.mockResolvedValue(3);
 });
 
 describe('useActivePeriod', () => {
@@ -303,5 +307,103 @@ describe('useFormulaActions — upsert / activate / assign', () => {
     await expect(
       result.current.createDraft({ templateId: 't1', level: 'staff', changeReason: 'duplikat draft' }),
     ).rejects.toThrow(/draft_already_exists/);
+  });
+});
+
+describe('useClosePeriod — WS-5 tutup periode', () => {
+  it('[WS5-H1] closePeriod(id) → closePeriodSnapshot(id) & mengembalikan int', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useClosePeriod(), { wrapper });
+    let n: number | undefined;
+    await act(async () => {
+      n = await result.current.closePeriod('p1');
+    });
+    expect(mockClosePeriodSnapshot).toHaveBeenCalledWith('p1');
+    expect(n).toBe(3);
+  });
+
+  it('[WS5-H2] onSuccess invalidasi TEPAT [active_period],[latest_closed_period],[ranking]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useClosePeriod(), { wrapper });
+    await act(async () => {
+      await result.current.closePeriod('p1');
+    });
+    const keys = spy.mock.calls.map((c) => JSON.stringify(c[0]));
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        JSON.stringify({ queryKey: ['active_period'] }),
+        JSON.stringify({ queryKey: ['latest_closed_period'] }),
+        JSON.stringify({ queryKey: ['ranking'] }),
+      ]),
+    );
+  });
+
+  it('[WS5-H3] n=0 → resolve (bukan reject) + tetap invalidasi', async () => {
+    mockClosePeriodSnapshot.mockResolvedValueOnce(0);
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useClosePeriod(), { wrapper });
+    let n: number | undefined;
+    await act(async () => {
+      n = await result.current.closePeriod('p1');
+    });
+    expect(n).toBe(0);
+    const keys = spy.mock.calls.map((c) => JSON.stringify(c[0]));
+    expect(keys).toContain(JSON.stringify({ queryKey: ['active_period'] }));
+  });
+
+  it('[WS5-H4] error E1 → mutateAsync MELEMPAR + TIDAK invalidasi', async () => {
+    mockClosePeriodSnapshot.mockRejectedValueOnce(new Error('Periode ini sudah ditutup dan tidak bisa diubah.'));
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useClosePeriod(), { wrapper });
+    await expect(result.current.closePeriod('p1')).rejects.toThrow(/sudah ditutup/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('[WS5-H5] error E3 unauthorized → melempar apa adanya', async () => {
+    mockClosePeriodSnapshot.mockRejectedValueOnce(new Error('Anda tidak berwenang mengelola Score Formula.'));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useClosePeriod(), { wrapper });
+    await expect(result.current.closePeriod('p1')).rejects.toThrow(/tidak berwenang/);
+  });
+
+  it('[WS5-H6] isPending toggle false → true → false', async () => {
+    let resolveFn: (v: number) => void = () => {};
+    mockClosePeriodSnapshot.mockReturnValueOnce(new Promise<number>((res) => { resolveFn = res; }));
+    const { wrapper } = makeWrapper();
+    const { result, unmount } = await renderHook(() => useClosePeriod(), { wrapper });
+    expect(result.current.isPending).toBe(false);
+    let p: Promise<number> = Promise.resolve(0);
+    await act(async () => { p = result.current.closePeriod('p1'); });
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+    await act(async () => { resolveFn(2); await p; });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    // Unmount agar mutation observer H6 tidak bocor ke renderHook test berikutnya (result.current null).
+    unmount();
+  });
+
+  it('[WS5-H7] satu closePeriod = tepat satu panggilan RPC (fondasi anti double-submit)', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useClosePeriod(), { wrapper });
+    await act(async () => {
+      await result.current.closePeriod('p1');
+    });
+    expect(mockClosePeriodSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it('[WS5-H8] regression: TIDAK invalidasi [my_score]/[my_score_history]/[user_score_history]; tepat 3 invalidasi', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useClosePeriod(), { wrapper });
+    await act(async () => {
+      await result.current.closePeriod('p1');
+    });
+    const keys = spy.mock.calls.map((c) => JSON.stringify(c[0]));
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['my_score'] }));
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['my_score_history'] }));
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['user_score_history'] }));
+    expect(spy).toHaveBeenCalledTimes(3);
   });
 });
