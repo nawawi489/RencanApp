@@ -188,3 +188,45 @@ begin
   raise notice 'TEST5 open_period_snapshot selalu org pemanggil (audit: no cross-org surface) PASS';
 end $$;
 rollback;
+
+-- ============================================================ TEST 6: pemanggil TANPA org (NULL) DITOLAK
+-- profiles.organization_id NULLABLE (on delete set null) + has_permission ceo-shortcut tak butuh org →
+-- current_user_org() bisa NULL sementara has_permission=true. Guard `<>` akan yield NULL (bypass);
+-- guard `is distinct from` menolak. User aktif ber-role ceo tapi organization_id=NULL tak boleh
+-- menutup periode org manapun.
+begin;
+do $$
+declare
+  v_orgB uuid; v_periodB uuid; v_ceoNull uuid := gen_random_uuid();
+  v_ceo_rt uuid; v_status text; fails text := '';
+begin
+  select id into v_ceo_rt from public.role_templates where level = 'ceo' limit 1;
+  if v_ceo_rt is null then raise notice 'TEST6 SKIP (tak ada role_template level ceo)'; return; end if;
+
+  insert into public.organizations (name) values ('OrgB-null-caller') returning id into v_orgB;
+  insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status)
+    values (v_orgB, 'B-null', current_date, current_date+30, 'active') returning id into v_periodB;
+
+  -- Attacker aktif, role ceo, tapi organization_id = NULL.
+  insert into auth.users (id) values (v_ceoNull);
+  insert into public.profiles (id, organization_id, role_template_id, is_active)
+    values (v_ceoNull, NULL, v_ceo_rt, true)
+    on conflict (id) do update set organization_id = NULL, role_template_id = v_ceo_rt, is_active = true;
+
+  perform set_config('request.jwt.claims', json_build_object('sub',v_ceoNull,'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+  begin
+    perform public.close_period_snapshot(v_periodB);
+    fails := fails||'null_org_caller_closed; ';
+  exception when others then
+    if sqlerrm not ilike '%tidak ditemukan%' then fails := fails||'null_org_wrong_msg:'||sqlerrm||'; '; end if;
+  end;
+  execute 'reset role';
+
+  select status into v_status from public.period_snapshots where id = v_periodB;
+  if v_status <> 'active' then fails := fails||'orgB_status_mutated_by_null_caller('||v_status||'); '; end if;
+
+  if fails <> '' then raise exception 'TEST6 null_org_caller FAIL: %', fails; end if;
+  raise notice 'TEST6 pemanggil NULL-org ditolak (guard NULL-safe is distinct from) PASS';
+end $$;
+rollback;

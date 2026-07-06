@@ -41,7 +41,10 @@ begin
   select * into v_period from public.period_snapshots where id = p_period_id;
   if not found then raise exception 'Periode tidak ditemukan.'; end if;
   -- Cross-org guard (SECURITY DEFINER bypass RLS): periode harus milik org pemanggil.
-  if v_period.organization_id <> public.current_user_org() then
+  -- `is distinct from` (BUKAN <>): profiles.organization_id NULLABLE + current_user_org() bisa NULL
+  -- (mis. org dihapus → on delete set null). `uuid <> NULL` = NULL → guard TAK menyala (bypass).
+  -- `is distinct from NULL` = TRUE → pemanggil tanpa org ditolak.
+  if v_period.organization_id is distinct from public.current_user_org() then
     raise exception 'Periode tidak ditemukan.';
   end if;
   if v_period.status = 'closed' then
@@ -158,7 +161,10 @@ begin
   select * into v_period from public.period_snapshots where id = p_period_id for update;
   if not found then raise exception 'Periode tidak ditemukan.'; end if;
   -- Cross-org guard (SECURITY DEFINER bypass RLS): periode harus milik org pemanggil.
-  if v_period.organization_id <> public.current_user_org() then
+  -- `is distinct from` (BUKAN <>): profiles.organization_id NULLABLE + current_user_org() bisa NULL
+  -- (mis. org dihapus → on delete set null). `uuid <> NULL` = NULL → guard TAK menyala (bypass).
+  -- `is distinct from NULL` = TRUE → pemanggil tanpa org ditolak.
+  if v_period.organization_id is distinct from public.current_user_org() then
     raise exception 'Periode tidak ditemukan.';
   end if;
   if v_period.status = 'closed' then
@@ -227,7 +233,10 @@ begin
   select * into v_period from public.period_snapshots where id = p_period_id;
   if not found then raise exception 'Periode tidak ditemukan.'; end if;
   -- Cross-org guard (SECURITY DEFINER bypass RLS): periode harus milik org pemanggil.
-  if v_period.organization_id <> public.current_user_org() then
+  -- `is distinct from` (BUKAN <>): profiles.organization_id NULLABLE + current_user_org() bisa NULL
+  -- (mis. org dihapus → on delete set null). `uuid <> NULL` = NULL → guard TAK menyala (bypass).
+  -- `is distinct from NULL` = TRUE → pemanggil tanpa org ditolak.
+  if v_period.organization_id is distinct from public.current_user_org() then
     raise exception 'Periode tidak ditemukan.';
   end if;
   if v_period.status = 'closed' then
