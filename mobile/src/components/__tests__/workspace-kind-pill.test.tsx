@@ -44,14 +44,19 @@ describe('WorkspaceKindPill', () => {
 
 describe('TREE_LEVEL_INDENT', () => {
   it('mengompresi level 0..5 agar mobile level-dalam tidak lari terlalu kanan', () => {
+    // Indent progresif tapi terkompresi (§8): naik pelan lalu mendatar, BUKAN linear.
     expect(TREE_LEVEL_INDENT).toEqual({
       0: 0,
       1: 6,
-      2: 6,
-      3: 6,
-      4: 6,
-      5: 6,
+      2: 10,
+      3: 12,
+      4: 12,
+      5: 14,
     });
+    // Properti kompresi: monoton naik & level terdalam jauh lebih kecil dari indent linear (5×16=80).
+    const vals = [0, 1, 2, 3, 4, 5].map((l) => TREE_LEVEL_INDENT[l as 0 | 1 | 2 | 3 | 4 | 5]);
+    expect(vals).toEqual([...vals].sort((a, b) => a - b));
+    expect(TREE_LEVEL_INDENT[5]).toBeLessThan(80);
   });
 });
 

@@ -29,11 +29,13 @@ describe('TreeProgressOrb', () => {
 
   it('mode compact memakai ukuran visual lebih kecil', async () => {
     const view = await render(<TreeProgressOrb value={41} label="Progress" compact />);
-    const ring = view.getByA11yLabel('Progress 41 persen');
+    const ring = view.getByLabelText('Progress 41 persen');
     expect(TREE_PROGRESS_ORB_COMPACT_SIZE).toBe(38);
-    expect(ring.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ minWidth: TREE_PROGRESS_ORB_COMPACT_SIZE })]),
-    );
+    // react-native-css meratakan `style` menjadi objek tunggal (bukan array).
+    const flat = Array.isArray(ring.props.style)
+      ? Object.assign({}, ...ring.props.style)
+      : ring.props.style;
+    expect(flat).toEqual(expect.objectContaining({ minWidth: TREE_PROGRESS_ORB_COMPACT_SIZE }));
   });
 });
 

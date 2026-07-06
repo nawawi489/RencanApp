@@ -4,7 +4,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { act, createElement, type PropsWithChildren } from 'react';
-import type { ReactTestInstance } from 'react-test-renderer';
 import { Alert } from 'react-native';
 
 import { PeriodFocusProvider } from '@/providers/period-focus-provider';
@@ -151,7 +150,11 @@ function flattenStyle(style: unknown) {
   return style ?? {};
 }
 
-function hasTextDescendant(node: ReactTestInstance, text: string): boolean {
+// Tipe node diturunkan dari return query RNTL (bukan `react-test-renderer` langsung) agar
+// selalu cocok dengan yang dikembalikan screen.* — RNTL memakai `TestInstance` internalnya.
+type RntlInstance = Awaited<ReturnType<typeof screen.findByText>>;
+
+function hasTextDescendant(node: RntlInstance, text: string): boolean {
   for (const child of node.children) {
     if (typeof child === 'string' && child.includes(text)) return true;
     if (typeof child !== 'string' && hasTextDescendant(child, text)) return true;
@@ -159,14 +162,13 @@ function hasTextDescendant(node: ReactTestInstance, text: string): boolean {
   return false;
 }
 
-function findClosestSectionCardHost(node: ReactTestInstance): ReactTestInstance | null {
-  let current: ReactTestInstance | null = node;
+// Cari pembungkus kartu tree terdekat via `testID` `tree-card-*` — react-native-css
+// menanggalkan `className` dari host instance, jadi penanda struktur pakai testID (dipertahankan RN).
+function findClosestSectionCardHost(node: RntlInstance): RntlInstance | null {
+  let current: RntlInstance | null = node;
   while (current) {
-    const className =
-      typeof current.props?.className === 'string' ? current.props.className : undefined;
-    if (className?.includes('rounded-2xl') && className.includes('border-neutral-200')) {
-      return current;
-    }
+    const testID = typeof current.props?.testID === 'string' ? current.props.testID : undefined;
+    if (testID?.startsWith('tree-card-')) return current;
     current = current.parent;
   }
   return null;
@@ -378,7 +380,7 @@ describe('WorkspaceScreen', () => {
   it('[compact-meta] Goal merender meta ringkas alih-alih count lama', async () => {
     mockUseGoals.mockReturnValue(
       goalsResult({
-        goals: [{ ...GOAL, target_result: 'Omset 48M', kpi_areas: [{ count: 2 }] }],
+        goals: [{ ...GOAL, target_value: 'Omset 48M', kpi_areas: [{ count: 2 }] }],
       }),
     );
     await renderScreen();
@@ -517,10 +519,9 @@ describe('WorkspaceScreen', () => {
     });
     await renderScreen();
 
-    const orb = await screen.findByA11yLabel('Capaian 68 persen');
-    expect(orb.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ minWidth: 38 })]),
-    );
+    const orb = await screen.findByLabelText('Capaian 68 persen');
+    // react-native-css meratakan `style` menjadi objek (bukan array) — flatten dulu.
+    expect(flattenStyle(orb.props.style)).toEqual(expect.objectContaining({ minWidth: 38 }));
   });
 
   it('[compact-header] period pill mengikuti rentang periode card', async () => {
@@ -1042,7 +1043,10 @@ describe('WorkspaceScreen', () => {
       expect(await screen.findByText('Setup pixel tracking')).toBeTruthy();
       expect(screen.getByLabelText('Detail Setup pixel tracking')).toBeTruthy();
       expect(screen.getByLabelText('Aksi lain Setup pixel tracking')).toBeTruthy();
-      expect(screen.queryByText('+ Plan')).toBeNull();
+      // Action Plan = leaf: TIDAK punya tombol tambah turunan. (Tombol "+ Plan" milik baris
+      // Initiative — legitimate saat create_action_plan aktif — jadi assert label leaf spesifik,
+      // bukan queryByText('+ Plan') yang menangkap tombol Initiative.)
+      expect(screen.queryByLabelText('Tambah Action Plan ke Setup pixel tracking')).toBeNull();
     });
 
     it('[WSA-01·3] Initiative "+ Plan" current period → push /action-plan/new', async () => {
