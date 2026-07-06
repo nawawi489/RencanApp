@@ -157,7 +157,9 @@ describe('useMbrCompliance — Fase 6 dev types', () => {
       expect(mockCheckMbrCompliance).toHaveBeenCalledWith('development_area', 'd1'),
     );
     expect(qc.getQueryData(['mbr_compliance', 'development_area', 'd1'])).toEqual(DEV_COMPLIANCE);
-    expect(result.current.isCompliant).toBe(false);
+    // Hook default fail-open (isCompliant=true) sampai query re-render dengan data cache;
+    // pakai waitFor supaya tidak race di runner Linux CI.
+    await waitFor(() => expect(result.current.isCompliant).toBe(false));
   });
 
   it('[F6-13] meneruskan parentType "problem_statement"', async () => {

@@ -39,7 +39,7 @@ function MbrExampleCard() {
       </Text>
       <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
         <View className="flex-row items-center justify-between gap-2">
-          <Text className="text-sm font-medium text-black dark:text-white">Strategy: "Tingkatkan retensi"</Text>
+          <Text className="text-sm font-medium text-black dark:text-white">Strategy: &ldquo;Tingkatkan retensi&rdquo;</Text>
           <Badge label="Draft" tone="neutral" />
         </View>
         <View className="flex-row items-center gap-2">
@@ -52,7 +52,7 @@ function MbrExampleCard() {
           <Text className="text-base font-semibold text-white">Aktifkan Strategy</Text>
         </View>
         <Text className="text-xs text-neutral-400">
-          Tap akan menampilkan dialog: <Text className="italic">"Butuh minimal 2 Initiative; saat ini 1."</Text>
+          Tap akan menampilkan dialog: <Text className="italic">&ldquo;Butuh minimal 2 Initiative; saat ini 1.&rdquo;</Text>
         </Text>
       </View>
     </SectionCard>
