@@ -140,14 +140,16 @@ export async function listActionPlans(initiativeId: string): Promise<ActionPlanW
   return data as unknown as ActionPlanWithPeople[];
 }
 
-export async function getActionPlan(id: string): Promise<ActionPlanWithPeople> {
+export async function getActionPlan(id: string): Promise<ActionPlanWithPeople | null> {
+  // maybeSingle, BUKAN single: id di luar akses/tidak ada → RLS menyaring jadi 0 baris.
+  // single() membalas 406 dan React Query terus retry → skeleton tak pernah selesai.
   const { data, error } = await supabase
     .from('action_plans')
     .select('*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email)')
     .eq('id', id)
-    .single();
+    .maybeSingle();
   if (error) throw error;
-  return data as unknown as ActionPlanWithPeople;
+  return data as unknown as ActionPlanWithPeople | null;
 }
 
 export async function listSubmissions(actionPlanId: string): Promise<SubmissionDetail[]> {
