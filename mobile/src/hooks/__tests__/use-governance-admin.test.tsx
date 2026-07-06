@@ -8,6 +8,7 @@ const mockGov = {
   listDeadlineChangeRequests: jest.fn(),
   createDeadlineChangeRequest: jest.fn(),
   reviewDeadlineChange: jest.fn(),
+  resubmitDeadlineChangeRequest: jest.fn(),
   getEvaluation: jest.fn(),
   recordEvaluation: jest.fn(),
   archiveCard: jest.fn(),
@@ -17,6 +18,7 @@ jest.mock('@/lib/governance-admin', () => ({
   listDeadlineChangeRequests: (...a: unknown[]) => mockGov.listDeadlineChangeRequests(...a),
   createDeadlineChangeRequest: (...a: unknown[]) => mockGov.createDeadlineChangeRequest(...a),
   reviewDeadlineChange: (...a: unknown[]) => mockGov.reviewDeadlineChange(...a),
+  resubmitDeadlineChangeRequest: (...a: unknown[]) => mockGov.resubmitDeadlineChangeRequest(...a),
   getEvaluation: (...a: unknown[]) => mockGov.getEvaluation(...a),
   recordEvaluation: (...a: unknown[]) => mockGov.recordEvaluation(...a),
   archiveCard: (...a: unknown[]) => mockGov.archiveCard(...a),
@@ -43,6 +45,7 @@ beforeEach(() => {
   mockGov.listDeadlineChangeRequests.mockResolvedValue([{ id: 'dcr1' }]);
   mockGov.createDeadlineChangeRequest.mockResolvedValue('dcr1');
   mockGov.reviewDeadlineChange.mockResolvedValue(undefined);
+  mockGov.resubmitDeadlineChangeRequest.mockResolvedValue(undefined);
   mockGov.getEvaluation.mockResolvedValue({ id: 'e1' });
   mockGov.recordEvaluation.mockResolvedValue('e1');
   mockGov.archiveCard.mockResolvedValue(undefined);
@@ -95,6 +98,68 @@ describe('deadline change requests', () => {
     await expect(
       result.current.reviewRequest({ requestId: 'dcr1', decision: 'approved' }),
     ).rejects.toThrow('sendiri');
+  });
+
+  it('[DCR-H-1] reviewRequest decision revision_requested + reason ke data layer', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useDeadlineChangeActions(), { wrapper });
+    await act(async () => {
+      await result.current.reviewRequest({
+        requestId: 'dcr1',
+        decision: 'revision_requested',
+        reason: 'butuh bukti',
+        entityId: 'ap1',
+      });
+    });
+    expect(mockGov.reviewDeadlineChange).toHaveBeenCalledWith('dcr1', 'revision_requested', 'butuh bukti');
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['deadline_change_requests'] });
+  });
+
+  it('[DCR-H-2] resubmitRequest meneruskan input & invalidate prefix ["deadline_change_requests"]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useDeadlineChangeActions(), { wrapper });
+    await act(async () => {
+      await result.current.resubmitRequest({
+        requestId: 'dcr1',
+        newDeadline: '2026-07-20',
+        reason: 'revisi bukti dilampirkan',
+      });
+    });
+    expect(mockGov.resubmitDeadlineChangeRequest).toHaveBeenCalledWith({
+      requestId: 'dcr1',
+      newDeadline: '2026-07-20',
+      reason: 'revisi bukti dilampirkan',
+    });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['deadline_change_requests'] });
+  });
+
+  it('[DCR-H-3] resubmitRequest error propagasi', async () => {
+    mockGov.resubmitDeadlineChangeRequest.mockRejectedValue(new Error('bukan pengaju'));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useDeadlineChangeActions(), { wrapper });
+    await expect(
+      result.current.resubmitRequest({ requestId: 'dcr1', newDeadline: '2026-07-20', reason: 'r' }),
+    ).rejects.toThrow('bukan pengaju');
+  });
+
+  it('[DCR-H-4] isPending true saat resubmitRequest berjalan', async () => {
+    let resolveFn: () => void = () => undefined;
+    mockGov.resubmitDeadlineChangeRequest.mockImplementation(
+      () => new Promise<void>((r) => { resolveFn = r; }),
+    );
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useDeadlineChangeActions(), { wrapper });
+    let p: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      p = result.current.resubmitRequest({ requestId: 'dcr1', newDeadline: '2026-07-20', reason: 'r' });
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+    await act(async () => {
+      resolveFn();
+      await p;
+    });
   });
 
   it('[F8-H36] isPending true saat reviewRequest berjalan', async () => {

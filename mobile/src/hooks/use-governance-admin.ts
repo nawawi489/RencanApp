@@ -9,12 +9,15 @@ import {
   getEvaluation,
   listDeadlineChangeRequests,
   recordEvaluation,
+  resubmitDeadlineChangeRequest,
   reviewDeadlineChange,
   type CardEntityType,
+  type DcrDecision,
   type DeadlineChangeRequest,
   type Evaluation,
   type NewDeadlineChangeRequest,
   type NewEvaluation,
+  type ResubmitDeadlineChangeInput,
 } from '@/lib/governance-admin';
 
 // ---------------------------------------------------------------- Deadline Change Request
@@ -42,18 +45,24 @@ export function useDeadlineChangeActions() {
       qc.invalidateQueries({ queryKey: ['deadline_change_requests', vars.entityId] }),
   });
   const reviewM = useMutation({
-    mutationFn: (input: { requestId: string; decision: 'approved' | 'rejected'; reason?: string; entityId?: string }) =>
+    mutationFn: (input: { requestId: string; decision: DcrDecision; reason?: string; entityId?: string }) =>
       reviewDeadlineChange(input.requestId, input.decision, input.reason),
     // Server tidak menerima entityId; invalidate prefix supaya semua list DCR ikut refresh
     // tanpa bergantung pada caller mengirim entityId (yang opsional).
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['deadline_change_requests'] }),
   });
+  const resubmitM = useMutation({
+    mutationFn: (input: ResubmitDeadlineChangeInput) => resubmitDeadlineChangeRequest(input),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['deadline_change_requests'] }),
+  });
   return {
     createRequest: (input: NewDeadlineChangeRequest) => createM.mutateAsync(input),
-    reviewRequest: (input: { requestId: string; decision: 'approved' | 'rejected'; reason?: string; entityId?: string }) =>
+    reviewRequest: (input: { requestId: string; decision: DcrDecision; reason?: string; entityId?: string }) =>
       reviewM.mutateAsync(input),
-    isPending: createM.isPending || reviewM.isPending,
+    resubmitRequest: (input: ResubmitDeadlineChangeInput) => resubmitM.mutateAsync(input),
+    isPending: createM.isPending || reviewM.isPending || resubmitM.isPending,
   };
 }
 

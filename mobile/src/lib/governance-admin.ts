@@ -23,9 +23,13 @@ export type SearchResult = { id: string; entity_type: string; name: string; stat
 
 export const DCR_STATUS_LABEL: Record<string, string> = {
   pending: 'Menunggu Review',
+  revision_requested: 'Perlu Revisi',
   approved: 'Disetujui',
   rejected: 'Ditolak',
 };
+
+/** Keputusan reviewer atas DCR (PRD §25 — tiga aksi). */
+export type DcrDecision = 'approved' | 'rejected' | 'revision_requested';
 
 export const EVALUATION_TARGET_LABEL: Record<string, string> = {
   ya: 'Tercapai',
@@ -69,13 +73,30 @@ export async function listDeadlineChangeRequests(entityId: string): Promise<Dead
 
 export async function reviewDeadlineChange(
   requestId: string,
-  decision: 'approved' | 'rejected',
+  decision: DcrDecision,
   reason?: string,
 ): Promise<void> {
   const { error } = await supabase.rpc('review_deadline_change', {
     p_request_id: requestId,
     p_decision: decision,
     p_reason: reason ?? '',
+  });
+  if (error) throw error;
+}
+
+export type ResubmitDeadlineChangeInput = {
+  requestId: string;
+  newDeadline: string;
+  reason: string;
+};
+
+export async function resubmitDeadlineChangeRequest(
+  input: ResubmitDeadlineChangeInput,
+): Promise<void> {
+  const { error } = await supabase.rpc('resubmit_deadline_change_request', {
+    p_request_id: input.requestId,
+    p_new_deadline: input.newDeadline,
+    p_reason: input.reason,
   });
   if (error) throw error;
 }

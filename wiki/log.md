@@ -1351,7 +1351,6 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **Status THEME-01:** CLOSED (pending konfirmasi manual testing ulang). AC-THEME01-2..N tidak dijadwalkan.
 - **Spec update:** `docs/spec-ui-testfix-2026-07-05.md` §8 (OQ-4 RESOLVED block diperluas dgn Fase 2 post-login) + §9 handoff status.
 - **Amend PR #30:** tambah commit follow-up dgn Fase 2 verification pada branch `investigate/theme-01-root-cause`.
-
 ## [2026-07-05] update | OQ-1 RESOLVED (WS-04 Opsi A UI-only) + governance debt tercatat
 
 - **Trigger:** owner memilih Opsi A (UI-only + governance debt tercatat) untuk OQ-1 setelah THEME-01 investigation menutup blocker terakhir non-owner. Closes the last remaining OQ pemblokir untuk batch bug UI 2026-07-05.
@@ -1373,3 +1372,21 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
   - THEME-01 ✅ CLOSED pending konfirmasi manual (PR #30 open — verifikasi runtime lintas layar).
   - WS-04 ✅ UI-only closed + governance debt tercatat (PR ini).
 - **Tidak ada code change hari ini** — hanya spec + wiki + gitignore update. Governance debt adalah keputusan tercatat, bukan bug.
+
+## [2026-07-06] update | WS-4 / DCR-05 "Minta Revisi" — eksekusi TDD selesai
+
+- **Sumber rencana:** `docs/spec-ws04-dcr-revision-2026-07-06.md` + `docs/tdd-plan-ws04-dcr-revision-2026-07-06.md` (owner-locked D1–D5 + resolusi OQ-8/OQ-9).
+- **Kode & migrasi (paths tersentuh):**
+  - `mobile/src/lib/governance-admin.ts` — union `DcrDecision`, fungsi `resubmitDeadlineChangeRequest`, `DCR_STATUS_LABEL.revision_requested='Perlu Revisi'`.
+  - `mobile/src/lib/database.types.ts` — tipe RPC `resubmit_deadline_change_request`.
+  - `mobile/src/hooks/use-governance-admin.ts` — `reviewM` decision typed `DcrDecision`, `resubmitM` baru + `resubmitRequest`, `isPending` OR 3.
+  - `mobile/src/app/(app)/deadline-change-request.tsx` — RequestRow terpisah, 3 tombol reviewer (Setujui / Minta Revisi / Tolak), input alasan reviewer, guard anti double-submit, form revisi inline untuk pengaju + `revision_reason` read-only, hapus hardcode `'Ditolak'`.
+  - `supabase/migrations/0038_dcr05_minta_revisi.sql` — status/action/notif CHECK superset, kolom `revision_reason`, index `dcr_one_pending_per_entity` DROP+RECREATE ke `status in ('pending','revision_requested')`, REPLACE `review_deadline_change` (branch revision_requested + guard OQ-8 terminal), CREATE `resubmit_deadline_change_request` (requestor-only + OQ-9 re-fetch `action_plans.deadline` aktual).
+- **Verifikasi:**
+  - `governance-admin.test.ts` 18/18, `use-governance-admin.test.tsx` 16/16, `fase8-lifecycle-screens.test.tsx` 16/16 (total 50/50 target).
+  - `npm test` 907/913 (6 fail pre-existing di workspace/tree/pill — bukan WS-4).
+  - `npm run type-check` 0 error terkait WS-4 (5 error pre-existing di workspace-screen/tests/tree-progress-orb).
+  - `supabase/tests/0038_dcr05_minta_revisi_contract.sql` — 7/7 blok ROLLBACK_OK (schema, index D3, revision happy path, alasan+anti-self, resubmit UPDATE row sama, guards resubmit + OQ-8 + OQ-9, guard review OQ-8).
+- **Deviasi vs spec (minor):**
+  - Nama constraint status sudah diverifikasi live: `deadline_change_requests_status_check`, `deadline_change_logs_action_check` — sesuai dugaan spec §5.1 blocker.
+  - UI: label input alasan reviewer disatukan (`Alasan review untuk <id>`) alih-alih dua alias tersembunyi (lebih bersih; test disesuaikan tanpa kehilangan cakupan AC).

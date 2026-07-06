@@ -3544,6 +3544,10 @@ export type Database = {
         Args: { p_goal_id: string }
         Returns: number
       }
+      resubmit_deadline_change_request: {
+        Args: { p_new_deadline: string; p_reason: string; p_request_id: string }
+        Returns: undefined
+      }
       review_action_plan_instance_submission: {
         Args: { p_decision: string; p_reason: string; p_submission_id: string }
         Returns: undefined
