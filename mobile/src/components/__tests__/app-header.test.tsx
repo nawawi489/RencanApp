@@ -111,4 +111,10 @@ describe('AppHeader — back button (pola seragam tab-stack)', () => {
     await render(<AppHeader />, { wrapper });
     expect(screen.getByLabelText('Cari')).toBeTruthy();
   });
+
+  it('avatar → push profil sendiri (bukan hub /settings lama)', async () => {
+    await render(<AppHeader />, { wrapper });
+    fireEvent.press(screen.getByLabelText('Buka profil saya'));
+    expect(mockPush).toHaveBeenCalledWith('/people-profile/u1');
+  });
 });
