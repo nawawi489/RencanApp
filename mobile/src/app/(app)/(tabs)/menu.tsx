@@ -284,7 +284,7 @@ export default function MenuScreen() {
                 {subhead}
               </Text>
             </View>
-            {scoreValue != null ? <ScoreBadge score={scoreValue} /> : <Badge label="Belum" tone="neutral" />}
+            {scoreValue != null ? <ScoreBadge score={scoreValue} /> : <Badge label="Belum ada skor" tone="neutral" />}
           </Pressable>
         )}
 
