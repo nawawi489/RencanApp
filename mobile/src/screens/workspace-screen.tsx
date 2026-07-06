@@ -670,7 +670,7 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
         style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
         {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna KPI Area (#b76b00). */}
         <View
-          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800"
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area }}>
           <TreeCardBody cardLabel={kpi.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
@@ -1084,7 +1084,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
         style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
         {/* Spec §7.4 + §8: level-2 Dev pane, border kiri 5px warna Problem Statement (#c2410c). */}
         <View
-          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800"
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement }}>
           <TreeCardBody cardLabel={ps.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">

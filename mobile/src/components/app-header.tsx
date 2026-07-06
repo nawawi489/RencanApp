@@ -8,7 +8,7 @@ import { BrandLogo } from '@/components/brand-logo';
 import { useProfile } from '@/hooks/use-profile';
 import { useThemePreference } from '@/providers/theme-provider';
 
-/** Topbar app: logo + wordmark + kicker per-layar + avatar (→ Settings).
+/** Topbar app: logo + wordmark + kicker per-layar + avatar (→ profil sendiri).
  *  Tombol back otomatis muncul bila:
  *    1. `router.canGoBack()` true (push dari pane sebelumnya), atau
  *    2. route saat ini adalah sub-route Workspace deep-link (Performance/Development)
@@ -98,11 +98,15 @@ export function AppHeader({ kicker }: { kicker?: string }) {
             <Ionicons name="search-outline" size={18} color={searchIconColor} />
             <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Cari</Text>
           </Pressable>
+          {/* Avatar → profil sendiri (bukan hub /settings lama — pengaturan kini hidup di tab
+              Menu; hub lama duplikat stale dan dijadwalkan pensiun). */}
           <Pressable
             className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
-            onPress={() => router.push('/(app)/settings')}
+            onPress={() => {
+              if (profile?.id) router.push(`/people-profile/${profile.id}` as never);
+            }}
             accessibilityRole="button"
-            accessibilityLabel="Buka profil & pengaturan">
+            accessibilityLabel="Buka profil saya">
             <Avatar name={name} seed={profile?.id ?? name} size={34} />
           </Pressable>
         </View>

@@ -121,8 +121,10 @@ export function WorkspaceHubCard({
         <HubStat label={activeStatLabel} value={String(stats.activeCount)} />
       </View>
 
-      {/* Progress line bawah + tombol Masuk nyata (spec §4.2 no.14 / §4.3 no.13). */}
-      <View style={{ height: 3, borderRadius: 999, backgroundColor: identity.kickerBg, marginTop: 4 }}>
+      {/* Progress line bawah + tombol Masuk nyata (spec §4.2 no.14 / §4.3 no.13).
+          Track theme-aware: tint terang kickerBg tepat di light (kontras dgn isian border),
+          tapi jadi garis "menyala" di card gelap → pakai neutral-800 di dark (DESIGN §12). */}
+      <View style={{ height: 3, borderRadius: 999, backgroundColor: isDark ? '#1f2937' : identity.kickerBg, marginTop: 4 }}>
         <View style={{ height: 3, borderRadius: 999, width: `${Math.max(6, orbValue ?? 0)}%`, backgroundColor: identity.border }} />
       </View>
       <Pressable

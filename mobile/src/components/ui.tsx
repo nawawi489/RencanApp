@@ -117,26 +117,37 @@ const ICON_TILE_COLOR: Record<IconTileTone, [string, string]> = {
 /**
  * Tile ikon berwarna untuk kartu/baris Menu (prototype `.menu-icon`). Ikon = dekorasi
  * penguat; label teks di sebelahnya tetap sumber makna (DESIGN §4), jadi tile disembunyikan
- * dari a11y tree. `icon` = nama Ionicons (mis. 'people-outline').
+ * dari a11y tree. Beri `icon` (nama Ionicons, mis. 'people-outline') ATAU `text` (glyph
+ * pendek seperti '?', 'CS', 'R') — keduanya di-center identik di frame (spec Menu §9).
  */
 export function IconTile({
   icon,
+  text,
   tone = 'info',
   size = 40,
 }: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  text?: string;
   tone?: IconTileTone;
   size?: number;
 }) {
   const { effective } = useThemePreference();
   const color = ICON_TILE_COLOR[tone][effective === 'dark' ? 1 : 0];
+  const glyphSize = Math.round(size * 0.38);
   return (
     <View
       style={{ width: size, height: size }}
       className={`items-center justify-center rounded-xl ${ICON_TILE_BG[tone]}`}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">
-      <Ionicons name={icon} size={Math.round(size * 0.55)} color={color} />
+      {text != null ? (
+        // lineHeight = fontSize agar glyph teks ('?','CS','R') center presisi tanpa offset naik/turun.
+        <Text style={{ fontSize: glyphSize, lineHeight: glyphSize, fontWeight: '900', color }}>
+          {text}
+        </Text>
+      ) : (
+        <Ionicons name={icon!} size={Math.round(size * 0.55)} color={color} />
+      )}
     </View>
   );
 }
