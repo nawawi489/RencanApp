@@ -171,6 +171,15 @@ describe('Menu V1.82 — header & logout', () => {
     expect(mockPush).toHaveBeenCalledWith('/settings-org-structure');
   });
 
+  // ISSUE-001: create_department kini admin-only, tapi Manager dengan manage_teams tetap butuh
+  // entry ke tab Tim. Gear muncul bila user bisa masuk minimal satu tab Organisasi.
+  it('gear tampil untuk Manager dengan manage_teams saja (tanpa create_department)', async () => {
+    mockCan.mockImplementation((k: string) => k === 'manage_teams');
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByLabelText('Pengaturan organisasi'));
+    expect(mockPush).toHaveBeenCalledWith('/settings-org-structure');
+  });
+
   it('tombol logout berlabel "Keluar" memanggil signOut', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Keluar'));

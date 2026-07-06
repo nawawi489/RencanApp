@@ -1,6 +1,7 @@
 // Hooks Fase 8 — useProfile.can() untuk permission keys baru. Mock supabase + auth-provider.
-// Mirror client HARUS cocok server has_permission (migration 0014): c_level/management default
-// create_department/manage_teams/review_deadline_changes; key Fase 8 lain butuh grant eksplisit.
+// Mirror client HARUS cocok server has_permission (migration 0041): c_level/management default
+// manage_teams/review_deadline_changes + create card; create_department kini admin-only (PRD
+// §34.3, ISSUE-001) → butuh grant eksplisit. Key Fase 8 lain juga butuh grant eksplisit.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import type { PropsWithChildren } from 'react';
@@ -64,17 +65,18 @@ it('[F8-H30] can() mengenali create_department via permissionKeys (grant eksplis
   expect(result.current.can('create_department')).toBe(true);
 });
 
-it('[F8-H31] no-leak: c_level TIDAK default manage_confidential_access; create_department default (cocok server)', async () => {
+it('[F8-H31] no-leak: c_level TIDAK default manage_confidential_access / create_department (cocok server)', async () => {
   mockSingle.mockResolvedValue(profileRow('c_level', []));
   const { wrapper } = makeWrapper();
   const { result } = await renderHook(() => useProfile(), { wrapper });
   await waitFor(() => expect(result.current.profile).toBeTruthy());
-  // key Fase 8 yang BUKAN default management → harus false tanpa grant eksplisit
+  // key yang BUKAN default management → harus false tanpa grant eksplisit
   expect(result.current.can('manage_confidential_access')).toBe(false);
   expect(result.current.can('manage_positions')).toBe(false);
   expect(result.current.can('manage_video_briefs')).toBe(false);
-  // default management Fase 8 (cocok dgn server has_permission)
-  expect(result.current.can('create_department')).toBe(true);
+  // create_department kini admin-only (ISSUE-001, PRD §34.3) → BUKAN default c_level
+  expect(result.current.can('create_department')).toBe(false);
+  // default management sah tetap berlaku
   expect(result.current.can('review_deadline_changes')).toBe(true);
 });
 

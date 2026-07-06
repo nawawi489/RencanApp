@@ -190,17 +190,24 @@ describe('K4 — permission create planning card', () => {
   // K6 — anti-drift 3-arah (#35): MGR_DEFAULT_KEYS (klien) WAJIB identik dengan default
   // server has_permission (0016) & is_default (0017). Test mengunci sisi klien: konstanta + can().
   describe('K6 — anti-drift default role (#35)', () => {
-    it('[K6-1] MGR_DEFAULT_KEYS = 6 key kanonik (sumber tunggal klien)', () => {
+    it('[K6-1] MGR_DEFAULT_KEYS = 5 key kanonik (sumber tunggal klien; create_department admin-only per PRD)', () => {
       expect([...MGR_DEFAULT_KEYS].sort()).toEqual(
         [
           'create_action_plan',
-          'create_department',
           'create_initiative',
           'create_strategy',
           'manage_teams',
           'review_deadline_changes',
         ].sort(),
       );
+    });
+
+    it('[K6-1b] create_department BUKAN default management/c_level (ikuti PRD §34.3, ISSUE-001)', async () => {
+      mockSingle.mockResolvedValue(profileRow('management', []));
+      const { wrapper } = makeWrapper();
+      const { result } = await renderHook(() => useProfile(), { wrapper });
+      await waitFor(() => expect(result.current.profile).toBeTruthy());
+      expect(result.current.can('create_department')).toBe(false);
     });
 
     it('[K6-2] c_level default: tiap MGR_DEFAULT_KEYS → can() true', async () => {
