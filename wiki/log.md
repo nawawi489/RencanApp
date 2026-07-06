@@ -1403,3 +1403,11 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **Deviasi vs spec (minor):**
   - Nama constraint status sudah diverifikasi live: `deadline_change_requests_status_check`, `deadline_change_logs_action_check` — sesuai dugaan spec §5.1 blocker.
   - UI: label input alasan reviewer disatukan (`Alasan review untuk <id>`) alih-alih dua alias tersembunyi (lebih bersih; test disesuaikan tanpa kehilangan cakupan AC).
+
+## [2026-07-07] update | QA menyeluruh via /qa — 7 fix + laporan
+
+- **Cakupan:** Exhaustive, 5 akun ([[kredensial-login]]), ±25 halaman web preview (localhost:8081), termasuk alur review E2E, RLS lintas-team, dark mode, mobile viewport, dialog Tutup Periode WS-5 (dibatalkan, tidak dieksekusi).
+- **Fix (commit atomik, branch `chore/rntl-a11y-tsc-cleanup`):** ISSUE-002 antrean review Home tak hitung submission instance (`b347f87`); ISSUE-003 timestamp dirender UTC bukan timezone org (`e98be97`); ISSUE-004 AP di luar akses = skeleton abadi + retry 406 → maybeSingle + empty state (`b56584d`); ISSUE-006 label log mentah (`2f35211`); ISSUE-007 judul Inggris (`b7c20dc`); ISSUE-008 badge "Belum" (`e13d2b2`); ISSUE-011 duplikasi role profil (`6292b16`). 3 test regresi baru.
+- **Bukan-bug setelah verifikasi:** Manager membuat departemen = sesuai `specs/permission-settings.md` (6 kunci default c_level+management); tanggal Home "Senin 6 Juli" dini hari = `get_org_today` sadar timezone org (CF-3); a11y tombol Masuk Workspace = artefak alat snapshot.
+- **Deferred:** ISSUE-005 notifikasi actionable basi (dicatat di `TODOS.md`, butuh keputusan produk).
+- **Laporan:** `.gstack/qa-reports/qa-report-localhost-8081-2026-07-07.md` (skor 82 → 98) + 40 screenshot.

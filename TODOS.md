@@ -54,3 +54,11 @@ UI-S-OR1 (Org/Posisi/Tim/Garis-lapor/Role Template), UI-S-GV1 (Governance "Seles
 UI-S-AL1 (Activity Log timeline+filter — semua event), UI-S-AR1 (Archive restore+metadata),
 UI-S-PRM1 (Scope pill permission), UI-S-KT1 (KPI Template per tipe Goal), UI-S-AP7 (Repeat compliance detail),
 UI-G-005 (Search lengkap semua tipe). Score Formula: UI-S-SF1 ✅; sisa SF2 (role chips) + versioning/effective-date/audit.
+
+---
+
+## QA 2026-07-07 — temuan /qa (deferred)
+
+Laporan lengkap: `.gstack/qa-reports/qa-report-localhost-8081-2026-07-07.md`. 7 bug sudah difix di branch `chore/rntl-a11y-tsc-cleanup` (ISSUE-002/003/004/006/007/008/011).
+
+- [ ] **ISSUE-005 (medium, UX) — Notifikasi actionable basi.** Notif DCR tetap "menunggu review" + Belum dibaca setelah request diputuskan (approved/rejected); notif "Review Sekarang" juga tetap tampil untuk submission yang sudah disetujui. Repro: login `mgr.sales@` → Notif → 2 kartu DCR; DB `deadline_change_requests` keduanya sudah final. Butuh keputusan produk: tandai selesai otomatis saat entity berubah status, atau tampilkan badge status hasil di kartu notif.
