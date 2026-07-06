@@ -61,9 +61,14 @@ export const MISSED_RULE_LABEL: Record<string, string> = {
 
 // ---------------------------------------------------------------- queries
 
+// Embed submissions HARUS disambiguasi via nama FK: action_plan_instances kini punya DUA
+// relasi ke action_plan_submissions — daftar (action_plan_instance_id) + balikan
+// current_submission_id. Tanpa `!fk` PostgREST balas 300 PGRST201 (ambiguous embedding),
+// membuat getInstance/listInstances gagal & layar instance blank. Pakai relasi daftar.
 const INSTANCE_SELECT =
   '*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email), ' +
-  'action_plan_submissions(*, evidence_files(*), action_plan_result_values(*), ' +
+  'action_plan_submissions!action_plan_submissions_action_plan_instance_id_fkey(' +
+  '*, evidence_files(*), action_plan_result_values(*), ' +
   'submitter:submitted_by(id, full_name, email), reviewer:reviewed_by(id, full_name, email))';
 
 export async function listInstances(actionPlanId: string): Promise<InstanceWithSubmissions[]> {
