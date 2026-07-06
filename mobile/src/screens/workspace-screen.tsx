@@ -762,7 +762,9 @@ const GoalRow = memo(function GoalRow({
   const metaLines = WS_TREE_COMPACT_COPY.goalMeta({
     past,
     statusLabel: TREE_STATUS_LABEL[goal.status] ?? goal.status,
-    target: goal.target_result,
+    // Kolom tabel `goals` bernama `target_value` (bukan `target_result` — itu milik `initiatives`).
+    // Referensi lama menghasilkan `undefined` → target Goal tak pernah tampil di tree meta.
+    target: goal.target_value,
   });
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
@@ -778,7 +780,11 @@ const GoalRow = memo(function GoalRow({
     <View>
       {/* Spec §6.4 + §8: level-0 (indent 0), border kiri 5px warna kategori Goal. */}
       <View className="gap-2" style={{ marginLeft: TREE_LEVEL_INDENT[0] }}>
-        <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16 }}>
+        {/* testID membungkus HANYA kartu Goal (turunan KPI dirender sibling di luar, §UI-N-003) —
+            penanda stabil untuk test struktur karena react-native-css menanggalkan className. */}
+        <View
+          testID={`tree-card-goal-${goal.id}`}
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.goal, borderRadius: 16 }}>
           <SectionCard>
             <TreeCardBody cardLabel={goal.name} onPress={openDetail} overlayRightInset={52}>
               <View className="flex-1 gap-1.5">
@@ -1196,7 +1202,9 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
     <View>
       {/* Spec §7.3 + §8: level-0 Dev pane, border kiri 5px warna Development Area (#0f766e). */}
       <View className="gap-2" style={{ marginLeft: TREE_LEVEL_INDENT[0] }}>
-        <View style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16 }}>
+        <View
+          testID={`tree-card-dev-${devArea.id}`}
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.development_area, borderRadius: 16 }}>
           <SectionCard>
             <TreeCardBody cardLabel={devArea.name} onPress={openDetail} overlayRightInset={52}>
               <View className="flex-1 gap-1.5">
