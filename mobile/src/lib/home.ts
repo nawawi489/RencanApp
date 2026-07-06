@@ -47,6 +47,41 @@ export function listNearDeadline(): Promise<HomeItem[]> {
   return callSection('get_near_deadline_items');
 }
 
+/**
+ * Instance Repeat yang menunggu review user (status 'submitted', reviewer = user).
+ * Pelengkap listPendingReviews (cards.ts) yang hanya melihat one-time action_plans —
+ * tanpa ini kartu "Butuh Review" Home menampilkan 0 padahal ada submission instance.
+ */
+export async function listPendingInstanceReviews(): Promise<HomeItem[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('action_plan_instances')
+    .select('id, action_plan_id, instance_date, status, action_plans(name)')
+    .eq('reviewer_id', uid)
+    .eq('status', 'submitted')
+    .order('instance_date', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((r) => {
+    const row = r as unknown as {
+      id: string;
+      action_plan_id: string;
+      instance_date: string;
+      status: string;
+      action_plans: { name: string | null } | null;
+    };
+    return {
+      kind: 'instance' as const,
+      id: row.id,
+      action_plan_id: row.action_plan_id,
+      name: row.action_plans?.name ?? null,
+      due: row.instance_date,
+      status: row.status,
+    };
+  });
+}
+
 /** KPI Area aktif yang perlu dipantau di Home (snapshot tim). */
 export type KpiAttentionItem = {
   id: string;

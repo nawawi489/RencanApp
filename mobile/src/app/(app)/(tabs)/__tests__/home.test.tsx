@@ -21,6 +21,7 @@ const mockTodayRepeat = jest.fn();
 const mockOverdue = jest.fn();
 const mockNear = jest.fn();
 const mockKpiAttn = jest.fn();
+const mockReviewInst = jest.fn();
 jest.mock('@/lib/home', () => ({
   __esModule: true,
   getOrgToday: () => mockToday(),
@@ -28,6 +29,7 @@ jest.mock('@/lib/home', () => ({
   listOverdueItems: () => mockOverdue(),
   listNearDeadline: () => mockNear(),
   listKpiNeedsAttention: () => mockKpiAttn(),
+  listPendingInstanceReviews: () => mockReviewInst(),
 }));
 
 const profileMock = { profile: { full_name: 'Rina Jaya', id: 'u1', created_at: '2020-01-01T00:00:00Z' } };
@@ -59,6 +61,7 @@ function wrapper() {
 function primeEmpty() {
   mockMine.mockResolvedValue([]);
   mockReview.mockResolvedValue([]);
+  mockReviewInst.mockResolvedValue([]);
   mockToday.mockResolvedValue('2026-06-24');
   mockTodayRepeat.mockResolvedValue([]);
   mockOverdue.mockResolvedValue([]);
@@ -74,6 +77,8 @@ beforeEach(() => {
   mockOverdue.mockReset();
   mockNear.mockReset();
   mockKpiAttn.mockReset();
+  mockReviewInst.mockReset();
+  mockReviewInst.mockResolvedValue([]);
   mockPush.mockReset();
   profileMock.profile = { full_name: 'Rina Jaya', id: 'u1', created_at: '2020-01-01T00:00:00Z' };
 });
