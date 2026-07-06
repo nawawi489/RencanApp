@@ -22,6 +22,7 @@ import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { getKpiAreaCurrentValue, listKpiAreaResultValueSources, type KpiResultValueSource } from '@/lib/cards';
 import { computeKpiGap, formatRemaining, groupThousands } from '@/lib/kpi-gap';
 import { REVIEW_STATUS, formatDateTime } from '@/components/submission-card';
+import { useProfile } from '@/hooks/use-profile';
 import { UserPicker } from '@/components/user-picker';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { KpiAreaBreakdownPanel } from '@/components/kpi-area-breakdown-panel';
@@ -69,6 +70,7 @@ function SumberNilaiHasilPanel({
   sources: KpiResultValueSource[];
   onOpenActionPlan: (actionPlanId: string) => void;
 }) {
+  const { profile } = useProfile();
   return (
     <SectionCard>
       <Text className="text-sm font-bold text-black dark:text-white">Sumber Nilai Hasil</Text>
@@ -98,7 +100,7 @@ function SumberNilaiHasilPanel({
                   {resultValueLabel(s)}
                 </Text>
                 <Text className="text-[11px] text-neutral-400">
-                  {s.submission ? formatDateTime(s.submission.submitted_at) : '—'}
+                  {s.submission ? formatDateTime(s.submission.submitted_at, profile?.org_timezone) : '—'}
                 </Text>
               </View>
             </Pressable>
