@@ -1411,3 +1411,11 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **Bukan-bug setelah verifikasi:** Manager membuat departemen = sesuai `specs/permission-settings.md` (6 kunci default c_level+management); tanggal Home "Senin 6 Juli" dini hari = `get_org_today` sadar timezone org (CF-3); a11y tombol Masuk Workspace = artefak alat snapshot.
 - **Deferred:** ISSUE-005 notifikasi actionable basi (dicatat di `TODOS.md`, butuh keputusan produk).
 - **Laporan:** `.gstack/qa-reports/qa-report-localhost-8081-2026-07-07.md` (skor 82 → 98) + 40 screenshot.
+
+## [2026-07-07] update | ISSUE-001 follow-up — Department admin-only (ikuti PRD)
+
+- **Konteks:** Temuan /qa ISSUE-001 (Manager bisa buat Departemen) awalnya ditandai "bukan bug" karena `specs/permission-settings.md` memberi `create_department` sebagai default c_level+management. Cek ulang ke PRD: §9 tak melistkan pengelolaan Department sbg permission utama; §34.3 menempatkannya di Admin Settings. Owner memilih **ikuti PRD**.
+- **Perubahan:** Migrasi `0041_department_admin_only.sql` mencabut `create_department` dari bundle default di `has_permission`, `list_user_permissions_admin`, `set_user_permission` → hanya CEO/Super Admin bypass atau grant eksplisit. Klien `MGR_DEFAULT_KEYS` jadi 5 kunci; gate entry Organisasi (gear + item Menu) diubah ke `ORG_SETTINGS_PERMISSIONS.some(can)` agar Manager tetap capai tab Tim (`manage_teams`). Spec §5.2/§5.3 disinkron.
+- **Verifikasi:** DB tolak RPC create_department utk Manager & C-Level; CEO tetap bisa. Browser: Dewi tab Departemen "Anda tidak memiliki akses", tab Tim jalan, gear tetap muncul. `tsc` bersih; suite terdampak (use-profile/menu/org-structure) 54/54; suite penuh 971/973 (2 flaky di mbr-completion/notifications, lulus saat rerun terisolasi).
+- **Catatan:** migrasi dinomori 0041 karena 0040 dipakai workstream ISSUE-005 (notification resolution) yang jalan paralel di working tree yang sama.
+- Commit: `36bb2c7` (fix) + `1ed26b1` (test).
