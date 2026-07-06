@@ -71,7 +71,7 @@ export default function AppLayout() {
 
       {/* Fase 8 — Governance & Admin */}
       <Stack.Screen name="settings-org-structure" options={{ headerShown: true, title: 'Organisasi' }} />
-      <Stack.Screen name="settings-activity-log" options={{ headerShown: true, title: 'Activity Log' }} />
+      <Stack.Screen name="settings-activity-log" options={{ headerShown: true, title: 'Log Aktivitas' }} />
       <Stack.Screen
         name="settings-governance-violation"
         options={{ headerShown: true, title: 'Governance Violation' }}

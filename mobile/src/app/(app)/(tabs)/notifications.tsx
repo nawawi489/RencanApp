@@ -243,7 +243,7 @@ export function LiveNotificationsScreen() {
   const header = (
     <View className="gap-4 pb-3">
       <View className="gap-1">
-        <Text className="text-2xl font-bold text-black dark:text-white">Notifications</Text>
+        <Text className="text-2xl font-bold text-black dark:text-white">Notifikasi</Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
           Notifikasi resmi dan respons.
         </Text>

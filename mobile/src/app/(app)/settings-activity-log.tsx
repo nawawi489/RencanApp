@@ -93,7 +93,7 @@ export default function SettingsActivityLogScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Activity Log' }} />
+      <Stack.Screen options={{ title: 'Log Aktivitas' }} />
       <View className="gap-3 p-5">
         {!allowed ? (
           <AccessDenied message="Activity Log hanya untuk pemegang izin Lihat Activity Log." />
