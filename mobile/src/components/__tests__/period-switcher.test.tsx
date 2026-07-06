@@ -36,6 +36,56 @@ describe('PeriodSwitcher — compact panel', () => {
   });
 });
 
+// WS-2 (BUG-02 / WS-04) — label panel harus DINAMIS mengikut status periode fokus.
+// Kini hardcoded "Periode aktif" (period-switcher.tsx:91); saat user memilih periode
+// arsip/masa depan, label tetap "Periode aktif" → menyesatkan (tak ada sinyal bahwa
+// aksi turunan terkunci). Fix: turunkan dari focusPeriodStatus(focus, now).
+describe('PeriodSwitcher — label periode dinamis (WS-2)', () => {
+  const STORAGE_KEY = 'rencanaapp:period-focus';
+
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it('[WS2-a] fokus berjalan (Juni) → "Periode aktif"', async () => {
+    await act(async () => {
+      render(
+        <Wrap>
+          <PeriodSwitcher now={NOW} />
+        </Wrap>,
+      );
+    });
+    expect(await screen.findByText('Periode aktif')).toBeTruthy();
+    expect(screen.queryByText('Periode arsip')).toBeNull();
+  });
+
+  it('[WS2-b] fokus ARSIP (Januari 2026) → "Periode arsip"', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'month', year: 2026, month: 1 }));
+    await act(async () => {
+      render(
+        <Wrap>
+          <PeriodSwitcher now={NOW} />
+        </Wrap>,
+      );
+    });
+    expect(await screen.findByText('Periode arsip')).toBeTruthy();
+    expect(screen.queryByText('Periode aktif')).toBeNull();
+  });
+
+  it('[WS2-c] fokus MASA DEPAN (Desember 2026) → "Periode akan datang"', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'month', year: 2026, month: 12 }));
+    await act(async () => {
+      render(
+        <Wrap>
+          <PeriodSwitcher now={NOW} />
+        </Wrap>,
+      );
+    });
+    expect(await screen.findByText('Periode akan datang')).toBeTruthy();
+    expect(screen.queryByText('Periode aktif')).toBeNull();
+  });
+});
+
 describe('PeriodSwitcher — modal expand', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();

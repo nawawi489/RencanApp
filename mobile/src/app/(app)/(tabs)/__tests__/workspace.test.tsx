@@ -313,6 +313,38 @@ describe('WorkspaceScreen', () => {
       }
     });
 
+    it('[WS-04·5] BUG-02: Goal TAHUNAN (card current) di fokus ARSIP → "+ KPI Area" per-card terkunci (disabled + alert, TIDAK push)', async () => {
+      // Root cause BUG-02: row memakai cardPeriodStatus saja. Goal berperiode tahunan
+      // (2026-01-01..2026-12-31) TAK PERNAH 'past' di dalam 2026, jadi sebelum fix
+      // tombol "+ KPI Area" tetap aktif walau fokus di bulan arsip (Januari 2026).
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(
+        goalsResult({
+          goals: [
+            {
+              id: 'g-year',
+              name: 'Goal Tahunan',
+              status: 'active',
+              period_start: '2026-01-01',
+              period_end: '2026-12-31',
+            },
+          ],
+        }),
+      );
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      await renderScreen();
+      const addBtn = await screen.findByLabelText('Tambah KPI Area ke Goal Tahunan');
+      // Tombol tetap tampil tapi disabled (fokus arsip mengunci meski card sendiri 'current').
+      expect(addBtn.props.accessibilityState?.disabled).toBe(true);
+      fireEvent.press(addBtn);
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Periode ini sudah menjadi Archive',
+        'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
+      );
+      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/kpi-area/new'));
+      alertSpy.mockRestore();
+    });
+
     it('[WS-04·4] AC-WS04-5 (regresi negatif): fokus current → "+ Goal" tidak locked, push goal-wizard', async () => {
       await AsyncStorage.clear();
       // Kembali ke fokus default (Juni 2026, current di anchor NOW).

@@ -165,6 +165,22 @@ export function focusPeriodStatus(focus: PeriodFocus, now: Date): CardPeriodStat
   return found?.status ?? 'current';
 }
 
+/**
+ * WS-2 (BUG-02 / WS-04) — gerbang tunggal untuk mengunci tombol "+ turunan".
+ *
+ * Menggabungkan dua sumber status: window MILIK CARD (`cardPeriodStatus`) DAN
+ * status periode FOKUS aktif (`focusPeriodStatus`). Kartu Goal berperiode tahunan
+ * (PRD §17) tak pernah 'past' oleh cardPeriodStatus di dalam tahun berjalan —
+ * tanpa cek fokus, tombol "+" tetap aktif saat user membuka periode arsip.
+ *
+ * Dipakai sebagai satu sumber `past`/`addDimmed`/guard di semua row tree
+ * (Goal/KPI Area/Strategy/Development Area/Problem Statement) agar keputusan
+ * navigasi-vs-alert dan a11y-disabled konsisten.
+ */
+export function isAddLocked(card: CardDates, focus: PeriodFocus, now: Date): boolean {
+  return cardPeriodStatus(card, focus) === 'past' || focusPeriodStatus(focus, now) === 'past';
+}
+
 export function enumerateMonths(year: number, now: Date): PeriodOption[] {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
