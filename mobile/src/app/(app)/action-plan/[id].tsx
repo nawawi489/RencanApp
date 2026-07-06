@@ -278,7 +278,7 @@ function RepeatSection({
   onSubmitInstance: (id: string) => void;
   onOpenInstance: (id: string) => void;
 }) {
-  const { instances, isLoading, compliance, compliancePercent } = useRepeatInstances(actionPlanId, {
+  const { instances, isLoading, isError, refresh, compliance, compliancePercent } = useRepeatInstances(actionPlanId, {
     enabled: true,
   });
   const complianceText =
@@ -301,6 +301,15 @@ function RepeatSection({
       <Text className="text-lg font-bold text-black dark:text-white">Instance Terjadwal</Text>
       {isLoading ? (
         <ActivityIndicator />
+      ) : isError ? (
+        // WS-3d — JANGAN tampilkan "Belum ada instance" saat fetch gagal: menyesatkan
+        // (compliance query terpisah bisa tetap menampilkan angka). Beri sinyal gagal + retry.
+        <View className="gap-2">
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+            Gagal memuat daftar instance. Angka compliance mungkin belum sinkron dengan daftar.
+          </Text>
+          <Button label="Coba lagi" variant="secondary" onPress={refresh} />
+        </View>
       ) : instances.length > 0 ? (
         instances.map((inst) => (
           <InstanceRow

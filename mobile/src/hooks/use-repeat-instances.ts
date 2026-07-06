@@ -35,6 +35,10 @@ export function useRepeatInstances(actionPlanId: string, options?: { enabled?: b
   return {
     instances: (instancesQ.data ?? []) as InstanceWithSubmissions[],
     isLoading: instancesQ.isLoading,
+    // WS-3d — bedakan "gagal fetch" dari "benar-benar kosong": tanpa ini layar
+    // menampilkan "Belum ada instance" saat listInstances error, padahal compliance
+    // (query terpisah) bisa tetap menunjukkan angka → kontradiksi yang dilaporkan.
+    isError: instancesQ.isError,
     compliance,
     compliancePercent,
     refresh,
