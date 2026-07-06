@@ -20,6 +20,7 @@ import {
   getEvaluation,
   listDeadlineChangeRequests,
   recordEvaluation,
+  resubmitDeadlineChangeRequest,
   reviewDeadlineChange,
   searchCards,
   upsertSettings,
@@ -35,6 +36,10 @@ describe('governance-admin label maps', () => {
     expect(DCR_STATUS_LABEL.pending).toBe('Menunggu Review');
     expect(DCR_STATUS_LABEL.approved).toBe('Disetujui');
     expect(DCR_STATUS_LABEL.rejected).toBe('Ditolak');
+  });
+
+  it('[DCR-DL-1] DCR_STATUS_LABEL.revision_requested = Perlu Revisi', () => {
+    expect(DCR_STATUS_LABEL.revision_requested).toBe('Perlu Revisi');
   });
 
   it('[3] EVALUATION_TARGET_LABEL mencakup ya/sebagian/tidak', () => {
@@ -89,6 +94,50 @@ describe('deadline change request', () => {
     await expect(reviewDeadlineChange('dcr1', 'approved')).rejects.toEqual({
       message: 'tidak dapat menyetujui sendiri',
     });
+  });
+
+  it('[DCR-DL-2] reviewDeadlineChange terima decision revision_requested + reason wajib', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    await reviewDeadlineChange('dcr1', 'revision_requested', 'butuh detail bukti');
+    expect(mockRpc).toHaveBeenCalledWith('review_deadline_change', {
+      p_request_id: 'dcr1',
+      p_decision: 'revision_requested',
+      p_reason: 'butuh detail bukti',
+    });
+  });
+
+  it('[DCR-DL-3] reviewDeadlineChange default reason "" saat tidak diberikan', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    await reviewDeadlineChange('dcr1', 'approved');
+    expect(mockRpc).toHaveBeenCalledWith('review_deadline_change', {
+      p_request_id: 'dcr1',
+      p_decision: 'approved',
+      p_reason: '',
+    });
+  });
+
+  it('[DCR-DL-4] resubmitDeadlineChangeRequest meneruskan p_request_id/p_new_deadline/p_reason', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    await resubmitDeadlineChangeRequest({
+      requestId: 'dcr1',
+      newDeadline: '2026-07-20',
+      reason: 'revisi: bukti dilampirkan',
+    });
+    expect(mockRpc).toHaveBeenCalledWith('resubmit_deadline_change_request', {
+      p_request_id: 'dcr1',
+      p_new_deadline: '2026-07-20',
+      p_reason: 'revisi: bukti dilampirkan',
+    });
+  });
+
+  it('[DCR-DL-5] resubmitDeadlineChangeRequest propagasi error status guard', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Permintaan ini tidak dalam status perlu revisi.' },
+    });
+    await expect(
+      resubmitDeadlineChangeRequest({ requestId: 'dcr1', newDeadline: '2026-07-20', reason: 'r' }),
+    ).rejects.toEqual({ message: 'Permintaan ini tidak dalam status perlu revisi.' });
   });
 });
 
