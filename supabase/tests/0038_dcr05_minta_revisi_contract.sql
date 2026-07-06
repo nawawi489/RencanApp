@@ -261,3 +261,29 @@ begin
   perform public.review_deadline_change(v_dcr, 'rejected', 'AP sudah selesai');
   raise exception 'ROLLBACK_OK: BlockG passed (OQ-8 blok approve+revision, rejected tetap boleh)';
 end $$;
+
+-- ============================== BLOCK H — index D3 inverse: terminal (rejected/approved) → create baru boleh
+-- Predicate parsial `where status in ('pending','revision_requested')` mengecualikan baris terminal,
+-- sehingga request baru untuk entity sama sah setelah putaran sebelumnya selesai.
+do $$
+declare v_org uuid := '52b0ebe1-d8bd-466d-b491-526ee6518b70';
+        v_ceo uuid := '11111111-1111-1111-1111-000000000001';
+        v_staff uuid; v_ap uuid; v_init uuid; v_dcr uuid; v_dcr2 uuid;
+begin
+  v_staff := gen_random_uuid();
+  insert into auth.users(id) values (v_staff);
+  insert into public.initiatives(organization_id, name, status, pic_id, created_by)
+    values (v_org, 'H-Init', 'active', v_ceo, v_ceo) returning id into v_init;
+  insert into public.action_plans(organization_id, initiative_id, name, pic_id, reviewer_id, deadline, status, created_by)
+    values (v_org, v_init, 'H-AP', v_staff, v_ceo, '2026-07-01', 'in_progress', v_ceo) returning id into v_ap;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_staff, 'role','authenticated')::text, true);
+  v_dcr := public.create_deadline_change_request(v_ap, '2026-07-01','2026-07-15','pertama',null,null);
+  -- Reviewer menolak → baris jadi terminal (rejected)
+  perform set_config('request.jwt.claims', json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  perform public.review_deadline_change(v_dcr, 'rejected', 'tidak setuju');
+  -- Pengaju boleh membuat request baru untuk entity yang sama (index D3 tidak menghalangi)
+  perform set_config('request.jwt.claims', json_build_object('sub', v_staff, 'role','authenticated')::text, true);
+  v_dcr2 := public.create_deadline_change_request(v_ap, '2026-07-01','2026-07-25','kedua',null,null);
+  if v_dcr2 is null or v_dcr2 = v_dcr then raise exception 'FAIL: create baru setelah reject seharusnya baris baru'; end if;
+  raise exception 'ROLLBACK_OK: BlockH passed (index D3 inverse: terminal reject → create baru boleh)';
+end $$;
