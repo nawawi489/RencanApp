@@ -13,9 +13,21 @@ export const NOTIFICATION_TYPES = [
   'comment',
   'mention',
   'governance_warning',
+  // DCR (migration 0014 + 0038) — dulu terkirim dari DB tapi tak dikenali client → Badge/ikon kosong.
+  'deadline_change_requested',
+  'deadline_change_approved',
+  'deadline_change_rejected',
+  'deadline_change_revision_requested',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export type NotificationResolution =
+  | 'approved'
+  | 'rejected'
+  | 'revision_requested'
+  | 'resubmitted'
+  | 'superseded';
 
 export type Notification = {
   id: string;
@@ -31,6 +43,8 @@ export type Notification = {
   read_at: string | null;
   dedupe_date: string | null;
   created_at: string;
+  resolved_at: string | null;
+  resolution: NotificationResolution | null;
 };
 
 // ---------------------------------------------------------------- label & tone
@@ -45,6 +59,10 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   comment: 'Komentar',
   mention: 'Sebutan',
   governance_warning: 'Peringatan Governance',
+  deadline_change_requested: 'Permintaan Perubahan Deadline',
+  deadline_change_approved: 'Perubahan Deadline Disetujui',
+  deadline_change_rejected: 'Perubahan Deadline Ditolak',
+  deadline_change_revision_requested: 'Perubahan Deadline Perlu Revisi',
 };
 
 export const NOTIFICATION_TYPE_TONE: Record<
@@ -60,6 +78,10 @@ export const NOTIFICATION_TYPE_TONE: Record<
   comment: 'info',
   mention: 'info',
   governance_warning: 'danger',
+  deadline_change_requested: 'warn',
+  deadline_change_approved: 'success',
+  deadline_change_rejected: 'danger',
+  deadline_change_revision_requested: 'warn',
 };
 
 // ---------------------------------------------------------------- tabs
@@ -86,11 +108,21 @@ export function notificationTypesForTab(tab?: NotificationTab): NotificationType
     case 'semua':
       return null;
     case 'perlu_tindakan':
-      return ['review_request', 'rejected', 'mention'];
+      return [
+        'review_request',
+        'rejected',
+        'mention',
+        'deadline_change_requested',
+        'deadline_change_revision_requested',
+      ];
     case 'review':
       return ['review_request', 'approved', 'rejected'];
     case 'deadline':
-      return ['deadline_reminder'];
+      return [
+        'deadline_reminder',
+        'deadline_change_approved',
+        'deadline_change_rejected',
+      ];
     case 'komentar':
       return ['comment', 'mention'];
     case 'terlewat':
@@ -117,6 +149,9 @@ export async function listNotifications(tab?: NotificationTab): Promise<Notifica
   const types = notificationTypesForTab(tab);
   let q = supabase.from('notifications').select('*').eq('recipient_id', uid);
   if (types) q = q.in('type', types);
+  // Tab "Perlu Tindakan" hanya menampilkan yang masih actionable — notif yang RPC pemutus
+  // sudah tandai `resolved_at` (ISSUE-005) tidak lagi menuntut aksi.
+  if (tab === 'perlu_tindakan') q = q.is('resolved_at', null);
   const { data, error } = await q.order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as Notification[];

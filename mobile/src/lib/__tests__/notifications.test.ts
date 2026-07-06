@@ -32,7 +32,7 @@ import {
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'in', 'gte', 'lt', 'lte', 'neq', 'or', 'order', 'range', 'limit']) {
+  for (const m of ['select', 'eq', 'in', 'is', 'gte', 'lt', 'lte', 'neq', 'or', 'order', 'range', 'limit']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -81,12 +81,44 @@ describe('notificationTypesForTab', () => {
 
   it('[4] tiap tab non-semua memetakan ke tipe spesifik', () => {
     expect(notificationTypesForTab('review')).toEqual(['review_request', 'approved', 'rejected']);
-    expect(notificationTypesForTab('deadline')).toEqual(['deadline_reminder']);
+    expect(notificationTypesForTab('deadline')).toEqual([
+      'deadline_reminder',
+      'deadline_change_approved',
+      'deadline_change_rejected',
+    ]);
     expect(notificationTypesForTab('terlewat')).toEqual(['instance_missed']);
     expect(notificationTypesForTab('repeat')).toEqual(['repeat_due']);
     expect(notificationTypesForTab('governance')).toEqual(['governance_warning']);
     expect(notificationTypesForTab('komentar')).toEqual(['comment', 'mention']);
-    expect(notificationTypesForTab('perlu_tindakan')).toEqual(['review_request', 'rejected', 'mention']);
+    expect(notificationTypesForTab('perlu_tindakan')).toEqual([
+      'review_request',
+      'rejected',
+      'mention',
+      'deadline_change_requested',
+      'deadline_change_revision_requested',
+    ]);
+  });
+
+  it('[ISSUE-005-10a] tipe DCR ada di NOTIFICATION_TYPES + LABEL + TONE (dulu silent-render)', () => {
+    for (const t of [
+      'deadline_change_requested',
+      'deadline_change_approved',
+      'deadline_change_rejected',
+      'deadline_change_revision_requested',
+    ] as const) {
+      expect(NOTIFICATION_TYPES).toContain(t);
+      expect(NOTIFICATION_TYPE_LABEL[t]).toBeTruthy();
+      expect(NOTIFICATION_TYPE_TONE[t]).toBeTruthy();
+    }
+  });
+
+  it('[ISSUE-005-10b] deadline_change_requested→perlu_tindakan; DCR results→deadline', () => {
+    expect(notificationTypesForTab('perlu_tindakan')).toContain('deadline_change_requested');
+    expect(notificationTypesForTab('perlu_tindakan')).toContain('deadline_change_revision_requested');
+    const dl = notificationTypesForTab('deadline') ?? [];
+    for (const t of ['deadline_change_approved','deadline_change_rejected'] as const) {
+      expect(dl).toContain(t);
+    }
   });
 
   it('[5] no-orphan: tiap dari 9 tipe muncul di ≥1 tab non-semua', () => {
@@ -135,6 +167,20 @@ describe('listNotifications', () => {
     mockFrom.mockReturnValue(builder);
     await listNotifications('review');
     expect(calls.in).toEqual(['type', ['review_request', 'approved', 'rejected']]);
+  });
+
+  it('[ISSUE-005-8a] tab perlu_tindakan menambah .is(resolved_at, null) supaya notif basi disembunyikan', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listNotifications('perlu_tindakan');
+    expect(calls.is).toEqual(['resolved_at', null]);
+  });
+
+  it('[ISSUE-005-8b] tab non-perlu-tindakan TIDAK memfilter resolved_at (riwayat tetap tampak)', async () => {
+    const { builder } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listNotifications('review');
+    expect(builder.is).not.toHaveBeenCalled();
   });
 
   it('[10] error dari query dipropagasi', async () => {

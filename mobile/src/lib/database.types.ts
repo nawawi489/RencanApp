@@ -1925,6 +1925,8 @@ export type Database = {
           organization_id: string
           read_at: string | null
           recipient_id: string
+          resolution: string | null
+          resolved_at: string | null
           title: string
           type: string
         }
@@ -1940,6 +1942,8 @@ export type Database = {
           organization_id: string
           read_at?: string | null
           recipient_id: string
+          resolution?: string | null
+          resolved_at?: string | null
           title: string
           type: string
         }
@@ -1955,6 +1959,8 @@ export type Database = {
           organization_id?: string
           read_at?: string | null
           recipient_id?: string
+          resolution?: string | null
+          resolved_at?: string | null
           title?: string
           type?: string
         }

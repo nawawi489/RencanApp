@@ -1419,3 +1419,14 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **Verifikasi:** DB tolak RPC create_department utk Manager & C-Level; CEO tetap bisa. Browser: Dewi tab Departemen "Anda tidak memiliki akses", tab Tim jalan, gear tetap muncul. `tsc` bersih; suite terdampak (use-profile/menu/org-structure) 54/54; suite penuh 971/973 (2 flaky di mbr-completion/notifications, lulus saat rerun terisolasi).
 - **Catatan:** migrasi dinomori 0041 karena 0040 dipakai workstream ISSUE-005 (notification resolution) yang jalan paralel di working tree yang sama.
 - Commit: `36bb2c7` (fix) + `1ed26b1` (test).
+
+## [2026-07-07] update | ISSUE-005 — resolusi notifikasi actionable
+
+- Migration: `supabase/migrations/0040_notification_resolution.sql`.
+- Skema: kolom `resolved_at timestamptz` + `resolution text` di `public.notifications` (CHECK: `approved|rejected|revision_requested|resubmitted|superseded`); index parsial `notifications_unresolved_idx` untuk query "Perlu Tindakan".
+- Helper internal `resolve_notifications(entity_type, entity_id, types[], resolution)` — SECURITY DEFINER, revoke dari role publik.
+- Empat RPC pemutus di-patch untuk memanggil helper: `review_deadline_change` (branch approved/rejected/revision_requested), `resubmit_deadline_change_request`, `review_action_plan_submission`, `review_action_plan_instance_submission`.
+- Backfill idempoten `backfill_resolve_stale_notifications()` di-invoke sekali saat migration diterapkan; membereskan notif basi eksisting (2 DCR + 1 AP-level review_request di seed DB).
+- Client: `mobile/src/lib/notifications.ts` menambah `resolved_at`/`resolution` ke tipe `Notification`, tab **Perlu Tindakan** menyaring `.is('resolved_at', null)`, dan `NOTIFICATION_TYPES` diperluas dengan 4 tipe DCR (`deadline_change_requested/approved/rejected/revision_requested`) yang sebelumnya silent-render tanpa Badge/ikon. Layar `notifications.tsx` menampilkan Badge hasil (Disetujui/Ditolak/Perlu Revisi/Sudah dikirim ulang/Sudah ditindaklanjuti) dan menurunkan CTA ke "Lihat Detail" untuk baris resolved.
+- Verifikasi: `supabase/tests/0040_notification_resolution_contract.sql` 8/8 (Block A approve DCR, B reject DCR, C revision_requested, D resubmit, E approve AP, F reject AP, G approve instance, H backfill); jest `notifications.test.ts` 17/17 + `notifications.test.tsx` 12/12; `tsc --noEmit` bersih.
+- Referensi: PRD §22–§25 (DCR + review); [`bugfix-2026-07-06-execution.md`](../wiki/concepts/) ISSUE-005 line item; laporan QA `.gstack/qa-reports/qa-report-localhost-8081-2026-07-07.md` (row ISSUE-005 diupdate ke verified).

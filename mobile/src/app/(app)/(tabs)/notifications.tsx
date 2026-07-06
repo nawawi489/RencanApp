@@ -50,6 +50,10 @@ const TYPE_ICON: Record<NotificationType, ComponentProps<typeof Ionicons>['name'
   comment: 'chatbubble-ellipses-outline',
   mention: 'at-outline',
   governance_warning: 'shield-half-outline',
+  deadline_change_requested: 'calendar-outline',
+  deadline_change_approved: 'checkmark-circle-outline',
+  deadline_change_rejected: 'close-circle-outline',
+  deadline_change_revision_requested: 'refresh-outline',
 };
 
 /** Waktu relatif ringkas (id-ID). Graceful pada tanggal invalid: string kosong. */
@@ -70,22 +74,37 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
 // ---------------------------------------------------------------- row
 
 // UI-S-N01 — aksi inline diturunkan dari (type, entity_type). null = baris hanya bisa ditandai dibaca.
+// ISSUE-005: kartu resolved menurunkan CTA ke "Lihat Detail" (aksi asli sudah tidak relevan —
+// e.g. "Review Sekarang" untuk submission yg sudah diputuskan menyesatkan).
 function inlineAction(item: Notification): { label: string; href: Href | null } | null {
   const t: NotificationType = item.type;
   const et = item.entity_type;
+  const detail: Href = (et === 'action_plan_instance'
+    ? `/action-plan/instance/${item.entity_id}`
+    : `/action-plan/${item.entity_id}`) as Href;
+  if (item.resolved_at) return { label: 'Lihat Detail', href: detail };
   if (et === 'action_plan_instance') {
-    return { label: 'Buka Instance', href: `/action-plan/instance/${item.entity_id}` as Href };
+    return { label: 'Buka Instance', href: detail };
   }
   if (et === 'action_plan') {
-    if (t === 'review_request') return { label: 'Review Sekarang', href: `/action-plan/${item.entity_id}` as Href };
-    if (t === 'rejected') return { label: 'Lihat Revisi', href: `/action-plan/${item.entity_id}` as Href };
-    if (t === 'approved') return { label: 'Lihat Bukti', href: `/action-plan/${item.entity_id}` as Href };
-    if (t === 'deadline_reminder') return { label: 'Buka Request', href: `/action-plan/${item.entity_id}` as Href };
-    return { label: 'Buka Detail', href: `/action-plan/${item.entity_id}` as Href };
+    if (t === 'review_request') return { label: 'Review Sekarang', href: detail };
+    if (t === 'rejected') return { label: 'Lihat Revisi', href: detail };
+    if (t === 'approved') return { label: 'Lihat Bukti', href: detail };
+    if (t === 'deadline_reminder') return { label: 'Buka Request', href: detail };
+    return { label: 'Buka Detail', href: detail };
   }
   if (t === 'governance_warning') return null;
   return null;
 }
+
+// ISSUE-005 — label hasil (tone-consistent dgn DESIGN §4: teks label, bukan warna saja).
+const RESOLUTION_LABEL: Record<string, { label: string; tone: 'success' | 'danger' | 'warn' | 'neutral' }> = {
+  approved: { label: 'Disetujui', tone: 'success' },
+  rejected: { label: 'Ditolak', tone: 'danger' },
+  revision_requested: { label: 'Perlu Revisi', tone: 'warn' },
+  resubmitted: { label: 'Sudah dikirim ulang', tone: 'neutral' },
+  superseded: { label: 'Sudah ditindaklanjuti', tone: 'neutral' },
+};
 
 /** Tombol aksi kompak (primary, lebar mengikuti label — bukan full-width). */
 function InlineActionButton({ label, onPress }: { label: string; onPress: () => void }) {
@@ -143,7 +162,14 @@ function NotificationRow({
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">{item.body}</Text>
           ) : null}
           <View className="flex-row items-center gap-2 pt-0.5">
-            <Badge label={NOTIFICATION_TYPE_LABEL[item.type]} tone={tone} />
+            {item.resolved_at && item.resolution && RESOLUTION_LABEL[item.resolution] ? (
+              <Badge
+                label={RESOLUTION_LABEL[item.resolution].label}
+                tone={RESOLUTION_LABEL[item.resolution].tone}
+              />
+            ) : (
+              <Badge label={NOTIFICATION_TYPE_LABEL[item.type]} tone={tone} />
+            )}
             {time ? (
               <Text className="text-xs text-neutral-500 dark:text-neutral-400">{time}</Text>
             ) : null}
