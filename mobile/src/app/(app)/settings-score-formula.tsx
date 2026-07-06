@@ -9,14 +9,17 @@ import { ScrollView, Text, TextInput, View, Pressable } from 'react-native-css/c
 
 import {
   Badge,
+  Button,
   GuidanceNote,
   ScoreLegend,
   SectionCard,
   SkeletonCard,
   usePlaceholderColor,
 } from '@/components/ui';
+import { ClosePeriodModal } from '@/components/close-period-modal';
 import {
   useActivePeriod,
+  useClosePeriod,
   useFormulaActions,
   useScoreFormulaTemplates,
   useScoreFormulaVersions,
@@ -430,8 +433,10 @@ function FormulaTemplateSection({
 
 export default function SettingsScoreFormulaScreen() {
   const { isLoading: profileLoading, can } = useProfile();
-  const { period, isLoading: periodLoading } = useActivePeriod();
+  const { period, isLoading: periodLoading, isError: periodError, refetch: refetchPeriod } = useActivePeriod();
   const { templates } = useScoreFormulaTemplates();
+  const { closePeriod } = useClosePeriod();
+  const [showCloseModal, setShowCloseModal] = useState(false);
 
   if (profileLoading) return <SkeletonCard />;
 
@@ -463,17 +468,49 @@ export default function SettingsScoreFormulaScreen() {
           </View>
           {periodLoading ? (
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat…</Text>
+          ) : periodError ? (
+            <View className="gap-2">
+              <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
+                Gagal memuat periode. Periksa koneksi lalu coba lagi.
+              </Text>
+              <Button
+                label="Coba lagi"
+                variant="secondary"
+                accessibilityLabel="Coba lagi memuat periode"
+                onPress={() => refetchPeriod()}
+              />
+            </View>
           ) : period ? (
-            <Text className="text-sm text-neutral-600 dark:text-neutral-300">
-              {period.period_name} · {period.period_start} – {period.period_end}
-            </Text>
+            <View className="gap-3">
+              <Text className="text-sm text-neutral-600 dark:text-neutral-300">
+                {period.period_name} · {period.period_start} – {period.period_end}
+              </Text>
+              {/* WS-5: aksi tutup periode (buka dialog dua-langkah). Layar sudah digate
+                  manage_score_formula → tombol tak pernah tampil tanpa izin. */}
+              <Button
+                label="Tutup Periode"
+                variant="secondary"
+                onPress={() => setShowCloseModal(true)}
+              />
+            </View>
           ) : (
+            // Copy state-kosong TIDAK menjanjikan "Buka periode" (tak ada UI open-period, WS-5 close-only).
             <GuidanceNote
-              title="Belum ada periode skoring"
-              body="Buka periode skoring agar perhitungan & override skor tersedia."
+              title="Belum ada periode aktif"
+              body="Tidak ada periode skoring yang sedang berjalan. Ranking menampilkan hasil periode terakhir yang ditutup."
             />
           )}
         </SectionCard>
+
+        {period ? (
+          <ClosePeriodModal
+            visible={showCloseModal}
+            period={period}
+            onConfirm={closePeriod}
+            onError={() => refetchPeriod()}
+            onClose={() => setShowCloseModal(false)}
+          />
+        ) : null}
 
         {templates.length ? (
           <View className="gap-3">

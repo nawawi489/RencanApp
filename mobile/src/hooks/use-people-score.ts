@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   activateScoreFormulaVersion,
+  closePeriodSnapshot,
   createScoreFormulaDraft,
   updateFormulaVersionWeights,
   type CreateScoreFormulaDraftInput,
@@ -165,6 +166,30 @@ export function useScoreFormulaVersions(templateId: string) {
 }
 
 // ---------------------------------------------------------------- actions (mutations)
+
+/**
+ * WS-5 — tutup periode aktif (buat snapshot ranking beku, D9). Standalone (bukan
+ * bagian useFormulaActions: close adalah aksi periode, tanpa templateId).
+ * onSuccess invalidate TEPAT 3 key: ['active_period'] (periode aktif kini hilang),
+ * ['latest_closed_period'] (People ScoreBadge), ['ranking'] (prefix — ranking baru muncul).
+ * n=0 (tak ada skor current) = sukses. Error RPC (has_permission/sudah-tutup/tak-ada)
+ * di-propagate apa adanya lewat mutateAsync agar modal menyurface.
+ */
+export function useClosePeriod() {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (periodId: string) => closePeriodSnapshot(periodId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['active_period'] });
+      qc.invalidateQueries({ queryKey: ['latest_closed_period'] });
+      qc.invalidateQueries({ queryKey: ['ranking'] });
+    },
+  });
+  return {
+    closePeriod: (periodId: string) => m.mutateAsync(periodId),
+    isPending: m.isPending,
+  };
+}
 
 export type ScoreOverrideArgs = {
   userId: string;
