@@ -14,9 +14,11 @@ import { useThemePreference } from '@/providers/theme-provider';
 import {
   enumerateMonths,
   enumerateQuarters,
+  focusPeriodStatus,
   formatPeriodLabel,
   isSameFocus,
   periodBreadcrumb,
+  type CardPeriodStatus,
   type PeriodFocus,
   type PeriodMode,
   type PeriodOption,
@@ -24,6 +26,14 @@ import {
 } from '@/lib/period-focus';
 
 const MODE_LABEL: Record<PeriodMode, string> = { month: 'Bulan', quarter: 'Quarter' };
+
+// WS-2 (BUG-02 / WS-04) — label panel mengikut status periode fokus, bukan hardcoded.
+// Memberi sinyal bahwa aksi turunan terkunci saat fokus arsip/masa depan.
+const PERIOD_KIND_LABEL: Record<CardPeriodStatus, string> = {
+  past: 'Periode arsip',
+  current: 'Periode aktif',
+  future: 'Periode akan datang',
+};
 
 function statusPill(status: PeriodOption['status']) {
   if (status === 'current') {
@@ -42,11 +52,14 @@ function optionToFocus(opt: PeriodOption): PeriodFocus {
 }
 
 export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSpace }) {
-  const { focus, setFocus, setMode } = usePeriodFocus();
+  const { focus, setFocus, setMode, now: providerNow } = usePeriodFocus();
   const [open, setOpen] = useState(false);
   const isDark = useThemePreference().effective === 'dark';
-  // `now` anchor — di runtime pakai Date saat ini; di test injected agar deterministik.
-  const anchor = useMemo(() => now ?? new Date(), [now]);
+  // `now` anchor — prop eksplisit (standalone test) > anchor sesi dari provider
+  // (satu sumber "sekarang" yg sama dgn gating isAddLocked di workspace) > new Date().
+  // WS-2: label periode HARUS memakai anchor yg sama dgn gating, jika tidak fokus
+  // "aktif" bisa salah terbaca "arsip" saat jam mesin ≠ anchor sesi.
+  const anchor = useMemo(() => now ?? providerNow, [now, providerNow]);
 
   const options = useMemo<PeriodOption[]>(
     () =>
@@ -58,6 +71,7 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
 
   const label = formatPeriodLabel(focus);
   const breadcrumb = periodBreadcrumb(focus, space);
+  const periodKindLabel = PERIOD_KIND_LABEL[focusPeriodStatus(focus, anchor)];
   // WSA-10 — collapsed pill (spec §6.2/§7.2): bg #eef4fb border #d9e3ef (Performance);
   // varian Development #eefaf8/#cceee8. Amandemen a11y (DESIGN §4 mengikat):
   //  - surface/border theme-aware — tint terkunci HANYA light mode; dark ikut gelap
@@ -86,9 +100,9 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
         gap: 10,
       }}
       accessible
-      accessibilityLabel={`Periode aktif ${label}`}>
+      accessibilityLabel={`${periodKindLabel} ${label}`}>
       <View style={{ flex: 1, gap: 0 }}>
-        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.4, color: isDark ? '#94a3b8' : '#64748b', textTransform: 'uppercase' }}>Periode aktif</Text>
+        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.4, color: isDark ? '#94a3b8' : '#64748b', textTransform: 'uppercase' }}>{periodKindLabel}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
           <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a' }}>{label}</Text>
           <Text style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }} numberOfLines={1}>{breadcrumb}</Text>

@@ -7,6 +7,7 @@ import {
   enumerateQuarters,
   focusPeriodStatus,
   formatPeriodLabel,
+  isAddLocked,
   isSameFocus,
   parseFocusJson,
   periodBreadcrumb,
@@ -179,6 +180,51 @@ describe('focusPeriodStatus (WS-04 AC-WS04-1)', () => {
   it('quarter: Q4 2026 → future', () => {
     const focus: PeriodFocus = { mode: 'quarter', year: 2026, quarter: 4 };
     expect(focusPeriodStatus(focus, now)).toBe('future');
+  });
+});
+
+// WS-2 (BUG-02 / WS-04) — gerbang tunggal kunci tombol "+ turunan".
+// Root cause: row tree hanya memakai cardPeriodStatus. Goal berperiode TAHUNAN
+// (PRD §17) tak pernah 'past' di dalam tahun berjalan, jadi saat fokus di bulan
+// ARSIP tombol "+" tetap aktif (bug). `isAddLocked` menggabungkan status card DAN
+// status periode fokus; nilainya jadi satu sumber untuk `past`/`addDimmed`/guard.
+describe('isAddLocked (WS-2 / BUG-02)', () => {
+  const now = new Date(2026, 6, 5); // 5 Juli 2026 → bulan berjalan Juli, Q3
+  const yearlyGoal = { period_start: '2026-01-01', period_end: '2026-12-31' };
+  const focusJuli: PeriodFocus = { mode: 'month', year: 2026, month: 7 }; // current
+  const focusJan: PeriodFocus = { mode: 'month', year: 2026, month: 1 }; // arsip
+
+  it('Goal tahunan + fokus berjalan (Juli) → TIDAK terkunci', () => {
+    // sanity: card current + fokus current → boleh tambah turunan
+    expect(cardPeriodStatus(yearlyGoal, focusJuli)).toBe('current');
+    expect(focusPeriodStatus(focusJuli, now)).toBe('current');
+    expect(isAddLocked(yearlyGoal, focusJuli, now)).toBe(false);
+  });
+
+  it('Goal tahunan + fokus ARSIP (Januari) → TERKUNCI (inti BUG-02)', () => {
+    // cardPeriodStatus sendiri masih 'current' (jebakan yang didokumentasikan),
+    // tapi periode fokus 'past' harus tetap mengunci tombol.
+    expect(cardPeriodStatus(yearlyGoal, focusJan)).toBe('current');
+    expect(focusPeriodStatus(focusJan, now)).toBe('past');
+    expect(isAddLocked(yearlyGoal, focusJan, now)).toBe(true);
+  });
+
+  it('card yang benar-benar past + fokus berjalan → TERKUNCI (jalur cardPeriodStatus tetap jalan)', () => {
+    const pastCard = { period_start: '2026-01-01', period_end: '2026-03-31' };
+    expect(isAddLocked(pastCard, focusJuli, now)).toBe(true);
+  });
+
+  it('card tanpa tanggal (flat) + fokus berjalan → TIDAK terkunci', () => {
+    expect(isAddLocked({}, focusJuli, now)).toBe(false);
+  });
+
+  it('card tanpa tanggal (flat) + fokus ARSIP → TERKUNCI (fokus arsip mengunci apa pun)', () => {
+    expect(isAddLocked({}, focusJan, now)).toBe(true);
+  });
+
+  it('quarter: Goal tahunan + fokus Q1 arsip → TERKUNCI', () => {
+    const focusQ1: PeriodFocus = { mode: 'quarter', year: 2026, quarter: 1 };
+    expect(isAddLocked(yearlyGoal, focusQ1, now)).toBe(true);
   });
 });
 

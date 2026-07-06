@@ -2,7 +2,9 @@
 // notifikasi action_plan membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
 // UI-S-N01 — tombol aksi inline per row sesuai (type, entity_type).
 // UI-S-N02 — section "Baru" (≤24 jam) vs "Sebelumnya".
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
+import type { ComponentProps } from 'react';
 import { useMemo, useState } from 'react';
 import { SectionList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
@@ -10,10 +12,9 @@ import { Pressable, Text, View } from 'react-native-css/components';
 import { Screen } from '@/components/screen';
 import {
   Badge,
-  Button,
   EmptyState,
   ErrorState,
-  SectionCard,
+  IconTile,
   SkeletonList,
   TabBar,
 } from '@/components/ui';
@@ -25,6 +26,7 @@ import {
   type NotificationTab,
   type NotificationType,
 } from '@/lib/notifications';
+import { useThemePreference } from '@/providers/theme-provider';
 
 const TABS: { key: NotificationTab; label: string }[] = [
   { key: 'semua', label: 'Semua' },
@@ -36,6 +38,34 @@ const TABS: { key: NotificationTab; label: string }[] = [
   { key: 'repeat', label: 'Repeat' },
   { key: 'governance', label: 'Governance' },
 ];
+
+// Ikon per tipe (Ionicons outline, DESIGN §10) — penguat visual; label teks Badge tetap sumber makna.
+const TYPE_ICON: Record<NotificationType, ComponentProps<typeof Ionicons>['name']> = {
+  review_request: 'eye-outline',
+  approved: 'checkmark-circle-outline',
+  rejected: 'close-circle-outline',
+  deadline_reminder: 'time-outline',
+  repeat_due: 'repeat-outline',
+  instance_missed: 'alert-circle-outline',
+  comment: 'chatbubble-ellipses-outline',
+  mention: 'at-outline',
+  governance_warning: 'shield-half-outline',
+};
+
+/** Waktu relatif ringkas (id-ID). Graceful pada tanggal invalid: string kosong. */
+export function relativeTime(iso: string, now: number = Date.now()): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const min = Math.floor((now - t) / 60000);
+  if (min < 1) return 'Baru saja';
+  if (min < 60) return `${min} menit lalu`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} jam lalu`;
+  const day = Math.floor(hr / 24);
+  if (day === 1) return 'Kemarin';
+  if (day < 7) return `${day} hari lalu`;
+  return new Date(t).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 // ---------------------------------------------------------------- row
 
@@ -57,6 +87,20 @@ function inlineAction(item: Notification): { label: string; href: Href | null } 
   return null;
 }
 
+/** Tombol aksi kompak (primary, lebar mengikuti label — bukan full-width). */
+function InlineActionButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      // min-h-[44px]: touch target a11y; bg-brand-dark: solid + teks putih (DESIGN §4).
+      className="min-h-[44px] items-center justify-center self-start rounded-xl bg-brand-dark px-5 active:opacity-80">
+      <Text className="text-sm font-semibold text-white">{label}</Text>
+    </Pressable>
+  );
+}
+
 function NotificationRow({
   item,
   onPress,
@@ -67,35 +111,52 @@ function NotificationRow({
   onAction: (href: Href) => void;
 }) {
   const action = inlineAction(item);
+  const tone = NOTIFICATION_TYPE_TONE[item.type];
+  const time = relativeTime(item.created_at);
   return (
-    <SectionCard onPress={onPress}>
-      <View className="flex-row items-start gap-2">
-        {/* Indikator belum dibaca: titik + teks a11y (warna ≠ satu-satunya sinyal). */}
-        {!item.is_read ? (
-          <View
-            className="mt-1.5 h-2 w-2 rounded-full bg-brand-dark"
-            accessible
-            accessibilityLabel="Belum dibaca"
-          />
-        ) : null}
-        <View className="flex-1 gap-1.5">
-          <View className="flex-row items-start justify-between gap-2">
-            <Text className="flex-1 text-base font-semibold text-black dark:text-white">
+    // Kartu = View; area tap baris & tombol aksi adalah sibling Pressable — nested <button>
+    // invalid di web (react-native-web merender keduanya sebagai <button>).
+    <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        className="flex-row items-start gap-3 active:opacity-70">
+        <IconTile icon={TYPE_ICON[item.type]} tone={tone} />
+        <View className="flex-1 gap-1">
+          <View className="flex-row items-start gap-2">
+            <Text
+              className={`flex-1 text-base text-black dark:text-white ${
+                item.is_read ? 'font-semibold' : 'font-bold'
+              }`}>
               {item.title}
             </Text>
-            <Badge label={NOTIFICATION_TYPE_LABEL[item.type]} tone={NOTIFICATION_TYPE_TONE[item.type]} />
+            {/* Indikator belum dibaca: titik + teks a11y (warna ≠ satu-satunya sinyal). */}
+            {!item.is_read ? (
+              <View
+                className="mt-1.5 h-2.5 w-2.5 rounded-full bg-red-600"
+                accessible
+                accessibilityLabel="Belum dibaca"
+              />
+            ) : null}
           </View>
           {item.body ? (
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">{item.body}</Text>
           ) : null}
-          {action && action.href ? (
-            <View className="pt-1">
-              <Button label={action.label} variant="secondary" onPress={() => onAction(action.href!)} />
-            </View>
-          ) : null}
+          <View className="flex-row items-center gap-2 pt-0.5">
+            <Badge label={NOTIFICATION_TYPE_LABEL[item.type]} tone={tone} />
+            {time ? (
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">{time}</Text>
+            ) : null}
+          </View>
         </View>
-      </View>
-    </SectionCard>
+      </Pressable>
+      {action && action.href ? (
+        // pl-[52px] = lebar IconTile 40 + gap 12 — tombol sejajar kolom teks.
+        <View className="pl-[52px]">
+          <InlineActionButton label={action.label} onPress={() => onAction(action.href!)} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -119,8 +180,10 @@ function groupByRecency(items: Notification[]): NotifSection[] {
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <View className="bg-white py-2 dark:bg-black">
-      <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{title}</Text>
+    <View className="bg-white pb-1 pt-2 dark:bg-black">
+      <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+        {title}
+      </Text>
     </View>
   );
 }
@@ -133,6 +196,10 @@ export function LiveNotificationsScreen() {
   const { notifications, isLoading, isError, refetch } = useNotifications(tab);
   const { count } = useUnreadCount();
   const { markRead, markAllRead } = useNotificationActions();
+  const { effective } = useThemePreference();
+  // Pola warna ikon brand theme-aware (app-header/IconTile, DESIGN §12).
+  const brandIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
+  const mutedIconColor = effective === 'dark' ? '#a3a3a3' : '#667085';
 
   const tabs = TABS.map((t) =>
     t.key === 'perlu_tindakan' && count > 0 ? { ...t, badge: count } : t,
@@ -157,12 +224,14 @@ export function LiveNotificationsScreen() {
   const controls = (
     <>
       {count > 0 ? (
+        // Aksi ringan (link-style, bukan tombol berbingkai): satu ketukan menandai semua.
         <Pressable
           onPress={() => markAllRead()}
-          className="min-h-[44px] items-center justify-center self-start rounded-xl border border-neutral-300 px-4 py-2.5 active:opacity-70 dark:border-neutral-700"
+          className="min-h-[44px] flex-row items-center gap-1.5 self-start active:opacity-70"
           accessibilityRole="button"
           accessibilityLabel="Tandai semua dibaca">
-          <Text className="text-sm font-semibold text-black dark:text-white">
+          <Ionicons name="checkmark-done-outline" size={18} color={brandIconColor} />
+          <Text className="text-sm font-semibold text-brand-dark dark:text-blue-300">
             Tandai semua dibaca
           </Text>
         </Pressable>
@@ -172,7 +241,7 @@ export function LiveNotificationsScreen() {
   );
 
   const header = (
-    <View className="gap-5 pb-3">
+    <View className="gap-4 pb-3">
       <View className="gap-1">
         <Text className="text-2xl font-bold text-black dark:text-white">Notifications</Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
@@ -223,7 +292,7 @@ export function LiveNotificationsScreen() {
         renderSectionHeader={({ section }) => <SectionHeader title={section.title} />}
         ListEmptyComponent={
           <EmptyState
-            icon={<Text className="text-2xl">🔔</Text>}
+            icon={<Ionicons name="notifications-outline" size={28} color={mutedIconColor} />}
             title="Belum ada notifikasi"
             description="Review request, approval, deadline reminder, dan repeat due akan tampil di sini."
           />

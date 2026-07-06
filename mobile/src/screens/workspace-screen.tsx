@@ -64,9 +64,9 @@ import {
 } from '@/lib/development-areas';
 import {
   MONTH_LABELS_ID,
-  cardPeriodStatus,
   focusPeriodStatus,
   formatPeriodLabel,
+  isAddLocked,
   quarterOfMonth,
   showPastPeriodAlert,
 } from '@/lib/period-focus';
@@ -504,8 +504,8 @@ const StrategySubRow = memo(function StrategySubRow({
     [expanded, initiatives],
   );
   const { progressOf: initProgressOf } = useCardProgress(initiativeIds);
-  const { focus } = usePeriodFocus();
-  const past = cardPeriodStatus(strategy, focus) === 'past';
+  const { focus, now } = usePeriodFocus();
+  const past = isAddLocked(strategy, focus, now);
   const canAddInit = can('create_initiative');
   const rowActions = useTreeRowActions('strategy', strategy.id, strategy.name);
   const periodLabel = treePeriodPillLabel(strategy, focus);
@@ -639,8 +639,8 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
   // WSA-04 — guard MBR: fetch kepatuhan kpi_area→strategy hanya saat expanded (parentType ''
   // menonaktifkan query di useMbrCompliance). Diteruskan ke StrategySubRow untuk guard "+ Initiative".
   const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'kpi_area' : '', kpi.id);
-  const { focus } = usePeriodFocus();
-  const past = cardPeriodStatus(kpi, focus) === 'past';
+  const { focus, now } = usePeriodFocus();
+  const past = isAddLocked(kpi, focus, now);
   const canAddStrategy = can('create_strategy'); // WSA-13 — key presisi (bukan proxy create_kpi_area)
   const rowActions = useTreeRowActions('kpi_area', kpi.id, kpi.name);
   const periodLabel = treePeriodPillLabel(kpi, focus);
@@ -670,7 +670,7 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
         style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
         {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna KPI Area (#b76b00). */}
         <View
-          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800"
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area }}>
           <TreeCardBody cardLabel={kpi.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
@@ -749,13 +749,13 @@ const GoalRow = memo(function GoalRow({
   // UI-S-W07: destrukturisasi state fetch penuh — expand tanpa skeleton/empty/error
   // terasa seperti tombol mati (paritas dgn KpiAreaSubRow level-2).
   const { kpiAreas, isLoading, isError, refetch } = useKpiAreas(goal.id, expanded);
-  const { focus } = usePeriodFocus();
+  const { focus, now } = usePeriodFocus();
   // WSA-15 — orb capaian anak (KPI Area) di level kontainer (1 RPC per Goal expanded, bukan per row).
   const kpiIds = useMemo(() => (expanded ? kpiAreas.map((k) => k.id) : EMPTY_IDS), [expanded, kpiAreas]);
   const { progressOf: kpiProgressOf } = useCardProgress(kpiIds);
 
   const count = kpiCountOf(goal);
-  const past = cardPeriodStatus(goal, focus) === 'past';
+  const past = isAddLocked(goal, focus, now);
   const canAddKpi = can('create_kpi_area');
   const rowActions = useTreeRowActions('goal', goal.id, goal.name);
   const periodLabel = treePeriodPillLabel(goal, focus);
@@ -861,8 +861,8 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
 }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { focus } = usePeriodFocus();
-  const past = cardPeriodStatus(item, focus) === 'past';
+  const { focus, now } = usePeriodFocus();
+  const past = isAddLocked(item, focus, now);
   const rowActions = useTreeRowActions('action_plan', item.id, item.name);
   const periodLabel = treePeriodPillLabel(item, focus);
   const metaLines = WS_TREE_COMPACT_COPY.actionPlanMeta({
@@ -938,8 +938,8 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const { actionPlans, isLoading, isError, refetch } = useInitiativeActionPlans(item.id, expanded);
-  const { focus } = usePeriodFocus();
-  const past = cardPeriodStatus(item, focus) === 'past';
+  const { focus, now } = usePeriodFocus();
+  const past = isAddLocked(item, focus, now);
   const canAddPlan = can('create_action_plan');
   const rowActions = useTreeRowActions('initiative', item.id, item.name);
   const periodLabel = treePeriodPillLabel(item, focus);
@@ -1053,8 +1053,8 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
     [expanded, initiatives],
   );
   const { progressOf: initProgressOf } = useCardProgress(initiativeIds);
-  const { focus } = usePeriodFocus();
-  const past = cardPeriodStatus(ps, focus) === 'past';
+  const { focus, now } = usePeriodFocus();
+  const past = isAddLocked(ps, focus, now);
   const canAddInit = can('create_initiative');
   const rowActions = useTreeRowActions('problem_statement', ps.id, ps.name);
   const periodLabel = treePeriodPillLabel(ps, focus);
@@ -1084,7 +1084,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
         style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
         {/* Spec §7.4 + §8: level-2 Dev pane, border kiri 5px warna Problem Statement (#c2410c). */}
         <View
-          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800"
+          className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement }}>
           <TreeCardBody cardLabel={ps.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
@@ -1163,7 +1163,7 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
     devArea.id,
     expanded,
   );
-  const { focus } = usePeriodFocus();
+  const { focus, now } = usePeriodFocus();
   const problemStatementIds = useMemo(
     () => (expanded ? problemStatements.map((p) => p.id) : EMPTY_IDS),
     [expanded, problemStatements],
@@ -1171,7 +1171,7 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
   const { progressOf: psProgressOf } = useCardProgress(problemStatementIds);
 
   const count = problemCountOf(devArea);
-  const past = cardPeriodStatus(devArea, focus) === 'past';
+  const past = isAddLocked(devArea, focus, now);
   const canAddProblem = can('create_problem_statement'); // WSA-13 — key presisi (bukan proxy create_development_area)
   const rowActions = useTreeRowActions('development_area', devArea.id, devArea.name);
   const periodLabel = treePeriodPillLabel(devArea, focus);

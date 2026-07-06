@@ -1351,6 +1351,28 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **Status THEME-01:** CLOSED (pending konfirmasi manual testing ulang). AC-THEME01-2..N tidak dijadwalkan.
 - **Spec update:** `docs/spec-ui-testfix-2026-07-05.md` §8 (OQ-4 RESOLVED block diperluas dgn Fase 2 post-login) + §9 handoff status.
 - **Amend PR #30:** tambah commit follow-up dgn Fase 2 verification pada branch `investigate/theme-01-root-cause`.
+## [2026-07-05] update | OQ-1 RESOLVED (WS-04 Opsi A UI-only) + governance debt tercatat
+
+- **Trigger:** owner memilih Opsi A (UI-only + governance debt tercatat) untuk OQ-1 setelah THEME-01 investigation menutup blocker terakhir non-owner. Closes the last remaining OQ pemblokir untuk batch bug UI 2026-07-05.
+- **Files added:**
+  - `wiki/concepts/ws-04-governance-debt.md` — halaman konsep permanen yang mencatat: (a) batas UI-only landed (`workspace-screen.tsx` gate via `focusPeriodStatus`); (b) batas server-side yang TIDAK ada (`.insert()` langsung ber-RLS di `cards.ts`; RLS INSERT policy 0005/0010/0012 hanya validasi org+created_by+has_permission tanpa cek periode); (c) trade-off kenapa Opsi A dipilih (cost migrasi non-trivial vs eksposur bypass path minim untuk aplikasi internal); (d) signal kapan wajib re-open backend hardening.
+- **Files edited:**
+  - `docs/spec-ui-testfix-2026-07-05.md`:
+    - Header status: "semua 6 bug fase eksekusi UI selesai atau di-hold dengan alasan tercatat"; hilangkan flag OQ-1 sebagai pemblokir.
+    - §8: tambah "RESOLVED — WS-04 governance session 2026-07-05" block yang menetapkan Opsi A, dan mencatat AC-WS04-8 TIDAK DIJADWALKAN sampai trigger re-open.
+    - §9 handoff: WS-04 SELESAI, governance debt tercatat.
+    - Koreksi faktual §9 update: gate server absent bukan warning lagi, tapi keputusan tercatat.
+  - `wiki/index.md` — tambah pointer ke `[[ws-04-governance-debt]]` di section Concepts; bump `updated: 2026-07-05`.
+  - `.gitignore` — tambah `docs/kredensial-login.md` (kredensial dev owner) supaya tidak accidental commit.
+- **Status batch bug UI 2026-07-05 (final):**
+  - AUTH-02b ✅ closed (`23041a7`).
+  - CFG-01 ✅ closed (`d1fd7eb`).
+  - PPL-02 ✅ closed (PR #28 merged).
+  - PPL-06 ✅ closed (PR #28 merged) + refactor sub-komponen (PR #29 open).
+  - THEME-01 ✅ CLOSED pending konfirmasi manual (PR #30 open — verifikasi runtime lintas layar).
+  - WS-04 ✅ UI-only closed + governance debt tercatat (PR ini).
+- **Tidak ada code change hari ini** — hanya spec + wiki + gitignore update. Governance debt adalah keputusan tercatat, bukan bug.
+
 ## [2026-07-06] update | WS-4 / DCR-05 "Minta Revisi" — eksekusi TDD selesai
 
 - **Sumber rencana:** `docs/spec-ws04-dcr-revision-2026-07-06.md` + `docs/tdd-plan-ws04-dcr-revision-2026-07-06.md` (owner-locked D1–D5 + resolusi OQ-8/OQ-9).
