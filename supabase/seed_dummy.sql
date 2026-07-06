@@ -321,42 +321,59 @@ insert into public.action_plan_repeat_rules (
    '11111111-1111-1111-1111-000000000006')
 on conflict (id) do nothing;
 
--- Action plan instances (3 — historical untuk #2, 1 untuk #4)
+-- Action plan instances (3 untuk #2, 1 untuk #4).
+-- reviewer_id di-set agar layar instance menampilkan reviewer + panel review.
+-- #2 (2026-07-02) berstatus 'submitted' — submission f..002 masih 'pending' menunggu
+-- review Dewi (…003); current_submission_id di-set via UPDATE setelah submissions dibuat.
 insert into public.action_plan_instances (
   id, organization_id, action_plan_id, repeat_rule_id, instance_date, instance_time,
-  deadline_at, status, pic_id, submitted_at, submitted_late
+  deadline_at, status, pic_id, reviewer_id, submitted_at, submitted_late
 ) values
   ('eeeeeeee-eeee-eeee-eeee-000000000001', (select id from public.organizations limit 1),
    'cccccccc-cccc-cccc-cccc-000000000002', 'dddddddd-dddd-dddd-dddd-000000000001',
    '2026-07-01', '17:00:00', '2026-07-01 17:30:00+07', 'done',
-   '11111111-1111-1111-1111-000000000005', '2026-07-01 17:15:00+07', false),
+   '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
+   '2026-07-01 17:15:00+07', false),
   ('eeeeeeee-eeee-eeee-eeee-000000000002', (select id from public.organizations limit 1),
    'cccccccc-cccc-cccc-cccc-000000000002', 'dddddddd-dddd-dddd-dddd-000000000001',
-   '2026-07-02', '17:00:00', '2026-07-02 17:30:00+07', 'done',
-   '11111111-1111-1111-1111-000000000005', '2026-07-02 17:25:00+07', false),
+   '2026-07-02', '17:00:00', '2026-07-02 17:30:00+07', 'submitted',
+   '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
+   '2026-07-02 17:25:00+07', false),
   ('eeeeeeee-eeee-eeee-eeee-000000000003', (select id from public.organizations limit 1),
    'cccccccc-cccc-cccc-cccc-000000000002', 'dddddddd-dddd-dddd-dddd-000000000001',
    '2026-07-03', '17:00:00', '2026-07-03 17:30:00+07', 'assigned',
-   '11111111-1111-1111-1111-000000000005', null, false),
+   '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
+   null, false),
   ('eeeeeeee-eeee-eeee-eeee-000000000004', (select id from public.organizations limit 1),
    'cccccccc-cccc-cccc-cccc-000000000004', 'dddddddd-dddd-dddd-dddd-000000000002',
    '2026-07-06', '09:00:00', '2026-07-06 09:00:00+07', 'done',
-   '11111111-1111-1111-1111-000000000006', '2026-07-06 08:55:00+07', false)
+   '11111111-1111-1111-1111-000000000006', null,
+   '2026-07-06 08:55:00+07', false)
 on conflict (id) do nothing;
 
--- Submissions (2 — untuk instance yang sudah done)
+-- Submissions (2). action_plan_instance_id WAJIB di-set agar submission tampil di
+-- "Riwayat Submission" layar instance + jadi current_submission yang bisa direview.
 insert into public.action_plan_submissions (
-  id, action_plan_id, version_number, submitted_by, submitted_at, note, review_status, reviewed_by, reviewed_at
+  id, action_plan_id, action_plan_instance_id, version_number, submitted_by, submitted_at, note, review_status, reviewed_by, reviewed_at
 ) values
-  ('ffffffff-ffff-ffff-ffff-000000000001', 'cccccccc-cccc-cccc-cccc-000000000002', 1,
+  ('ffffffff-ffff-ffff-ffff-000000000001', 'cccccccc-cccc-cccc-cccc-000000000002',
+   'eeeeeeee-eeee-eeee-eeee-000000000001', 1,
    '11111111-1111-1111-1111-000000000005', '2026-07-01 17:15:00+07',
    'Basket size Senin 1 Juli: Rp 348.500', 'approved',
    '11111111-1111-1111-1111-000000000003', '2026-07-01 18:00:00+07'),
-  ('ffffffff-ffff-ffff-ffff-000000000002', 'cccccccc-cccc-cccc-cccc-000000000002', 2,
+  ('ffffffff-ffff-ffff-ffff-000000000002', 'cccccccc-cccc-cccc-cccc-000000000002',
+   'eeeeeeee-eeee-eeee-eeee-000000000002', 1,
    '11111111-1111-1111-1111-000000000005', '2026-07-02 17:25:00+07',
    'Basket size Selasa 2 Juli: Rp 362.000', 'pending',
    null, null)
 on conflict (id) do nothing;
+
+-- Tautkan current_submission_id instance (FK → submissions, di-set setelah insert submissions).
+update public.action_plan_instances i
+  set current_submission_id = s.id
+  from public.action_plan_submissions s
+  where s.action_plan_instance_id = i.id
+    and i.id in ('eeeeeeee-eeee-eeee-eeee-000000000001', 'eeeeeeee-eeee-eeee-eeee-000000000002');
 
 -- Evidence files (2)
 insert into public.evidence_files (id, submission_id, kind, storage_path, file_name, mime_type, text_content, uploaded_by)
@@ -493,13 +510,15 @@ on conflict (id) do nothing;
 
 insert into public.notifications (id, organization_id, recipient_id, actor_id, type, entity_type, entity_id, title, body, is_read)
 values
+  -- review_request instance: entity_type=action_plan_instance + entity_id=instance (WS-3b).
+  -- CTA "Review Sekarang" harus membuka layar instance e..002 (submission f..002 pending), bukan parent AP.
   ('66666666-ffff-ffff-ffff-000000000010', (select id from public.organizations limit 1),
    '11111111-1111-1111-1111-000000000003', '11111111-1111-1111-1111-000000000005',
-   'review_request', 'action_plan', 'cccccccc-cccc-cccc-cccc-000000000002',
+   'review_request', 'action_plan_instance', 'eeeeeeee-eeee-eeee-eeee-000000000002',
    'Review Submission Baru', 'Submission baru menunggu review kamu', false),
   ('66666666-ffff-ffff-ffff-000000000011', (select id from public.organizations limit 1),
    '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
-   'approved', 'action_plan', 'cccccccc-cccc-cccc-cccc-000000000002',
+   'approved', 'action_plan_instance', 'eeeeeeee-eeee-eeee-eeee-000000000001',
    'Submission Disetujui', 'Submission basket size Senin disetujui', true)
 on conflict (id) do nothing;
 
