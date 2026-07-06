@@ -12,6 +12,8 @@ export type CurrentProfile = {
   role_level: string | null;
   role_name: string | null;
   org_name: string | null;
+  /** Timezone IANA organisasi (organizations.timezone) — untuk format timestamp sisi klien. */
+  org_timezone: string | null;
   created_at: string | null;
   permissionKeys: string[];
 };
@@ -23,7 +25,7 @@ type ProfileRow = {
   organization_id: string | null;
   created_at: string | null;
   role_templates: { name: string; level: string } | null;
-  organizations: { name: string } | null;
+  organizations: { name: string; timezone: string | null } | null;
   user_permissions: { granted: boolean; permissions: { key: string } | null }[] | null;
 };
 
@@ -45,7 +47,7 @@ async function fetchCurrentProfile(): Promise<CurrentProfile> {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, full_name, email, organization_id, created_at, role_templates(name, level), organizations(name), user_permissions(granted, permissions(key))',
+      'id, full_name, email, organization_id, created_at, role_templates(name, level), organizations(name, timezone), user_permissions(granted, permissions(key))',
     )
     .eq('id', auth.user!.id)
     .single();
@@ -59,6 +61,7 @@ async function fetchCurrentProfile(): Promise<CurrentProfile> {
     role_level: row.role_templates?.level ?? null,
     role_name: row.role_templates?.name ?? null,
     org_name: row.organizations?.name ?? null,
+    org_timezone: row.organizations?.timezone ?? null,
     created_at: row.created_at ?? null,
     permissionKeys: (row.user_permissions ?? [])
       .filter((p) => p.granted && p.permissions?.key)

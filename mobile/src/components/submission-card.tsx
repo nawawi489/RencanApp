@@ -3,10 +3,34 @@
 import { Text, View } from 'react-native-css/components';
 
 import { SectionCard, Badge } from '@/components/ui';
+import { useProfile } from '@/hooks/use-profile';
 import { EVIDENCE_KIND_LABEL, RESULT_VALUE_TYPE_LABEL, personLabel, type EvidenceFile, type ResultValue, type SubmissionDetail } from '@/lib/cards';
 
-export function formatDateTime(iso: string): string {
-  return iso.replace('T', ' ').slice(0, 16);
+/**
+ * Format timestamptz ke "YYYY-MM-DD HH:mm" pada timezone organisasi (ISSUE-003).
+ * Tanpa timeZone, string ISO UTC dari PostgREST dulunya di-slice mentah sehingga jam
+ * tampil dalam UTC (mis. deadline 17:00 WIB tampil 10:00). Fallback ke slice lama bila
+ * tanggal tak valid / tz tak dikenal.
+ */
+export function formatDateTime(iso: string, timeZone?: string | null): string {
+  const fallback = iso.replace('T', ' ').slice(0, 16);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return fallback;
+  try {
+    // Locale sv-SE menghasilkan "YYYY-MM-DD HH:mm" stabil lintas platform.
+    return new Intl.DateTimeFormat('sv-SE', {
+      timeZone: timeZone ?? undefined,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+      .format(d)
+      .replace(',', '');
+  } catch {
+    return fallback;
+  }
 }
 
 export const REVIEW_STATUS: Record<string, { label: string; tone: 'warn' | 'success' | 'danger' }> = {
@@ -40,6 +64,8 @@ function ResultValueItem({ rv }: { rv: ResultValue }) {
 
 export function SubmissionCard({ s }: { s: SubmissionDetail }) {
   const status = REVIEW_STATUS[s.review_status] ?? REVIEW_STATUS.pending;
+  const { profile } = useProfile();
+  const tz = profile?.org_timezone;
   return (
     <SectionCard>
       <View className="flex-row items-center justify-between">
@@ -47,7 +73,7 @@ export function SubmissionCard({ s }: { s: SubmissionDetail }) {
         <Badge label={status.label} tone={status.tone} />
       </View>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        Oleh {s.submitter ? personLabel(s.submitter) : '—'} · {formatDateTime(s.submitted_at)}
+        Oleh {s.submitter ? personLabel(s.submitter) : '—'} · {formatDateTime(s.submitted_at, tz)}
       </Text>
       {s.note ? <Text className="text-sm text-black dark:text-white">{s.note}</Text> : null}
 
@@ -77,7 +103,7 @@ export function SubmissionCard({ s }: { s: SubmissionDetail }) {
       ) : null}
       {s.reviewed_at ? (
         <Text className="text-xs text-neutral-400">
-          Direview {s.reviewer ? `oleh ${personLabel(s.reviewer)} ` : ''}· {formatDateTime(s.reviewed_at)}
+          Direview {s.reviewer ? `oleh ${personLabel(s.reviewer)} ` : ''}· {formatDateTime(s.reviewed_at, tz)}
         </Text>
       ) : null}
     </SectionCard>

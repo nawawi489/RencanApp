@@ -14,12 +14,17 @@ const ACTION_LABEL: Record<string, string> = {
   create: 'Dibuat',
   update: 'Diubah',
   activate: 'Diaktifkan',
+  start: 'Dimulai',
   card_archived: 'Diarsipkan',
   card_cancelled: 'Dibatalkan',
+  card_restored: 'Dipulihkan',
   cancellation_requested: 'Pengajuan Pembatalan',
+  apply_template: 'Template Diterapkan',
   deadline_change_requested: 'Pengajuan Perubahan Deadline',
   deadline_change_approved: 'Perubahan Deadline Disetujui',
   deadline_change_rejected: 'Perubahan Deadline Ditolak',
+  deadline_change_resubmitted: 'Perubahan Deadline Diajukan Ulang',
+  deadline_change_revision_requested: 'Revisi Perubahan Deadline Diminta',
   evaluation_recorded: 'Evaluasi Dicatat',
   setting_updated: 'Pengaturan Diubah',
   confidential_access_granted: 'Akses Rahasia Diberikan',
@@ -27,8 +32,25 @@ const ACTION_LABEL: Record<string, string> = {
   scores_calculated: 'Skor Dihitung',
   score_override_applied: 'Override Skor Diterapkan',
   period_closed: 'Periode Ditutup',
+  score_formula_draft_created: 'Draft Formula Dibuat',
+  score_formula_weights_updated: 'Bobot Formula Diubah',
+  score_formula_activated: 'Formula Diaktifkan',
+  score_formula_changed: 'Formula Diubah',
   user_permission_granted: 'Hak Akses Diberikan',
   user_permission_revoked: 'Hak Akses Dicabut',
+  permission_scope_updated: 'Scope Permission Diubah',
+  submit: 'Bukti Disubmit',
+  submit_instance: 'Bukti Instance Disubmit',
+  review_approve: 'Review Disetujui',
+  review_reject: 'Review Ditolak',
+  review_instance_approve: 'Review Instance Disetujui',
+  review_instance_reject: 'Review Instance Ditolak',
+  instance_marked_overdue: 'Instance Terlewat',
+  instance_missed: 'Instance Terlewat',
+  instances_generated: 'Instance Digenerate',
+  activate_repeat: 'Repeat Diaktifkan',
+  set_repeat_rule: 'Jadwal Repeat Diatur',
+  violation_resolved: 'Pelanggaran Diselesaikan',
 };
 
 type ChipKey = 'semua' | 'create' | 'update' | 'archive_cancel' | 'review' | 'periode' | 'permission';
@@ -71,7 +93,7 @@ export default function SettingsActivityLogScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Activity Log' }} />
+      <Stack.Screen options={{ title: 'Log Aktivitas' }} />
       <View className="gap-3 p-5">
         {!allowed ? (
           <AccessDenied message="Activity Log hanya untuk pemegang izin Lihat Activity Log." />

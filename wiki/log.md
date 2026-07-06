@@ -1373,6 +1373,19 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
   - WS-04 ✅ UI-only closed + governance debt tercatat (PR ini).
 - **Tidak ada code change hari ini** — hanya spec + wiki + gitignore update. Governance debt adalah keputusan tercatat, bukan bug.
 
+## [2026-07-06] ingest | Kredensial Login Dev (Nyantuy Group)
+
+- **Source:** `docs/kredensial-login.md` (verifikasi 2026-07-06).
+- **Pages created (1):**
+  - `wiki/sources/kredensial-login.md` — ringkasan 6 akun uji Supabase lokal + peta ke case manual testing.
+- **Pages updated (1):**
+  - `wiki/index.md` — tambah entry `[[kredensial-login]]` di seksi Sources (alfabetis antara `konsep-dan-fondasi` dan `sistem-permission-data-governance`); bump `updated: 2026-07-06`.
+- **Key takeaways:**
+  - Password universal `rencan123` untuk semua `*@rencan.local` — lokal saja, jangan pakai di staging/prod.
+  - 6 akun menutup kasus manual-testing yang sebelumnya Blocked: ADM-01..15, ROLE-01 (semua baris), MENU-02, SCORE-02/02b/04, REV/DCR/NOTIF, CHAT/INBOX, EVD-01..05, AP-01..03, PPL-07 (D9), ADM-11 (Confidential Access), SRCH-02.
+  - Pairing dua-aktor SCORE-02: Dewi (mgr.sales) + Eko (mgr.ops) memenuhi "aktor 1 ≠ aktor 2"; CEO/CMO fallback.
+  - Seed catatan: `staff.finance@` masih member Tim Ops (bukan tim finance khusus) — cukup untuk uji role, kurang rapi untuk skenario lintas-departemen.
+
 ## [2026-07-06] update | WS-4 / DCR-05 "Minta Revisi" — eksekusi TDD selesai
 
 - **Sumber rencana:** `docs/spec-ws04-dcr-revision-2026-07-06.md` + `docs/tdd-plan-ws04-dcr-revision-2026-07-06.md` (owner-locked D1–D5 + resolusi OQ-8/OQ-9).
@@ -1390,3 +1403,30 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **Deviasi vs spec (minor):**
   - Nama constraint status sudah diverifikasi live: `deadline_change_requests_status_check`, `deadline_change_logs_action_check` — sesuai dugaan spec §5.1 blocker.
   - UI: label input alasan reviewer disatukan (`Alasan review untuk <id>`) alih-alih dua alias tersembunyi (lebih bersih; test disesuaikan tanpa kehilangan cakupan AC).
+
+## [2026-07-07] update | QA menyeluruh via /qa — 7 fix + laporan
+
+- **Cakupan:** Exhaustive, 5 akun ([[kredensial-login]]), ±25 halaman web preview (localhost:8081), termasuk alur review E2E, RLS lintas-team, dark mode, mobile viewport, dialog Tutup Periode WS-5 (dibatalkan, tidak dieksekusi).
+- **Fix (commit atomik, branch `chore/rntl-a11y-tsc-cleanup`):** ISSUE-002 antrean review Home tak hitung submission instance (`b347f87`); ISSUE-003 timestamp dirender UTC bukan timezone org (`e98be97`); ISSUE-004 AP di luar akses = skeleton abadi + retry 406 → maybeSingle + empty state (`b56584d`); ISSUE-006 label log mentah (`2f35211`); ISSUE-007 judul Inggris (`b7c20dc`); ISSUE-008 badge "Belum" (`e13d2b2`); ISSUE-011 duplikasi role profil (`6292b16`). 3 test regresi baru.
+- **Bukan-bug setelah verifikasi:** Manager membuat departemen = sesuai `specs/permission-settings.md` (6 kunci default c_level+management); tanggal Home "Senin 6 Juli" dini hari = `get_org_today` sadar timezone org (CF-3); a11y tombol Masuk Workspace = artefak alat snapshot.
+- **Deferred:** ISSUE-005 notifikasi actionable basi (dicatat di `TODOS.md`, butuh keputusan produk).
+- **Laporan:** `.gstack/qa-reports/qa-report-localhost-8081-2026-07-07.md` (skor 82 → 98) + 40 screenshot.
+
+## [2026-07-07] update | ISSUE-001 follow-up — Department admin-only (ikuti PRD)
+
+- **Konteks:** Temuan /qa ISSUE-001 (Manager bisa buat Departemen) awalnya ditandai "bukan bug" karena `specs/permission-settings.md` memberi `create_department` sebagai default c_level+management. Cek ulang ke PRD: §9 tak melistkan pengelolaan Department sbg permission utama; §34.3 menempatkannya di Admin Settings. Owner memilih **ikuti PRD**.
+- **Perubahan:** Migrasi `0041_department_admin_only.sql` mencabut `create_department` dari bundle default di `has_permission`, `list_user_permissions_admin`, `set_user_permission` → hanya CEO/Super Admin bypass atau grant eksplisit. Klien `MGR_DEFAULT_KEYS` jadi 5 kunci; gate entry Organisasi (gear + item Menu) diubah ke `ORG_SETTINGS_PERMISSIONS.some(can)` agar Manager tetap capai tab Tim (`manage_teams`). Spec §5.2/§5.3 disinkron.
+- **Verifikasi:** DB tolak RPC create_department utk Manager & C-Level; CEO tetap bisa. Browser: Dewi tab Departemen "Anda tidak memiliki akses", tab Tim jalan, gear tetap muncul. `tsc` bersih; suite terdampak (use-profile/menu/org-structure) 54/54; suite penuh 971/973 (2 flaky di mbr-completion/notifications, lulus saat rerun terisolasi).
+- **Catatan:** migrasi dinomori 0041 karena 0040 dipakai workstream ISSUE-005 (notification resolution) yang jalan paralel di working tree yang sama.
+- Commit: `36bb2c7` (fix) + `1ed26b1` (test).
+
+## [2026-07-07] update | ISSUE-005 — resolusi notifikasi actionable
+
+- Migration: `supabase/migrations/0040_notification_resolution.sql`.
+- Skema: kolom `resolved_at timestamptz` + `resolution text` di `public.notifications` (CHECK: `approved|rejected|revision_requested|resubmitted|superseded`); index parsial `notifications_unresolved_idx` untuk query "Perlu Tindakan".
+- Helper internal `resolve_notifications(entity_type, entity_id, types[], resolution)` — SECURITY DEFINER, revoke dari role publik.
+- Empat RPC pemutus di-patch untuk memanggil helper: `review_deadline_change` (branch approved/rejected/revision_requested), `resubmit_deadline_change_request`, `review_action_plan_submission`, `review_action_plan_instance_submission`.
+- Backfill idempoten `backfill_resolve_stale_notifications()` di-invoke sekali saat migration diterapkan; membereskan notif basi eksisting (2 DCR + 1 AP-level review_request di seed DB).
+- Client: `mobile/src/lib/notifications.ts` menambah `resolved_at`/`resolution` ke tipe `Notification`, tab **Perlu Tindakan** menyaring `.is('resolved_at', null)`, dan `NOTIFICATION_TYPES` diperluas dengan 4 tipe DCR (`deadline_change_requested/approved/rejected/revision_requested`) yang sebelumnya silent-render tanpa Badge/ikon. Layar `notifications.tsx` menampilkan Badge hasil (Disetujui/Ditolak/Perlu Revisi/Sudah dikirim ulang/Sudah ditindaklanjuti) dan menurunkan CTA ke "Lihat Detail" untuk baris resolved.
+- Verifikasi: `supabase/tests/0040_notification_resolution_contract.sql` 8/8 (Block A approve DCR, B reject DCR, C revision_requested, D resubmit, E approve AP, F reject AP, G approve instance, H backfill); jest `notifications.test.ts` 17/17 + `notifications.test.tsx` 12/12; `tsc --noEmit` bersih.
+- Referensi: PRD §22–§25 (DCR + review); [`bugfix-2026-07-06-execution.md`](../wiki/concepts/) ISSUE-005 line item; laporan QA `.gstack/qa-reports/qa-report-localhost-8081-2026-07-07.md` (row ISSUE-005 diupdate ke verified).

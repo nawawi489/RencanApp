@@ -69,7 +69,8 @@ function ThemeSwitch() {
 }
 
 // Satu item Menu. `href` = navigasi; `toast` = fitur belum dibangun (Bantuan) → alert "Segera hadir";
-// `permission` = gate opsional (non-pressable + dim bila can() false). `icon` XOR `text` (glyph).
+// `permission` = gate opsional (non-pressable + dim bila can() false). `permissionAny` = gate bila
+// user punya SALAH SATU izin (layar multi-tab dg gate per-tab). `icon` XOR `text` (glyph).
 type MenuItem = {
   label: string;
   description: string;
@@ -78,8 +79,16 @@ type MenuItem = {
   text?: string;
   href?: Href;
   permission?: string;
+  permissionAny?: readonly string[];
   toast?: boolean;
 };
+
+// Layar Organisasi punya 4 tab dengan gate per-tab (create_department / manage_positions /
+// manage_teams / manage_settings). Entry tampil bila user bisa MASUK minimal satu tab — Manager
+// tetap capai tab Tim (manage_teams) meski Departemen kini admin-only (ISSUE-001, ikuti PRD).
+const ORG_SETTINGS_PERMISSIONS = [
+  'create_department', 'manage_positions', 'manage_teams', 'manage_settings',
+] as const;
 
 // Akses Cepat — spec §7/§10: TEPAT 3, tak ber-permission (visible untuk semua user, §18).
 const AKSES_CEPAT: MenuItem[] = [
@@ -103,7 +112,7 @@ const BANTUAN_ITEMS: MenuItem[] = [
 // decision 2026-07-05): dipertahankan agar layar Card Completion Rule / Keterangan Card /
 // Status & Prioritas / Notifications Rule tetap punya entry point (kalau tidak, jadi orphan).
 const PENGATURAN_ITEMS: MenuItem[] = [
-  { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permission: 'create_department' },
+  { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permissionAny: ORG_SETTINGS_PERMISSIONS },
   { label: 'Repeat Setting', description: 'Jadwal Action Plan', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
   { label: 'Score Formula', description: 'Rumus score', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
   { label: 'Permission Settings', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
@@ -142,7 +151,10 @@ async function fetchProfile(): Promise<ProfileRow | null> {
 /** Kartu fitur Menu (grid 2 kolom). Non-pressable + dim bila permission tak terpenuhi (spec §18). */
 function MenuCard({ item, onPress }: { item: MenuItem; onPress: (item: MenuItem) => void }) {
   const { can } = useProfile();
-  const active = item.toast ? true : !!item.href && (!item.permission || can(item.permission));
+  const permitted =
+    (!item.permission || can(item.permission)) &&
+    (!item.permissionAny || item.permissionAny.some((k) => can(k)));
+  const active = item.toast ? true : !!item.href && permitted;
   const body = (
     <View
       className={`min-h-[112px] justify-between rounded-2xl border p-3.5 ${
@@ -250,11 +262,11 @@ export default function MenuScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <View className="gap-4 p-5">
         {/* Local header — spec §5: title Menu (28px) + satu gear (tanpa search/plus).
-            Gear hanya untuk admin (can create_department) — non-admin jangan diarahkan ke
-            layar akses-ditolak (spec §18: hide diizinkan). */}
+            Gear muncul bila user bisa masuk minimal satu tab Organisasi — non-admin jangan
+            diarahkan ke layar akses-ditolak (spec §18: hide diizinkan). */}
         <View className="mb-1 flex-row items-center justify-between">
           <Text className="text-[28px] font-extrabold text-black dark:text-white">Menu</Text>
-          {can('create_department') ? (
+          {ORG_SETTINGS_PERMISSIONS.some((k) => can(k)) ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Pengaturan organisasi"
@@ -284,7 +296,7 @@ export default function MenuScreen() {
                 {subhead}
               </Text>
             </View>
-            {scoreValue != null ? <ScoreBadge score={scoreValue} /> : <Badge label="Belum" tone="neutral" />}
+            {scoreValue != null ? <ScoreBadge score={scoreValue} /> : <Badge label="Belum ada skor" tone="neutral" />}
           </Pressable>
         )}
 

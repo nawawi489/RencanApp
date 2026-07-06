@@ -30,6 +30,7 @@ import {
   listKpiNeedsAttention,
   listNearDeadline,
   listOverdueItems,
+  listPendingInstanceReviews,
   listTodayRepeatInstances,
   type HomeItem,
 } from '@/lib/home';
@@ -161,6 +162,7 @@ export default function LiveHomeScreen() {
   const todayQ = useQuery({ queryKey: ['org-today'], queryFn: getOrgToday, staleTime: Infinity });
   const mineQ = useQuery({ queryKey: ['home-my-plans'], queryFn: listMyActionPlans });
   const reviewQ = useQuery({ queryKey: ['home-reviews'], queryFn: listPendingReviews });
+  const reviewInstQ = useQuery({ queryKey: ['home-review-instances'], queryFn: listPendingInstanceReviews });
   const todayRepeatQ = useQuery({ queryKey: ['home-today-repeat'], queryFn: listTodayRepeatInstances });
   const overdueQ = useQuery({ queryKey: ['home-overdue'], queryFn: listOverdueItems });
   const nearQ = useQuery({ queryKey: ['home-near'], queryFn: listNearDeadline });
@@ -168,6 +170,7 @@ export default function LiveHomeScreen() {
 
   const refetchMine = mineQ.refetch;
   const refetchReview = reviewQ.refetch;
+  const refetchReviewInst = reviewInstQ.refetch;
   const refetchTodayRepeat = todayRepeatQ.refetch;
   const refetchOverdue = overdueQ.refetch;
   const refetchNear = nearQ.refetch;
@@ -176,11 +179,12 @@ export default function LiveHomeScreen() {
     useCallback(() => {
       refetchMine();
       refetchReview();
+      refetchReviewInst();
       refetchTodayRepeat();
       refetchOverdue();
       refetchNear();
       refetchKpiAttn();
-    }, [refetchMine, refetchReview, refetchTodayRepeat, refetchOverdue, refetchNear, refetchKpiAttn]),
+    }, [refetchMine, refetchReview, refetchReviewInst, refetchTodayRepeat, refetchOverdue, refetchNear, refetchKpiAttn]),
   );
 
   const mine = mineQ.data ?? [];
@@ -188,8 +192,11 @@ export default function LiveHomeScreen() {
   const revisi = mine.filter((p) => p.status === 'revision');
 
   const overdueCount = overdueQ.isError ? '—' : String(overdueQ.data?.length ?? 0);
-  const reviewCount = reviewQ.isError ? '—' : String(reviewQ.data?.length ?? 0);
-  const numericPriority = (overdueQ.data?.length ?? 0) + (reviewQ.data?.length ?? 0);
+  // Antrean review = one-time AP submitted + instance repeat submitted (dua sumber).
+  const reviewError = reviewQ.isError || reviewInstQ.isError;
+  const reviewTotal = (reviewQ.data?.length ?? 0) + (reviewInstQ.data?.length ?? 0);
+  const reviewCount = reviewError ? '—' : String(reviewTotal);
+  const numericPriority = (overdueQ.data?.length ?? 0) + reviewTotal;
 
   const name = profile?.full_name?.trim()?.split(' ')[0] || 'Rekan';
   const dateLabel = todayQ.data
@@ -238,9 +245,9 @@ export default function LiveHomeScreen() {
               icon="R"
               title="Butuh Review"
               subtitle={
-                reviewQ.isError
+                reviewError
                   ? 'Gagal memuat.'
-                  : (reviewQ.data?.length ?? 0) > 0
+                  : reviewTotal > 0
                     ? `${reviewCount} bukti menunggu keputusan.`
                     : 'Tidak ada antrean review.'
               }
@@ -343,14 +350,20 @@ export default function LiveHomeScreen() {
 
         <Section
           title="Butuh review Anda"
-          isLoading={reviewQ.isLoading}
-          isError={reviewQ.isError}
-          onRetry={() => reviewQ.refetch()}
-          isEmpty={(reviewQ.data?.length ?? 0) === 0}
+          isLoading={reviewQ.isLoading || reviewInstQ.isLoading}
+          isError={reviewError}
+          onRetry={() => {
+            reviewQ.refetch();
+            reviewInstQ.refetch();
+          }}
+          isEmpty={reviewTotal === 0}
           emptyTitle="Tidak ada yang menunggu review"
           emptyDesc="Submission yang menunggu persetujuan Anda akan muncul di sini.">
           {(reviewQ.data ?? []).map((item) => (
             <TaskRow key={item.id} item={item} onPress={() => openActionPlan(item.id)} />
+          ))}
+          {(reviewInstQ.data ?? []).map((item) => (
+            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
           ))}
         </Section>
 

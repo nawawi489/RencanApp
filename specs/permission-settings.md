@@ -145,7 +145,7 @@ begin
   else
     -- 8. revoke default role ditolak
     if v_target_level in ('c_level','management') and p_permission_key in
-       ('create_initiative','create_action_plan','create_strategy','create_department','manage_teams','review_deadline_changes')
+       ('create_initiative','create_action_plan','create_strategy','manage_teams','review_deadline_changes')
     then raise exception 'Hak akses ini melekat pada role; ubah role untuk mencabutnya.'; end if;
     -- 9. anti-lockout (jika revoke gate key dari pemegang terakhir & tidak ada CEO aktif) — lihat OQ-3
     delete from public.user_permissions where user_id = p_target_user_id and permission_id = v_perm_id;
@@ -176,11 +176,11 @@ begin
   select jsonb_build_object('key', pm.key, 'label', pm.label,
     'granted', (v_level='ceo')
                or (v_level in ('c_level','management') and pm.key in
-                   ('create_initiative','create_action_plan','create_strategy','create_department','manage_teams','review_deadline_changes'))
+                   ('create_initiative','create_action_plan','create_strategy','manage_teams','review_deadline_changes'))
                or coalesce(up.granted,false),
     'is_default', (v_level='ceo')
                or (v_level in ('c_level','management') and pm.key in
-                   ('create_initiative','create_action_plan','create_strategy','create_department','manage_teams','review_deadline_changes')))
+                   ('create_initiative','create_action_plan','create_strategy','manage_teams','review_deadline_changes')))
   from public.permissions pm
   left join public.user_permissions up on up.permission_id = pm.id and up.user_id = p_target_user_id
   order by pm.key;

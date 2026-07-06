@@ -11,7 +11,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { StatTile } from '@/components/stat-tile';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
-import { SubmissionCard } from '@/components/submission-card';
+import { SubmissionCard, formatDateTime } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
 import { getActionPlan, personLabel } from '@/lib/cards';
@@ -115,7 +115,12 @@ export default function ActionPlanInstanceDetailScreen() {
                 items={[
                   { label: 'PIC', value: inst.pic ? personLabel(inst.pic) : '—' },
                   { label: 'Reviewer', value: inst.reviewer ? personLabel(inst.reviewer) : '—' },
-                  { label: 'Deadline', value: (inst.deadline_at ?? '').replace('T', ' ').slice(0, 16) || '—' },
+                  {
+                    label: 'Deadline',
+                    value: inst.deadline_at
+                      ? formatDateTime(inst.deadline_at, profile?.org_timezone)
+                      : '—',
+                  },
                   {
                     label: 'Status',
                     value: INSTANCE_STATUS_LABEL[inst.status] ?? inst.status,

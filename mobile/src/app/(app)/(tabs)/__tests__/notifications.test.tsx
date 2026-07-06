@@ -130,4 +130,60 @@ describe('NotificationsScreen', () => {
     expect(mockMarkRead).toHaveBeenCalledWith('n1');
     expect(mockPush).toHaveBeenCalledWith('/action-plan/ap1');
   });
+
+  // ISSUE-005 — kartu resolved menampilkan label hasil (bukan pill tipe biasa)
+  // dan CTA turun ke "Lihat Detail" — bukan lagi "Review Sekarang" / "Buka Request".
+  it('[ISSUE-005-9a] resolved=approved → badge status "Disetujui" & CTA "Lihat Detail"', async () => {
+    primeList({
+      notifications: [
+        {
+          ...ROW,
+          is_read: true,
+          resolved_at: '2026-07-07T00:00:00Z',
+          resolution: 'approved',
+        },
+      ],
+    });
+    await render(<NotificationsScreen />, { wrapper: wrapper() });
+    expect(screen.getByText('Disetujui')).toBeTruthy();
+    expect(screen.getByText('Lihat Detail')).toBeTruthy();
+    expect(screen.queryByText('Review Sekarang')).toBeNull();
+  });
+
+  it('[ISSUE-005-9b] resolved=rejected → badge "Ditolak"', async () => {
+    primeList({
+      notifications: [
+        {
+          ...ROW,
+          type: 'deadline_change_requested',
+          title: 'Permintaan Perubahan Deadline',
+          body: 'Ada permintaan…',
+          is_read: true,
+          resolved_at: '2026-07-07T00:00:00Z',
+          resolution: 'rejected',
+        },
+      ],
+    });
+    await render(<NotificationsScreen />, { wrapper: wrapper() });
+    expect(screen.getByText('Ditolak')).toBeTruthy();
+    expect(screen.getByText('Lihat Detail')).toBeTruthy();
+  });
+
+  it('[ISSUE-005-9c] resolved=revision_requested → badge "Perlu Revisi"', async () => {
+    primeList({
+      notifications: [
+        {
+          ...ROW,
+          type: 'deadline_change_requested',
+          title: 'Permintaan Perubahan Deadline',
+          body: 'Ada permintaan…',
+          is_read: true,
+          resolved_at: '2026-07-07T00:00:00Z',
+          resolution: 'revision_requested',
+        },
+      ],
+    });
+    await render(<NotificationsScreen />, { wrapper: wrapper() });
+    expect(screen.getByText('Perlu Revisi')).toBeTruthy();
+  });
 });

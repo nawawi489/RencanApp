@@ -5,7 +5,7 @@ import { Alert } from 'react-native';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
-import { Badge, Button, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { SubmissionCard } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
@@ -381,8 +381,13 @@ export function LiveActionPlanDetailScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: ap?.name ?? 'Action Plan' }} />
       <View className="gap-5 p-5">
-        {apQ.isLoading || !ap ? (
+        {apQ.isLoading ? (
           <SkeletonList count={3} />
+        ) : !ap ? (
+          <EmptyState
+            title="Card tidak ditemukan"
+            description="Card ini tidak ada atau Anda tidak memiliki akses untuk melihatnya."
+          />
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">

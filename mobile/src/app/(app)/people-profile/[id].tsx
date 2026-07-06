@@ -49,6 +49,17 @@ const ROLE_LEVEL_LABEL: Record<string, string> = {
   staff: 'Staff', management: 'Management', c_level: 'C-Level', ceo: 'CEO',
 };
 
+/**
+ * "Role Name · Level" — suffix level disembunyikan bila nama role sudah memuat label level
+ * (mis. "CEO / Super Admin · CEO" atau "Staff · Staff" jadi berulang; ISSUE-011).
+ */
+function roleWithLevel(roleName: string, roleLevel: string | null | undefined): string {
+  if (!roleLevel) return roleName;
+  const levelLabel = ROLE_LEVEL_LABEL[roleLevel] ?? roleLevel;
+  if (roleName.toLowerCase().includes(levelLabel.toLowerCase())) return roleName;
+  return `${roleName} · ${levelLabel}`;
+}
+
 function formatJoinDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -172,8 +183,7 @@ export function LivePeopleProfileScreen() {
             </View>
             {detail?.role_name ? (
               <Text className="text-sm text-neutral-600 dark:text-neutral-300">
-                {detail.role_name}
-                {detail.role_level ? ` · ${ROLE_LEVEL_LABEL[detail.role_level] ?? detail.role_level}` : ''}
+                {roleWithLevel(detail.role_name, detail.role_level)}
               </Text>
             ) : null}
             {detail?.position_title ? (
@@ -276,8 +286,7 @@ export function LivePeopleProfileScreen() {
                 <View className="flex-row justify-between gap-2">
                   <Text className="text-sm text-neutral-500 dark:text-neutral-400">Hak akses</Text>
                   <Text className="text-sm font-medium text-black dark:text-white">
-                    {detail.role_name}
-                    {detail.role_level ? ` · ${ROLE_LEVEL_LABEL[detail.role_level] ?? detail.role_level}` : ''}
+                    {roleWithLevel(detail.role_name, detail.role_level)}
                   </Text>
                 </View>
               ) : null}
