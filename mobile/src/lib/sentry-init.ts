@@ -1,8 +1,8 @@
 // Titik integrasi Sentry ke seam logger. SDK diinjeksi (bukan di-require langsung)
 // agar unit test dapat mem-mock tanpa native module + startup lokal (tanpa DSN) tetap
 // aman meski package terpasang.
-import { setLogger } from './logger';
-import { createSentryLogger, type SentryClient } from './sentry-logger';
+import { addTransport } from './logger';
+import { createSentryTransport, type SentryClient } from './sentry-logger';
 
 export type InjectableSentry = SentryClient & {
   init: (options: Record<string, unknown>) => void;
@@ -14,7 +14,8 @@ export type InitSentryDeps = {
 };
 
 // Sampling produksi konservatif — biaya + noise. Dev boleh 100% agar tim melihat semua
-// error. Angka bisa disetel via env di masa depan bila perlu (di luar cakupan awal).
+// error. Dapat di-override per-channel via EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE /
+// EXPO_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE tanpa rebuild kode.
 const PROD_TRACES_SAMPLE_RATE = 0.2;
 const PROD_PROFILES_SAMPLE_RATE = 0.1;
 
@@ -25,11 +26,22 @@ function resolveEnvironment(env: Record<string, string | undefined>): string {
   return isDev ? 'development' : 'production';
 }
 
-function samplingFor(environment: string) {
+// Parse env sampling rate ke [0,1]. Invalid (NaN, negatif, >1, kosong) → undefined agar
+// pemanggil pakai default; salah ketik di env tidak boleh mematahkan startup.
+function parseSampleRate(raw: string | undefined): number | undefined {
+  if (raw == null || raw === '') return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 1) return undefined;
+  return n;
+}
+
+function samplingFor(environment: string, env: Record<string, string | undefined>) {
   const isDev = environment === 'development';
+  const tracesOverride = parseSampleRate(env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE);
+  const profilesOverride = parseSampleRate(env.EXPO_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE);
   return {
-    tracesSampleRate: isDev ? 1.0 : PROD_TRACES_SAMPLE_RATE,
-    profilesSampleRate: isDev ? 1.0 : PROD_PROFILES_SAMPLE_RATE,
+    tracesSampleRate: tracesOverride ?? (isDev ? 1.0 : PROD_TRACES_SAMPLE_RATE),
+    profilesSampleRate: profilesOverride ?? (isDev ? 1.0 : PROD_PROFILES_SAMPLE_RATE),
   };
 }
 
@@ -44,9 +56,9 @@ export function initSentry(deps: InitSentryDeps): InjectableSentry | null {
     environment,
     enableAutoSessionTracking: true,
     attachStacktrace: true,
-    ...samplingFor(environment),
+    ...samplingFor(environment, env),
   });
 
-  setLogger(createSentryLogger(deps.sentry));
+  addTransport(createSentryTransport(deps.sentry));
   return deps.sentry;
 }

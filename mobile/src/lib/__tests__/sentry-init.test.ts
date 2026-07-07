@@ -1,7 +1,4 @@
-// Wire Sentry ke seam logger. DSN dari env (EXPO_PUBLIC_SENTRY_DSN) — bila kosong,
-// aplikasi tetap boot dgn console logger (default). SDK diinjeksi (bukan di-require
-// langsung) agar unit test tak menyeret native module & Metro tak perlu resolusi.
-import { consoleLogger, getLogger, setLogger } from '../logger';
+import { _resetForTest, createLogger, getTransports } from '../logger';
 import { initSentry, type InjectableSentry } from '../sentry-init';
 
 function mockSentry(): InjectableSentry & { init: jest.Mock } {
@@ -12,19 +9,19 @@ function mockSentry(): InjectableSentry & { init: jest.Mock } {
   };
 }
 
-describe('initSentry', () => {
-  afterEach(() => setLogger(consoleLogger));
+afterEach(() => _resetForTest());
 
+describe('initSentry', () => {
   it('mengembalikan null (no-op) bila EXPO_PUBLIC_SENTRY_DSN tidak di-set', () => {
     const sentry = mockSentry();
     const result = initSentry({ env: {}, sentry });
     expect(result).toBeNull();
     expect(sentry.init).not.toHaveBeenCalled();
-    // Logger aktif tetap console (tak diganti).
-    expect(getLogger()).toBe(consoleLogger);
+    expect(getTransports().some((t) => t.name === 'sentry')).toBe(false);
   });
 
-  it('memanggil Sentry.init dgn DSN dari env & menukar logger aktif ke Sentry', () => {
+  it('memanggil Sentry.init dgn DSN & mendaftarkan sentry transport', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const sentry = mockSentry();
     const result = initSentry({
       env: { EXPO_PUBLIC_SENTRY_DSN: 'https://key@o1.ingest.sentry.io/1' },
@@ -34,21 +31,18 @@ describe('initSentry', () => {
     expect(sentry.init).toHaveBeenCalledTimes(1);
     const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
     expect(opts.dsn).toBe('https://key@o1.ingest.sentry.io/1');
-    // Logger aktif sekarang meneruskan ke Sentry (getLogger !== consoleLogger).
-    expect(getLogger()).not.toBe(consoleLogger);
-    // Bukti fungsional: getLogger().error meneruskan Error ke sentry.captureException.
+    expect(getTransports().some((t) => t.name === 'sentry')).toBe(true);
+
     const err = new Error('boom');
-    getLogger().error('[ctx]', err);
+    createLogger('ctx').error(err);
     expect(sentry.captureException).toHaveBeenCalledWith(err);
+    spy.mockRestore();
   });
 
   it('memakai environment dari EXPO_PUBLIC_APP_ENV bila diset', () => {
     const sentry = mockSentry();
     initSentry({
-      env: {
-        EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
-        EXPO_PUBLIC_APP_ENV: 'staging',
-      },
+      env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1', EXPO_PUBLIC_APP_ENV: 'staging' },
       sentry,
     });
     const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
@@ -62,9 +56,73 @@ describe('initSentry', () => {
       sentry,
     });
     const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
-    // Nilai boleh berubah — invarian: tak boleh 100% di produksi (biaya + noise).
     expect(typeof opts.tracesSampleRate).toBe('number');
     expect(opts.tracesSampleRate).toBeGreaterThan(0);
     expect(opts.tracesSampleRate).toBeLessThan(1);
+  });
+
+  describe('sampling rate override via env', () => {
+    it('EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE valid → dipakai apa adanya (menang atas default)', () => {
+      const sentry = mockSentry();
+      initSentry({
+        env: {
+          EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
+          EXPO_PUBLIC_APP_ENV: 'production',
+          EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: '0.5',
+        },
+        sentry,
+      });
+      const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+      expect(opts.tracesSampleRate).toBe(0.5);
+    });
+
+    it('EXPO_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE valid → dipakai apa adanya', () => {
+      const sentry = mockSentry();
+      initSentry({
+        env: {
+          EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
+          EXPO_PUBLIC_APP_ENV: 'production',
+          EXPO_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE: '0',
+        },
+        sentry,
+      });
+      const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+      expect(opts.profilesSampleRate).toBe(0);
+    });
+
+    it.each([
+      ['NaN', 'not-a-number'],
+      ['negatif', '-0.1'],
+      ['di atas 1', '1.5'],
+      ['string kosong', ''],
+    ])('nilai INVALID (%s) → fallback ke default produksi (tidak crash)', (_label, raw) => {
+      const sentry = mockSentry();
+      initSentry({
+        env: {
+          EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
+          EXPO_PUBLIC_APP_ENV: 'production',
+          EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: raw,
+        },
+        sentry,
+      });
+      const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+      expect(typeof opts.tracesSampleRate).toBe('number');
+      expect(opts.tracesSampleRate).toBeGreaterThan(0);
+      expect(opts.tracesSampleRate).toBeLessThan(1);
+    });
+
+    it('override berlaku juga di development (mis. 0 untuk mematikan tracing lokal)', () => {
+      const sentry = mockSentry();
+      initSentry({
+        env: {
+          EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: '0',
+        },
+        sentry,
+      });
+      const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+      expect(opts.tracesSampleRate).toBe(0);
+    });
   });
 });
