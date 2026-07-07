@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { Button, LabeledInput, SectionCard } from '@/components/ui';
+import { reportError } from '@/lib/errors';
 import { upsertSettings } from '@/lib/governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -25,7 +26,7 @@ export default function SettingsCardGuidanceScreen() {
     try {
       await upsertSettings(`card_guidance_${cardType}`, { body });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menyimpan keterangan.');
+      setError(reportError('Simpan keterangan card', e, 'Gagal menyimpan keterangan.'));
     } finally {
       setSaving(false);
     }

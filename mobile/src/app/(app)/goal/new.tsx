@@ -6,6 +6,7 @@ import { ScrollView, View } from 'react-native-css/components';
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useGoalActions } from '@/hooks/use-workspace';
+import { alertFriendlyError } from '@/lib/errors';
 import { type PersonRef } from '@/lib/goals';
 type Person = NonNullable<PersonRef>;
 
@@ -44,7 +45,7 @@ export function LiveNewGoalScreen() {
       });
       router.replace(`/goal/${created.id}` as Href);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
   }
 

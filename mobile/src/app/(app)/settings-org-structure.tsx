@@ -2,7 +2,6 @@
 // Gating: create_department / manage_positions / manage_teams / manage_settings (per tab).
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -15,6 +14,7 @@ import {
   useTeams,
 } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 
 type Tab = 'department' | 'position' | 'team' | 'role';
 
@@ -105,7 +105,7 @@ function SimpleOrgTab({
       setName('');
       setAdding(false);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.');
+      alertFriendlyError('Gagal', e, 'Kesalahan.');
     }
   }
 
@@ -200,7 +200,7 @@ function RoleTab() {
       setName('');
       setAdding(false);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.');
+      alertFriendlyError('Gagal', e, 'Kesalahan.');
     }
   }
 

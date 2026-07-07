@@ -10,6 +10,7 @@ import { UserPicker } from '@/components/user-picker';
 import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
 import type { PersonRef } from '@/lib/cards';
+import { alertFriendlyError } from '@/lib/errors';
 import { getKpiArea } from '@/lib/kpi-areas';
 
 type Person = NonNullable<PersonRef>;
@@ -67,7 +68,7 @@ export function LiveNewStrategyScreen() {
       });
       router.replace(`/strategy/${created.id}` as Href);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
   }
 

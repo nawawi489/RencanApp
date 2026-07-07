@@ -10,6 +10,7 @@ import { UserPicker } from '@/components/user-picker';
 import { useProblemStatementActions, usePerson } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
 import type { PersonRef } from '@/lib/cards';
+import { alertFriendlyError } from '@/lib/errors';
 import { getDevelopmentArea } from '@/lib/development-areas';
 
 type Person = NonNullable<PersonRef>;
@@ -111,7 +112,7 @@ export default function NewProblemStatementScreen() {
       });
       router.replace(`/problem-statement/${created.id}` as Href);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
   }
 

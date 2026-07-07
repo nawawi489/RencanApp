@@ -8,6 +8,7 @@ import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { useDevelopmentAreaActions } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
+import { alertFriendlyError } from '@/lib/errors';
 import type { PersonRef } from '@/lib/cards';
 
 type Person = NonNullable<PersonRef>;
@@ -42,7 +43,7 @@ export default function NewDevelopmentAreaScreen() {
       });
       router.replace(`/development-area/${created.id}` as Href);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
   }
 

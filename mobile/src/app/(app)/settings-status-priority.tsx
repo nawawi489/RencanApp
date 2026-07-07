@@ -6,6 +6,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { Button, LabeledInput, SectionCard } from '@/components/ui';
+import { reportError } from '@/lib/errors';
 import { upsertSettings } from '@/lib/governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -24,7 +25,7 @@ export default function SettingsStatusPriorityScreen() {
       await upsertSettings('status_card_labels', { labels: statusLabels.split(',').map((s) => s.trim()) });
       await upsertSettings('priority_card_labels', { labels: priorityLabels.split(',').map((s) => s.trim()) });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menyimpan pengaturan.');
+      setError(reportError('Simpan status & prioritas', e, 'Gagal menyimpan pengaturan.'));
     } finally {
       setSaving(false);
     }

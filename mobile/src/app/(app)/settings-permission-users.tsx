@@ -5,7 +5,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -18,6 +17,7 @@ import {
 } from '@/hooks/use-permissions-admin';
 import { useProfile } from '@/hooks/use-profile';
 import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
+import { alertFriendlyError, surfaceServerError } from '@/lib/errors';
 import type { AdminPermissionRow } from '@/lib/permissions-admin';
 
 type Person = NonNullable<PersonRef>;
@@ -163,7 +163,7 @@ export default function SettingsPermissionUsersScreen() {
       setPending(null);
       setReason('');
     } catch (e) {
-      setModalError(e instanceof Error ? e.message : 'Gagal menyimpan perubahan hak akses.');
+      setModalError(surfaceServerError('Ubah hak akses', e, 'Gagal menyimpan perubahan hak akses.'));
     }
   }
 
@@ -262,7 +262,7 @@ export default function SettingsPermissionUsersScreen() {
                       selectedId &&
                       setScope({ targetUserId: selectedId, permissionKey: row.key, scope: next }).catch(
                         (e: unknown) =>
-                          Alert.alert('Gagal scope', e instanceof Error ? e.message : 'Kesalahan.'),
+                          alertFriendlyError('Gagal scope', e, 'Kesalahan.'),
                       )
                     }
                   />

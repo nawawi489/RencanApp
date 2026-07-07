@@ -8,6 +8,7 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createActionPlan, getInitiative, type PersonRef } from '@/lib/cards';
+import { alertFriendlyError } from '@/lib/errors';
 import { DATE_HINT, DATE_RE } from '@/lib/date';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
 type Person = NonNullable<PersonRef>;
@@ -198,7 +199,7 @@ export function LiveNewActionPlanScreen() {
       qc.invalidateQueries({ queryKey: ['action-plans', initiativeId] });
       router.back();
     },
-    onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal', e, 'Terjadi kesalahan.'),
   });
 
   function submit() {

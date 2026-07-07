@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { Button, LabeledInput, SectionCard } from '@/components/ui';
+import { reportError } from '@/lib/errors';
 import { upsertSettings } from '@/lib/governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -29,7 +30,7 @@ export default function SettingsCardCompletionRuleScreen() {
         require_evidence: requireEvidence,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menyimpan pengaturan.');
+      setError(reportError('Simpan aturan penyelesaian', e, 'Gagal menyimpan pengaturan.'));
     } finally {
       setSaving(false);
     }

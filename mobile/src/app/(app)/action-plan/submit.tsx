@@ -27,6 +27,7 @@ import {
   type EvidenceInput,
   type ResultValueInput,
 } from '@/lib/cards';
+import { alertFriendlyError } from '@/lib/errors';
 import { pickEvidenceFiles } from '@/lib/file-picker';
 import { getInstance, submitInstance } from '@/lib/repeat';
 import { classifyKind, type LocalFile } from '@/lib/storage';
@@ -228,7 +229,7 @@ export function LiveActionPlanSubmitScreen() {
       qc.invalidateQueries({ queryKey: ['instance', instanceId] });
       router.back();
     },
-    onError: (e) => Alert.alert('Gagal submit', e instanceof Error ? e.message : 'Terjadi kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal submit', e, 'Terjadi kesalahan.'),
   });
 
   async function pickFiles() {
@@ -242,7 +243,7 @@ export function LiveActionPlanSubmitScreen() {
       }, {});
       setUploadStates((prev) => ({ ...prev, ...newStates }));
     } catch (e) {
-      Alert.alert('Tidak bisa memilih file', e instanceof Error ? e.message : 'Coba lagi.');
+      alertFriendlyError('Tidak bisa memilih file', e, 'Coba lagi.');
     }
   }
 
@@ -292,7 +293,7 @@ export function LiveActionPlanSubmitScreen() {
         pendingFiles.forEach((f) => (next[f.uri] = 'failed'));
         return next;
       });
-      Alert.alert('Gagal submit', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal submit', e, 'Terjadi kesalahan.');
     }
   }
 
