@@ -113,7 +113,7 @@ export default function SettingsPermissionUsersScreen() {
     queryKey: ['org-profiles'],
     queryFn: listOrgProfiles,
   });
-  const { rows, isLoading: permsLoading, isError: permsError } = useUserPermissionsAdmin(selectedId ?? '');
+  const { rows, isLoading: permsLoading, isError: permsError, refetch: refetchPerms } = useUserPermissionsAdmin(selectedId ?? '');
   const { scopes } = useUserPermissionScopes(selectedId ?? '');
   const { setPermission, isPending } = usePermissionActions(profile?.id ?? null);
   const { setScope } = useScopeActions();
@@ -249,6 +249,7 @@ export default function SettingsPermissionUsersScreen() {
               <ErrorState
                 title="Gagal memuat hak akses"
                 description="Tidak bisa mengambil hak akses anggota ini."
+                onRetry={() => refetchPerms()}
               />
             ) : (
               <View className="gap-2">
