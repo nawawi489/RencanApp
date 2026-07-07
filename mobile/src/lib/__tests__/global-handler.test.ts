@@ -1,7 +1,4 @@
-// Item — global handler untuk uncaught error di luar React tree (async yang tak di-catch,
-// promise rejection tanpa handler). ErrorBoundary hanya menangkap crash render; tanpa ini
-// error itu senyap di produksi. Diuji lewat ErrorUtils palsu (injectable) agar pure.
-import { consoleLogger, setLogger } from '../logger';
+import { _resetForTest, addTransport, type LogTransport } from '../logger';
 import { installGlobalErrorHandler } from '../global-handler';
 
 type Handler = (error: unknown, isFatal?: boolean) => void;
@@ -13,39 +10,46 @@ function fakeErrorUtils() {
     setGlobalHandler: jest.fn((h: Handler) => {
       current = h;
     }),
-    // helper: trigger sebuah error untuk assert routing ke handler baru
     _trigger: (err: unknown, isFatal?: boolean) => current?.(err, isFatal),
   };
 }
 
-describe('installGlobalErrorHandler', () => {
-  afterEach(() => setLogger(consoleLogger));
+function mockTransport(): LogTransport & { write: jest.Mock } {
+  return { name: 'mock', write: jest.fn() };
+}
 
+afterEach(() => _resetForTest());
+
+describe('installGlobalErrorHandler', () => {
   it('tidak melempar bila ErrorUtils absent (aman di test/web)', () => {
     expect(() => installGlobalErrorHandler(undefined)).not.toThrow();
   });
 
-  it('meneruskan uncaught error ke logger aktif (choke point telemetry)', () => {
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
+  it('meneruskan uncaught error ke transport (choke point telemetry)', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const t = mockTransport();
+    addTransport(t);
     const eu = fakeErrorUtils();
     installGlobalErrorHandler(eu);
     const err = new Error('uncaught');
     eu._trigger(err, false);
-    expect(active.error).toHaveBeenCalled();
-    // objek error asli utuh (bukan hanya string) → stack tetap sampai telemetry
-    expect(active.error.mock.calls[0]).toContain(err);
+    expect(t.write).toHaveBeenCalled();
+    expect(t.write.mock.calls[0][0].namespace).toBe('GlobalHandler');
+    const rawArgs = t.write.mock.calls[0][1] as unknown[];
+    expect(rawArgs).toContain(err);
+    spy.mockRestore();
   });
 
   it('menandai isFatal saat error fatal (info berguna untuk telemetry)', () => {
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const t = mockTransport();
+    addTransport(t);
     const eu = fakeErrorUtils();
     installGlobalErrorHandler(eu);
     eu._trigger(new Error('boom'), true);
-    // salah satu argumen memuat penanda isFatal (bentuknya bebas: string/obj)
-    const argsFlat = active.error.mock.calls[0].map((a: unknown) => JSON.stringify(a)).join(' ');
-    expect(argsFlat).toMatch(/isFatal/i);
+    const entry = t.write.mock.calls[0][0];
+    expect(JSON.stringify(entry)).toMatch(/isFatal/i);
+    spy.mockRestore();
   });
 
   it('memanggil handler sebelumnya (chain, agar RN LogBox default tetap jalan di dev)', () => {
@@ -59,16 +63,17 @@ describe('installGlobalErrorHandler', () => {
   });
 
   it('mengembalikan disposer yang memulihkan handler sebelumnya', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const prev = jest.fn();
     const eu = fakeErrorUtils();
     eu.setGlobalHandler(prev);
     const dispose = installGlobalErrorHandler(eu);
     dispose();
-    // handler aktif kembali ke prev — tak lagi mem-forward ke logger
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
+    const t = mockTransport();
+    addTransport(t);
     eu._trigger(new Error('after-dispose'), false);
     expect(prev).toHaveBeenCalledTimes(1);
-    expect(active.error).not.toHaveBeenCalled();
+    expect(t.write).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

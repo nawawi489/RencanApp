@@ -5,7 +5,9 @@
 //
 // `errorUtils` sengaja injectable agar pure di unit test (React Native mengeksposnya sebagai
 // global `ErrorUtils`; web/test env boleh absent tanpa error).
-import { getLogger } from './logger';
+import { createLogger } from './logger';
+
+const log = createLogger('GlobalHandler');
 
 type Handler = (error: unknown, isFatal?: boolean) => void;
 
@@ -25,7 +27,7 @@ export function installGlobalErrorHandler(
   if (!errorUtils) return () => {};
   const prev = errorUtils.getGlobalHandler?.();
   errorUtils.setGlobalHandler((error, isFatal) => {
-    getLogger().error('[GlobalHandler]', error, { isFatal: isFatal ?? false });
+    log.error(error, { isFatal: isFatal ?? false });
     prev?.(error, isFatal);
   });
   return () => {

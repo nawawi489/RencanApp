@@ -4,7 +4,7 @@
 // `alertImpl`/`logImpl` injectable agar pure di unit test.
 import { Alert } from 'react-native';
 
-import { getLogger } from './logger';
+import { createLogger } from './logger';
 
 type AlertFn = (title: string, message: string) => void;
 type LogFn = (...args: unknown[]) => void;
@@ -74,7 +74,7 @@ export function friendlyErrorMessage(error: unknown): string | undefined {
  * `setError(reportError('Konteks', e, 'Fallback ramah.'))`.
  */
 export function reportError(context: string, error: unknown, fallbackMessage: string): string {
-  getLogger().error(`[${context}]`, error);
+  createLogger(context).error(error);
   return friendlyErrorMessage(error) ?? fallbackMessage;
 }
 
@@ -86,7 +86,7 @@ export function reportError(context: string, error: unknown, fallbackMessage: st
  * — jadi kebocoran teknis (WSA-18) tetap tercegah. Selalu mencatat detail ke logger.
  */
 export function surfaceServerError(context: string, error: unknown, fallbackMessage: string): string {
-  getLogger().error(`[${context}]`, error);
+  createLogger(context).error(error);
   // Error dengan code teknis dikenal → pesan ramah (sembunyikan mentah).
   const mapped = friendlyErrorMessage(error);
   if (mapped) return mapped;
@@ -106,7 +106,7 @@ export function alertFriendlyError(
   fallbackMessage: string,
   opts?: { alertImpl?: AlertFn; logImpl?: LogFn },
 ): void {
-  const log = opts?.logImpl ?? ((...a: unknown[]) => getLogger().error(...a));
+  const log = opts?.logImpl ?? ((...a: unknown[]) => createLogger(title).error(...a));
   log(`[${title}]`, error);
   const alert = opts?.alertImpl ?? (Alert.alert as AlertFn);
   alert(title, friendlyErrorMessage(error) ?? fallbackMessage);

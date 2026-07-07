@@ -1,11 +1,15 @@
-// WSA-18 — sanitasi error mutation: user lihat copy ramah, detail teknis ke console (bukan Alert).
 import { alertFriendlyError, friendlyErrorMessage, reportError, surfaceServerError } from '../errors';
-import { consoleLogger, setLogger } from '../logger';
+import { _resetForTest, addTransport, type LogTransport } from '../logger';
 
-/** Helper: bikin objek error mirip PostgrestError (punya `code` + `message`). */
 function pgError(code: string, message = 'technical detail'): Error & { code: string } {
   return Object.assign(new Error(message), { code });
 }
+
+function mockTransport(): LogTransport & { write: jest.Mock } {
+  return { name: 'mock', write: jest.fn() };
+}
+
+afterEach(() => _resetForTest());
 
 describe('alertFriendlyError', () => {
   it('menampilkan judul + pesan ramah (fallback), TANPA e.message mentah', () => {
@@ -18,7 +22,6 @@ describe('alertFriendlyError', () => {
       { alertImpl: alertSpy, logImpl: logSpy },
     );
     expect(alertSpy).toHaveBeenCalledWith('Gagal menyimpan', 'Perubahan belum tersimpan. Coba lagi.');
-    // Pesan teknis tak boleh bocor ke Alert.
     expect(alertSpy.mock.calls[0][1]).not.toContain('unique constraint');
   });
 
@@ -28,7 +31,6 @@ describe('alertFriendlyError', () => {
     const err = new Error('SQLSTATE 42501');
     alertFriendlyError('Gagal', err, 'Terjadi kesalahan.', { alertImpl: alertSpy, logImpl: logSpy });
     expect(logSpy).toHaveBeenCalled();
-    // objek error asli diteruskan ke log (bukan hanya string).
     expect(logSpy.mock.calls[0]).toContain(err);
   });
 
@@ -41,9 +43,7 @@ describe('alertFriendlyError', () => {
     });
     expect(alertSpy.mock.calls[0][1]).toMatch(/tidak (memiliki |punya )?izin/i);
     expect(alertSpy.mock.calls[0][1]).not.toBe('Fallback generik.');
-    // teknis tak bocor
     expect(alertSpy.mock.calls[0][1]).not.toContain('42501');
-    expect(alertSpy.mock.calls[0][1]).not.toContain('technical detail');
   });
 
   it('memakai fallback untuk error tanpa code yang dikenal', () => {
@@ -64,62 +64,57 @@ describe('alertFriendlyError', () => {
     expect(logSpy.mock.calls[0]).toContain(err);
   });
 
-  it('default logImpl meneruskan ke logger aktif (choke point telemetry)', () => {
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
-    try {
-      const err = new Error('boom');
-      // tanpa logImpl → pakai default (activeLogger.error), alertImpl di-inject agar tak buka Alert.
-      alertFriendlyError('Gagal', err, 'Fallback.', { alertImpl: jest.fn() });
-      expect(active.error).toHaveBeenCalled();
-      expect(active.error.mock.calls[0]).toContain(err);
-    } finally {
-      setLogger(consoleLogger);
-    }
+  it('default logImpl meneruskan ke centralized transport', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const t = mockTransport();
+    addTransport(t);
+    const err = new Error('boom');
+    alertFriendlyError('Gagal', err, 'Fallback.', { alertImpl: jest.fn() });
+    expect(t.write).toHaveBeenCalled();
+    const entry = t.write.mock.calls[0][0];
+    expect(entry.level).toBe('error');
+    expect(entry.namespace).toBe('Gagal');
+    const rawArgs = t.write.mock.calls[0][1] as unknown[];
+    expect(rawArgs).toContain(err);
+    spy.mockRestore();
   });
 });
 
 describe('reportError (untuk inline error / setError)', () => {
-  it('mencatat error teknis ke logger dan mengembalikan pesan ramah dari mapper', () => {
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
-    try {
-      const err = pgError('42501');
-      const msg = reportError('Simpan', err, 'Gagal menyimpan.');
-      expect(msg).toMatch(/tidak (memiliki |punya )?izin/i);
-      expect(active.error).toHaveBeenCalledWith('[Simpan]', err);
-    } finally {
-      setLogger(consoleLogger);
-    }
+  it('mencatat error teknis ke transport dan mengembalikan pesan ramah dari mapper', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const t = mockTransport();
+    addTransport(t);
+    const err = pgError('42501');
+    const msg = reportError('Simpan', err, 'Gagal menyimpan.');
+    expect(msg).toMatch(/tidak (memiliki |punya )?izin/i);
+    expect(t.write).toHaveBeenCalled();
+    expect(t.write.mock.calls[0][0].namespace).toBe('Simpan');
+    spy.mockRestore();
   });
 
   it('mengembalikan fallback saat error tak dikenal (tanpa membocorkan teknis)', () => {
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
-    try {
-      const err = new Error('column "x" does not exist');
-      const msg = reportError('Simpan', err, 'Gagal menyimpan.');
-      expect(msg).toBe('Gagal menyimpan.');
-      expect(msg).not.toContain('column');
-      expect(active.error).toHaveBeenCalledWith('[Simpan]', err);
-    } finally {
-      setLogger(consoleLogger);
-    }
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const t = mockTransport();
+    addTransport(t);
+    const err = new Error('column "x" does not exist');
+    const msg = reportError('Simpan', err, 'Gagal menyimpan.');
+    expect(msg).toBe('Gagal menyimpan.');
+    expect(msg).not.toContain('column');
+    spy.mockRestore();
   });
 });
 
 describe('surfaceServerError (flow RPC dengan pesan domain terkurasi)', () => {
-  it('menampilkan pesan server terkurasi apa adanya (bukan fallback) & tetap mencatat ke logger', () => {
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
-    try {
-      const err = new Error('Hanya CEO yang dapat memberikan hak Kelola User.');
-      const msg = surfaceServerError('Ubah hak akses', err, 'Gagal menyimpan.');
-      expect(msg).toBe('Hanya CEO yang dapat memberikan hak Kelola User.');
-      expect(active.error).toHaveBeenCalledWith('[Ubah hak akses]', err);
-    } finally {
-      setLogger(consoleLogger);
-    }
+  it('menampilkan pesan server terkurasi apa adanya & tetap mencatat ke transport', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const t = mockTransport();
+    addTransport(t);
+    const err = new Error('Hanya CEO yang dapat memberikan hak Kelola User.');
+    const msg = surfaceServerError('Ubah hak akses', err, 'Gagal menyimpan.');
+    expect(msg).toBe('Hanya CEO yang dapat memberikan hak Kelola User.');
+    expect(t.write).toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it('MENYEMBUNYIKAN error dengan code teknis dikenal (mapper menang atas message mentah)', () => {

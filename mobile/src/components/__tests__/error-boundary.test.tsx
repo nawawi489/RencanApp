@@ -1,10 +1,8 @@
-// Item 2 — ErrorBoundary root: crash render TIDAK boleh mematikan app (white screen). Fallback
-// ramah, tak membocorkan error.message (WSA-18), kirim detail ke logger, dan bisa retry.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { ErrorBoundary } from '../error-boundary';
-import { consoleLogger, setLogger } from '@/lib/logger';
+import { _resetForTest, addTransport, type LogTransport } from '@/lib/logger';
 
 let shouldThrow = true;
 function Boom() {
@@ -12,16 +10,19 @@ function Boom() {
   return <Text>konten pulih</Text>;
 }
 
+function mockTransport(): LogTransport & { write: jest.Mock } {
+  return { name: 'mock', write: jest.fn() };
+}
+
 describe('ErrorBoundary', () => {
   let consoleErr: jest.SpyInstance;
   beforeEach(() => {
     shouldThrow = true;
-    // React menuliskan error boundary ke console.error — redam agar output test bersih.
     consoleErr = jest.spyOn(console, 'error').mockImplementation(() => {});
   });
   afterEach(() => {
     consoleErr.mockRestore();
-    setLogger(consoleLogger);
+    _resetForTest();
   });
 
   it('menampilkan fallback ramah saat child crash, TANPA membocorkan error.message', async () => {
@@ -35,15 +36,17 @@ describe('ErrorBoundary', () => {
     expect(screen.queryByText(/boom secret technical detail/)).toBeNull();
   });
 
-  it('mengirim detail teknis ke logger (bukan ke user)', async () => {
-    const active = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    setLogger(active);
+  it('mengirim detail teknis ke transport (bukan ke user)', async () => {
+    const t = mockTransport();
+    addTransport(t);
     await render(
       <ErrorBoundary>
         <Boom />
       </ErrorBoundary>,
     );
-    expect(active.error).toHaveBeenCalled();
+    expect(t.write).toHaveBeenCalled();
+    expect(t.write.mock.calls[0][0].namespace).toBe('ErrorBoundary');
+    expect(t.write.mock.calls[0][0].level).toBe('error');
   });
 
   it('tombol retry memulihkan tree setelah penyebab crash hilang', async () => {
@@ -52,7 +55,6 @@ describe('ErrorBoundary', () => {
         <Boom />
       </ErrorBoundary>,
     );
-    // penyebab crash hilang, lalu user menekan retry
     shouldThrow = false;
     fireEvent.press(screen.getByRole('button', { name: 'Muat ulang' }));
     await waitFor(() => expect(screen.getByText('konten pulih')).toBeTruthy());

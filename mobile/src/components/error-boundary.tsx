@@ -6,7 +6,9 @@
 import { Component, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { getLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('ErrorBoundary');
 
 type Props = {
   children: ReactNode;
@@ -25,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: unknown, info: { componentStack?: string | null }): void {
     // WSA-18: detail teknis HANYA ke telemetry, tidak pernah ke user.
-    getLogger().error('[ErrorBoundary]', error, info?.componentStack ?? '');
+    log.error(error, info?.componentStack ?? '');
   }
 
   private reset = (): void => this.setState({ hasError: false });

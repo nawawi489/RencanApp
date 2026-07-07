@@ -1,7 +1,5 @@
-// Item 4 — adapter Sentry untuk seam logger. STUB: tidak menautkan @sentry/react-native (butuh
-// dep + DSN). Diuji lewat client palsu agar membuktikan routing tanpa memanggil Sentry nyata.
-import { getLogger, setLogger, consoleLogger } from '../logger';
-import { createSentryLogger, noopSentryClient, type SentryClient } from '../sentry-logger';
+import { _resetForTest, addTransport, createLogger, removeTransport } from '../logger';
+import { createSentryTransport, noopSentryClient, type SentryClient } from '../sentry-logger';
 
 function fakeClient(): SentryClient & {
   captureException: jest.Mock;
@@ -10,60 +8,67 @@ function fakeClient(): SentryClient & {
   return { captureException: jest.fn(), captureMessage: jest.fn() };
 }
 
-describe('createSentryLogger', () => {
-  let consoleErr: jest.SpyInstance;
-  let consoleWarn: jest.SpyInstance;
-  beforeEach(() => {
-    consoleErr = jest.spyOn(console, 'error').mockImplementation(() => {});
-    consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-  });
-  afterEach(() => {
-    consoleErr.mockRestore();
-    consoleWarn.mockRestore();
-    setLogger(consoleLogger);
-  });
+afterEach(() => _resetForTest());
 
-  it('memenuhi bentuk Logger (error/warn/log)', () => {
-    const logger = createSentryLogger(fakeClient());
-    expect(typeof logger.error).toBe('function');
-    expect(typeof logger.warn).toBe('function');
-    expect(typeof logger.log).toBe('function');
+describe('createSentryTransport', () => {
+  it('memenuhi bentuk LogTransport (name + write)', () => {
+    const t = createSentryTransport(fakeClient());
+    expect(t.name).toBe('sentry');
+    expect(typeof t.write).toBe('function');
   });
 
   it('error dengan objek Error → captureException(err)', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const client = fakeClient();
-    const logger = createSentryLogger(client);
+    addTransport(createSentryTransport(client));
     const err = new Error('boom');
-    logger.error('[ctx]', err);
+    createLogger('ctx').error(err);
     expect(client.captureException).toHaveBeenCalledWith(err);
     expect(client.captureMessage).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it('error tanpa objek Error → captureMessage(level error)', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const client = fakeClient();
-    const logger = createSentryLogger(client);
-    logger.error('[ctx]', 'kegagalan tanpa Error');
-    expect(client.captureMessage).toHaveBeenCalledWith(expect.stringContaining('kegagalan tanpa Error'), 'error');
+    addTransport(createSentryTransport(client));
+    createLogger('ctx').error('kegagalan tanpa Error');
+    expect(client.captureMessage).toHaveBeenCalledWith(expect.any(String), 'error');
     expect(client.captureException).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it('warn → captureMessage(level warning)', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const client = fakeClient();
-    createSentryLogger(client).warn('hati-hati');
-    expect(client.captureMessage).toHaveBeenCalledWith(expect.stringContaining('hati-hati'), 'warning');
+    addTransport(createSentryTransport(client));
+    createLogger('ctx').warn('hati-hati');
+    expect(client.captureMessage).toHaveBeenCalledWith(expect.any(String), 'warning');
+    spy.mockRestore();
   });
 
-  it('tetap menulis ke console agar dev build tetap melihat', () => {
-    createSentryLogger(fakeClient()).error('[ctx]', new Error('boom'));
-    expect(consoleErr).toHaveBeenCalled();
+  it('info/debug tidak mengirim ke Sentry (hanya console)', () => {
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const client = fakeClient();
+    addTransport(createSentryTransport(client));
+    createLogger('ctx').info('biasa');
+    createLogger('ctx').debug('detail');
+    expect(client.captureException).not.toHaveBeenCalled();
+    expect(client.captureMessage).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
-  it('melengkapi seam: setLogger(createSentryLogger(client)) merutekan error aplikasi ke Sentry', () => {
+  it('berjalan berdampingan dengan console transport (broadcast ke semua)', () => {
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const client = fakeClient();
-    setLogger(createSentryLogger(client));
-    const err = new Error('dari alertFriendlyError');
-    getLogger().error('[Gagal]', err);
+    addTransport(createSentryTransport(client));
+    const err = new Error('boom');
+    createLogger('ctx').error(err);
     expect(client.captureException).toHaveBeenCalledWith(err);
+    expect(errSpy).toHaveBeenCalledTimes(1);
+    const parsed = JSON.parse(errSpy.mock.calls[0][0] as string);
+    expect(parsed.namespace).toBe('ctx');
+    errSpy.mockRestore();
   });
 });
 
