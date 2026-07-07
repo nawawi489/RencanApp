@@ -92,10 +92,34 @@ const SENSITIVE_FRAGMENTS = [
   'supabase',
 ];
 
+// PII karyawan (aplikasi EMS) — dicocokkan pada key SETELAH normalisasi. Whole-key
+// EQUALITY (bukan substring) karena fragmen pendek seperti `nik`/`hp` beresiko
+// false-positive di kata biasa (`piknik`, `alamatnya`). Nama TIDAK disensor —
+// konteks debug penting; sensitivitas jauh di bawah data auth.
+const PII_KEYS = new Set([
+  'nik',
+  'ktp',
+  'nomorktp',
+  'noktp',
+  'phone',
+  'hp',
+  'nomorhp',
+  'nohp',
+  'nomortelepon',
+  'telepon',
+  'notelp',
+  'dob',
+  'tanggallahir',
+  'birthdate',
+  'alamat',
+  'address',
+]);
+
 function isSensitiveKey(key: string): boolean {
   // Normalisasi: lowercase + hapus separator (_, -) agar `x-api-key`, `api_key`,
   // `apiKey` semua menghasilkan `apikey` dan cocok pada fragmen yang sama.
   const norm = key.toLowerCase().replace(/[_-]/g, '');
+  if (PII_KEYS.has(norm)) return true;
   return SENSITIVE_FRAGMENTS.some((frag) => norm.includes(frag));
 }
 

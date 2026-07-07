@@ -322,6 +322,63 @@ describe('sanitize', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PII karyawan (aplikasi EMS)
+// ---------------------------------------------------------------------------
+
+describe('sanitize — PII karyawan (Indonesia)', () => {
+  it.each([
+    // Identitas
+    ['nik', '1234567890123456'],
+    ['NIK', '1234567890123456'],
+    ['ktp', 'K123'],
+    ['nomor_ktp', 'K123'],
+    ['no_ktp', 'K123'],
+    // Kontak
+    ['phone', '081234567890'],
+    ['hp', '081234567890'],
+    ['nomor_hp', '081234567890'],
+    ['no_hp', '081234567890'],
+    ['nomor_telepon', '021123'],
+    ['telepon', '021123'],
+    ['no_telp', '021123'],
+    // Tanggal lahir
+    ['dob', '1990-01-01'],
+    ['tanggal_lahir', '1990-01-01'],
+    ['birth_date', '1990-01-01'],
+    ['birthdate', '1990-01-01'],
+    // Alamat
+    ['alamat', 'Jl. Merdeka 1'],
+    ['address', 'Jl. Merdeka 1'],
+  ])('meredaksi PII key "%s"', (key, val) => {
+    const result = sanitize({ [key]: val, unrelated: 'ok' }) as Record<string, unknown>;
+    expect(result[key]).toBe('[REDACTED]');
+    expect(result.unrelated).toBe('ok');
+  });
+
+  it('TIDAK menyensor nama (name/full_name/nama_lengkap) — perlu untuk debug', () => {
+    const result = sanitize({
+      name: 'Ali Rahman',
+      full_name: 'Ali Rahman',
+      nama_lengkap: 'Ali Rahman',
+    }) as Record<string, unknown>;
+    expect(result.name).toBe('Ali Rahman');
+    expect(result.full_name).toBe('Ali Rahman');
+    expect(result.nama_lengkap).toBe('Ali Rahman');
+  });
+
+  it('PII key tidak salah menyensor kata mirip (mis. `piknik`, `manikur`)', () => {
+    const result = sanitize({
+      piknik: 'weekend',
+      manikur: 'salon',
+      alamatnya: 'jaga',
+    }) as Record<string, unknown>;
+    expect(result.piknik).toBe('weekend');
+    expect(result.manikur).toBe('salon');
+    expect(result.alamatnya).toBe('jaga');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Circular reference guard
 // ---------------------------------------------------------------------------
 
