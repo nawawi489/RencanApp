@@ -1,7 +1,7 @@
 // Titik integrasi Sentry ke seam logger. SDK diinjeksi (bukan di-require langsung)
 // agar unit test dapat mem-mock tanpa native module + startup lokal (tanpa DSN) tetap
 // aman meski package terpasang.
-import { addTransport } from './logger';
+import { addTransport, sanitize } from './logger';
 import { createSentryTransport, type SentryClient } from './sentry-logger';
 
 export type InjectableSentry = SentryClient & {
@@ -48,6 +48,16 @@ function samplingFor(environment: string, env: Record<string, string | undefined
   };
 }
 
+// beforeSend adalah lapisan defense-in-depth: transport sudah membangun ulang Error
+// dari entry tersanitasi, tapi Sentry SDK juga mengumpulkan breadcrumbs, contexts,
+// dan navigasi otomatis yang bisa membawa PII/secret dari sumber lain. Jalankan
+// `sanitize` sekali lagi atas seluruh payload event tepat sebelum transmisi.
+export function scrubSentryEvent(
+  event: Record<string, unknown>,
+): Record<string, unknown> {
+  return sanitize(event) as Record<string, unknown>;
+}
+
 export function initSentry(deps: InitSentryDeps): InjectableSentry | null {
   const env = deps.env ?? process.env;
   const dsn = env.EXPO_PUBLIC_SENTRY_DSN;
@@ -59,6 +69,9 @@ export function initSentry(deps: InitSentryDeps): InjectableSentry | null {
     environment,
     enableAutoSessionTracking: true,
     attachStacktrace: true,
+    // Cegah SDK mengirim IP + cookie by default (drift-safe).
+    sendDefaultPii: false,
+    beforeSend: scrubSentryEvent,
     ...samplingFor(environment, env),
   });
 

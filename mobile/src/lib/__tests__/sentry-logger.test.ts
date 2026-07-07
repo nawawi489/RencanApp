@@ -17,14 +17,61 @@ describe('createSentryTransport', () => {
     expect(typeof t.write).toBe('function');
   });
 
-  it('error dengan objek Error → captureException(err)', () => {
+  it('error dengan objek Error → captureException menerima Error tersanitasi (bukan Error mentah)', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const client = fakeClient();
     addTransport(createSentryTransport(client));
     const err = new Error('boom');
     createLogger('ctx').error(err);
-    expect(client.captureException).toHaveBeenCalledWith(err);
+    // Kontrak baru: Sentry harus menerima Error instance (untuk grouping) namun BUKAN
+    // objek asli — kita bangun ulang dari entry tersanitasi supaya redaksi berlaku.
+    expect(client.captureException).toHaveBeenCalledTimes(1);
+    const captured = client.captureException.mock.calls[0][0] as Error;
+    expect(captured).toBeInstanceOf(Error);
+    expect(captured).not.toBe(err);
+    expect(captured.message).toBe('boom');
     expect(client.captureMessage).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('error dgn message berisi JWT → captureException menerima message [REDACTED_JWT] (sink Sentry tidak menerima token mentah)', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const client = fakeClient();
+    addTransport(createSentryTransport(client));
+    const err = new Error('auth failed: eyJhbGciOiJIUzI1NiJ9.abcdefghij.signature');
+    createLogger('ctx').error(err);
+    const captured = client.captureException.mock.calls[0][0] as Error;
+    expect(captured.message).toContain('[REDACTED_JWT]');
+    expect(captured.message).not.toContain('eyJhbGciOiJIUzI1NiJ9');
+    spy.mockRestore();
+  });
+
+  it('error dgn PII karyawan di property enumerable → dihilangkan sebelum sampai ke Sentry', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const client = fakeClient();
+    addTransport(createSentryTransport(client));
+    const err = new Error('conflict') as Error & { nik?: string; hp?: string };
+    err.nik = '3201234567890001';
+    err.hp = '081234567890';
+    createLogger('ctx').error(err);
+    const captured = client.captureException.mock.calls[0][0] as Error &
+      Record<string, unknown>;
+    const serialized = JSON.stringify(captured);
+    expect(serialized).not.toContain('3201234567890001');
+    expect(serialized).not.toContain('081234567890');
+    spy.mockRestore();
+  });
+
+  it('error dgn stack mengandung email → email disensor pada stack yg diteruskan ke Sentry', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const client = fakeClient();
+    addTransport(createSentryTransport(client));
+    const err = new Error('bad');
+    err.stack = 'Error: bad\n    at fn (user=alice@example.com)';
+    createLogger('ctx').error(err);
+    const captured = client.captureException.mock.calls[0][0] as Error;
+    expect(captured.stack ?? '').not.toContain('alice@example.com');
+    expect(captured.stack ?? '').toContain('[REDACTED_EMAIL]');
     spy.mockRestore();
   });
 
@@ -44,6 +91,33 @@ describe('createSentryTransport', () => {
     addTransport(createSentryTransport(client));
     createLogger('ctx').warn('hati-hati');
     expect(client.captureMessage).toHaveBeenCalledWith(expect.any(String), 'warning');
+    spy.mockRestore();
+  });
+
+  it('warn dgn string berisi email/JWT → captureMessage menerima string tersanitasi', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = fakeClient();
+    addTransport(createSentryTransport(client));
+    createLogger('ctx').warn(
+      'auth retry untuk alice@example.com token eyJhbGciOiJIUzI1NiJ9.aaaaaaaaaa.bbb',
+    );
+    const [msg] = client.captureMessage.mock.calls[0];
+    expect(msg).not.toContain('alice@example.com');
+    expect(msg).not.toContain('eyJhbGciOiJIUzI1NiJ9');
+    expect(msg).toContain('[REDACTED_EMAIL]');
+    expect(msg).toContain('[REDACTED_JWT]');
+    spy.mockRestore();
+  });
+
+  it('warn dgn object payload berisi kunci PII → key disensor sebelum diserialisasi ke Sentry', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = fakeClient();
+    addTransport(createSentryTransport(client));
+    createLogger('ctx').warn({ nik: '3201234567890001', address: 'Jl. Merdeka 1' });
+    const [msg] = client.captureMessage.mock.calls[0];
+    expect(msg).not.toContain('3201234567890001');
+    expect(msg).not.toContain('Jl. Merdeka 1');
+    expect(msg).toContain('[REDACTED]');
     spy.mockRestore();
   });
 

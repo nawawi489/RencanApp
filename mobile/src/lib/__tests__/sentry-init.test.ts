@@ -1,7 +1,11 @@
 import { _resetForTest, createLogger, getTransports } from '../logger';
 import { initSentry, type InjectableSentry } from '../sentry-init';
 
-function mockSentry(): InjectableSentry & { init: jest.Mock } {
+function mockSentry(): InjectableSentry & {
+  init: jest.Mock;
+  captureException: jest.Mock;
+  captureMessage: jest.Mock;
+} {
   return {
     init: jest.fn(),
     captureException: jest.fn(),
@@ -35,8 +39,56 @@ describe('initSentry', () => {
 
     const err = new Error('boom');
     createLogger('ctx').error(err);
-    expect(sentry.captureException).toHaveBeenCalledWith(err);
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+    const captured = sentry.captureException.mock.calls[0][0] as Error;
+    expect(captured).toBeInstanceOf(Error);
+    expect(captured.message).toBe('boom');
     spy.mockRestore();
+  });
+
+  it('menonaktifkan sendDefaultPii eksplisit (defense-in-depth, IP/cookie tidak dikirim)', () => {
+    const sentry = mockSentry();
+    initSentry({ env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' }, sentry });
+    const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+    expect(opts.sendDefaultPii).toBe(false);
+  });
+
+  it('memasang beforeSend hook (defense-in-depth scrub event sebelum kirim ke Sentry)', () => {
+    const sentry = mockSentry();
+    initSentry({ env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' }, sentry });
+    const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+    expect(typeof opts.beforeSend).toBe('function');
+  });
+
+  it('beforeSend menyensor JWT/email di exception message', () => {
+    const sentry = mockSentry();
+    initSentry({ env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' }, sentry });
+    const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+    const beforeSend = opts.beforeSend as (e: Record<string, unknown>) => Record<string, unknown>;
+    const event = {
+      message: 'user alice@example.com',
+      exception: {
+        values: [{ value: 'token eyJhbGciOiJIUzI1NiJ9.aaaaaaaaaa.bbb dipakai' }],
+      },
+      extra: { authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.aaaaaaaaaa.bbb' },
+    };
+    const scrubbed = beforeSend(event) as {
+      message: string;
+      exception: { values: { value: string }[] };
+      extra: { authorization: string };
+    };
+    expect(scrubbed.message).toContain('[REDACTED_EMAIL]');
+    expect(scrubbed.exception.values[0].value).toContain('[REDACTED_JWT]');
+    expect(scrubbed.extra.authorization).toBe('[REDACTED]');
+  });
+
+  it('beforeSend tetap mengembalikan event (bukan null) agar Sentry tidak drop silent', () => {
+    const sentry = mockSentry();
+    initSentry({ env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' }, sentry });
+    const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+    const beforeSend = opts.beforeSend as (e: Record<string, unknown>) => Record<string, unknown> | null;
+    const result = beforeSend({ message: 'ok' });
+    expect(result).not.toBeNull();
   });
 
   it('memakai environment dari EXPO_PUBLIC_APP_ENV bila diset', () => {
