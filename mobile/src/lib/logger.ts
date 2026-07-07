@@ -73,25 +73,71 @@ export function clearRequestId(): void {
 // Sanitize — sensor data sensitif
 // ---------------------------------------------------------------------------
 
-const SENSITIVE_KEYS =
-  /^(password|passwd|secret|token|access_token|refresh_token|authorization|apikey|api_key|credential|cookie|session_token|jwt)$/i;
+// Substring match — fragmen sensitif bisa menyusup di nama key gabungan (mis.
+// `x-api-key`, `client_secret`, `user_password`, `serviceKey`, `bearerToken`).
+// Exact-match sebelumnya melewatkan varian ini. `code` sengaja tidak masuk agar
+// SQLSTATE PostgrestError tetap ke telemetry.
+const SENSITIVE_FRAGMENTS = [
+  'password',
+  'passwd',
+  'secret',
+  'token',
+  'apikey',
+  'authorization',
+  'credential',
+  'cookie',
+  'jwt',
+  'bearer',
+  'servicekey',
+  'supabase',
+];
+
+function isSensitiveKey(key: string): boolean {
+  // Normalisasi: lowercase + hapus separator (_, -) agar `x-api-key`, `api_key`,
+  // `apiKey` semua menghasilkan `apikey` dan cocok pada fragmen yang sama.
+  const norm = key.toLowerCase().replace(/[_-]/g, '');
+  return SENSITIVE_FRAGMENTS.some((frag) => norm.includes(frag));
+}
+
 const JWT_PATTERN = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g;
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+// Token opaque: Supabase (sbp_, sb_publishable_, sb_secret_) + Bearer <opaque>.
+// Sengaja spesifik agar tidak salah menyensor UUID/hash biasa dalam log.
+const SUPABASE_TOKEN_PATTERN = /\b(?:sbp_|sb_publishable_|sb_secret_|sb-)[A-Za-z0-9_-]{16,}/g;
+const BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Za-z0-9_.\-~+/=]{16,}/gi;
+
+const MAX_DEPTH = 32;
 
 export function sanitize(value: unknown): unknown {
+  return sanitizeWithGuard(value, new WeakSet(), 0);
+}
+
+function sanitizeWithGuard(value: unknown, seen: WeakSet<object>, depth: number): unknown {
   if (value === null || value === undefined) return value;
 
   if (typeof value === 'string') {
-    return value.replace(JWT_PATTERN, '[REDACTED_JWT]').replace(EMAIL_PATTERN, '[REDACTED_EMAIL]');
+    // Urutan penting: JWT → Bearer opaque → Supabase → email. Bearer <JWT> ditangani
+    // JWT_PATTERN dulu (biar sisanya "Bearer [REDACTED_JWT]" tidak ikut ditelan Bearer opaque).
+    return value
+      .replace(JWT_PATTERN, '[REDACTED_JWT]')
+      .replace(BEARER_TOKEN_PATTERN, 'Bearer [REDACTED_TOKEN]')
+      .replace(SUPABASE_TOKEN_PATTERN, '[REDACTED_TOKEN]')
+      .replace(EMAIL_PATTERN, '[REDACTED_EMAIL]');
   }
 
   if (typeof value !== 'object') return value;
 
-  if (Array.isArray(value)) return value.map(sanitize);
+  if (seen.has(value as object)) return '[CIRCULAR]';
+  if (depth >= MAX_DEPTH) return '[TRUNCATED]';
+  seen.add(value as object);
+
+  if (Array.isArray(value)) {
+    return value.map((v) => sanitizeWithGuard(v, seen, depth + 1));
+  }
 
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    out[k] = SENSITIVE_KEYS.test(k) ? '[REDACTED]' : sanitize(v);
+    out[k] = isSensitiveKey(k) ? '[REDACTED]' : sanitizeWithGuard(v, seen, depth + 1);
   }
   return out;
 }

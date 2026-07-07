@@ -267,6 +267,113 @@ describe('sanitize', () => {
     expect(entry.message).not.toContain('eyJ');
     expect(entry.message).toContain('[REDACTED_JWT]');
   });
+
+  // Celah 1: substring match — key sensitif menyusup di nama gabungan
+  it('meredaksi key sensitif via SUBSTRING match (x-api-key, client_secret, dll)', () => {
+    const result = sanitize({
+      'x-api-key': 'k_live',
+      client_secret: 'cs_xyz',
+      serviceKey: 'sv',
+      user_password: 'p',
+      apiKeyValue: 'v',
+      bearerToken: 'bt',
+      'x-supabase-auth': 'sa',
+    }) as Record<string, unknown>;
+    expect(result['x-api-key']).toBe('[REDACTED]');
+    expect(result.client_secret).toBe('[REDACTED]');
+    expect(result.serviceKey).toBe('[REDACTED]');
+    expect(result.user_password).toBe('[REDACTED]');
+    expect(result.apiKeyValue).toBe('[REDACTED]');
+    expect(result.bearerToken).toBe('[REDACTED]');
+    expect(result['x-supabase-auth']).toBe('[REDACTED]');
+  });
+
+  it('substring match tidak salah menyensor key tanpa unsur sensitif', () => {
+    const result = sanitize({
+      username: 'ali',
+      description: 'anywhere',
+      status: 'active',
+      code: '42501',
+    }) as Record<string, unknown>;
+    expect(result.username).toBe('ali');
+    expect(result.description).toBe('anywhere');
+    expect(result.status).toBe('active');
+    expect(result.code).toBe('42501');
+  });
+
+  // Celah 2: token Supabase non-JWT
+  it('meredaksi Supabase service key (sbp_...) di dalam string', () => {
+    const result = sanitize('service key sbp_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6 tersebar');
+    expect(result).not.toContain('sbp_a1b2c3');
+    expect(result).toContain('[REDACTED_TOKEN]');
+  });
+
+  it('meredaksi Supabase publishable key (sb_publishable_...) di dalam string', () => {
+    const result = sanitize('key: sb_publishable_ABCDEFghijklMNOPqrstuv');
+    expect(result).not.toContain('sb_publishable_ABC');
+    expect(result).toContain('[REDACTED_TOKEN]');
+  });
+
+  it('meredaksi Bearer token opaque non-JWT setelah Bearer', () => {
+    const result = sanitize('Authorization: Bearer opaqueTokenXyzAbc1234567890abcdef');
+    expect(result).not.toContain('opaqueTokenXyzAbc');
+    expect(result).toContain('[REDACTED_TOKEN]');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Circular reference guard
+// ---------------------------------------------------------------------------
+
+describe('sanitize — guard circular reference & depth', () => {
+  it('tidak infinite-loop pada circular reference (self)', () => {
+    const obj: Record<string, unknown> = { name: 'x' };
+    obj.self = obj;
+    expect(() => sanitize(obj)).not.toThrow();
+    const result = sanitize(obj) as Record<string, unknown>;
+    expect(result.name).toBe('x');
+    expect(result.self).toBe('[CIRCULAR]');
+  });
+
+  it('tidak infinite-loop pada circular reference (mutual)', () => {
+    const a: Record<string, unknown> = { label: 'a' };
+    const b: Record<string, unknown> = { label: 'b' };
+    a.child = b;
+    b.parent = a;
+    expect(() => sanitize(a)).not.toThrow();
+    const result = sanitize(a) as Record<string, unknown>;
+    expect(result.label).toBe('a');
+    const child = result.child as Record<string, unknown>;
+    expect(child.label).toBe('b');
+    expect(child.parent).toBe('[CIRCULAR]');
+  });
+
+  it('tidak infinite-loop pada circular array', () => {
+    const arr: unknown[] = [1, 2];
+    arr.push(arr);
+    expect(() => sanitize(arr)).not.toThrow();
+    const result = sanitize(arr) as unknown[];
+    expect(result[0]).toBe(1);
+    expect(result[2]).toBe('[CIRCULAR]');
+  });
+
+  it('formatLogEntry + JSON.stringify tidak crash pada error dengan circular ref', () => {
+    const err = new Error('boom');
+    const req: Record<string, unknown> = { url: '/api' };
+    const resp: Record<string, unknown> = { status: 500 };
+    req.response = resp;
+    resp.request = req;
+    Object.assign(err, { request: req });
+    const entry = formatLogEntry('error', 'HTTP', [err]);
+    expect(() => JSON.stringify(entry)).not.toThrow();
+  });
+
+  it('memotong nesting yang sangat dalam (guard depth)', () => {
+    let deep: Record<string, unknown> = { leaf: 'end' };
+    for (let i = 0; i < 200; i++) deep = { child: deep };
+    expect(() => sanitize(deep)).not.toThrow();
+    expect(() => JSON.stringify(sanitize(deep))).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------
