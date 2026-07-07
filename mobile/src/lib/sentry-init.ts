@@ -16,8 +16,11 @@ export type InitSentryDeps = {
 // Sampling produksi konservatif — biaya + noise. Dev boleh 100% agar tim melihat semua
 // error. Dapat di-override per-channel via EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE /
 // EXPO_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE tanpa rebuild kode.
-const PROD_TRACES_SAMPLE_RATE = 0.2;
-const PROD_PROFILES_SAMPLE_RATE = 0.1;
+// Konservatif di awal — kuota performance events Sentry free-tier kecil (~10k/mo).
+// Naikkan hanya bila baseline error/perf tuning sudah stabil dan owner butuh detail.
+// Override per-env via EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE / _PROFILES_SAMPLE_RATE.
+const PROD_TRACES_SAMPLE_RATE = 0.1;
+const PROD_PROFILES_SAMPLE_RATE = 0;
 
 function resolveEnvironment(env: Record<string, string | undefined>): string {
   if (env.EXPO_PUBLIC_APP_ENV) return env.EXPO_PUBLIC_APP_ENV;
