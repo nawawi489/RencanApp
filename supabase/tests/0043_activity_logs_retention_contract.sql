@@ -143,7 +143,9 @@ begin
     values (fresh_id, org_id, user_id, '__test_purge_fresh', fresh_id, 'test', now() - interval '1 day');
 
   -- Force activation dengan tanggal masa lalu → fungsi jalan sungguhan.
-  select public.purge_old_activity_logs(12, 10000, current_date - interval '1 day') into deleted;
+  -- (current_date - integer) = date; hindari `- interval '1 day'` yang jadi timestamp
+  -- dan tak match signature p_activate_after date.
+  select public.purge_old_activity_logs(12, 10000, current_date - 1) into deleted;
 
   -- Baris tua harus hilang, baris baru harus tetap.
   select exists (select 1 from public.activity_logs where id = old_id) into old_still_exists;

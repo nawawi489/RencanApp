@@ -1,7 +1,7 @@
 // Titik integrasi Sentry ke seam logger. SDK diinjeksi (bukan di-require langsung)
 // agar unit test dapat mem-mock tanpa native module + startup lokal (tanpa DSN) tetap
 // aman meski package terpasang.
-import { addTransport, sanitize } from './logger';
+import { addTransport, createLogger, sanitize } from './logger';
 import { createSentryTransport, type SentryClient } from './sentry-logger';
 
 export type InjectableSentry = SentryClient & {
@@ -64,16 +64,25 @@ export function initSentry(deps: InitSentryDeps): InjectableSentry | null {
   if (!dsn) return null;
 
   const environment = resolveEnvironment(env);
-  deps.sentry.init({
-    dsn,
-    environment,
-    enableAutoSessionTracking: true,
-    attachStacktrace: true,
-    // Cegah SDK mengirim IP + cookie by default (drift-safe).
-    sendDefaultPii: false,
-    beforeSend: scrubSentryEvent,
-    ...samplingFor(environment, env),
-  });
+  // Bungkus init dgn try/catch: dipanggil di module scope root layout, sebelum
+  // ErrorBoundary sempat render. Kalau DSN malformed (mis. salah copy dari dashboard),
+  // Sentry.init throw → app tak boot (white screen). Fail-safe: catat lewat console
+  // transport yang sudah aktif, transport Sentry tidak didaftar, app tetap jalan.
+  try {
+    deps.sentry.init({
+      dsn,
+      environment,
+      enableAutoSessionTracking: true,
+      attachStacktrace: true,
+      // Cegah SDK mengirim IP + cookie by default (drift-safe).
+      sendDefaultPii: false,
+      beforeSend: scrubSentryEvent,
+      ...samplingFor(environment, env),
+    });
+  } catch (e) {
+    createLogger('Sentry').error(e);
+    return null;
+  }
 
   addTransport(createSentryTransport(deps.sentry));
   return deps.sentry;

@@ -18,9 +18,10 @@ import { PeriodFocusProvider } from '@/providers/period-focus-provider';
 import { ThemeProvider, useThemePreference } from '@/providers/theme-provider';
 
 // Sentry: aktif hanya bila EXPO_PUBLIC_SENTRY_DSN di-set (dev lokal aman tanpa DSN).
-// Bila aktif, `initSentry` menukar logger aktif ke Sentry — semua jalur error setelahnya
-// (ErrorBoundary, alertFriendlyError/reportError, QueryCache/MutationCache onError,
-// installGlobalErrorHandler) mengalir ke Sentry sekaligus tanpa perubahan lain.
+// Bila aktif, `initSentry` menambahkan transport Sentry ke pipeline logger — semua jalur
+// error setelahnya (ErrorBoundary, alertFriendlyError/reportError/surfaceServerError,
+// QueryCache/MutationCache onError, installGlobalErrorHandler) mengalir ke Sentry
+// paralel dengan console transport tanpa perubahan lain.
 initSentry({ sentry: Sentry as unknown as InjectableSentry });
 
 const queryClient = createQueryClient();
