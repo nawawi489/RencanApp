@@ -8,6 +8,8 @@
 .env.*
 !.env.example
 !mobile/.env.example
+!mobile/.env.staging.example
+!mobile/.env.production.example
 *.local
 # Kredensial dev — jangan di-commit
 docs/kredensial-login.md
