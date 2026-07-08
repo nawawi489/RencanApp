@@ -2,6 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
 
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('ThemeProvider');
+
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 const STORAGE_KEY = 'rencanaapp:theme';
@@ -54,7 +58,8 @@ export function ThemeProvider({ children }: PropsWithChildren) {
         setModeState(next);
         apply(next);
       })
-      .catch(() => {
+      .catch((err) => {
+        log.warn('gagal baca AsyncStorage', err);
         if (!cancelled) apply('system');
       });
     return () => {
@@ -73,7 +78,9 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   const setMode = (next: ThemeMode) => {
     setModeState(next);
     apply(next);
-    AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
+    AsyncStorage.setItem(STORAGE_KEY, next).catch((err) =>
+      log.warn('gagal simpan AsyncStorage', err),
+    );
   };
 
   const effective: 'light' | 'dark' =

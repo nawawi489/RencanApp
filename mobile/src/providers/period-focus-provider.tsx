@@ -14,6 +14,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 
+import { createLogger } from '@/lib/logger';
 import {
   defaultFocus,
   parseFocusJson,
@@ -21,6 +22,7 @@ import {
   type PeriodMode,
 } from '@/lib/period-focus';
 
+const log = createLogger('PeriodFocusProvider');
 const STORAGE_KEY = 'rencanaapp:period-focus';
 
 type PeriodFocusContextValue = {
@@ -53,7 +55,7 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
         const parsed = parseFocusJson(raw);
         if (parsed) setFocusState(parsed);
       })
-      .catch(() => {});
+      .catch((err) => log.warn('gagal baca AsyncStorage', err));
     return () => {
       cancelled = true;
     };
@@ -61,7 +63,9 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
 
   const setFocus = useCallback((next: PeriodFocus) => {
     setFocusState(next);
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch((err) =>
+      log.warn('gagal simpan AsyncStorage', err),
+    );
   }, []);
 
   const setMode = useCallback(
@@ -74,7 +78,9 @@ export function PeriodFocusProvider({ children, now }: ProviderProps) {
           mode === 'month'
             ? { mode: 'month', year: cur.year, month: initialNow.getMonth() + 1 }
             : { mode: 'quarter', year: cur.year, quarter: Math.ceil((initialNow.getMonth() + 1) / 3) };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch((err) =>
+          log.warn('gagal simpan AsyncStorage', err),
+        );
         return next;
       });
     },

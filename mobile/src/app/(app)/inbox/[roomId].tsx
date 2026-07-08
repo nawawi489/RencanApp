@@ -13,6 +13,7 @@ import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 import { Screen } from '@/components/screen';
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatActions, useChatMessages } from '@/hooks/use-inbox';
+import { reportError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/inbox';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -155,7 +156,7 @@ export default function ChatRoomScreen() {
       await send(body);
       setText('');
     } catch (e) {
-      setSendError(e instanceof Error ? e.message : 'Gagal mengirim pesan.');
+      setSendError(reportError('Kirim pesan', e, 'Gagal mengirim pesan.'));
     }
   }
 

@@ -5,10 +5,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
+import { alertFriendlyError } from '@/lib/errors';
 import { StatTile } from '@/components/stat-tile';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
 import { SubmissionCard, formatDateTime } from '@/components/submission-card';
@@ -63,7 +63,7 @@ export default function ActionPlanInstanceDetailScreen() {
         reason: args.reason,
       }),
     onSuccess: refresh,
-    onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.'),
   });
 
   const actions = useInstanceActions(

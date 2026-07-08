@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/c
 
 import { Badge, Button, LabeledInput, SectionCard, usePlaceholderColor } from '@/components/ui';
 import { DATE_RE } from '@/lib/date';
+import { reportError } from '@/lib/errors';
 import { DCR_STATUS_LABEL, type DeadlineChangeRequest } from '@/lib/governance-admin';
 import { useDeadlineChangeActions, useDeadlineChangeRequests } from '@/hooks/use-governance-admin';
 import { useProfile } from '@/hooks/use-profile';
@@ -59,7 +60,7 @@ export default function DeadlineChangeRequestScreen() {
       setReason('');
       setImpact('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal mengirim permintaan.');
+      setError(reportError('Ajukan perubahan deadline', e, 'Gagal mengirim permintaan.'));
     }
   }
 
@@ -146,7 +147,7 @@ function RequestRow({
       await onReview({ requestId: r.id, decision, reason: reviewReason.trim() || undefined });
       setReviewReason('');
     } catch (e) {
-      setRowError(e instanceof Error ? e.message : 'Gagal memproses.');
+      setRowError(reportError('Review perubahan deadline', e, 'Gagal memproses.'));
     }
   }
 
@@ -169,7 +170,7 @@ function RequestRow({
     try {
       await onResubmit({ requestId: r.id, newDeadline: next, reason: resubmitReason.trim() });
     } catch (e) {
-      setRowError(e instanceof Error ? e.message : 'Gagal mengirim revisi.');
+      setRowError(reportError('Kirim revisi deadline', e, 'Gagal mengirim revisi.'));
     }
   }
 

@@ -9,6 +9,7 @@ import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { useKpiAreaActions, usePerson } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
+import { alertFriendlyError } from '@/lib/errors';
 import { getGoal, listKpiAreaTemplates, type KpiAreaTemplate } from '@/lib/goals';
 import type { PersonRef } from '@/lib/kpi-areas';
 
@@ -186,7 +187,7 @@ export function LiveNewKpiAreaScreen() {
       });
       router.replace(`/kpi-area/${created.id}` as Href);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
   }
 

@@ -9,6 +9,7 @@ import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
 import { Button, EmptyState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import { getArchiveMetadata } from '@/lib/activity-governance';
+import { alertFriendlyError } from '@/lib/errors';
 import { restoreCard, type CardEntityType } from '@/lib/governance-admin';
 import { CARD_TYPE_LABEL, type CardType } from '@/lib/settings-mbr';
 
@@ -37,7 +38,7 @@ export default function SettingsArchiveScreen() {
       qc.invalidateQueries({ queryKey: ['search'] });
       Alert.alert('Dipulihkan', 'Card kembali ke status Draft. Verifikasi lalu Aktifkan kembali.');
     },
-    onError: (e) => Alert.alert('Gagal pulihkan', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal pulihkan', e, 'Kesalahan.'),
   });
 
   const archived = useMemo(() => {

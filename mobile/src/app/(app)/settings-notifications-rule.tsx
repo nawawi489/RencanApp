@@ -6,6 +6,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { Button, LabeledInput, SectionCard } from '@/components/ui';
+import { reportError } from '@/lib/errors';
 import { upsertSettings } from '@/lib/governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -24,7 +25,7 @@ export default function SettingsNotificationsRuleScreen() {
         days_before: Number(deadlineReminderDays) || 0,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kunci pengaturan tidak valid.');
+      setError(reportError('Simpan aturan notifikasi', e, 'Kunci pengaturan tidak valid.'));
     } finally {
       setSaving(false);
     }

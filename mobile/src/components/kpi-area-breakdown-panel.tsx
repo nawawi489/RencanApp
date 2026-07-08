@@ -10,7 +10,7 @@
 //   - Field "Alasan perubahan" wajib ≥ 8 char.
 //   - Save disabled bila Σ tidak valid atau reason kurang.
 import { useMemo, useState } from 'react';
-import { Alert, Modal, TextInput } from 'react-native';
+import { Modal, TextInput } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, ProgressBar, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
@@ -28,6 +28,7 @@ import {
   type QuarterInput,
   type QuarterKey,
 } from '@/lib/kpi-area-breakdown';
+import { alertFriendlyError } from '@/lib/errors';
 
 type EditTab = 'quarter' | 'month';
 
@@ -299,7 +300,7 @@ function BreakdownEditorModal({
       : null;
     replace({ quarter: quarterPayload, month: monthPayload, reason: reason.trim() })
       .then(() => onClose())
-      .catch((e) => Alert.alert('Gagal menyimpan', e instanceof Error ? e.message : 'Kesalahan.'));
+      .catch((e) => alertFriendlyError('Gagal menyimpan', e, 'Kesalahan.'));
   }
 
   return (

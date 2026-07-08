@@ -25,6 +25,7 @@ import {
   useScoreFormulaVersions,
 } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
+import { reportError } from '@/lib/errors';
 import {
   FORMULA_STATUS_LABEL,
   METRIC_LABEL,
@@ -87,7 +88,7 @@ function DraftEditor({
       await updateWeights({ versionId: version.id, categories: draft, changeReason: reason.trim() });
       setReason(''); // clear setelah sukses; data refetch re-seed via useEffect.
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Gagal menyimpan draft.');
+      setSaveError(reportError('Simpan draft', e, 'Gagal menyimpan draft.'));
     }
   }
 
@@ -326,7 +327,7 @@ function FormulaTemplateSection({
     try {
       await activate(versionId, today);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal mengaktifkan versi.');
+      setError(reportError('Aktifkan versi', e, 'Gagal mengaktifkan versi.'));
     }
   }
 
@@ -345,13 +346,7 @@ function FormulaTemplateSection({
       });
       setCreateReason('');
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Gagal membuat draft.';
-      // §6 DEC-11: 1 draft per template+level enforce
-      if (/draft_already_exists/i.test(msg)) {
-        setError('Sudah ada draft untuk level ini. Buka draft existing untuk edit.');
-      } else {
-        setError(msg);
-      }
+      setError(reportError('Buat draft', e, 'Gagal membuat draft.'));
     }
   }
 

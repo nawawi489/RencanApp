@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { alertFriendlyError } from '@/lib/errors';
 import { Badge, Button, EmptyState, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { SubmissionCard } from '@/components/submission-card';
@@ -359,18 +359,18 @@ export function LiveActionPlanDetailScreen() {
   const activateM = useMutation({
     mutationFn: () => activateActionPlan(id),
     onSuccess: refresh,
-    onError: (e) => Alert.alert('Tidak bisa diaktifkan', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Kesalahan.'),
   });
   const startM = useMutation({
     mutationFn: () => startActionPlan(id),
     onSuccess: refresh,
-    onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.'),
   });
   const reviewM = useMutation({
     mutationFn: (args: { decision: 'approve' | 'reject'; reason: string | null }) =>
       reviewSubmission({ submissionId: ap!.current_submission_id!, decision: args.decision, reason: args.reason }),
     onSuccess: refresh,
-    onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.'),
   });
 
   const ap = apQ.data;

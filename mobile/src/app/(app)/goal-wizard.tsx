@@ -10,6 +10,7 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { UserPicker } from '@/components/user-picker';
 import { useGoalActions, useGoalTemplates, useKpiAreaTemplates } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
+import { alertFriendlyError } from '@/lib/errors';
 import type { PersonRef } from '@/lib/goals';
 
 type Person = NonNullable<PersonRef>;
@@ -66,7 +67,7 @@ export default function GoalWizardScreen() {
       });
       router.replace(`/goal/${goalId}` as Href);
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.');
+      alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
   }
 

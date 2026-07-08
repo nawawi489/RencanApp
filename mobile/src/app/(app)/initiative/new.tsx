@@ -10,6 +10,7 @@ import { UserPicker } from '@/components/user-picker';
 import { usePerson } from '@/hooks/use-workspace';
 import { createInitiative, type PersonRef } from '@/lib/cards';
 import { periodError } from '@/lib/date';
+import { alertFriendlyError } from '@/lib/errors';
 import { getStrategy } from '@/lib/strategies';
 import { getProblemStatement } from '@/lib/problem-statements';
 import { listTeams } from '@/lib/org-structure';
@@ -112,7 +113,7 @@ export function LiveNewInitiativeScreen() {
       qc.invalidateQueries({ queryKey: ['initiatives'] });
       router.replace(`/initiative/${created.id}` as Href);
     },
-    onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Terjadi kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal', e, 'Terjadi kesalahan.'),
   });
 
   function submit() {

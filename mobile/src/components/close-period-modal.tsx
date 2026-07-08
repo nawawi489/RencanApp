@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { Modal } from 'react-native';
 import { Text, View } from 'react-native-css/components';
 
+import { surfaceServerError } from '@/lib/errors';
+
 import { Button } from './ui';
 
 export type ClosePeriodModalPeriod = {
@@ -53,7 +55,7 @@ export function ClosePeriodModal({
       const n = await onConfirm(period.id);
       setResult({ ok: true, count: n });
     } catch (e) {
-      setResult({ ok: false, message: e instanceof Error ? e.message : 'Terjadi kesalahan.' });
+      setResult({ ok: false, message: surfaceServerError('Tutup periode', e, 'Terjadi kesalahan.') });
       onError();
     } finally {
       setSubmitting(false);

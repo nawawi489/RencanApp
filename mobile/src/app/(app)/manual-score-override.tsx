@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, ScoreBadge, SectionCard } from '@/components/ui';
+import { reportError } from '@/lib/errors';
 import { effectiveScore } from '@/lib/people-score';
 import { useScoreOverride, useUserScore } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
@@ -86,7 +87,7 @@ export default function ManualScoreOverrideScreen() {
       Alert.alert('Berhasil', `Override skor untuk ${targetName} tersimpan.`);
       router.back();
     } catch (e) {
-      setInlineError(e instanceof Error ? e.message : 'Gagal menyimpan override.');
+      setInlineError(reportError('Simpan override', e, 'Gagal menyimpan override.'));
     }
   }
 

@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Modal, TextInput } from 'react-native';
+import { Modal, TextInput } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -15,6 +15,7 @@ import {
 } from '@/lib/activity-governance';
 import { useGovernanceViolations } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
+import { alertFriendlyError } from '@/lib/errors';
 import { resolveGovernanceViolation, type CardEntityType } from '@/lib/governance-admin';
 import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 
@@ -51,7 +52,7 @@ export default function SettingsGovernanceViolationScreen() {
       setNote('');
       qc.invalidateQueries({ queryKey: ['governance_violations'] });
     },
-    onError: (e) => Alert.alert('Gagal', e instanceof Error ? e.message : 'Kesalahan.'),
+    onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.'),
   });
 
   const filtered = useMemo(() => {
