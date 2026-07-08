@@ -107,12 +107,12 @@ export default function LoginScreen() {
   return (
     <LinearGradient colors={gradient} style={{ flex: 1 }}>
       <ScrollView contentContainerClassName="grow justify-center px-6 py-12">
-        <View className="items-center gap-3">
+        <View className="items-center gap-3" accessibilityLabel="Rencanapp">
           <View className="rounded-3xl bg-white p-4 shadow-sm dark:bg-neutral-900">
             <BrandLogo size={56} />
           </View>
           <Text className="text-3xl font-extrabold text-[#092753] dark:text-white">
-            Rencana<Text className="text-green-700 dark:text-green-400">app</Text>
+            Rencan<Text className="text-green-700 dark:text-green-400">app</Text>
           </Text>
           <Text className="text-sm font-semibold text-[#667085] dark:text-neutral-300">{BRAND_TAGLINE}</Text>
           <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">

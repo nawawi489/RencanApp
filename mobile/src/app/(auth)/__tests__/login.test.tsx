@@ -278,4 +278,9 @@ describe('LoginScreen — password guard AUTH-02b', () => {
     expect(screen.queryByText(AUTH_COPY.passwordTooShort)).toBeNull();
     expect(mockSignIn).toHaveBeenCalledTimes(1);
   });
+
+  it('[15] brand regression: login screen mengekspose label "Rencanapp"', async () => {
+    await setup();
+    expect(screen.getByLabelText('Rencanapp')).toBeTruthy();
+  });
 });

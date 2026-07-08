@@ -1,4 +1,4 @@
-# Rencanaapp V1.82 — 02 · Spesifikasi Card & Alur Eksekusi
+# Rencanapp V1.82 — 02 · Spesifikasi Card & Alur Eksekusi
 
 > **Untuk AI agent:** File ini adalah spesifikasi fungsional yang Anda implementasikan. Isinya: field & validasi tiap card, kelengkapan card, KPI Area Target Breakdown 100%, loop eksekusi (bukti versioning / nilai hasil / review), Action Plan repeat & instance, minimum breakdown rule, template & wizard, dan lifecycle card. Untuk konsep & makna card → [01-konsep-dan-fondasi.md](01-konsep-dan-fondasi.md). Untuk permission/data/score → [03-sistem-permission-data-governance.md](03-sistem-permission-data-governance.md). Sumber otoritatif: [../PRD.md](../PRD.md).
 

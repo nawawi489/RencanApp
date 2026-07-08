@@ -88,6 +88,14 @@ export default function AppLayout() {
       <Stack.Screen name="settings-archive" options={{ headerShown: true, title: 'Arsip' }} />
       <Stack.Screen name="settings-goal-templates" options={{ headerShown: true, title: 'Goal Template' }} />
       <Stack.Screen
+        name="settings-mbr"
+        options={{ headerShown: true, title: 'Minimum Breakdown Rule' }}
+      />
+      <Stack.Screen
+        name="settings-score-formula"
+        options={{ headerShown: true, title: 'Score Formula' }}
+      />
+      <Stack.Screen
         name="settings-permission-users"
         options={{ headerShown: true, title: 'User & Permission' }}
       />

@@ -7,7 +7,7 @@ sources: 3
 
 # Architecture — Thick Database, Thin Client
 
-Pola arsitektur menyeluruh [[overview|RencanApp]] (EMS V1.8.1). Bukan monolith server, bukan microservice — melainkan **DB-centric serverless** di atas [[tech-stack|Supabase BaaS]], dengan prinsip inti: **aturan yang tidak boleh dilanggar diturunkan ke lapisan yang tidak bisa dilewati (Postgres).**
+Pola arsitektur menyeluruh [[overview|Rencanapp]] (EMS V1.8.1). Bukan monolith server, bukan microservice — melainkan **DB-centric serverless** di atas [[tech-stack|Supabase BaaS]], dengan prinsip inti: **aturan yang tidak boleh dilanggar diturunkan ke lapisan yang tidak bisa dilewati (Postgres).**
 
 ## Verdict
 

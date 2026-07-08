@@ -3,7 +3,7 @@ type: index
 updated: 2026-07-06
 ---
 
-# RencanApp Wiki — Index
+# Rencanapp Wiki — Index
 
 Master index of all wiki pages. Updated on every ingest.
 

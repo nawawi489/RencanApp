@@ -572,7 +572,7 @@ describe('PrototypeHomeScreen', () => {
   it('renders the prototype shell and home sections', () => {
     render(<PrototypeHomeScreen />);
 
-    expect(screen.getByText('Rencanaapp')).toBeTruthy();
+    expect(screen.getByText('Rencanapp')).toBeTruthy();
     expect(screen.getByText('Pusat Kendali Hari Ini')).toBeTruthy();
     expect(screen.getByText('Selamat pagi, Rina.')).toBeTruthy();
     expect(screen.getByText('Prioritas')).toBeTruthy();
@@ -599,7 +599,7 @@ Expected: FAIL because `PrototypeHomeScreen` does not exist yet
 ```ts
 // mobile/src/prototype/fixtures/home.ts
 export const prototypeHome = {
-  title: 'Rencanaapp',
+  title: 'Rencanapp',
   kicker: 'Pusat Kendali Hari Ini',
   dateLabel: 'Selasa, 16 Juni',
   greeting: 'Selamat pagi, Rina.',

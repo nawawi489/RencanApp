@@ -221,7 +221,7 @@ export default function LiveHomeScreen() {
 
         {isNewUser ? (
           <GuidanceNote
-            title="Selamat datang di RencanApp"
+            title="Selamat datang di Rencanapp"
             body="Home adalah pusat fokus harian Anda: tugas hari ini, yang butuh review, terlewat, dan deadline mendekat tampil di sini. Buka tiap kartu untuk mulai mengeksekusi."
           />
         ) : null}

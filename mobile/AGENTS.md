@@ -1,4 +1,4 @@
-# AGENTS.md — RencanApp mobile
+# AGENTS.md — Rencanapp mobile
 
 Operating manual for agents working in `mobile/`. Read before writing any code here.
 
@@ -21,6 +21,7 @@ Do not assume APIs from memory — this project pins specific versions.
 1. Read `DESIGN.md` first.
 2. Register new tokens in `DESIGN.md`, then implement in `src/global.css` (`@theme` for brand) + NativeWind classes. Keep the two in sync.
 3. Obey the binding a11y rules in `DESIGN.md §4`: touch target ≥44px; color must not be the only signal; solid fills with white text use `brand-dark` `#1564b3`.
+4. Obey the naming rule in `DESIGN.md` / `PRD.md`: use `Rencanapp` for user-facing product copy; keep `RencanApp` only for repo/path/tooling identifiers that are already fixed.
 
 ## Commands
 
@@ -37,3 +38,4 @@ Run tests and type-check before considering a change complete.
 
 - `mobile/CLAUDE.md` just re-exports this file (`@AGENTS.md`) — edit here, not there.
 - PRD **V1.8.2** at the repo root is the current spec truth; wiki/code may still lag at V1.8.1.
+- Before closing UI work, sanity-check product naming on login/header/onboarding and other visible copy surfaces.

@@ -285,6 +285,6 @@ Lihat field `open_questions` (OQ-1..OQ-9): kunci aksi reviewer saat revision (OQ
 
 **Data layer/UI:** `DcrDecision`, `resubmitDeadlineChangeRequest`, `DCR_STATUS_LABEL.revision_requested`, tipe hook 2 lokasi + `resubmitM`, tombol Minta Revisi + field alasan, alasan asli Tolak (hapus `'Ditolak'`), `STATUS_TONE.revision_requested='warn'`, form revisi inline pengaju, guard anti-double-submit.
 
-**Invarian TDD:** RLS+RPC (DB contract test pola RencanApp), anti-self, advisory lock, append-only. Jalankan `npm run type-check` & `npm test` sebelum selesai (AGENTS.md).
+**Invarian TDD:** RLS+RPC (DB contract test pola Rencanapp), anti-self, advisory lock, append-only. Jalankan `npm run type-check` & `npm test` sebelum selesai (AGENTS.md).
 
 **Paths tersentuh:** `supabase/migrations/0038_dcr05_minta_revisi.sql`, `mobile/src/lib/governance-admin.ts`, `mobile/src/hooks/use-governance-admin.ts`, `mobile/src/app/(app)/deadline-change-request.tsx`, `mobile/src/lib/database.types.ts`, `mobile/src/components/ui`, DB contract tests, `mobile/src/lib/__tests__`, `mobile/src/hooks/__tests__`.

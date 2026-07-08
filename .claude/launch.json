@@ -9,6 +9,13 @@
       "autoPort": true
     },
     {
+      "name": "ems-web-staging",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/expo-web-staging.js"],
+      "port": 8092,
+      "autoPort": true
+    },
+    {
       "name": "design-preview",
       "runtimeExecutable": "node",
       "runtimeArgs": [".claude/static-server.js"],

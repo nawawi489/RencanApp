@@ -1,5 +1,5 @@
 # Spec Fase 8 — Governance & Admin Lengkap
-**RencanApp V1.8.1 — Exit Spec**
+**Rencanapp V1.8.1 — Exit Spec**
 Versi: 1.0 | Tanggal: 2026-06-25 | Status: Final (post-grill, siap TDD)
 
 ---
@@ -27,7 +27,7 @@ Spec ini sudah mengintegrasikan semua must-fix dari tiga putaran grill. Koreksi 
 
 ## 1. Problem Statement
 
-Setelah Fase 0–7, RencanApp memiliki loop eksekusi penuh tetapi lima gap mencegah go-live internal:
+Setelah Fase 0–7, Rencanapp memiliki loop eksekusi penuh tetapi lima gap mencegah go-live internal:
 
 **Gap 1 — Struktur Organisasi**: Tabel `departments`, `positions`, `teams`, `team_members` belum ada. Assignment PIC menggunakan `profiles.position_title` (string bebas). Admin tidak bisa mengatur struktur org dari dalam app.
 

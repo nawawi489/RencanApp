@@ -7,7 +7,7 @@ sources: 3
 
 # Tech Stack
 
-Rekomendasi tumpukan teknologi untuk membangun [[overview|RencanApp]] (EMS V1.8.1) sebagai aplikasi **mobile** (iOS + Android). Pilihan diturunkan langsung dari karakter teknis PRD, bukan preferensi generik.
+Rekomendasi tumpukan teknologi untuk membangun [[overview|Rencanapp]] (EMS V1.8.1) sebagai aplikasi **mobile** (iOS + Android). Pilihan diturunkan langsung dari karakter teknis PRD, bukan preferensi generik.
 
 ## Karakter teknis yang menentukan pilihan
 
