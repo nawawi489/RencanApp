@@ -36,6 +36,12 @@ export default function SettingsCardGuidanceScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Keterangan Card' }} />
       <View className="gap-4 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Keterangan Card</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Panduan pengisian tiap jenis card.
+          </Text>
+        </View>
         {!allowed ? (
           <AccessDenied message="Keterangan Card hanya untuk pemegang izin Kelola Card Completion Rule." />
         ) : (

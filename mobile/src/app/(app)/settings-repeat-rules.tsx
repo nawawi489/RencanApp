@@ -19,6 +19,12 @@ export default function SettingsRepeatRulesScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Repeat Setting' }} />
       <View className="gap-4 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Repeat Setting</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Daftar Action Plan dengan jadwal berulang.
+          </Text>
+        </View>
         <SectionCard>
           <Text className="text-sm font-bold text-black dark:text-white">Tentang Repeat Setting</Text>
           <Text className="text-xs text-neutral-500 dark:text-neutral-400">

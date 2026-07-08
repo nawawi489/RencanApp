@@ -46,6 +46,12 @@ export default function SettingsKpiAreaTemplatesScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'KPI Area Template' }} />
       <View className="gap-4 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">KPI Area Template</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Library KPI Area siap pakai, dikelompokkan per Goal Template.
+          </Text>
+        </View>
         {!allowed ? (
           <AccessDenied message="Pengelolaan KPI Area Template memerlukan izin Goal/KPI Area Template." />
         ) : tplQ.isLoading ? (

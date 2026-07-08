@@ -60,6 +60,12 @@ export default function SettingsArchiveScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Arsip' }} />
       <View className="gap-3 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Arsip</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Card yang telah diselesaikan atau dinonaktifkan.
+          </Text>
+        </View>
         <Text className="text-xs text-neutral-400">
           Card yang diarsipkan tidak dihapus permanen — pemegang akses dapat memulihkan ke Draft.
         </Text>

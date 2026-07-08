@@ -95,6 +95,12 @@ export default function SettingsActivityLogScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Log Aktivitas' }} />
       <View className="gap-3 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Log Aktivitas</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Riwayat perubahan yang tercatat sistem.
+          </Text>
+        </View>
         {!allowed ? (
           <AccessDenied message="Activity Log hanya untuk pemegang izin Lihat Activity Log." />
         ) : isLoading ? (
