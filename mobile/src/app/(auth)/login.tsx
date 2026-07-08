@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
@@ -25,7 +26,9 @@ function translateAuthError(message: string): string {
   if (m.includes('user already registered')) return 'Email sudah terdaftar. Silakan masuk.';
   if (m.includes('password should be at least')) return AUTH_COPY.passwordTooShort;
   if (m.includes('rate limit')) return 'Terlalu banyak percobaan. Coba lagi sebentar.';
-  if (m.includes('network')) return 'Koneksi bermasalah. Periksa jaringan Anda.';
+  // Web fetch error, RN network error, backend down — semua tidak informatif buat user.
+  if (m.includes('failed to fetch') || m.includes('network request failed') || m.includes('network'))
+    return AUTH_COPY.networkUnavailable;
   return message;
 }
 
@@ -77,7 +80,8 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      const redirectTo = Linking.createURL('/reset-password');
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
       if (error) throw error;
       // Pesan netral (tak membocorkan apakah email terdaftar).
       setFeedback({
@@ -103,12 +107,12 @@ export default function LoginScreen() {
   return (
     <LinearGradient colors={gradient} style={{ flex: 1 }}>
       <ScrollView contentContainerClassName="grow justify-center px-6 py-12">
-        <View className="items-center gap-3">
+        <View className="items-center gap-3" accessibilityLabel="Rencanapp">
           <View className="rounded-3xl bg-white p-4 shadow-sm dark:bg-neutral-900">
             <BrandLogo size={56} />
           </View>
           <Text className="text-3xl font-extrabold text-[#092753] dark:text-white">
-            Rencana<Text className="text-green-700 dark:text-green-400">app</Text>
+            Rencan<Text className="text-green-700 dark:text-green-400">app</Text>
           </Text>
           <Text className="text-sm font-semibold text-[#667085] dark:text-neutral-300">{BRAND_TAGLINE}</Text>
           <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">

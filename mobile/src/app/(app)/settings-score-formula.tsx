@@ -450,6 +450,12 @@ export default function SettingsScoreFormulaScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Score Formula' }} />
       <View className="gap-5 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Score Formula</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Rumus perhitungan Achievement Score.
+          </Text>
+        </View>
         <ScoreLegend />
 
         <SectionCard>

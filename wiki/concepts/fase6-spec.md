@@ -4,7 +4,7 @@
 
 ## 1. Problem Statement
 
-RencanApp (EMS V1.8.1) saat ini hanya memiliki satu jalur eksekusi: **Performance Workspace** (Goal - KPI Area - Strategy - Initiative - Action Plan). Jalur kedua -- **Development Workspace** -- sudah didefinisikan di PRD (S3, S7, S15-16) dan BUILD-PLAN (Fase 6), tetapi belum diimplementasikan.
+Rencanapp (EMS V1.8.1) saat ini hanya memiliki satu jalur eksekusi: **Performance Workspace** (Goal - KPI Area - Strategy - Initiative - Action Plan). Jalur kedua -- **Development Workspace** -- sudah didefinisikan di PRD (S3, S7, S15-16) dan BUILD-PLAN (Fase 6), tetapi belum diimplementasikan.
 
 Akibatnya, pekerjaan pembangunan mesin internal perusahaan (sistem, SDM, SOP, teknologi, infrastruktur, brand, governance) tetap berjalan di luar EMS, bertentangan dengan tujuan produk S2.3.
 

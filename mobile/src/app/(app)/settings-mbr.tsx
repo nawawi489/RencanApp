@@ -171,6 +171,12 @@ export default function SettingsMbrScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Minimum Breakdown Rule' }} />
       <View className="gap-4 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Minimum Breakdown Rule</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Aturan jumlah minimum kartu turunan per tingkat.
+          </Text>
+        </View>
         {!allowed ? (
           <SectionCard>
             <Text className="text-base font-semibold text-black dark:text-white">

@@ -1,9 +1,9 @@
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
-/** Logo mark Rencanaapp — centang gradient biru→hijau (dari prototype design.html). */
+/** Logo mark Rencanapp — centang gradient biru→hijau (dari prototype design.html). */
 export function BrandLogo({ size = 40 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityLabel="Rencanaapp">
+    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityLabel="Rencanapp">
       <Defs>
         <LinearGradient id="markBlue" x1="12" y1="8" x2="46" y2="46" gradientUnits="userSpaceOnUse">
           <Stop stopColor="#092753" />

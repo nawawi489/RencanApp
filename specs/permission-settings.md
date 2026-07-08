@@ -7,7 +7,7 @@ Status: siap-eksekusi (exit ke `tdd-plan`). Target migrasi: **0017** (berikutnya
 ## 1. Problem & Goals
 
 ### Problem
-Sejak Fase 0 (`0001`), RencanApp punya seluruh *storage* hak akses: tabel `public.user_permissions(user_id, permission_id, granted bool default true, unique(user_id,permission_id))` (`0001:41`), tabel `permissions` dengan 17 key ter-seed (`0001:199-216`), helper baca `public.has_permission(p_key)` (final `0016:35-58`), dan cermin klien `useProfile().can()` (`use-profile.ts:87-92`).
+Sejak Fase 0 (`0001`), Rencanapp punya seluruh *storage* hak akses: tabel `public.user_permissions(user_id, permission_id, granted bool default true, unique(user_id,permission_id))` (`0001:41`), tabel `permissions` dengan 17 key ter-seed (`0001:199-216`), helper baca `public.has_permission(p_key)` (final `0016:35-58`), dan cermin klien `useProfile().can()` (`use-profile.ts:87-92`).
 
 Yang **tidak ada**, terverifikasi:
 1. **Tidak ada RPC grant/revoke `user_permissions`.** Pencarian `0001`–`0016` nihil. Satu-satunya jalan ubah hak akses hari ini = SQL mentah → melanggar invarian "tulis-via-RPC" + tanpa audit.

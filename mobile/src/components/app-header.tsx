@@ -73,11 +73,11 @@ export function AppHeader({ kicker }: { kicker?: string }) {
               </Text>
             </View>
           ) : (
-            <View className="flex-row items-center gap-2.5">
+            <View className="flex-row items-center gap-2.5" accessibilityLabel="Rencanapp">
               <BrandLogo size={32} />
               <View>
                 <Text className="text-base font-extrabold text-black dark:text-white">
-                  Rencana<Text className="text-green-700 dark:text-green-400">app</Text>
+                  Rencan<Text className="text-green-700 dark:text-green-400">app</Text>
                 </Text>
                 {kicker ? (
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400">{kicker}</Text>

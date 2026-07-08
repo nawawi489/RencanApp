@@ -1,6 +1,6 @@
 # RencanApp
 
-**RencanApp** adalah repositori implementasi **EMS (Execution Management System) V1.82**, sebuah sistem eksekusi berbasis card untuk membantu perusahaan mengubah arah strategis menjadi pekerjaan nyata yang bisa dipantau, direview, dan dipertanggungjawabkan.
+**RencanApp** adalah repositori implementasi produk **Rencanapp**, sebuah **EMS (Execution Management System) V1.82** untuk membantu perusahaan mengubah arah strategis menjadi pekerjaan nyata yang bisa dipantau, direview, dan dipertanggungjawabkan.
 
 EMS dirancang untuk menggantikan pola follow-up manual yang tersebar di chat dengan alur kerja yang memiliki konteks, delegasi yang jelas, bukti kerja, hasil terukur, dan audit trail yang rapi.
 
@@ -22,7 +22,8 @@ EMS dirancang untuk menggantikan pola follow-up manual yang tersebar di chat den
 ### Nama Resmi
 
 - **Nama repositori:** `RencanApp`
-- **Nama produk:** `EMS (Execution Management System)`
+- **Nama produk:** `Rencanapp`
+- **Aturan penamaan:** pakai `Rencanapp` untuk nama produk pada UI, dokumen produk, dan desain; pakai `RencanApp` hanya saat merujuk repo, path, atau identifier teknis yang sudah baku.
 - **Versi produk acuan:** `V1.82`
 - **Versi paket aplikasi mobile saat ini:** `1.0.0` (`mobile/package.json`)
 - **Status pengembangan:** `Aktif` dengan implementasi kode saat ini berada di **Fase 0 - Fondasi & Shell**

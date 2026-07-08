@@ -1,18 +1,18 @@
-# Rencanaapp V1.82 — 01 · Konsep & Fondasi
+# Rencanapp V1.82 — 01 · Konsep & Fondasi
 
-> **Untuk AI agent:** File ini adalah north star dan guardrail. Baca pertama. Isinya: apa itu Rencanaapp/EMS, batas scope V1.82, aturan bahasa, status card, struktur workspace, dua konsep periode utama (Period Focus Engine & Target Breakdown KPI Area), prinsip card, dan makna tiap jenis card. Untuk spesifikasi field & validasi card → [02-spesifikasi-card-dan-eksekusi.md](02-spesifikasi-card-dan-eksekusi.md). Untuk permission, data, score, governance → [03-sistem-permission-data-governance.md](03-sistem-permission-data-governance.md). Sumber otoritatif: [../PRD.md](../PRD.md).
+> **Untuk AI agent:** File ini adalah north star dan guardrail. Baca pertama. Isinya: apa itu Rencanapp/EMS, batas scope V1.82, aturan bahasa, status card, struktur workspace, dua konsep periode utama (Period Focus Engine & Target Breakdown KPI Area), prinsip card, dan makna tiap jenis card. Untuk spesifikasi field & validasi card → [02-spesifikasi-card-dan-eksekusi.md](02-spesifikasi-card-dan-eksekusi.md). Untuk permission, data, score, governance → [03-sistem-permission-data-governance.md](03-sistem-permission-data-governance.md). Sumber otoritatif: [../PRD.md](../PRD.md).
 
 ---
 
-## 1. Apa itu Rencanaapp
+## 1. Apa itu Rencanapp
 
-Rencanaapp adalah **Execution Management System (EMS)** yang membantu perusahaan mengubah target besar menjadi eksekusi nyata yang bisa dipantau, direview, dibuktikan, dan dipertanggungjawabkan.
+Rencanapp adalah **Execution Management System (EMS)** yang membantu perusahaan mengubah target besar menjadi eksekusi nyata yang bisa dipantau, direview, dibuktikan, dan dipertanggungjawabkan.
 
 Tagline: *Rencanakan. Jalankan. Tuntaskan.*
 
-Rencanaapp **bukan**: task management biasa, chat, social media, atau aplikasi perhitungan KPI formal seperti spreadsheet.
+Rencanapp **bukan**: task management biasa, chat, social media, atau aplikasi perhitungan KPI formal seperti spreadsheet.
 
-Rencanaapp adalah sistem eksekusi berbasis **card** yang menghubungkan:
+Rencanapp adalah sistem eksekusi berbasis **card** yang menghubungkan:
 
 - **Performance:** Goal → KPI Area → Strategy → Initiative → Action Plan
 - **Development:** Development Area → Problem Statement / Development Goal → Initiative → Action Plan

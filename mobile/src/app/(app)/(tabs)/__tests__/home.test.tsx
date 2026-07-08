@@ -229,12 +229,12 @@ describe('HomeScreen', () => {
       created_at: new Date(Date.now() - 2 * 86_400_000).toISOString(), // 2 hari lalu
     };
     const { unmount } = await render(<HomeScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Selamat datang di RencanApp')).toBeTruthy();
+    expect(await screen.findByText('Selamat datang di Rencanapp')).toBeTruthy();
     unmount();
 
     profileMock.profile = { full_name: 'Lama', id: 'u3', created_at: '2020-01-01T00:00:00Z' };
     await render(<HomeScreen />, { wrapper: wrapper() });
     await screen.findByText('Tidak ada tugas aktif');
-    expect(screen.queryByText('Selamat datang di RencanApp')).toBeNull();
+    expect(screen.queryByText('Selamat datang di Rencanapp')).toBeNull();
   });
 });

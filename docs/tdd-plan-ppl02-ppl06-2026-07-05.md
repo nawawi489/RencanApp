@@ -214,7 +214,7 @@ Verifikasi `jest.setup.js` sudah punya mock untuk `react-native-safe-area-contex
 - **M12.** PPL-02/Quarter tab tidak bocor ke default: test bahwa TAB DEFAULT (Bulan ini) tidak accidentally render Quarter placeholder text 'Laporan quarterly menyusul' (regresi lupa switch content by tab).
 - **M13.** PPL-02/Loading & Error di dalam tab: bila `useRanking` isLoading=true di tab Ranking, render SkeletonList atau kosong? Bila isError, ErrorState? Plan hanya set default success mocks.
 - **M14.** PPL-02/Admin entry list source & order: konstanta `ADMIN_TAB_ENTRIES` — test yang mengunci keys, order, dan filtering per permission belum ada.
-- **M15.** Data layer/RLS smoke: RISK-1 mengakui RLS 0013:799-815 tidak diuji unit. Plan tidak menjadwalkan pgTAP/psql smoke — di RencanApp `supabase/tests/` biasanya ada db-contract test. Ketiadaan smoke = kebocoran risiko real.
+- **M15.** Data layer/RLS smoke: RISK-1 mengakui RLS 0013:799-815 tidak diuji unit. Plan tidak menjadwalkan pgTAP/psql smoke — di Rencanapp `supabase/tests/` biasanya ada db-contract test. Ketiadaan smoke = kebocoran risiko real.
 - **M16.** listUserScoreHistory select shape: existing listMyScoreHistory pakai `'*, period_snapshots!period_snapshot_id(period_start)'`. Plan D2 tidak mengunci select join tersebut → implementasi minimal bisa lupa join → foreignTable order noop → hasil arbitrary tapi test lolos.
 - **M17.** listUserScoreHistory client re-sort safety-net: existing listMyScoreHistory sort client-side setelah query. Plan tidak melakukannya pada listUserScoreHistory → inconsistent behavior + test tidak mengunci urutan hasil bila server order fickle.
 - **M18.** PPL-06/isSelf true + Achievement Score null tapi punya history: kontrak render Tren tetap muncul? Belum locked.

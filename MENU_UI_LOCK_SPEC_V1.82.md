@@ -1,11 +1,11 @@
-# MENU UI LOCK SPEC V1.82 - Rencanaapp
+# MENU UI LOCK SPEC V1.82 - Rencanapp
 
-Dokumen ini adalah lock spec khusus Menu agar implementasi Claude Code mengikuti prototype final Rencanaapp secara visual, interaksi, fitur, dan psikologi penggunaan.
+Dokumen ini adalah lock spec khusus Menu agar implementasi Claude Code mengikuti prototype final Rencanapp secara visual, interaksi, fitur, dan psikologi penggunaan.
 
 Source of truth visual:
 
 1. Prototype final: `outputs/ems-mobile-ui/index.html`.
-2. PRD utama: `outputs/PRD_EMS_V1.82_Rencanaapp.md`.
+2. PRD utama: `outputs/PRD_EMS_V1.82_Rencanapp.md`.
 3. Dokumen ini mengunci area Menu saja.
 
 Tujuan dokumen:
@@ -98,7 +98,7 @@ Menu termasuk main header screen.
 
 Global topbar tetap tampil di Menu:
 
-1. Logo Rencanaapp kiri.
+1. Logo Rencanapp kiri.
 2. Search pill `Cari`.
 3. Notification icon.
 4. Avatar.
@@ -852,7 +852,7 @@ Jika dokumen ini diberikan ke Claude Code, gunakan instruksi berikut:
 
 ## 23. Final Menu Statement
 
-Menu Rencanaapp V1.82 adalah pusat akses sekunder yang rapi.
+Menu Rencanapp V1.82 adalah pusat akses sekunder yang rapi.
 
 Menu harus membuat user merasa aplikasi mudah dikendalikan.
 

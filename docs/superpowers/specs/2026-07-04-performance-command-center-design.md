@@ -70,7 +70,7 @@ Alasan:
 - paling efektif mengurangi scroll dan rasa panjang
 - paling cocok untuk monitoring rutin dan prioritisasi cepat
 - tetap mempertahankan struktur produk yang sudah ada
-- paling dekat dengan kebutuhan utilitarian RencanApp
+- paling dekat dengan kebutuhan utilitarian Rencanapp
 - bisa berkembang ke warning mode dan deep dive tanpa mengubah model dasar layar
 
 ## Prinsip Desain

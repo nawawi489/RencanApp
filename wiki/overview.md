@@ -5,11 +5,11 @@ updated: 2026-06-27
 sources: 4
 ---
 
-# RencanApp — Overview
+# Rencanapp — Overview
 
-RencanApp adalah implementasi **EMS (Execution Management System) V1.8.2** (sumber kebenaran: `PRD.md` di root repo) — sistem yang membantu perusahaan mengubah arah besar menjadi eksekusi nyata yang bisa dipantau, direview, dan dipertanggungjawabkan. Bukan task manager biasa, chat, social media, atau aplikasi KPI formal.
+Rencanapp adalah implementasi **EMS (Execution Management System) V1.8.2** (sumber kebenaran: `PRD.md` di root repo) — sistem yang membantu perusahaan mengubah arah besar menjadi eksekusi nyata yang bisa dipantau, direview, dan dipertanggungjawabkan. Bukan task manager biasa, chat, social media, atau aplikasi KPI formal.
 
-## What is RencanApp?
+## What is Rencanapp?
 
 Sistem eksekusi berbasis **card** dengan dua workspace:
 

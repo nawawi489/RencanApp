@@ -47,6 +47,12 @@ export default function SettingsOrgStructureScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Organisasi' }} />
       <View className="gap-4 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Organisasi</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Departemen, posisi, tim, dan role template.
+          </Text>
+        </View>
         <TabBar<Tab>
           tabs={[
             { key: 'department', label: 'Departemen' },

@@ -2,7 +2,7 @@
 
 > Sumber spec: [specs/fase-7-people-score.md](fase-7-people-score.md). Verdict critic: **perlu-perbaikan** — lihat §Temuan Critic.
 
-# Rencana TDD — Fase 7 People & Score (RencanApp)
+# Rencana TDD — Fase 7 People & Score (Rencanapp)
 
 > Status: eksekutabel. Mengikuti pola Fase 1–6 yang sudah ada di repo (thin caller `cards.ts`/`repeat.ts`, hook `use-workspace.ts`, screen `settings-mbr.tsx`/`people.tsx`, migrasi `0011`). Semua otorisasi ditegakkan server (RLS + RPC SECURITY DEFINER); kode mobile hanya pemanggil tipis.
 

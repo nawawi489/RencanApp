@@ -1,6 +1,6 @@
-# Skenario Manual Testing — RencanApp (EMS Mobile)
+# Skenario Manual Testing — Rencanapp (EMS Mobile)
 
-Dokumen ini adalah panduan pengujian manual menyeluruh aplikasi mobile RencanApp (`mobile/`).
+Dokumen ini adalah panduan pengujian manual menyeluruh aplikasi mobile Rencanapp (`mobile/`).
 Basis: PRD V1.8.2 (root `PRD.md`), DESIGN.md (token & aksesibilitas), dan rute yang terimplementasi di `mobile/src/app/`.
 
 - **Versi dokumen**: 1.0 — 2026-07-05
@@ -67,6 +67,15 @@ Prioritas:
 
 Format bug report: judul singkat, langkah reproduksi, hasil aktual vs diharapkan, screenshot, akun/role yang dipakai, ID kasus uji terkait.
 
+### 1.5 Checklist Review UI
+
+Sebelum menutup review atau manual test untuk perubahan UI/copy, cek cepat:
+
+1. **Nama produk konsisten** — surface yang terlihat user memakai `Rencanapp`, bukan `RencanApp`.
+2. **Identifier teknis tetap aman** — nama repo/path/tooling yang memang fixed tetap memakai `RencanApp`.
+3. **Wordmark/header sinkron** — login, header global, onboarding hint, dan surface utama tidak memakai ejaan campuran.
+4. **Copy acuan selaras** — jika ada copy baru, cocokkan dengan aturan penamaan di `PRD.md` dan `DESIGN.md`.
+
 ---
 
 ## 2. Autentikasi & Sesi (AUTH)
@@ -96,7 +105,7 @@ Layar: `(auth)/login`. Tidak ada layar registrasi — akun dibuat lewat seed/adm
 |---|---|---|---|---|
 | NAV-01 | P1 | Bottom nav final | Amati bottom nav setelah login | Tepat 5 tab: **Home, Notif, Workspace, Inbox, Menu** (PRD §44.2) — bukan "People" |
 | NAV-02 | P1 | Pindah antar tab | Tap tiap tab bergantian | Layar berganti tanpa crash; posisi scroll/tab state wajar |
-| NAV-03 | P2 | Header global | Amati header di layar utama | Header "Rencanaapp" konsisten antar layar (PRD §44.3) |
+| NAV-03 | P2 | Header global | Amati header di layar utama | Header "Rencanapp" konsisten antar layar (PRD §44.3) |
 | NAV-04 | P2 | Deep navigation & back | Home → detail Action Plan → back | Kembali ke layar asal, bukan reset ke root |
 | NAV-05 | P3 | Tidak ada fitur terlarang | Telusuri seluruh app | Tidak ada Feed, Company News, Announcement, Routine, Checklist Routine, Watcher, Area Goal (PRD §44.28) |
 

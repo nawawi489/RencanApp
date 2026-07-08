@@ -38,7 +38,7 @@ Keputusan berikut MENGIKAT dan menggantikan jawaban sementara di §9 Open Questi
 
 ## 1. Problem & Goals
 
-Setelah Fase 0–6, RencanApp punya loop eksekusi terkunci (Action Plan one-time + repeat, Instance, Submission + versioning, Review anti-self-approval, Repeat Compliance, Governance Violation, kontribusi Development Workspace) — semua append-only & evidence-locked. Namun belum ada cara objektif menjawab "siapa berkinerja seperti apa". Surface `People` (`mobile/src/app/(app)/(tabs)/people.tsx`) masih shell: hanya nama + email via `listOrgProfiles()`, dengan `ScoreBadge` yang merender `p.score` bila non-null. `mobile/src/lib/score.ts` hanya semantik band UI (0–100) tanpa kalkulasi/persistensi. Tidak ada satupun tabel skor di DB (0001–0012).
+Setelah Fase 0–6, Rencanapp punya loop eksekusi terkunci (Action Plan one-time + repeat, Instance, Submission + versioning, Review anti-self-approval, Repeat Compliance, Governance Violation, kontribusi Development Workspace) — semua append-only & evidence-locked. Namun belum ada cara objektif menjawab "siapa berkinerja seperti apa". Surface `People` (`mobile/src/app/(app)/(tabs)/people.tsx`) masih shell: hanya nama + email via `listOrgProfiles()`, dengan `ScoreBadge` yang merender `p.score` bila non-null. `mobile/src/lib/score.ts` hanya semantik band UI (0–100) tanpa kalkulasi/persistensi. Tidak ada satupun tabel skor di DB (0001–0012).
 
 Fase 7 mengubah data eksekusi terkumpul menjadi **Achievement Score** yang dihitung, ber-versi, dan auditable.
 

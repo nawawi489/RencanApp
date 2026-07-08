@@ -112,6 +112,13 @@ describe('AppHeader — back button (pola seragam tab-stack)', () => {
     expect(screen.getByLabelText('Cari')).toBeTruthy();
   });
 
+  it('surface utama non-workspace mengekspose brand label "Rencanapp"', async () => {
+    mockCanGoBack.mockReturnValue(false);
+    mockSegments = ['(app)', '(tabs)', 'home'];
+    await render(<AppHeader />, { wrapper });
+    expect(screen.getByLabelText('Rencanapp')).toBeTruthy();
+  });
+
   it('avatar → push profil sendiri (bukan hub /settings lama)', async () => {
     await render(<AppHeader />, { wrapper });
     fireEvent.press(screen.getByLabelText('Buka profil saya'));

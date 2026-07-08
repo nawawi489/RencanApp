@@ -40,6 +40,12 @@ export default function SettingsCardCompletionRuleScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Card Completion Rule' }} />
       <View className="gap-4 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Card Completion Rule</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Syarat card dianggap selesai per jenis.
+          </Text>
+        </View>
         {!allowed ? (
           <AccessDenied message="Card Completion Rule hanya untuk pemegang izin Kelola Card Completion Rule." />
         ) : (

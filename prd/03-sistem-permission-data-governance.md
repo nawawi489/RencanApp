@@ -1,4 +1,4 @@
-# Rencanaapp V1.82 — 03 · Sistem, Permission, Data & Governance
+# Rencanapp V1.82 — 03 · Sistem, Permission, Data & Governance
 
 > **Untuk AI agent:** File ini adalah referensi arsitektur & sistem. Isinya: model permission & delegasi, surface aplikasi V1.82 (Home / Notif / Workspace / Inbox / Menu — People pindah ke Menu), Score Formula, audit (Activity Log, Governance Violation), Search, Settings, backend-mandatory rules, blueprint database, relationship rules, seed data. Untuk konsep → [01-konsep-dan-fondasi.md](01-konsep-dan-fondasi.md). Untuk spesifikasi card → [02-spesifikasi-card-dan-eksekusi.md](02-spesifikasi-card-dan-eksekusi.md). Urutan build → [../BUILD-PLAN.md](../BUILD-PLAN.md). Sumber otoritatif: [../PRD.md](../PRD.md).
 
@@ -53,7 +53,7 @@ Bukan system rule (system rule = akses PIC/Reviewer/turunan, tidak perlu permiss
 | **Reviewer** | Sub-role fungsional: bisa review Bukti pada card yang ditugaskan; tidak otomatis punya akses turunan card. |
 
 ### A.5 Watcher dihapus
-Rencanaapp V1.82 **tidak** memakai Watcher. Tidak ada watcher table, tidak ada "Add Watcher", tidak ada watcher notification. Akses luas diberi via permission "lihat seluruh Workspace".
+Rencanapp V1.82 **tidak** memakai Watcher. Tidak ada watcher table, tidak ada "Add Watcher", tidak ada watcher notification. Akses luas diberi via permission "lihat seluruh Workspace".
 
 ## B. Surface Aplikasi (V1.82)
 
@@ -65,7 +65,7 @@ Bottom nav utama: **Home · Notif · Workspace · Inbox · Menu**.
 Settings tidak tampil sebagai bottom nav mandiri; diakses lewat Menu.
 
 ### B.2 Header Global (PRD §7.2)
-1. Logo mark Rencanaapp di kiri.
+1. Logo mark Rencanapp di kiri.
 2. Search pill pendek berlabel "Cari".
 3. Icon Notifications.
 4. Avatar / profile di kanan.
@@ -274,7 +274,7 @@ Baseline V1.8.1 (53 core tables) tetap berlaku sebagai fondasi. V1.82 menambah/m
 
 ## I. Seed Data Default
 
-- **Organization:** Rencanaapp / Nyantuy Group.
+- **Organization:** Rencanapp / Nyantuy Group.
 - **Development Area default:** Organization, People, System, Technology, Infrastructure, Brand, Governance Development.
 - **Goal Template:** Meningkatkan Omset Penjualan, Meningkatkan Profit.
 - **Repeat Frequency:** Harian, Mingguan, Bulanan, Custom.
@@ -288,4 +288,4 @@ Baseline V1.8.1 (53 core tables) tetap berlaku sebagai fondasi. V1.82 menambah/m
 ## J. Build & Success
 
 - **Urutan build:** lihat [../BUILD-PLAN.md](../BUILD-PLAN.md) — 9 fase vertical slice, cakupan = 100% scope V1.82.
-- **Acceptance Criteria V1.82 (PRD §44):** 28 kriteria kelulusan, ringkas: mobile-first 390px; bottom nav final Home/Notif/Workspace/Inbox/Menu; header global Rencanaapp konsisten; Menu jadi akses People/Template/Settings/Admin/Archive/Logout; Workspace pakai card tree dengan Detail & panah terpisah; Performance & Development pola UI sama; periode default bulan berjalan; pilih Bulan/Quarter; card periode lewat redup + tidak bisa buat turunan baru; Goal tahunan; KPI Area ikut Goal tahunan; KPI Area punya pecahan target Quarter & Bulan total 100%; New KPI Area default manual, template lewat popup; Kelengkapan Card tidak memenuhi layar, divalidasi saat Aktifkan Card; MBR mengunci tombol turunan dengan popup; Action Plan One Time & Repeat; Repeat menghasilkan Instance; Bukti versioning; Nilai Hasil masuk KPI Area setelah review; Initiative Chat hanya untuk Initiative; Action Plan bisa buka chat dengan konteks reply; Notifications bukan chat; Inbox bukan action queue; People ranking objektif tanpa mempermalukan; Admin settings ikut permission; Activity Log tidak intimidatif; Search & Archive ikut permission; **tanpa Feed, Company News, Announcement, Routine, Checklist Routine, Watcher, Area Goal**.
+- **Acceptance Criteria V1.82 (PRD §44):** 28 kriteria kelulusan, ringkas: mobile-first 390px; bottom nav final Home/Notif/Workspace/Inbox/Menu; header global Rencanapp konsisten; Menu jadi akses People/Template/Settings/Admin/Archive/Logout; Workspace pakai card tree dengan Detail & panah terpisah; Performance & Development pola UI sama; periode default bulan berjalan; pilih Bulan/Quarter; card periode lewat redup + tidak bisa buat turunan baru; Goal tahunan; KPI Area ikut Goal tahunan; KPI Area punya pecahan target Quarter & Bulan total 100%; New KPI Area default manual, template lewat popup; Kelengkapan Card tidak memenuhi layar, divalidasi saat Aktifkan Card; MBR mengunci tombol turunan dengan popup; Action Plan One Time & Repeat; Repeat menghasilkan Instance; Bukti versioning; Nilai Hasil masuk KPI Area setelah review; Initiative Chat hanya untuk Initiative; Action Plan bisa buka chat dengan konteks reply; Notifications bukan chat; Inbox bukan action queue; People ranking objektif tanpa mempermalukan; Admin settings ikut permission; Activity Log tidak intimidatif; Search & Archive ikut permission; **tanpa Feed, Company News, Announcement, Routine, Checklist Routine, Watcher, Area Goal**.

@@ -1,8 +1,10 @@
-# PRD FINAL V1.82 - EMS: Rencanaapp Execution Management System
+# PRD FINAL V1.82 - EMS: Rencanapp Execution Management System
 
 ## 1. Dokumen
 
-Nama produk: Rencanaapp.
+Nama produk: Rencanapp.
+
+Aturan penamaan: gunakan `Rencanapp` untuk semua penyebutan brand produk di UI, copy, dan dokumen spesifikasi. Gunakan `RencanApp` hanya untuk identifier teknis seperti nama repo, path, atau referensi tooling yang memang fixed.
 
 Tagline: Rencanakan. Jalankan. Tuntaskan.
 
@@ -21,17 +23,17 @@ Tujuan dokumen ini adalah menjadi source-of-truth untuk implementasi frontend ag
 
 ## 2. Product Overview
 
-Rencanaapp adalah Execution Management System untuk membantu perusahaan mengubah target besar menjadi eksekusi nyata yang bisa dipantau, direview, dibuktikan, dan dipertanggungjawabkan.
+Rencanapp adalah Execution Management System untuk membantu perusahaan mengubah target besar menjadi eksekusi nyata yang bisa dipantau, direview, dibuktikan, dan dipertanggungjawabkan.
 
-Rencanaapp bukan task management biasa.
+Rencanapp bukan task management biasa.
 
-Rencanaapp bukan aplikasi chat biasa.
+Rencanapp bukan aplikasi chat biasa.
 
-Rencanaapp bukan social media.
+Rencanapp bukan social media.
 
-Rencanaapp bukan aplikasi perhitungan KPI formal seperti spreadsheet.
+Rencanapp bukan aplikasi perhitungan KPI formal seperti spreadsheet.
 
-Rencanaapp adalah sistem eksekusi berbasis Card yang menghubungkan:
+Rencanapp adalah sistem eksekusi berbasis Card yang menghubungkan:
 
 Performance Workspace:
 
@@ -231,9 +233,9 @@ Alasan:
 
 ### 7.2 Header Global
 
-Header global memakai brand Rencanaapp:
+Header global memakai brand Rencanapp:
 
-1. Logo mark Rencanaapp di kiri.
+1. Logo mark Rencanapp di kiri.
 2. Search pill pendek berlabel "Cari".
 3. Icon Notifications.
 4. Avatar/profile di kanan.
@@ -1090,7 +1092,7 @@ Home tidak boleh menjadi feed panjang.
 
 Komponen:
 
-1. Header global Rencanaapp.
+1. Header global Rencanapp.
 2. Greeting singkat.
 3. Fokus Hari Ini.
 4. Prioritas yang pas satu layar, tidak horizontal scroll.
@@ -1516,12 +1518,12 @@ User tidak boleh menemukan data yang tidak boleh dia akses.
 
 ## 39. Login
 
-Login mengikuti style mobile app dengan brand Rencanaapp.
+Login mengikuti style mobile app dengan brand Rencanapp.
 
 Komponen:
 
-1. Logo Rencanaapp besar.
-2. Nama Rencanaapp.
+1. Logo Rencanapp besar.
+2. Nama Rencanapp.
 3. Tagline.
 4. Email perusahaan.
 5. Password.
@@ -1669,7 +1671,7 @@ People Ranking terpisah tidak wajib menjadi screen utama karena ranking sudah ad
 
 Brand:
 
-1. Rencanaapp.
+1. Rencanapp.
 2. Rencanakan. Jalankan. Tuntaskan.
 
 User utama:
@@ -1719,7 +1721,7 @@ Frontend dianggap sesuai V1.82 jika:
 
 1. Mobile-first dan nyaman di viewport 390 px.
 2. Bottom nav final: Home, Notif, Workspace, Inbox, Menu.
-3. Header global Rencanaapp konsisten.
+3. Header global Rencanapp konsisten.
 4. Menu menjadi akses People, Template, Settings, Admin, Archive, Logout.
 5. Workspace memakai card tree dengan Detail dan panah terpisah.
 6. Performance dan Development punya pola UI yang sama.
@@ -1750,7 +1752,7 @@ Frontend dianggap sesuai V1.82 jika:
 
 ## 45. Final Product Statement
 
-Rencanaapp V1.82 adalah mobile-first execution governance app yang membantu perusahaan menjalankan target tahunan menjadi eksekusi bulanan, quarter, dan harian tanpa membuat user bingung.
+Rencanapp V1.82 adalah mobile-first execution governance app yang membantu perusahaan menjalankan target tahunan menjadi eksekusi bulanan, quarter, dan harian tanpa membuat user bingung.
 
 User staff melihat pekerjaan yang perlu dilakukan.
 

@@ -1,6 +1,6 @@
-# RencanApp — Wiki Schema for Claude Code
+# Rencanapp — Wiki Schema for Claude Code
 
-This file is the operating manual for maintaining the RencanApp project wiki.
+This file is the operating manual for maintaining the Rencanapp project wiki.
 Read it at the start of every session before touching any wiki files.
 
 ---

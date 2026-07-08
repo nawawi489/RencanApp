@@ -1,6 +1,6 @@
 # Rencana TDD Fase 8 — Governance & Admin Lengkap
 
-**Proyek:** RencanApp  
+**Proyek:** Rencanapp  
 **Fase:** 8 — Governance & Admin Lengkap  
 **Tanggal:** 2026-06-25  
 **Status:** Siap Eksekusi  
@@ -9,7 +9,7 @@
 
 ## Ringkasan Fitur
 
-Fase 8 menambahkan 10 area fitur utama ke RencanApp:
+Fase 8 menambahkan 10 area fitur utama ke Rencanapp:
 
 1. **Org Structure CRUD** — departments, positions, teams, team_members via RLS org-scoped
 2. **Deadline Change Request (DCR) workflow** — create → review → approve/reject, anti-self-approval, append-only logs

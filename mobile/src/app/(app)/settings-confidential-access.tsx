@@ -21,6 +21,12 @@ export default function SettingsConfidentialAccessScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: 'Akses Rahasia' }} />
       <View className="gap-3 p-5">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-black dark:text-white">Akses Rahasia</Text>
+          <Text className="text-base text-neutral-500 dark:text-neutral-400">
+            Aturan pengecualian akses data sensitif.
+          </Text>
+        </View>
         {!allowed ? (
           <AccessDenied message="Akses Rahasia hanya untuk pemegang izin Kelola Akses Rahasia." />
         ) : isLoading ? (

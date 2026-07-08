@@ -1,4 +1,4 @@
-# Spec Final — Fase 2: Action Plan Repeat (RencanApp EMS)
+# Spec Final — Fase 2: Action Plan Repeat (Rencanapp EMS)
 
 > Status: siap-eksekusi. Meresolusi seluruh must-fix dari grill produk/engineering/governance secara deterministik. Grounded pada PRD §26–29/§36/§38/§73–74, BUILD-PLAN Fase 2, dan migrasi aktual `0001_fase0_foundation.sql` / `0005_fase1_card_engine.sql` / `0006_fase1_fix_returning_rls.sql` (diverifikasi langsung pada commit ini).
 

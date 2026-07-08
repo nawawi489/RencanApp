@@ -9,7 +9,7 @@ Sumber yang dihormati: PRD §57/§63/§64/§94, `wiki/concepts/ui-prototype-gap.
 ## 1. Problem & Goals
 
 ### Problem
-Inbox adalah satu dari lima surface utama RencanApp (`[[surfaces]]`): pusat chat per-Initiative yang anggotanya di-derive otomatis dari akses card. Backend chat sudah lengkap dan ber-governance sejak Fase 3 (migrasi `0008_fase3_collab.sql`): tabel `chat_rooms`, `chat_room_members`, `chat_messages`, `chat_message_reads`, `mentions`; RPC `send_chat_message`, `mark_chat_messages_read`, `get_chat_rooms`; semua append-only, RLS via `is_chat_member()` SECURITY DEFINER. Data layer (`mobile/src/lib/inbox.ts`) + hooks (`mobile/src/hooks/use-inbox.ts`) sudah membungkusnya.
+Inbox adalah satu dari lima surface utama Rencanapp (`[[surfaces]]`): pusat chat per-Initiative yang anggotanya di-derive otomatis dari akses card. Backend chat sudah lengkap dan ber-governance sejak Fase 3 (migrasi `0008_fase3_collab.sql`): tabel `chat_rooms`, `chat_room_members`, `chat_messages`, `chat_message_reads`, `mentions`; RPC `send_chat_message`, `mark_chat_messages_read`, `get_chat_rooms`; semua append-only, RLS via `is_chat_member()` SECURITY DEFINER. Data layer (`mobile/src/lib/inbox.ts`) + hooks (`mobile/src/hooks/use-inbox.ts`) sudah membungkusnya.
 
 Masalahnya murni di **lapisan presentasi** (regresi visual, bukan bug logika), terverifikasi di kode:
 - **Inbox list** (`(tabs)/inbox.tsx`): `SectionCard` seragam berisi `room.name` + `last_message_at` + Badge `unread_count`. Tidak ada search, filter chips, avatar, atau preview pesan terakhir.

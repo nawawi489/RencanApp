@@ -1,4 +1,4 @@
-# RencanApp — Design System & Tokens
+# Rencanapp — Design System & Tokens
 
 Sumber kebenaran token desain. Diekstrak dari prototype tim desain [`design.html`](design.html) dan diselaraskan dengan implementasi di [`mobile/`](mobile/) (NativeWind v5 / `react-native-css`, [`global.css`](mobile/src/global.css)).
 
@@ -10,7 +10,8 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 
 ## 1. Brand
 
-- **Nama:** Rencanaapp · **Tagline:** "Rencanakan. Jalankan. Tuntaskan."
+- **Nama:** Rencanapp · **Tagline:** "Rencanakan. Jalankan. Tuntaskan."
+- **Aturan penamaan:** gunakan `Rencanapp` untuk semua surface produk yang terlihat user, copy UI, spec produk, dan artefak desain. Gunakan `RencanApp` hanya untuk identifier teknis seperti nama repo, path folder, atau referensi tooling yang memang sudah fixed.
 - **Logo:** mark centang gradient biru→hijau. Gradien resmi:
   - Biru: `#092753` → `#1877f2` (`loginMarkBlue`)
   - Hijau: `#009f72` → `#6ccf43` (`loginMarkGreen`)
