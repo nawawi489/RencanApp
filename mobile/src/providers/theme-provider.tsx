@@ -59,7 +59,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
         apply(next);
       })
       .catch((err) => {
-        log.warn(' gagal baca AsyncStorage', err);
+        log.warn('gagal baca AsyncStorage', err);
         if (!cancelled) apply('system');
       });
     return () => {
@@ -79,7 +79,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     setModeState(next);
     apply(next);
     AsyncStorage.setItem(STORAGE_KEY, next).catch((err) =>
-      log.warn(' gagal simpan AsyncStorage', err),
+      log.warn('gagal simpan AsyncStorage', err),
     );
   };
 

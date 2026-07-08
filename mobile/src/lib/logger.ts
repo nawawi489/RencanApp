@@ -69,6 +69,22 @@ export function clearRequestId(): void {
   currentRequestId = undefined;
 }
 
+/**
+ * Jalankan `fn` dengan requestId terikat, lalu KEMBALIKAN state sebelumnya di `finally`
+ * (nested-safe). Pola aman yang disarankan dibanding `setRequestId` telanjang: tanpa ini,
+ * lupa `clearRequestId()` di jalur error membuat requestId bocor ke semua log berikutnya
+ * (lintas namespace). `fn` boleh sync; untuk async, await hasilnya di dalam callback.
+ */
+export function withRequestId<T>(id: string, fn: () => T): T {
+  const prev = currentRequestId;
+  currentRequestId = id;
+  try {
+    return fn();
+  } finally {
+    currentRequestId = prev;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Sanitize — sensor data sensitif
 // ---------------------------------------------------------------------------
@@ -155,14 +171,21 @@ function sanitizeWithGuard(value: unknown, seen: WeakSet<object>, depth: number)
   if (depth >= MAX_DEPTH) return '[TRUNCATED]';
   seen.add(value as object);
 
+  // `seen` melacak ANCESTOR di jalur rekursi saat ini (bukan semua node yang pernah
+  // dikunjungi). Add sebelum turun ke anak, delete setelah selesai (backtracking) →
+  // hanya siklus SEJATI yang jadi '[CIRCULAR]'. Shared-ref non-siklik (mis. objek yang
+  // sama muncul di dua field berbeda) tetap diserialisasi penuh, tidak salah ditandai.
   if (Array.isArray(value)) {
-    return value.map((v) => sanitizeWithGuard(v, seen, depth + 1));
+    const arr = value.map((v) => sanitizeWithGuard(v, seen, depth + 1));
+    seen.delete(value as object);
+    return arr;
   }
 
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
     out[k] = isSensitiveKey(k) ? '[REDACTED]' : sanitizeWithGuard(v, seen, depth + 1);
   }
+  seen.delete(value as object);
   return out;
 }
 

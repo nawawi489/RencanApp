@@ -14,6 +14,7 @@ import {
   sanitize,
   setLogLevel,
   setRequestId,
+  withRequestId,
   type LogTransport,
 } from '../logger';
 
@@ -431,6 +432,25 @@ describe('sanitize — guard circular reference & depth', () => {
     expect(() => sanitize(deep)).not.toThrow();
     expect(() => JSON.stringify(sanitize(deep))).not.toThrow();
   });
+
+  it('shared-ref NON-siklik tidak salah ditandai [CIRCULAR] (backtracking)', () => {
+    // Objek yang sama dipakai di dua field berbeda BUKAN siklus — keduanya harus
+    // diserialisasi penuh. Guard ancestor-based (bukan visited-based) menjaga ini.
+    const shared = { value: 'reuse' };
+    const result = sanitize({ first: shared, second: shared }) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    expect(result.first.value).toBe('reuse');
+    expect(result.second.value).toBe('reuse');
+  });
+
+  it('shared-ref dalam array tetap penuh (bukan [CIRCULAR])', () => {
+    const shared = { id: 7 };
+    const result = sanitize([shared, shared]) as Record<string, unknown>[];
+    expect(result[0].id).toBe(7);
+    expect(result[1].id).toBe(7);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -480,5 +500,34 @@ describe('requestId — tracing', () => {
     setRequestId('trace-abc');
     createLogger('X').error('boom');
     expect((t.write as jest.Mock).mock.calls[0][0].requestId).toBe('trace-abc');
+  });
+
+  it('withRequestId mengikat id selama fn lalu memulihkan state sebelumnya', () => {
+    expect(getRequestId()).toBeUndefined();
+    const inside = withRequestId('op-1', () => getRequestId());
+    expect(inside).toBe('op-1');
+    // Auto-restore setelah fn selesai — tidak bocor ke log berikutnya.
+    expect(getRequestId()).toBeUndefined();
+  });
+
+  it('withRequestId nested-safe: memulihkan id luar, bukan undefined', () => {
+    setRequestId('outer');
+    const inner = withRequestId('inner', () => getRequestId());
+    expect(inner).toBe('inner');
+    expect(getRequestId()).toBe('outer');
+  });
+
+  it('withRequestId memulihkan state meski fn throw', () => {
+    setRequestId('outer');
+    expect(() =>
+      withRequestId('inner', () => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect(getRequestId()).toBe('outer');
+  });
+
+  it('withRequestId mengembalikan nilai fn', () => {
+    expect(withRequestId('x', () => 42)).toBe(42);
   });
 });
