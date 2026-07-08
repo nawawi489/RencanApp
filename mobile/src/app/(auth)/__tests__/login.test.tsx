@@ -45,6 +45,11 @@ jest.mock('expo-linear-gradient', () => {
 // Ionicons stub — hindari load font.
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 
+// expo-linking: kontrol nilai createURL agar assertion redirectTo stabil.
+jest.mock('expo-linking', () => ({
+  createURL: (path: string) => `ems://${path.replace(/^\//, '')}`,
+}));
+
 // react-native-css/components dan @/components/ui SENGAJA tidak di-mock — mengikuti
 // pola menu.test.tsx yang berhasil (mocking Pressable di test-renderer justru
 // merusak wiring fireEvent.press → onPress). Button real dari @/components/ui akan
@@ -229,6 +234,37 @@ describe('LoginScreen — password guard AUTH-02b', () => {
     expect(mockReset).toHaveBeenCalledTimes(1);
     expect(mockReset.mock.calls[0][0]).toBe('a@b.co');
     expect(screen.queryByText(AUTH_COPY.passwordTooShort)).toBeNull();
+  });
+
+  it('[13] AC-NET-1 (login): "Failed to fetch" → pesan koneksi ramah (bukan raw EN)', async () => {
+    mockSignIn.mockResolvedValueOnce({ error: new Error('Failed to fetch') });
+    const { fillForm, submit } = await setup();
+    await fillForm('a@b.co', 'rahasia123');
+    await submit();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText(AUTH_COPY.networkUnavailable)).toBeTruthy();
+    expect(screen.queryByText('Failed to fetch')).toBeNull();
+  });
+
+  it('[14] AC-NET-2 (reset link): "Network request failed" → pesan koneksi ramah', async () => {
+    mockReset.mockResolvedValueOnce({ error: new Error('Network request failed') });
+    const { fillForm } = await setup();
+    await fillForm('a@b.co', '');
+    await press(screen.getByLabelText('Lupa kata sandi, kirim link reset'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText(AUTH_COPY.networkUnavailable)).toBeTruthy();
+  });
+
+  it('[12] AC-RESET-1: resetPasswordForEmail dikirim dengan redirectTo deep-link ems://reset-password', async () => {
+    const { fillForm } = await setup();
+    await fillForm('a@b.co', '');
+    await press(screen.getByLabelText('Lupa kata sandi, kirim link reset'));
+    expect(mockReset).toHaveBeenCalledTimes(1);
+    expect(mockReset.mock.calls[0][1]).toEqual({ redirectTo: 'ems://reset-password' });
   });
 
   it('[11] critic regression: koreksi password (dari "123" → "123456") + submit ulang → feedback lama ter-clear', async () => {

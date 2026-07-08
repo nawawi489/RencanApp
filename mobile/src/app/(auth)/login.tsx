@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
@@ -25,7 +26,9 @@ function translateAuthError(message: string): string {
   if (m.includes('user already registered')) return 'Email sudah terdaftar. Silakan masuk.';
   if (m.includes('password should be at least')) return AUTH_COPY.passwordTooShort;
   if (m.includes('rate limit')) return 'Terlalu banyak percobaan. Coba lagi sebentar.';
-  if (m.includes('network')) return 'Koneksi bermasalah. Periksa jaringan Anda.';
+  // Web fetch error, RN network error, backend down — semua tidak informatif buat user.
+  if (m.includes('failed to fetch') || m.includes('network request failed') || m.includes('network'))
+    return AUTH_COPY.networkUnavailable;
   return message;
 }
 
@@ -77,7 +80,8 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      const redirectTo = Linking.createURL('/reset-password');
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
       if (error) throw error;
       // Pesan netral (tak membocorkan apakah email terdaftar).
       setFeedback({

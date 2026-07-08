@@ -9,4 +9,5 @@
 
 export const AUTH_COPY = {
   passwordTooShort: 'Kata sandi minimal 6 karakter.',
+  networkUnavailable: 'Tidak dapat terhubung ke server. Cek koneksi internet Anda.',
 } as const;

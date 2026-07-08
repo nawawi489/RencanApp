@@ -3,9 +3,11 @@ import { Redirect, Stack } from 'expo-router';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function AuthLayout() {
-  const { session } = useAuth();
+  const { session, isRecovering } = useAuth();
 
-  if (session) {
+  // Selama recovery flow (deep-link "Lupa password"), Supabase membuat session
+  // sementara sebelum user set kata sandi baru — jangan redirect ke (app).
+  if (session && !isRecovering) {
     return <Redirect href="/(app)/(tabs)" />;
   }
 
