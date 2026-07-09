@@ -1,0 +1,10 @@
+{
+  "name": "rencanapp-staging-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker: transparent proxy dari staging.rencanapp.com ke Expo alias staging.",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  }
+}

@@ -1,0 +1,12 @@
+name = "rencanapp-staging-proxy"
+main = "src/index.js"
+compatibility_date = "2026-07-09"
+
+# Custom domain: Cloudflare auto-manages DNS + SSL cert for this hostname.
+# Attaches this Worker to https://staging.rencanapp.com.
+[[routes]]
+pattern = "staging.rencanapp.com"
+custom_domain = true
+
+[vars]
+UPSTREAM_ORIGIN = "https://nww489-ems--staging.expo.app"

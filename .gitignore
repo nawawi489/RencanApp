@@ -13,6 +13,9 @@
 *.local
 # Kredensial dev — jangan di-commit
 docs/kredensial-login.md
+*.token
+*.token.txt
+cf.token*
 
 # OS / editor
 .DS_Store
