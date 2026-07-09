@@ -24,14 +24,6 @@ function FailingQueryProbe({ armed }: { armed: boolean }) {
 }
 
 export default function DevSmokeQuery() {
-  if (isProduction()) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.notice}>Halaman ini tidak tersedia di build produksi.</Text>
-      </View>
-    );
-  }
-
   const [queryArmed, setQueryArmed] = useState(false);
 
   const failingMutation = useMutation({
@@ -41,6 +33,14 @@ export default function DevSmokeQuery() {
       throw new Error(`Mutation smoke test — ${new Date().toISOString()}`);
     },
   });
+
+  if (isProduction()) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.notice}>Halaman ini tidak tersedia di build produksi.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} accessible accessibilityRole="none">
