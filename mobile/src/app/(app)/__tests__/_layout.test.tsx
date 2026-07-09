@@ -14,18 +14,20 @@ jest.mock('expo-router', () => {
     return React.createElement(React.Fragment, null, children);
   }
 
-  Stack.Screen = ({
+  function StackScreen({
     name,
     options,
   }: {
     name: string;
     options?: { headerShown?: boolean; title?: string; presentation?: string };
-  }) =>
-    React.createElement(
+  }) {
+    return React.createElement(
       RN.Text,
       { testID: `screen:${name}` },
       JSON.stringify({ name, options: options ?? {} }),
     );
+  }
+  Stack.Screen = StackScreen;
 
   return {
     Redirect: ({ href }: { href: string }) =>

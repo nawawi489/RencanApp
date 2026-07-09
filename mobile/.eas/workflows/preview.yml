@@ -16,7 +16,12 @@ jobs:
     name: Lint, types & tests
     steps:
       - uses: eas/checkout
-      - uses: eas/install_node_modules
+      # `npm install` (bukan step bawaan `eas/install_node_modules` yang pakai `npm ci`):
+      # optional wasm dep (@emnapi/*, lightningcss) resolve berbeda antar-OS, jadi lockfile
+      # yang di-generate di dev Windows tidak lolos `npm ci` strict di runner Linux EAS.
+      # Selaras dengan strategi di `.github/workflows/ci.yml`.
+      - name: Install node modules
+        run: npm install --no-audit --no-fund
       - name: Lint
         run: npm run lint
       - name: Type-check
