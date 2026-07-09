@@ -1,0 +1,57 @@
+name: Regenerate lockfile (Linux)
+
+# On-demand: regenerate mobile/package-lock.json di runner Linux dan buka PR.
+# Perlu karena lockfile yang dihasilkan di Windows sering menahan versi optional
+# wasm dep (@emnapi/*, lightningcss-*) yang berbeda dari resolusi Linux, sehingga
+# `npm ci` di EAS Managed Build gagal dengan
+# "Missing: @emnapi/core@x.y.z from lock file". Jalankan workflow ini setelah
+# ada dependency change signifikan yang berasal dari dev Windows.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: regen-lockfile
+  cancel-in-progress: true
+
+jobs:
+  regen:
+    name: Regenerate mobile/package-lock.json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regenerate lockfile
+        working-directory: mobile
+        # `--package-lock-only`: hanya update lockfile, tidak install node_modules.
+        # Hapus lockfile lama supaya npm menyusun ulang resolusi dari nol.
+        run: |
+          rm -f package-lock.json
+          npm install --package-lock-only --no-audit --no-fund
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/regen-lockfile
+          delete-branch: true
+          commit-message: "chore(deps): regenerate mobile/package-lock.json di Linux"
+          title: "chore(deps): regenerate mobile/package-lock.json di Linux"
+          body: |
+            Regenerate `mobile/package-lock.json` di runner Ubuntu untuk memulihkan
+            EAS PR Preview Build yang gagal dengan `Missing: @emnapi/core@... from
+            lock file`.
+
+            Dihasilkan otomatis dari workflow `Regenerate lockfile (Linux)`.
+          labels: |
+            dependencies
+            ci
