@@ -16,6 +16,7 @@ Basis: PRD V1.8.2 (root `PRD.md`), DESIGN.md (token & aksesibilitas), dan rute y
 | Item | Detail |
 |---|---|
 | Supabase lokal | Berjalan di port 54321 (API) / 54322 (DB). DDL lokal via `docker exec supabase_db_supabase psql` |
+| Edge Functions | Fitur Tambah User memanggil function `create-user`. Lokal: `npx supabase functions serve create-user` (stack lokal harus jalan). Staging: `npx supabase link --project-ref fhnqwytqprsptjshoxfn` lalu `npx supabase functions deploy create-user` |
 | Seed data | Database sudah berisi seed (user, goal, KPI Area, dst.) sesuai PRD §43 |
 | App | `cd mobile && npm run web` (atau `npm run android` / `npm run ios`) |
 | Viewport | Uji utama di lebar **390 px** (acceptance criteria PRD §44.1) |
@@ -371,6 +372,7 @@ Uji dengan akun ceo (atau akun dengan permission terkait). Untuk tiap layar, min
 | ADM-13 | P2 | KPI Area Template (`settings-kpi-area-templates`) | CRUD template KPI Area; muncul di popup KPI-02 |
 | ADM-14 | P1 | Activity Log (`settings-activity-log`) | Log tampil **default tidak intimidatif** (PRD §44.26); entri tercipta dari aksi EVD/REV/DCR/SCORE |
 | ADM-15 | P2 | Arsip (`settings-archive`) | Card terarsip tampil; akses mengikuti permission (PRD §44.27) |
+| ADM-16 | P1 | Tambah User (`settings-user-new`, via tombol di ADM-02) | Buat akun baru (nama, email, password sementara ≥8 karakter, role): user baru bisa login & profil otomatis tercipta dengan role benar; email duplikat ditolak dengan pesan jelas; pill role C-Level terkunci untuk admin non-CEO dan Edge Function menolak `role_level=c_level` dari non-CEO; user tanpa `manage_users_permissions` → AccessDenied; pembuatan tercatat di Activity Log (entity `user`, action `create`) |
 
 ---
 

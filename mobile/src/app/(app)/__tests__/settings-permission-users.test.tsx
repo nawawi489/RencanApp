@@ -32,7 +32,12 @@ jest.mock('@/hooks/use-permissions-admin', () => ({
   useScopeActions: () => ({ setScope: jest.fn(), isPending: false }),
 }));
 
-jest.mock('expo-router', () => ({ __esModule: true, Stack: { Screen: () => null } }));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({
+  __esModule: true,
+  Stack: { Screen: () => null },
+  useRouter: () => ({ push: mockPush }),
+}));
 
 // eslint-disable-next-line import/first
 import SettingsPermissionUsersScreen from '../settings-permission-users';
@@ -51,6 +56,7 @@ const ROWS = [
 ];
 
 beforeEach(() => {
+  mockPush.mockReset();
   mockListOrgProfiles.mockReset();
   mockCan.mockReset();
   mockUseUserPerms.mockReset();
@@ -147,6 +153,14 @@ describe('SettingsPermissionUsersScreen', () => {
       granted: false,
       reason: 'tidak lagi relevan',
     });
+  });
+
+  it('[P-UI-08] tombol Tambah User → push /settings-user-new', async () => {
+    await render(<SettingsPermissionUsersScreen />, { wrapper: wrapper() });
+    await act(async () => {
+      fireEvent.press(await screen.findByLabelText('Tambah User baru'));
+    });
+    expect(mockPush).toHaveBeenCalledWith('/settings-user-new');
   });
 
   it('[P-UI-07] error server → pesan inline di modal', async () => {

@@ -1,0 +1,8 @@
+# Minimal config untuk Supabase CLI — dibutuhkan `supabase link` / `functions serve|deploy`.
+# project_id "supabase" mengikuti nama container stack lokal existing (supabase_db_supabase).
+project_id = "supabase"
+
+# create-user memverifikasi JWT + permission pemanggil di dalam function;
+# verify_jwt gateway tetap aktif sebagai lapisan pertama.
+[functions.create-user]
+verify_jwt = true
