@@ -1,0 +1,173 @@
+// Tambah User — akun dibuat admin (PRD §39: invite-only, tanpa public self-register).
+// Gate manage_users_permissions (server penegak akhir di Edge Function create-user).
+// Guard eskalasi: C-Level hanya bisa dibuat CEO; role CEO tidak tersedia dari layar ini.
+// Password sementara diketik admin & dibagikan manual — tanpa dependensi email/SMTP.
+import { Stack, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+
+import { AccessDenied } from '@/components/access-denied';
+import { Button, GuidanceNote, LabeledInput, SectionCard, SkeletonList } from '@/components/ui';
+import { useProfile } from '@/hooks/use-profile';
+import { useCreateUserAdmin } from '@/hooks/use-users-admin';
+import { surfaceServerError } from '@/lib/errors';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN = 8;
+
+type RoleLevel = 'staff' | 'management' | 'c_level';
+const ROLE_OPTIONS: { value: RoleLevel; label: string }[] = [
+  { value: 'staff', label: 'Staff' },
+  { value: 'management', label: 'Management' },
+  { value: 'c_level', label: 'C-Level' },
+];
+
+export default function SettingsUserNewScreen() {
+  const router = useRouter();
+  const { profile, isLoading: profileLoading, can } = useProfile();
+  const { createUser, isPending } = useCreateUserAdmin();
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [roleLevel, setRoleLevel] = useState<RoleLevel>('staff');
+  const [error, setError] = useState<string | null>(null);
+
+  if (profileLoading) {
+    return (
+      <View className="flex-1 bg-neutral-50 p-5 dark:bg-black">
+        <Stack.Screen options={{ title: 'Tambah User' }} />
+        <SkeletonList count={3} />
+      </View>
+    );
+  }
+
+  if (!can('manage_users_permissions')) {
+    return (
+      <View className="flex-1 bg-neutral-50 p-5 dark:bg-black">
+        <Stack.Screen options={{ title: 'Tambah User' }} />
+        <AccessDenied message="Hanya pemegang izin Kelola User & Permission yang dapat menambah user." />
+      </View>
+    );
+  }
+
+  const isCeo = profile?.role_level === 'ceo';
+
+  async function submit() {
+    if (!fullName.trim()) {
+      Alert.alert('Belum lengkap', 'Nama lengkap wajib diisi.');
+      return;
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(normalizedEmail)) {
+      Alert.alert('Email tidak valid', 'Periksa kembali format alamat email.');
+      return;
+    }
+    if (password.length < PASSWORD_MIN) {
+      Alert.alert('Password terlalu pendek', `Password sementara minimal ${PASSWORD_MIN} karakter.`);
+      return;
+    }
+    setError(null);
+    try {
+      await createUser({
+        email: normalizedEmail,
+        password,
+        fullName: fullName.trim(),
+        roleLevel,
+      });
+      Alert.alert(
+        'User dibuat',
+        `Akun ${normalizedEmail} siap digunakan. Bagikan password sementara secara aman dan sarankan menggantinya lewat Reset Password setelah login pertama.`,
+      );
+      router.back();
+    } catch (e) {
+      setError(surfaceServerError('Tambah User', e, 'Gagal membuat user. Coba lagi.'));
+    }
+  }
+
+  return (
+    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+      <Stack.Screen options={{ title: 'Tambah User' }} />
+      <View className="gap-4 p-5">
+        <GuidanceNote
+          title="Akun dibuat oleh admin"
+          body="Rencanapp tidak memiliki pendaftaran mandiri. Buat akun di sini, lalu bagikan email + password sementara ke user secara aman. Hak akses lanjutan diatur di User & Permission."
+        />
+
+        <SectionCard>
+          <LabeledInput
+            label="Nama lengkap"
+            value={fullName}
+            onChangeText={setFullName}
+            required
+            placeholder="mis. Rina Jaya"
+          />
+          <LabeledInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            required
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholder="mis. rina@perusahaan.co.id"
+          />
+          <LabeledInput
+            label="Password sementara"
+            value={password}
+            onChangeText={setPassword}
+            required
+            autoCapitalize="none"
+            placeholder={`Minimal ${PASSWORD_MIN} karakter`}
+          />
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-black dark:text-white">
+              Role<Text className="text-red-700 dark:text-red-400"> *</Text>
+            </Text>
+            <View className="flex-row gap-1" accessibilityRole="radiogroup" accessibilityLabel="Role user baru">
+              {ROLE_OPTIONS.map((opt) => {
+                const active = roleLevel === opt.value;
+                const locked = opt.value === 'c_level' && !isCeo;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active, disabled: locked }}
+                    accessibilityLabel={`Role ${opt.label}`}
+                    disabled={locked}
+                    onPress={() => !active && setRoleLevel(opt.value)}
+                    className={`min-h-[44px] flex-1 items-center justify-center rounded-full px-2 ${
+                      active ? 'bg-brand-dark' : 'border border-neutral-300 dark:border-neutral-700'
+                    } ${locked ? 'opacity-40' : 'active:opacity-70'}`}>
+                    <Text
+                      className={`text-xs font-semibold ${active ? 'text-white' : 'text-black dark:text-white'}`}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {!isCeo ? (
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                Role C-Level hanya dapat dibuat oleh CEO. Role CEO tidak dapat dibuat dari sini.
+              </Text>
+            ) : (
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                Role CEO tidak dapat dibuat dari sini.
+              </Text>
+            )}
+          </View>
+        </SectionCard>
+
+        {error ? (
+          <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {error}
+          </Text>
+        ) : null}
+
+        <Button label="Buat User" onPress={submit} loading={isPending} disabled={isPending} />
+      </View>
+    </ScrollView>
+  );
+}
