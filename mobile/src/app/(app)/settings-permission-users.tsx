@@ -3,7 +3,7 @@
 // (badge "Bawaan role"). Grant/revoke butuh reason (modal in-tree, bukan Alert native — testable);
 // revoke = destruktif (danger). Token DESIGN.md: brand-dark, min-h-44, warna+label.
 import { useQuery } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
@@ -102,6 +102,7 @@ function PermToggle({
 type PendingChange = { row: AdminPermissionRow; next: boolean };
 
 export default function SettingsPermissionUsersScreen() {
+  const router = useRouter();
   const { profile, isLoading: profileLoading, can } = useProfile();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingChange | null>(null);
@@ -180,6 +181,12 @@ export default function SettingsPermissionUsersScreen() {
                 Pilih anggota untuk mengatur hak akses. Perubahan tercatat di Activity Log.
               </Text>
             </View>
+            {/* PRD §39: akun dibuat admin (invite-only) — entry point pembuatan akun baru. */}
+            <Button
+              label="Tambah User"
+              accessibilityLabel="Tambah User baru"
+              onPress={() => router.push('/settings-user-new' as Href)}
+            />
             {membersLoading ? (
               <SkeletonList count={5} />
             ) : membersError ? (
