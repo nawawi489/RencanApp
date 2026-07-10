@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, staging]
 
 # Batalkan run lama untuk ref yang sama saat ada push baru.
 concurrency:
