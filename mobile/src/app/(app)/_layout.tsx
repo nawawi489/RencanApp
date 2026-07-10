@@ -100,6 +100,10 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'User & Permission' }}
       />
       <Stack.Screen
+        name="settings-user-new"
+        options={{ headerShown: true, title: 'Tambah User' }}
+      />
+      <Stack.Screen
         name="settings-kpi-area-templates"
         options={{ headerShown: true, title: 'KPI Area Template' }}
       />
