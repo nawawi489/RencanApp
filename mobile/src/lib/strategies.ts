@@ -62,7 +62,7 @@ export async function createStrategy(input: NewStrategy): Promise<Strategy> {
 }
 
 /**
- * Lengkapi/ubah KPI Area Draft (mis. isi Target untuk KPI Area hasil template yang awalnya null).
+ * Lengkapi/ubah Strategy Draft (mis. isi Target untuk Strategy hasil template yang awalnya null).
  * Update ber-RLS (policy strategies_update: creator/PIC/manage_others). Server tetap penegak akhir.
  */
 export type StrategyPatch = Partial<

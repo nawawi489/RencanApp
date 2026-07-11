@@ -36,7 +36,7 @@ jest.mock('@/hooks/use-mbr', () => ({
   useMbrCompliance: (...a: unknown[]) => mockUseMbrCompliance(...a),
 }));
 
-// WSA-08 — Initiative detail kini men-gate CTA "+ Tambah ActionPlan" via useProfile().can().
+// WSA-08 — Initiative detail kini men-gate CTA "+ Tambah Action Plan" via useProfile().can().
 jest.mock('@/hooks/use-profile', () => ({
   __esModule: true,
   useProfile: () => ({ profile: { id: 'u1' }, isLoading: false, can: () => true }),

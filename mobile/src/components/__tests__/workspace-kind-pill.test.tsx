@@ -15,10 +15,10 @@ describe('WorkspaceKindPill', () => {
     expect(screen.getByText('Goal')).toBeTruthy();
   });
 
-  it('task → letter "AP" (dua huruf) + label "Action Plan"', async () => {
+  it('task → letter "AP" (dua huruf) + label "Task"', async () => {
     await render(<WorkspaceKindPill kind="task" />);
     expect(screen.getByText('AP')).toBeTruthy();
-    expect(screen.getByText('Action Plan')).toBeTruthy();
+    expect(screen.getByText('Task')).toBeTruthy();
   });
 
   it('mapping huruf per kategori sesuai spec §9', () => {

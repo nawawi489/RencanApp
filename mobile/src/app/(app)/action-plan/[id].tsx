@@ -57,10 +57,10 @@ function ExecSpaceCard({
     <SectionCard>
       <View className="flex-row items-center justify-between gap-2">
         <Text className="text-sm font-bold text-black dark:text-white">Ruang Eksekusi</Text>
-        <Badge label={`${counts.total} Action Plan`} tone="info" />
+        <Badge label={`${counts.total} Task`} tone="info" />
       </View>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        Status pekerjaan di bawah ActionPlan ini.
+        Status pekerjaan di bawah Action Plan ini.
       </Text>
       <View className="flex-row flex-wrap gap-2 pt-1">
         <StatTile
@@ -95,7 +95,7 @@ function ExecSpaceCard({
         />
       </View>
       <View className="pt-2">
-        <Button label="Buka Chat ActionPlan" variant="secondary" onPress={onOpenChat} />
+        <Button label="Buka Chat Action Plan" variant="secondary" onPress={onOpenChat} />
       </View>
     </SectionCard>
   );
@@ -115,8 +115,8 @@ function collectRoster(plans: TaskWithPeople[], actionPlanPicId: string | null):
     const initPic = plans.find((p) => p.pic?.id === actionPlanPicId)?.pic
       ?? plans.find((p) => p.reviewer?.id === actionPlanPicId)?.reviewer
       ?? null;
-    if (initPic) add(initPic, 'ActionPlan PIC');
-    else map.set(actionPlanPicId, { id: actionPlanPicId, full_name: null, email: null, roles: new Set(['ActionPlan PIC']) });
+    if (initPic) add(initPic, 'Action Plan PIC');
+    else map.set(actionPlanPicId, { id: actionPlanPicId, full_name: null, email: null, roles: new Set(['Action Plan PIC']) });
   }
   for (const p of plans) {
     add(p.pic, 'PIC AP');
@@ -135,11 +135,11 @@ function RosterCard({ entries }: { entries: RosterEntry[] }) {
         <Badge label={`${entries.length} orang`} tone="neutral" />
       </View>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        Hak akses ActionPlan ini terbentuk otomatis dari PIC & Reviewer Action Plan di bawahnya.
+        Hak akses Action Plan ini terbentuk otomatis dari PIC & Reviewer Task di bawahnya.
       </Text>
       {entries.length === 0 ? (
         <Text className="text-xs text-neutral-500 dark:text-neutral-400 pt-1">
-          Belum ada anggota — tambahkan Action Plan dengan PIC/Reviewer.
+          Belum ada anggota — tambahkan Task dengan PIC/Reviewer.
         </Text>
       ) : (
         <View className="gap-2 pt-1">
@@ -152,7 +152,7 @@ function RosterCard({ entries }: { entries: RosterEntry[] }) {
                 </Text>
                 <View className="flex-row flex-wrap gap-1">
                   {Array.from(r.roles).map((role) => (
-                    <Badge key={role} label={role} tone={role === 'ActionPlan PIC' ? 'info' : 'neutral'} />
+                    <Badge key={role} label={role} tone={role === 'Action Plan PIC' ? 'info' : 'neutral'} />
                   ))}
                 </View>
               </View>
@@ -209,7 +209,7 @@ export function LiveActionPlanDetailScreen() {
     useCallback(() => {
       actionPlanQ.refetch();
       plansQ.refetch();
-      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Action Plan
+      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Task
     }, [actionPlanQ, plansQ, refetchCompliance]),
   );
 
@@ -219,7 +219,7 @@ export function LiveActionPlanDetailScreen() {
       qc.invalidateQueries({ queryKey: ['action_plan', id] });
       qc.invalidateQueries({ queryKey: ['action_plans'] });
     },
-    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'ActionPlan belum bisa diaktifkan. Coba lagi.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Action Plan belum bisa diaktifkan. Coba lagi.'),
   });
 
   const action_plan = actionPlanQ.data;
@@ -228,12 +228,12 @@ export function LiveActionPlanDetailScreen() {
     () => collectRoster(plansQ.data ?? [], action_plan?.pic_id ?? null),
     [plansQ.data, action_plan?.pic_id],
   );
-  // WSA-08 §14.4 — CTA "+ Tambah" dihapus; tambah Action Plan hanya dari tree Workspace.
+  // WSA-08 §14.4 — CTA "+ Tambah" dihapus; tambah Task hanya dari tree Workspace.
 
   function handleActivate() {
     if (action_plan && guardActivationFields('action_plan', action_plan)) return;
     const blocked = guardMbrActivation(compliance, {
-      childLabel: 'Action Plan',
+      childLabel: 'Task',
       onAddChild: () => router.push(`/task/new?actionPlanId=${id}` as Href),
     });
     if (blocked) return;
@@ -242,7 +242,7 @@ export function LiveActionPlanDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: action_plan?.name ?? 'ActionPlan' }} />
+      <Stack.Screen options={{ title: action_plan?.name ?? 'Action Plan' }} />
       <View className="gap-5 p-5">
         {actionPlanQ.isLoading || !action_plan ? (
           <SkeletonList count={3} />
@@ -297,17 +297,17 @@ export function LiveActionPlanDetailScreen() {
 
             {action_plan.status === 'draft' ? (
               <Button
-                label="Aktifkan ActionPlan"
+                label="Aktifkan Action Plan"
                 onPress={handleActivate}
                 loading={activateM.isPending}
               />
             ) : null}
 
-            {/* PRD §26 — Evaluation muncul saat ActionPlan mendekati selesai atau selesai. */}
+            {/* PRD §26 — Evaluation muncul saat Action Plan mendekati selesai atau selesai. */}
             {/* Anti-self gating ditangani oleh layar evaluation (picId dibandingkan dgn profile). */}
             {action_plan.status === 'active' || action_plan.status === 'done' ? (
               <SectionCard>
-                <Text className="text-sm font-bold text-black dark:text-white">Evaluasi ActionPlan</Text>
+                <Text className="text-sm font-bold text-black dark:text-white">Evaluasi Action Plan</Text>
                 <Text className="text-xs text-neutral-500 dark:text-neutral-400">
                   Catat pencapaian, lesson learned, dan apakah perlu jadi SOP atau rollout.
                 </Text>
@@ -324,7 +324,7 @@ export function LiveActionPlanDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
+              <Text className="text-lg font-bold text-black dark:text-white">Task</Text>
 
               {plansQ.isLoading ? (
                 <SkeletonList count={2} />
@@ -340,8 +340,8 @@ export function LiveActionPlanDetailScreen() {
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada Action Plan"
-                  description="Pecah ActionPlan ini menjadi pekerjaan konkret dengan PIC, Reviewer, dan deadline."
+                  title="Belum ada Task"
+                  description="Pecah Action Plan ini menjadi pekerjaan konkret dengan PIC, Reviewer, dan deadline."
                 />
               )}
             </View>

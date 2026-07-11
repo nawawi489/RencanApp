@@ -18,12 +18,12 @@ beforeEach(() => {
 });
 
 describe('treeOrbLabel (spec §10)', () => {
-  it("Goal & KPI Area → 'Capaian'", () => {
+  it("Goal & Strategy → 'Capaian'", () => {
     expect(treeOrbLabel('goal')).toBe('Capaian');
     expect(treeOrbLabel('strategy')).toBe('Capaian');
   });
 
-  it("Initiative/ActionPlan/Action Plan/Development Area/Problem Statement → 'Progress'", () => {
+  it("Initiative/Action Plan/Task/Development Area/Problem Statement → 'Progress'", () => {
     for (const k of ['initiative', 'action_plan', 'task', 'development_area', 'problem_statement']) {
       expect(treeOrbLabel(k)).toBe('Progress');
     }

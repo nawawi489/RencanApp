@@ -11,7 +11,7 @@ export type HubStats = {
   orbPercent: number | null;
   /** Total card lvl-1 (Goal / DevArea). */
   parentCount: number;
-  /** Total card lvl-2 turunan (KPI Area / Problem Statement) — dari embedded count. */
+  /** Total card lvl-2 turunan (Strategy / Problem Statement) — dari embedded count. */
   childCount: number;
   /** Card lvl-1 berstatus `active`. */
   activeCount: number;

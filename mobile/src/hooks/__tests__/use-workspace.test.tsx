@@ -71,7 +71,7 @@ jest.mock('@/lib/problem-statements', () => ({
   activateProblemStatement: (...a: unknown[]) => mockActivateProblemStatement(...a),
 }));
 
-// S2 — KPI Area Target Breakdown (lib menyentuh supabase; mock untuk hindari env throw).
+// S2 — Strategy Target Breakdown (lib menyentuh supabase; mock untuk hindari env throw).
 jest.mock('@/lib/strategy-breakdown', () => ({
   __esModule: true,
   listStrategyBreakdown: jest.fn(),

@@ -117,7 +117,7 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
     items: [
       { label: 'Goal Template Library', href: '/settings-goal-templates' as Href, icon: 'document-text-outline', tone: 'success' },
       {
-        label: 'KPI Area Template',
+        label: 'Strategy Template',
         href: '/settings-kpi-area-templates' as Href,
         permission: 'manage_strategy_templates',
         icon: 'bar-chart-outline',

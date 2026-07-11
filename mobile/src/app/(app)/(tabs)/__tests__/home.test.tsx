@@ -127,7 +127,7 @@ describe('HomeScreen', () => {
     expect(screen.getByText(/Selamat (pagi|siang|sore|malam), Rina\./)).toBeTruthy();
     expect(screen.getByText('Daily Finance Closing')).toBeTruthy(); // repeat hari ini
     expect(screen.getByText('2 item lewat deadline.')).toBeTruthy(); // priority Terlewat dari listOverdueItems
-    expect(screen.getByText('1 KPI perlu dipantau.')).toBeTruthy(); // priority Gap KPI Area
+    expect(screen.getByText('1 KPI perlu dipantau.')).toBeTruthy(); // priority Gap Strategy
     expect(screen.getByText('Customer Baru')).toBeTruthy(); // Snapshot Tim row
     expect(screen.getByText('kurang 1.060 customer')).toBeTruthy(); // "% gap" prototype
   });
@@ -138,7 +138,7 @@ describe('HomeScreen', () => {
     expect(await screen.findByText('Tidak ada tugas aktif')).toBeTruthy();
     expect(screen.getByText('Tidak ada yang telat.')).toBeTruthy(); // priority subtitle
     expect(screen.getByText('Semua KPI sesuai target.')).toBeTruthy(); // priority Gap KPI subtitle (kosong)
-    expect(screen.getByText('Semua KPI Area terpantau')).toBeTruthy(); // Snapshot Tim empty
+    expect(screen.getByText('Semua Strategy terpantau')).toBeTruthy(); // Snapshot Tim empty
     expect(screen.getByText('Tidak ada tugas rutin hari ini')).toBeTruthy();
     expect(screen.getByText('Tidak ada deadline mendekat')).toBeTruthy();
   });

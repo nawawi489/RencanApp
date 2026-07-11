@@ -1,4 +1,4 @@
-// Layar Chat ActionPlan — UI-S-IN2/IN3/IN4.
+// Layar Chat Action Plan — UI-S-IN2/IN3/IN4.
 // Tata letak: header banner governance (tutup) → daftar pesan kronologis-menaik (date divider antar-hari)
 // dengan bubble me/them (Avatar + nama untuk them) → composer circular Kirim pesan.
 // Guard: roomId undefined → ErrorState (markRead TIDAK dipanggil).
@@ -17,7 +17,7 @@ import { reportError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/inbox';
 import { useAuth } from '@/providers/auth-provider';
 
-const GOVERNANCE_BANNER = 'Chat bukan jalur formal: keputusan & bukti tetap lewat Action Plan / Review.';
+const GOVERNANCE_BANNER = 'Chat bukan jalur formal: keputusan & bukti tetap lewat Task / Review.';
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -163,7 +163,7 @@ export default function ChatRoomScreen() {
   // Guard: roomId undefined → ErrorState (Critic §8.5).
   if (!roomId) {
     return (
-      <Screen title="Diskusi ActionPlan">
+      <Screen title="Diskusi Action Plan">
         <ErrorState
           title="Room tidak ditemukan"
           description="Buka room dari Inbox untuk memulai diskusi."
@@ -176,7 +176,7 @@ export default function ChatRoomScreen() {
   const composerDisabled = isInputBlank || isSending;
 
   return (
-    <Screen title="Diskusi ActionPlan">
+    <Screen title="Diskusi Action Plan">
       {!bannerDismissed ? <GovernanceBanner onClose={() => setBannerDismissed(true)} /> : null}
 
       {isLoading ? (

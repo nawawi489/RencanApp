@@ -1,4 +1,4 @@
-// Data layer Fase 4 — Initiative (turunan dari KPI Area). Pemanggil tipis: card dibuat via INSERT
+// Data layer Fase 4 — Initiative (turunan dari Strategy). Pemanggil tipis: card dibuat via INSERT
 // ber-RLS (mengisi organization_id dari profiles + created_by), aktivasi lewat RPC SECURITY DEFINER.
 // Otorisasi ditegakkan di server.
 import { STATUS_TONE } from './cards';
@@ -14,7 +14,7 @@ export { PLANNING_STATUS_LABEL } from './goals';
 
 // ---------------------------------------------------------------- queries
 
-/** Strategi di bawah satu KPI Area, terlama dulu. Guard parentId kosong → []. */
+/** Strategi di bawah satu Strategy, terlama dulu. Guard parentId kosong → []. */
 export async function listInitiatives(strategyId: string): Promise<Initiative[]> {
   if (!strategyId) return [];
   const { data, error } = await supabase
@@ -44,7 +44,7 @@ export type NewInitiative = {
   pic_id: string | null;
   period_start: string | null;
   period_end: string | null;
-  /** UI-S-S01 — PRD §20 "Kontribusi Quarter" (% ke parent KPI Area); NULL diizinkan saat Draft. */
+  /** UI-S-S01 — PRD §20 "Kontribusi Quarter" (% ke parent Strategy); NULL diizinkan saat Draft. */
   contribution_pct?: number | null;
 };
 

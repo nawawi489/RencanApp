@@ -1,8 +1,8 @@
 // Workspace (Fase 6) — Performance & Development sebagai route deep-linkable.
-// Performance (Fase 4): Goal → KPI Area → Initiative → ActionPlan, + ActionPlan Tanpa Goal.
-// Development (Fase 6): Development Area → Problem Statement → ActionPlan → Action Plan.
-// UI-N-003 (Stage 1 B′): tree 3-level inline — KPI Area & Problem Statement EXPANDABLE
-//   ke level-3 (Initiative / ActionPlan) untuk turunkan tap-count Goal→Initiative dari 3 → 1.
+// Performance (Fase 4): Goal → Strategy → Initiative → Action Plan, + Action Plan Tanpa Goal.
+// Development (Fase 6): Development Area → Problem Statement → Action Plan → Task.
+// UI-N-003 (Stage 1 B′): tree 3-level inline — Strategy & Problem Statement EXPANDABLE
+//   ke level-3 (Initiative / Action Plan) untuk turunkan tap-count Goal→Initiative dari 3 → 1.
 // Perpindahan pane dilakukan via Hub (Kembali di AppHeader → Masuk ruang lain) — TIDAK ada
 // TabBar internal di pane agar tidak duplikasi navigasi hub-card lobby.
 import { Ionicons } from '@expo/vector-icons';
@@ -88,7 +88,7 @@ import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY, WS_TREE_COMPACT_COPY }
 
 // Tree merender status dari beberapa jenis kartu: planning (goal/kpi/action-plan/dev-area/PS),
 // action_plan, dan action plan (execution). PLANNING_STATUS_LABEL saja bocorkan enum mentah
-// (mis. `in_progress`) untuk Action Plan → gabung ketiga map (nilai konsisten, tanpa konflik).
+// (mis. `in_progress`) untuk Task → gabung ketiga map (nilai konsisten, tanpa konflik).
 const TREE_STATUS_LABEL: Record<string, string> = {
   ...PLANNING_STATUS_LABEL,
   ...INITIATIVE_STATUS_LABEL,
@@ -368,7 +368,7 @@ function CompactActionRow({
   /** Redup visual "+" (past ATAU ter-guard MBR). */
   addDimmed?: boolean;
   addLabel?: string;
-  /** WSA-17 — teks TERLIHAT tombol tambah, mis. "+ KPI Area" (spec §11). */
+  /** WSA-17 — teks TERLIHAT tombol tambah, mis. "+ Strategy" (spec §11). */
   addButtonLabel?: string;
 }) {
   // Spec §11 (amandemen a11y — DESIGN §4 mengikat menang atas lock; lihat lock §3/§11):
@@ -481,8 +481,8 @@ function useTreeRowActions(
 }
 
 /**
- * Sub-row level 3: Initiative di bawah satu KPI Area. WSA-01: expandable → ActionPlan (level 4).
- * "+ ActionPlan" gated `create_action_plan`, past-period lock, guard MBR strategy→initiative.
+ * Sub-row level 3: Initiative di bawah satu Strategy. WSA-01: expandable → Action Plan (level 4).
+ * "+ Action Plan" gated `create_action_plan`, past-period lock, guard MBR strategy→initiative.
  */
 const InitiativeSubRow = memo(function InitiativeSubRow({
   initiative,
@@ -490,7 +490,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   progress,
 }: {
   initiative: Initiative;
-  /** Kepatuhan MBR strategy→initiative (parent). Non-compliant → "+ ActionPlan" ter-guard (WSA-04). */
+  /** Kepatuhan MBR strategy→initiative (parent). Non-compliant → "+ Action Plan" ter-guard (WSA-04). */
   parentCompliance?: MbrCompliance;
   progress: number | null;
 }) {
@@ -527,7 +527,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const retryChildren = useCallback(() => refetch(), [refetch]);
   const onAddActionPlan = useCallback(() => {
     if (mbrGuarded && parentCompliance) {
-      const { title, message } = mbrBreakdownGuardMessage('KPI Area', parentCompliance, 'ActionPlan');
+      const { title, message } = mbrBreakdownGuardMessage('Strategy', parentCompliance, 'Action Plan');
       Alert.alert(title, message);
       return;
     }
@@ -564,7 +564,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
               <TreeOrbCell kind="initiative" value={progress} compact />
               <TreeToggleButton
                 expanded={expanded}
-                label={`Toggle ActionPlan ${initiative.name}`}
+                label={`Toggle Action Plan ${initiative.name}`}
                 onPress={toggleExpanded}
               />
             </View>
@@ -577,8 +577,8 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
             past={past}
             onAddPress={canAddInit ? onAddActionPlan : undefined}
             addDimmed={addDimmed}
-            addLabel={`Tambah ActionPlan ke ${initiative.name}`}
-            addButtonLabel="+ ActionPlan"
+            addLabel={`Tambah Action Plan ke ${initiative.name}`}
+            addButtonLabel="+ Action Plan"
           />
         </View>
 
@@ -589,7 +589,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
             <ErrorState onRetry={retryChildren} />
           ) : action_plans.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Belum ada ActionPlan. Tambah ActionPlan untuk eksekusi Initiative ini.
+              Belum ada Action Plan. Tambah Action Plan untuk eksekusi Initiative ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
@@ -616,7 +616,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
 });
 
 /**
- * Sub-row level 2: KPI Area di bawah satu Goal. Expandable → Initiative children.
+ * Sub-row level 2: Strategy di bawah satu Goal. Expandable → Initiative children.
  * Lazy fetch Initiative hanya saat `expanded` (parameter `enabled` di useInitiatives).
  */
 const StrategySubRow = memo(function StrategySubRow({
@@ -637,7 +637,7 @@ const StrategySubRow = memo(function StrategySubRow({
   );
   const { progressOf: stratProgressOf } = useCardProgress(initiativeIds);
   // WSA-04 — guard MBR: fetch kepatuhan strategy→initiative hanya saat expanded (parentType ''
-  // menonaktifkan query di useMbrCompliance). Diteruskan ke InitiativeSubRow untuk guard "+ ActionPlan".
+  // menonaktifkan query di useMbrCompliance). Diteruskan ke InitiativeSubRow untuk guard "+ Action Plan".
   const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'strategy' : '', kpi.id);
   const { focus, now } = usePeriodFocus();
   const past = isAddLocked(kpi, focus, now);
@@ -668,7 +668,7 @@ const StrategySubRow = memo(function StrategySubRow({
       <View
         className="gap-2"
         style={{ marginLeft: TREE_LEVEL_INDENT[2] }}>
-        {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna KPI Area (#b76b00). */}
+        {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna Strategy (#b76b00). */}
         <View
           className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy }}>
@@ -708,7 +708,7 @@ const StrategySubRow = memo(function StrategySubRow({
             <ErrorState onRetry={retryChildren} />
           ) : initiatives.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Belum ada Initiative. Tambah Initiative untuk pecah KPI Area ini.
+              Belum ada Initiative. Tambah Initiative untuk pecah Strategy ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
@@ -750,7 +750,7 @@ const GoalRow = memo(function GoalRow({
   // terasa seperti tombol mati (paritas dgn StrategySubRow level-2).
   const { strategies, isLoading, isError, refetch } = useStrategies(goal.id, expanded);
   const { focus, now } = usePeriodFocus();
-  // WSA-15 — orb capaian anak (KPI Area) di level kontainer (1 RPC per Goal expanded, bukan per row).
+  // WSA-15 — orb capaian anak (Strategy) di level kontainer (1 RPC per Goal expanded, bukan per row).
   const kpiIds = useMemo(() => (expanded ? strategies.map((k) => k.id) : EMPTY_IDS), [expanded, strategies]);
   const { progressOf: kpiProgressOf } = useCardProgress(kpiIds);
 
@@ -796,14 +796,14 @@ const GoalRow = memo(function GoalRow({
                 <TreeOrbCell kind="goal" value={progress} compact />
                 <TreeToggleButton
                   expanded={expanded}
-                  label={`Toggle KPI Area ${goal.name}`}
+                  label={`Toggle Strategy ${goal.name}`}
                   onPress={toggleExpanded}
                 />
               </View>
             </TreeCardBody>
 
             <ExpandChildCount
-              label={count === 0 ? 'Belum ada KPI' : WS_TREE_COMPACT_COPY.needChild(count, 'KPI Area')}
+              label={count === 0 ? 'Belum ada KPI' : WS_TREE_COMPACT_COPY.needChild(count, 'Strategy')}
               expanded={expanded}
               onPress={toggleExpanded}
             />
@@ -815,8 +815,8 @@ const GoalRow = memo(function GoalRow({
               onMore={openMenu}
               past={past}
               onAdd={canAddKpi ? addKpi : undefined}
-              addLabel={`Tambah KPI Area ke ${goal.name}`}
-              addButtonLabel="+ KPI Area"
+              addLabel={`Tambah Strategy ke ${goal.name}`}
+              addButtonLabel="+ Strategy"
             />
           </SectionCard>
         </View>
@@ -828,7 +828,7 @@ const GoalRow = memo(function GoalRow({
             <ErrorState onRetry={retryChildren} />
           ) : strategies.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Belum ada KPI Area. Tambah KPI Area untuk pecah Goal ini.
+              Belum ada Strategy. Tambah Strategy untuk pecah Goal ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
@@ -855,7 +855,7 @@ const GoalRow = memo(function GoalRow({
 });
 
 /**
- * Sub-row Action Plan — level TERBAWAH (spec §6.8/§7.5): tanpa panah, tanpa tombol tambah.
+ * Sub-row Task — level TERBAWAH (spec §6.8/§7.5): tanpa panah, tanpa tombol tambah.
  * Hanya Detail + ⋯. `level` menentukan indent (5 di Performance, 4 di Development).
  */
 const TaskSubRow = memo(function TaskSubRow({
@@ -898,14 +898,14 @@ const TaskSubRow = memo(function TaskSubRow({
             <Text
               className="text-sm font-medium text-black dark:text-white"
               numberOfLines={2}
-              accessibilityLabel={`Action Plan ${item.name}`}>
+              accessibilityLabel={`Task ${item.name}`}>
               {item.name}
             </Text>
             <CompactMeta lines={metaLines} />
           </View>
           <TreeOrbCell kind="task" value={orbValue} compact />
         </TreeCardBody>
-        {/* Action Plan = leaf: tanpa panah/+. Tetap pakai pola compact Detail + ⋯. */}
+        {/* Task = leaf: tanpa panah/+. Tetap pakai pola compact Detail + ⋯. */}
         <CompactActionRow
           cardLabel={item.name}
           detailLabel={`Detail ${item.name}`}
@@ -925,7 +925,7 @@ const TaskSubRow = memo(function TaskSubRow({
 });
 
 /**
- * Sub-row ActionPlan. WSA-01: expandable → Action Plan (level terbawah). Dipakai di Performance
+ * Sub-row Action Plan. WSA-01: expandable → Task (level terbawah). Dipakai di Performance
  * (di bawah Initiative, level 4) dan Development (di bawah Problem Statement, level 3).
  * "+ Plan" gated `create_task`, past-period lock.
  */
@@ -935,7 +935,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
   progress,
 }: {
   item: ActionPlan;
-  /** Level tree ActionPlan: 4 di Performance (bawah Initiative), 3 di Development (bawah PS). */
+  /** Level tree Action Plan: 4 di Performance (bawah Initiative), 3 di Development (bawah PS). */
   level?: 3 | 4;
   progress: number | null;
 }) {
@@ -973,7 +973,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
       <View
         className="gap-2"
         style={{ marginLeft: TREE_LEVEL_INDENT[level] }}>
-        {/* Spec §6.7/§7.5 + §8: border kiri 5px warna ActionPlan (#14845c). */}
+        {/* Spec §6.7/§7.5 + §8: border kiri 5px warna Action Plan (#14845c). */}
         <View
           className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan }}>
@@ -983,7 +983,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
               <Text
                 className="text-sm font-medium text-black dark:text-white"
                 numberOfLines={2}
-                accessibilityLabel={`ActionPlan ${item.name}`}>
+                accessibilityLabel={`Action Plan ${item.name}`}>
                 {item.name}
               </Text>
               <CompactMeta lines={metaLines} />
@@ -992,7 +992,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
               <TreeOrbCell kind="action_plan" value={progress} compact />
               <TreeToggleButton
                 expanded={expanded}
-                label={`Toggle Action Plan ${item.name}`}
+                label={`Toggle Task ${item.name}`}
                 onPress={toggleExpanded}
               />
             </View>
@@ -1004,7 +1004,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
             onMore={openMenu}
             past={past}
             onAdd={canAddPlan ? addPlan : undefined}
-            addLabel={`Tambah Action Plan ke ${item.name}`}
+            addLabel={`Tambah Task ke ${item.name}`}
             addButtonLabel="+ Plan"
           />
         </View>
@@ -1016,7 +1016,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
             <ErrorState onRetry={retryChildren} />
           ) : tasks.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Belum ada Action Plan. Tambah Action Plan untuk eksekusi ActionPlan ini.
+              Belum ada Task. Tambah Task untuk eksekusi Action Plan ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
@@ -1039,7 +1039,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
 });
 
 /**
- * Sub-row level 2: Problem Statement di bawah satu Development Area. Expandable → ActionPlan.
+ * Sub-row level 2: Problem Statement di bawah satu Development Area. Expandable → Action Plan.
  * Symmetric dgn StrategySubRow di Performance pane.
  */
 const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
@@ -1102,7 +1102,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
               <TreeOrbCell kind="problem_statement" value={progress} compact />
               <TreeToggleButton
                 expanded={expanded}
-                label={`Toggle ActionPlan ${ps.name}`}
+                label={`Toggle Action Plan ${ps.name}`}
                 onPress={toggleExpanded}
               />
             </View>
@@ -1114,8 +1114,8 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
             onMore={openMenu}
             past={past}
             onAdd={canAddInit ? addActionPlan : undefined}
-            addLabel={`Tambah ActionPlan ke ${ps.name}`}
-            addButtonLabel="+ ActionPlan"
+            addLabel={`Tambah Action Plan ke ${ps.name}`}
+            addButtonLabel="+ Action Plan"
           />
         </View>
 
@@ -1126,7 +1126,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
             <ErrorState onRetry={retryChildren} />
           ) : action_plans.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Belum ada ActionPlan. Tambah ActionPlan untuk eksekusi Problem Statement ini.
+              Belum ada Action Plan. Tambah Action Plan untuk eksekusi Problem Statement ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
@@ -1361,7 +1361,7 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
           className="min-h-[44px] flex-row items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-950">
           <Text className="text-base text-neutral-400 dark:text-neutral-500">⌕</Text>
           <Text className="text-sm text-neutral-400 dark:text-neutral-500">
-            Cari Goal, KPI Area, ActionPlan, Action Plan
+            Cari Goal, Strategy, Action Plan, Task
           </Text>
         </Pressable>
         {loading ? (
@@ -1376,7 +1376,7 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
               enterLabel={WS_HUB_COPY.perf.enter}
               enterAccessibilityLabel={WS_HUB_COPY.perf.enterA11y}
               parentStatLabel="Goal"
-              childStatLabel="KPI Area"
+              childStatLabel="Strategy"
               activeStatLabel="Notif"
               help={WS_HELP_COPY.performance}
               helpAccessibilityLabel="Bantuan Performance"

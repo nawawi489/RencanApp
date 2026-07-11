@@ -19,7 +19,7 @@ export function LiveNewInitiativeScreen() {
   const { strategyId } = useLocalSearchParams<{ strategyId: string }>();
   const router = useRouter();
   const { create, isPending } = useInitiativeActions(strategyId);
-  // Default PIC turunan (PRD §52): picker di-prefill PIC KPI Area induk (terlihat & bisa diubah).
+  // Default PIC turunan (PRD §52): picker di-prefill PIC Strategy induk (terlihat & bisa diubah).
   const parentQ = useQuery({ queryKey: ['strategy', strategyId], queryFn: () => getStrategy(strategyId), enabled: !!strategyId });
   const { person: inheritedPic } = usePerson(parentQ.data?.pic_id);
 
@@ -77,7 +77,7 @@ export function LiveNewInitiativeScreen() {
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Initiative — Pendekatan mencapai KPI"
-          body="Initiative menjelaskan cara mencapai target KPI Area. Alasan, Risiko Utama, dan Alternatif wajib lengkap saat aktivasi (gate kualitas). Card disimpan sebagai Draft dulu."
+          body="Initiative menjelaskan cara mencapai target Strategy. Alasan, Risiko Utama, dan Alternatif wajib lengkap saat aktivasi (gate kualitas). Card disimpan sebagai Draft dulu."
         />
 
         <SectionCard>

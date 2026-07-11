@@ -1,5 +1,5 @@
 // UI Fase 5 — Indikator Kelengkapan Perencanaan + gating popup "Tidak Dapat Melanjutkan"
-// di layar KPI Area detail. Otoritas akhir tetap server (onError aktivasi); klien hanya gating
+// di layar Strategy detail. Otoritas akhir tetap server (onError aktivasi); klien hanya gating
 // pre-flight untuk mode 'blokir_aktivasi' + indikator visual berdasarkan compliance.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -10,7 +10,7 @@ jest.setTimeout(30000);
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
-// Data layer KPI Area — dimock seluruhnya agar useQuery inline ['strategy', id] resolve sesuai test.
+// Data layer Strategy — dimock seluruhnya agar useQuery inline ['strategy', id] resolve sesuai test.
 const mockGetStrategy = jest.fn();
 const mockActivateStrategy = jest.fn();
 const mockUpdateStrategy = jest.fn();
@@ -141,7 +141,7 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
       isCompliant: false,
     });
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
-    const btn = await screen.findByText('Aktifkan KPI Area');
+    const btn = await screen.findByText('Aktifkan Strategy');
     fireEvent.press(btn);
     const calls = (Alert.alert as jest.Mock).mock.calls;
     expect(calls.length).toBeGreaterThan(0);
@@ -162,7 +162,7 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
       isCompliant: true,
     });
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
-    const btn = await screen.findByText('Aktifkan KPI Area');
+    const btn = await screen.findByText('Aktifkan Strategy');
     fireEvent.press(btn);
     await waitFor(() => expect(mockActivateStrategy).toHaveBeenCalledWith('k1'));
     // tidak ada popup gating
@@ -189,7 +189,7 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
       isCompliant: true,
     });
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
-    const btn = await screen.findByText('Aktifkan KPI Area');
+    const btn = await screen.findByText('Aktifkan Strategy');
     fireEvent.press(btn);
     await waitFor(() => expect(mockActivateStrategy).toHaveBeenCalledWith('k1'));
   });

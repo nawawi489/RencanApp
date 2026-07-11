@@ -34,7 +34,7 @@ export function LiveInitiativeDetailScreen() {
     useCallback(() => {
       initiativeQ.refetch();
       refetchActionPlans();
-      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip ActionPlan
+      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Action Plan
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -49,12 +49,12 @@ export function LiveInitiativeDetailScreen() {
   });
 
   const initiative = initiativeQ.data;
-  // WSA-08 §14.4 — CTA "+ Tambah ActionPlan" dihapus; tambah turunan hanya dari tree Workspace.
+  // WSA-08 §14.4 — CTA "+ Tambah Action Plan" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (initiative && guardActivationFields('initiative', initiative)) return;
     const blocked = guardMbrActivation(compliance, {
-      childLabel: 'ActionPlan',
+      childLabel: 'Action Plan',
       onAddChild: () => router.push(`/action_plan/new?initiativeId=${id}` as Href),
     });
     if (blocked) return;
@@ -121,7 +121,7 @@ export function LiveInitiativeDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">ActionPlan</Text>
+              <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
 
               {action_plansLoading ? (
                 <SkeletonList count={2} />
@@ -139,8 +139,8 @@ export function LiveInitiativeDetailScreen() {
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada ActionPlan"
-                  description="Turunkan Initiative ini menjadi ActionPlan konkret lalu pecah jadi Action Plan."
+                  title="Belum ada Action Plan"
+                  description="Turunkan Initiative ini menjadi Action Plan konkret lalu pecah jadi Task."
                 />
               )}
             </View>

@@ -1,4 +1,4 @@
-// Util validasi periode card (dipakai layar form Goal/KPI Area/Initiative/ActionPlan).
+// Util validasi periode card (dipakai layar form Goal/Strategy/Initiative/Action Plan).
 // Tanggal disimpan & dibandingkan sebagai string YYYY-MM-DD (leksikografis = kronologis).
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

@@ -178,7 +178,7 @@ describe('PeopleScreen — Fase 7 score states', () => {
     });
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Score 80 · Stabil')).toBeTruthy();
-    expect(screen.getByText('Action Plan Completion')).toBeTruthy();
+    expect(screen.getByText('Task Completion')).toBeTruthy();
     expect(screen.getByText('Governance Discipline')).toBeTruthy();
     expect(screen.getByText('90%')).toBeTruthy();
     expect(screen.getByText('70%')).toBeTruthy();

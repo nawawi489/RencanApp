@@ -16,7 +16,7 @@ import type { PersonRef } from '@/lib/strategies';
 type Person = NonNullable<PersonRef>;
 
 /**
- * UI-S-K02 — KPI Area Template Picker (PRD §18).
+ * UI-S-K02 — Strategy Template Picker (PRD §18).
  *
  * "Klik Pakai Template membuka bottom sheet" → list `strategy_templates` di bawah goal_template_id
  * parent Goal, dikelompokkan per `division_label`. Pilih → prefill `name`.
@@ -61,7 +61,7 @@ function StrategyTemplatePicker({
     <View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Pakai Template KPI Area"
+        accessibilityLabel="Pakai Template Strategy"
         onPress={() => setOpen(true)}
         style={{ minHeight: 44 }}
         className="min-h-[44px] flex-row items-center justify-center rounded-xl border border-brand-dark px-4 py-2 active:opacity-70">
@@ -73,7 +73,7 @@ function StrategyTemplatePicker({
           <View className="max-h-[80%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900">
             <View className="flex-row items-center justify-between">
               <Text className="text-base font-semibold text-black dark:text-white">
-                Pilih Template KPI Area
+                Pilih Template Strategy
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -89,7 +89,7 @@ function StrategyTemplatePicker({
               <Text className="text-xs text-neutral-400">Memuat template…</Text>
             ) : grouped.length === 0 ? (
               <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                Belum ada KPI Area Template untuk Goal Template ini.
+                Belum ada Strategy Template untuk Goal Template ini.
               </Text>
             ) : (
               <ScrollView className="max-h-[60vh]">
@@ -147,15 +147,15 @@ export function LiveNewStrategyScreen() {
 
   async function submit() {
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama KPI Area wajib diisi.');
+      Alert.alert('Belum lengkap', 'Nama Strategy wajib diisi.');
       return;
     }
     if (!target.trim()) {
-      Alert.alert('Belum lengkap', 'Target KPI Area wajib diisi.');
+      Alert.alert('Belum lengkap', 'Target Strategy wajib diisi.');
       return;
     }
     if (!expectedOutcome.trim()) {
-      Alert.alert('Belum lengkap', 'Ekspektasi Hasil KPI Area wajib diisi.');
+      Alert.alert('Belum lengkap', 'Ekspektasi Hasil Strategy wajib diisi.');
       return;
     }
     const dateErr = periodError(periodStart, periodEnd);
@@ -195,15 +195,15 @@ export function LiveNewStrategyScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
-          title="KPI Area — Area pengukuran"
-          body="KPI Area mendefinisikan indikator keberhasilan sebuah Goal. Tetapkan Target yang terukur, lalu turunkan jadi Initiative. Card disimpan sebagai Draft dulu; aktifkan setelah kelengkapan terpenuhi."
+          title="Strategy — Area pengukuran"
+          body="Strategy mendefinisikan indikator keberhasilan sebuah Goal. Tetapkan Target yang terukur, lalu turunkan jadi Initiative. Card disimpan sebagai Draft dulu; aktifkan setelah kelengkapan terpenuhi."
         />
 
         <SectionCard>
           <StrategyTemplatePicker
             goalTemplateId={parentQ.data?.goal_template_id}
             onPick={(t) => {
-              // PRD §18: "Setelah template dipilih, Nama KPI Area, PIC rekomendasi, Target awal,
+              // PRD §18: "Setelah template dipilih, Nama Strategy, PIC rekomendasi, Target awal,
               // dan Ekspektasi Hasil terisi otomatis." Prefill berbasis kolom hint (0027).
               setName(t.name);
               if (t.target_hint) setTarget(t.target_hint);
@@ -211,7 +211,7 @@ export function LiveNewStrategyScreen() {
             }}
           />
           <LabeledInput
-            label="Nama KPI Area"
+            label="Nama Strategy"
             value={name}
             onChangeText={setName}
             required

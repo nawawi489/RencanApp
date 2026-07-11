@@ -37,7 +37,7 @@ export const PEOPLE_TAB_COPY = {
 
 /** 6 metric Fase 7 V1 — D4: result_achievement keluar (no data source). */
 export const METRIC_LABEL: Record<string, string> = {
-  task_completion: 'Action Plan Completion',
+  task_completion: 'Task Completion',
   repeat_compliance: 'Repeat Compliance',
   on_time_rate: 'On-Time Rate',
   review_pass_rate: 'Review Pass Rate',

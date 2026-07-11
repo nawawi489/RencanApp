@@ -133,7 +133,7 @@ describe('SubmitScreen — UI-S-AP5 file upload', () => {
   });
 });
 
-describe('SubmitScreen — UI-S-AP6 KPI Area linkage', () => {
+describe('SubmitScreen — UI-S-AP6 Strategy linkage', () => {
   it('[U5] OD-1 fallback: 0 kandidat → section "Nilai Hasil" TIDAK dirender', async () => {
     mockUseKpiCandidates.mockReturnValue({ candidates: [], isLoading: false, isError: false, refetch: jest.fn() });
     await render(<SubmitScreen />, { wrapper: wrapper() });

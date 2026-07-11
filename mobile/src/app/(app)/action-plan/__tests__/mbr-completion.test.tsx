@@ -1,4 +1,4 @@
-// UI Fase 5 — indikator Kelengkapan + gating MBR di ActionPlan detail (parent='action_plan').
+// UI Fase 5 — indikator Kelengkapan + gating MBR di Action Plan detail (parent='action_plan').
 // Verifikasi: useMbrCompliance('action_plan', id); gating blokir_aktivasi cegah aktivasi.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -112,7 +112,7 @@ describe('ActionPlanDetailScreen — MBR', () => {
       isCompliant: false,
     });
     await render(<ActionPlanDetailScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByText('Aktifkan ActionPlan'));
+    fireEvent.press(await screen.findByText('Aktifkan Action Plan'));
     expect((Alert.alert as jest.Mock).mock.calls[0][0]).toBe('Tidak Dapat Melanjutkan');
     expect(mockActivateActionPlan).not.toHaveBeenCalled();
   });
@@ -130,7 +130,7 @@ describe('ActionPlanDetailScreen — MBR', () => {
       isCompliant: true,
     });
     await render(<ActionPlanDetailScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByText('Aktifkan ActionPlan'));
+    fireEvent.press(await screen.findByText('Aktifkan Action Plan'));
     await waitFor(() => expect(mockActivateActionPlan).toHaveBeenCalledWith('i1'));
   });
 });

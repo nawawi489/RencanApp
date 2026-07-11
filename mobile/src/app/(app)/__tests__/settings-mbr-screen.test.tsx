@@ -76,14 +76,14 @@ describe('SettingsMbrScreen', () => {
     mockCan.mockReturnValue(false);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
     expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
-    expect(screen.queryByText('KPI Area → Initiative')).toBeNull();
+    expect(screen.queryByText('Strategy → Initiative')).toBeNull();
   });
 
   it('[2] dengan permission → menampilkan rule sebagai "Parent → Child" + mode + minimum', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('KPI Area → Initiative')).toBeTruthy();
-    expect(screen.getByText('Goal → KPI Area')).toBeTruthy();
+    expect(await screen.findByText('Strategy → Initiative')).toBeTruthy();
+    expect(screen.getByText('Goal → Strategy')).toBeTruthy();
     // mode saat ini terlihat (badge + tombol picker keduanya berlabel sama → >=1)
     expect(screen.getAllByText('Hanya Peringatan').length).toBeGreaterThanOrEqual(1);
     // minimum saat ini (2) terlihat
@@ -93,8 +93,8 @@ describe('SettingsMbrScreen', () => {
   it('[3] menaikkan minimum memanggil setRule dengan min_count+1 & mode saat ini', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    await screen.findByText('KPI Area → Initiative');
-    fireEvent.press(screen.getByLabelText('Tambah minimum KPI Area → Initiative'));
+    await screen.findByText('Strategy → Initiative');
+    fireEvent.press(screen.getByLabelText('Tambah minimum Strategy → Initiative'));
     await waitFor(() =>
       expect(mockSetRule).toHaveBeenCalledWith({
         parentCardType: 'strategy',
@@ -108,8 +108,8 @@ describe('SettingsMbrScreen', () => {
   it('[4] memilih mode Blokir Aktivasi memanggil setRule dengan mode baru & min saat ini', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    await screen.findByText('KPI Area → Initiative');
-    fireEvent.press(screen.getByLabelText('Set Blokir Aktivasi untuk KPI Area → Initiative'));
+    await screen.findByText('Strategy → Initiative');
+    fireEvent.press(screen.getByLabelText('Set Blokir Aktivasi untuk Strategy → Initiative'));
     await waitFor(() =>
       expect(mockSetRule).toHaveBeenCalledWith({
         parentCardType: 'strategy',
@@ -123,9 +123,9 @@ describe('SettingsMbrScreen', () => {
   it('[5] rule goal→strategy terkunci: kontrol edit tidak tersedia (tampil indikator Terkunci)', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    await screen.findByText('Goal → KPI Area');
+    await screen.findByText('Goal → Strategy');
     expect(screen.getByText('Terkunci')).toBeTruthy();
     // kontrol tambah minimum untuk goal→strategy tidak ada
-    expect(screen.queryByLabelText('Tambah minimum Goal → KPI Area')).toBeNull();
+    expect(screen.queryByLabelText('Tambah minimum Goal → Strategy')).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 // Komponen bersama Fase 5: MbrCompletionIndicator (visual) + guardMbrActivation (gating popup).
-// Dipakai ulang di KPI Area / Initiative / ActionPlan detail. Otoritas akhir tetap server.
+// Dipakai ulang di Strategy / Initiative / Action Plan detail. Otoritas akhir tetap server.
 import { render, screen } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 

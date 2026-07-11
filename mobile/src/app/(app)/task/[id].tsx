@@ -79,7 +79,7 @@ function GuidanceChecklist({
       </View>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">
         {isRepeat
-          ? 'Untuk Action Plan repeat: tiap instance mengikuti langkah yang sama.'
+          ? 'Untuk Task repeat: tiap instance mengikuti langkah yang sama.'
           : 'Langkah berurutan dari Draft hingga disetujui reviewer.'}
       </Text>
       <View className="gap-2 pt-1">
@@ -322,7 +322,7 @@ function RepeatSection({
         ))
       ) : (
         <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-          Belum ada instance. Aktifkan Action Plan untuk membuat jadwal.
+          Belum ada instance. Aktifkan Task untuk membuat jadwal.
         </Text>
       )}
     </View>
@@ -352,7 +352,7 @@ export function LiveTaskDetailScreen() {
     qc.invalidateQueries({ queryKey: ['action-plan', id] });
     qc.invalidateQueries({ queryKey: ['submissions', id] });
     qc.invalidateQueries({ queryKey: ['action-plans'] });
-    // WSA-15 — perubahan status AP (activate/start/review→done) mengubah %done ActionPlan → orb refresh.
+    // WSA-15 — perubahan status AP (activate/start/review→done) mengubah %done Action Plan → orb refresh.
     qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
   }
 
@@ -379,7 +379,7 @@ export function LiveTaskDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: ap?.name ?? 'Action Plan' }} />
+      <Stack.Screen options={{ title: ap?.name ?? 'Task' }} />
       <View className="gap-5 p-5">
         {apQ.isLoading ? (
           <SkeletonList count={3} />
@@ -440,7 +440,7 @@ export function LiveTaskDetailScreen() {
             <SectionCard>
               <View className="flex-row items-center justify-between gap-2">
                 <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
-                {/* UI-S-AP3 — akses cepat ke Inbox dari konteks Action Plan. */}
+                {/* UI-S-AP3 — akses cepat ke Inbox dari konteks Task. */}
                 <Button
                   label="Buka Chat"
                   variant="secondary"
@@ -480,7 +480,7 @@ export function LiveTaskDetailScreen() {
 
             {/* ---- Aksi sesuai peran & status ---- */}
             {ap.status === 'draft' ? (
-              <Button label="Aktifkan Action Plan" onPress={() => activateM.mutate()} loading={activateM.isPending} />
+              <Button label="Aktifkan Task" onPress={() => activateM.mutate()} loading={activateM.isPending} />
             ) : null}
 
             {/* ---- Repeat (Fase 2): compliance + daftar instance ---- */}

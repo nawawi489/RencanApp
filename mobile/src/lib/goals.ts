@@ -1,4 +1,4 @@
-// Data layer Fase 4 — Goals & Perencanaan Strategis (Goal → KPI Area → Initiative).
+// Data layer Fase 4 — Goals & Perencanaan Strategis (Goal → Strategy → Initiative).
 // Pemanggil tipis: otorisasi ditegakkan di server (RLS untuk INSERT, RPC SECURITY DEFINER untuk
 // lifecycle & template). Mirror pola createActionPlan (cards.ts) byte-for-byte.
 import { STATUS_TONE, type PersonRef } from './cards';
@@ -9,10 +9,10 @@ import { supabase } from './supabase';
 export type Goal = Tables<'goals'>;
 export type GoalTemplate = Tables<'goal_templates'>;
 export type StrategyTemplate = Tables<'strategy_templates'>;
-/** Goal + jumlah KPI Area (embedded count via PostgREST) — satu query, hindari N+1 per baris. */
+/** Goal + jumlah Strategy (embedded count via PostgREST) — satu query, hindari N+1 per baris. */
 export type GoalWithKpiCount = Goal & { strategies: { count: number }[] };
 
-/** Ekstrak jumlah KPI Area dari hasil embedded; null bila tak tersedia (tampil '—'). */
+/** Ekstrak jumlah Strategy dari hasil embedded; null bila tak tersedia (tampil '—'). */
 export function kpiCountOf(goal: GoalWithKpiCount): number | null {
   return goal.strategies?.[0]?.count ?? null;
 }
@@ -32,7 +32,7 @@ export const PLANNING_STATUS_LABEL: Record<string, string> = {
 // ---------------------------------------------------------------- queries
 
 export async function listGoals(): Promise<GoalWithKpiCount[]> {
-  // Embedded aggregate strategies(count): jumlah KPI Area ikut dalam SATU query (cegah N+1 per Goal).
+  // Embedded aggregate strategies(count): jumlah Strategy ikut dalam SATU query (cegah N+1 per Goal).
   const { data, error } = await supabase
     .from('goals')
     .select('*, strategies(count)')
@@ -67,7 +67,7 @@ export async function listStrategyTemplates(goalTemplateId: string): Promise<Str
   return data;
 }
 
-/** UI-S-KT1 — semua KPI Area Template join nama Goal Template (proxy "divisi"). */
+/** UI-S-KT1 — semua Strategy Template join nama Goal Template (proxy "divisi"). */
 export type StrategyTemplateWithParent = StrategyTemplate & {
   goal_templates: { id: string; name: string } | null;
 };
@@ -117,7 +117,7 @@ export async function applyGoalTemplate(args: {
   picId: string;
   periodStart: string;
   periodEnd: string;
-  /** Target per KPI Area template, key = nama KPI Area (PRD §49 step 5). Kosong → null di server. */
+  /** Target per Strategy template, key = nama Strategy (PRD §49 step 5). Kosong → null di server. */
   targets?: Record<string, string>;
 }): Promise<string> {
   const { data, error } = await supabase.rpc('apply_goal_template', {

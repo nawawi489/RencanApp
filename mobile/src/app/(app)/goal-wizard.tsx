@@ -1,5 +1,5 @@
 // Goal Wizard (Fase 4, PRD §49) — satu layar berurutan: (1) pilih Goal Template (atau Goal kosong),
-// (2) periode + PIC + Target tiap KPI Area, (3) Generate via applyGoalTemplate (atomik di server).
+// (2) periode + PIC + Target tiap Strategy, (3) Generate via applyGoalTemplate (atomik di server).
 // Meniru pola action_plan/new.tsx: onError → Alert, validasi tanggal DATE_RE.
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
@@ -47,7 +47,7 @@ export default function GoalWizardScreen() {
       return;
     }
     if (!pic) {
-      // PIC wajib (PRD §49 langkah 6): KPI Area template mewarisi PIC ini; tanpa PIC tak bisa diaktifkan.
+      // PIC wajib (PRD §49 langkah 6): Strategy template mewarisi PIC ini; tanpa PIC tak bisa diaktifkan.
       Alert.alert('Belum lengkap', 'Tentukan PIC / Owner Goal terlebih dulu.');
       return;
     }
@@ -76,7 +76,7 @@ export default function GoalWizardScreen() {
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal Wizard — Instansiasi dari template"
-          body="Pilih template Goal, tentukan periode, PIC, dan Target tiap KPI Area, lalu Generate. KPI Area terbentuk sebagai Draft; aktifkan setelah ditinjau."
+          body="Pilih template Goal, tentukan periode, PIC, dan Target tiap Strategy, lalu Generate. Strategy terbentuk sebagai Draft; aktifkan setelah ditinjau."
         />
 
         {step === 0 ? (
@@ -128,7 +128,7 @@ export default function GoalWizardScreen() {
             {kpiTemplates.length > 0 ? (
               <View className="gap-2">
                 <Text className="text-sm font-bold text-black dark:text-white">
-                  Target KPI Area (opsional — bisa dilengkapi nanti)
+                  Target Strategy (opsional — bisa dilengkapi nanti)
                 </Text>
                 {kpiTemplates.map((kt) => (
                   <LabeledInput

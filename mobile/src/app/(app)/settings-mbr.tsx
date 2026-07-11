@@ -14,7 +14,7 @@ import {
   type MbrRule,
 } from '@/lib/settings-mbr';
 
-/** Aturan Goal → KPI Area dikunci: konsisten dgn gerbang aktivasi Goal (≥1 KPI Area) Fase 4. */
+/** Aturan Goal → Strategy dikunci: konsisten dgn gerbang aktivasi Goal (≥1 Strategy) Fase 4. */
 function isLocked(rule: MbrRule): boolean {
   return rule.parent_card_type === 'goal' && rule.child_card_type === 'strategy';
 }
@@ -43,7 +43,7 @@ function MbrExampleCard() {
           <Badge label="Draft" tone="neutral" />
         </View>
         <View className="flex-row items-center gap-2">
-          <Text className="text-xs text-neutral-500 dark:text-neutral-400">ActionPlan</Text>
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">Action Plan</Text>
           <Text className="text-xs font-semibold text-amber-700 dark:text-amber-400">1 / 2 (50%)</Text>
         </View>
         <View
@@ -52,7 +52,7 @@ function MbrExampleCard() {
           <Text className="text-base font-semibold text-white">Aktifkan Initiative</Text>
         </View>
         <Text className="text-xs text-neutral-400">
-          Tap akan menampilkan dialog: <Text className="italic">&ldquo;Butuh minimal 2 ActionPlan; saat ini 1.&rdquo;</Text>
+          Tap akan menampilkan dialog: <Text className="italic">&ldquo;Butuh minimal 2 Action Plan; saat ini 1.&rdquo;</Text>
         </Text>
       </View>
     </SectionCard>

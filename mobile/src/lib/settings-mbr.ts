@@ -53,10 +53,10 @@ export const ENFORCEMENT_MODE_LABEL: Record<EnforcementMode, string> = {
 /** Label jenis kartu untuk tampilan Settings ("Parent → Child"). */
 export const CARD_TYPE_LABEL: Record<CardType, string> = {
   goal: 'Goal',
-  strategy: 'KPI Area',
+  strategy: 'Strategy',
   initiative: 'Initiative',
-  action_plan: 'ActionPlan',
-  task: 'Action Plan',
+  action_plan: 'Action Plan',
+  task: 'Task',
   development_area: 'Development Area',
   problem_statement: 'Problem Statement',
 };

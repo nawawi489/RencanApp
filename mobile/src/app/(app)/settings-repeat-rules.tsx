@@ -1,7 +1,7 @@
 // PRD §31 — Menu > Pengaturan > Repeat Setting. Inventory read-only seluruh repeat-rule
-// yang user boleh lihat (difilter RLS). Tiap row tappable → buka Action Plan induk untuk
+// yang user boleh lihat (difilter RLS). Tiap row tappable → buka Task induk untuk
 // mengedit jadwal/missed rule. Edit jadwal tetap per-AP (PRD §23: "Repeat Setting adalah
-// setting pada Action Plan"), layar ini hanya navigasi.
+// setting pada Task"), layar ini hanya navigasi.
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 
@@ -22,13 +22,13 @@ export default function SettingsRepeatRulesScreen() {
         <View className="gap-1">
           <Text className="text-2xl font-bold text-black dark:text-white">Repeat Setting</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
-            Daftar Action Plan dengan jadwal berulang.
+            Daftar Task dengan jadwal berulang.
           </Text>
         </View>
         <SectionCard>
           <Text className="text-sm font-bold text-black dark:text-white">Tentang Repeat Setting</Text>
           <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-            Daftar Action Plan dengan jadwal berulang. Edit jadwal dilakukan di tiap Action Plan
+            Daftar Task dengan jadwal berulang. Edit jadwal dilakukan di tiap Task
             (Repeat Setting adalah pengaturan per-AP, bukan template global).
           </Text>
         </SectionCard>
@@ -39,8 +39,8 @@ export default function SettingsRepeatRulesScreen() {
           <ErrorState onRetry={() => q.refetch()} />
         ) : !q.data || q.data.length === 0 ? (
           <EmptyState
-            title="Belum ada Action Plan repeat"
-            description="Buat Action Plan dengan mode Repeat dari ActionPlan untuk menjadwalkan pekerjaan berulang."
+            title="Belum ada Task repeat"
+            description="Buat Task dengan mode Repeat dari Action Plan untuk menjadwalkan pekerjaan berulang."
           />
         ) : (
           q.data.map((r) => {

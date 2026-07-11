@@ -1,4 +1,4 @@
-// Hooks Fase 4 — Workspace (Goal → KPI Area → Initiative → ActionPlan). Pemanggil tipis di atas
+// Hooks Fase 4 — Workspace (Goal → Strategy → Initiative → Action Plan). Pemanggil tipis di atas
 // @/lib/goals, @/lib/strategies, @/lib/initiatives, @/lib/cards. Query keys TERKUNCI (lihat kontrak):
 // ['goals'], ['goal', id], ['strategies', goalId], ['initiatives', strategyId],
 // ['goal_templates']. Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
@@ -125,8 +125,8 @@ export function useGoal(id: string) {
 }
 
 /**
- * KPI Area di bawah satu Goal. Hanya fetch saat goalId terisi DAN `enabled` (lazy: child tree
- * Workspace baru di-fetch saat baris Goal di-expand — jumlah KPI Area collapsed pakai embedded count).
+ * Strategy di bawah satu Goal. Hanya fetch saat goalId terisi DAN `enabled` (lazy: child tree
+ * Workspace baru di-fetch saat baris Goal di-expand — jumlah Strategy collapsed pakai embedded count).
  */
 export function useStrategies(goalId: string, enabled = true) {
   const q = useQuery({
@@ -144,7 +144,7 @@ export function useStrategies(goalId: string, enabled = true) {
 }
 
 /**
- * Initiative di bawah satu KPI Area. Hanya fetch saat strategyId terisi DAN `enabled` (lazy:
+ * Initiative di bawah satu Strategy. Hanya fetch saat strategyId terisi DAN `enabled` (lazy:
  * dipakai oleh StrategySubRow di Workspace tree 3-level — fetch saat user expand baris KPI).
  */
 export function useInitiatives(strategyId: string, enabled = true) {
@@ -163,7 +163,7 @@ export function useInitiatives(strategyId: string, enabled = true) {
 }
 
 /**
- * ActionPlan di bawah satu Initiative. `enabled` opsional untuk lazy-fetch di tree
+ * Action Plan di bawah satu Initiative. `enabled` opsional untuk lazy-fetch di tree
  * (default true agar detail page yang memanggil tanpa arg tetap fetch begitu initiativeId ada).
  */
 export function useInitiativeActionPlans(initiativeId: string, enabled = true) {
@@ -181,7 +181,7 @@ export function useInitiativeActionPlans(initiativeId: string, enabled = true) {
   };
 }
 
-/** Action Plan di bawah satu ActionPlan. Lazy-fetch di tree (WSA-01, level terbawah). */
+/** Task di bawah satu Action Plan. Lazy-fetch di tree (WSA-01, level terbawah). */
 export function useActionPlanTasks(actionPlanId: string, enabled = true) {
   const q = useQuery({
     queryKey: ['tasks', 'action_plan', actionPlanId],
@@ -207,7 +207,7 @@ export function usePerson(id: string | null | undefined) {
   return { person: (q.data ?? null) as PersonRef };
 }
 
-/** KPI Area template di bawah satu Goal Template (untuk isian Target di Wizard). */
+/** Strategy template di bawah satu Goal Template (untuk isian Target di Wizard). */
 export function useStrategyTemplates(goalTemplateId: string) {
   const q = useQuery({
     queryKey: ['strategy_templates', goalTemplateId],
@@ -297,9 +297,9 @@ export function useGoalActions() {
   };
 }
 
-// ---------------------------------------------------------------- KPI Area Target Breakdown (S2)
+// ---------------------------------------------------------------- Strategy Target Breakdown (S2)
 
-/** Baris breakdown periode untuk satu KPI Area. Hanya fetch saat strategyId terisi. */
+/** Baris breakdown periode untuk satu Strategy. Hanya fetch saat strategyId terisi. */
 export function useStrategyBreakdown(strategyId: string) {
   const q = useQuery({
     queryKey: ['strategy_breakdown', strategyId],
@@ -314,7 +314,7 @@ export function useStrategyBreakdown(strategyId: string) {
   };
 }
 
-/** Aksi tulis Target Breakdown KPI Area: replace atomik (Σ=100% per Q dan per Q-bulan). */
+/** Aksi tulis Target Breakdown Strategy: replace atomik (Σ=100% per Q dan per Q-bulan). */
 export function useStrategyBreakdownActions(strategyId: string) {
   const qc = useQueryClient();
   const replaceM = useMutation({
@@ -330,7 +330,7 @@ export function useStrategyBreakdownActions(strategyId: string) {
   };
 }
 
-/** Aksi tulis KPI Area di bawah satu Goal: create, activate. */
+/** Aksi tulis Strategy di bawah satu Goal: create, activate. */
 export function useStrategyActions(goalId: string) {
   const qc = useQueryClient();
 
@@ -391,7 +391,7 @@ export function useProblemStatements(developmentAreaId: string, enabled = true) 
 }
 
 /**
- * ActionPlan di bawah satu Problem Statement (jalur Development).
+ * Action Plan di bawah satu Problem Statement (jalur Development).
  * Lazy: dipakai oleh ProblemStatementSubRow di Workspace tree 3-level (Stage 1 B′).
  */
 export function useProblemStatementActionPlans(problemStatementId: string, enabled = true) {
@@ -464,7 +464,7 @@ export function useProblemStatementActions(developmentAreaId: string) {
   };
 }
 
-/** Aksi tulis Initiative di bawah satu KPI Area: create, activate. */
+/** Aksi tulis Initiative di bawah satu Strategy: create, activate. */
 export function useInitiativeActions(strategyId: string) {
   const qc = useQueryClient();
 
@@ -472,7 +472,7 @@ export function useInitiativeActions(strategyId: string) {
     mutationFn: (input: NewInitiative) => createInitiative(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['initiatives', strategyId] });
-      // KPI Area & Goal punya embedded count anak → wajib refresh agar badge tidak basi.
+      // Strategy & Goal punya embedded count anak → wajib refresh agar badge tidak basi.
       // Tidak ada goalId di scope; pakai prefix.
       qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['goal'] });

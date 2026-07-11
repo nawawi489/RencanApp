@@ -1,4 +1,4 @@
-// Instance lifecycle — Action Plan Instance Detail + Review Flow (mockup 23/24).
+// Instance lifecycle — Task Instance Detail + Review Flow (mockup 23/24).
 // Pola: mock supabase + @/lib/repeat (getInstance/reviewInstanceSubmission) + @/lib/cards + expo-router.
 // useInstanceActions dibiarkan asli (logika peran murni).
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

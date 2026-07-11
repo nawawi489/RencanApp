@@ -94,7 +94,7 @@ export function LivePeopleProfileScreen() {
   const { ranking } = useRanking(closed?.id ?? '');
   const closedEntry = useMemo(() => ranking.find((r) => r.user_id === id), [ranking, id]);
 
-  // UI-S-PR4 — Tugas (Action Plan) yang user ini jadi PIC-nya. Collapsible.
+  // UI-S-PR4 — Tugas (Task) yang user ini jadi PIC-nya. Collapsible.
   const [tasksOpen, setTasksOpen] = useState(false);
   const tasksQ = useQuery({
     queryKey: ['person-tasks', id],
@@ -310,7 +310,7 @@ export function LivePeopleProfileScreen() {
           </SectionCard>
         ) : null}
 
-        {/* UI-S-PR4 — Tugas (Action Plan aktif yang user ini PIC-nya). Lazy fetch saat expand. */}
+        {/* UI-S-PR4 — Tugas (Task aktif yang user ini PIC-nya). Lazy fetch saat expand. */}
         <SectionCard>
           <Pressable
             accessibilityRole="button"
@@ -330,7 +330,7 @@ export function LivePeopleProfileScreen() {
               </Text>
             ) : tasks.length === 0 ? (
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                Tidak ada Action Plan aktif untuk anggota ini.
+                Tidak ada Task aktif untuk anggota ini.
               </Text>
             ) : (
               <View className="gap-2">

@@ -64,12 +64,12 @@ export function LiveProblemStatementDetailScreen() {
   });
 
   const ps = psQ.data;
-  // WSA-08 §14.4 — CTA "+ Tambah ActionPlan" dihapus; tambah turunan hanya dari tree Workspace.
+  // WSA-08 §14.4 — CTA "+ Tambah Action Plan" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (ps && guardActivationFields('problem_statement', ps)) return;
     const blocked = guardMbrActivation(compliance, {
-      childLabel: 'ActionPlan',
+      childLabel: 'Action Plan',
       onAddChild: () => router.push(`/action_plan/new?problemStatementId=${id}` as Href),
     });
     if (blocked) return;
@@ -133,7 +133,7 @@ export function LiveProblemStatementDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">ActionPlan</Text>
+              <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
 
               {action_plansLoading ? (
                 <SkeletonList count={2} />
@@ -151,8 +151,8 @@ export function LiveProblemStatementDetailScreen() {
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada ActionPlan"
-                  description="Turunkan Problem Statement ini menjadi ActionPlan konkret lalu pecah jadi Action Plan."
+                  title="Belum ada Action Plan"
+                  description="Turunkan Problem Statement ini menjadi Action Plan konkret lalu pecah jadi Task."
                 />
               )}
             </View>

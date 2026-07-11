@@ -1,7 +1,7 @@
-// UI — Goal Template Library (mockup 37) + KPI Area Template (mockup 38, nested).
+// UI — Goal Template Library (mockup 37) + Strategy Template (mockup 38, nested).
 // Browse read-only template blueprint Fase 4 (data layer sudah ada: goal_templates / strategy_templates).
 // CTA "Buat Goal dari Template" → goal-wizard (yang menjalankan apply_goal_template). Hanya tampil
-// bila create_goal. Lazy: KPI Area template di-fetch saat baris template di-expand.
+// bila create_goal. Lazy: Strategy template di-fetch saat baris template di-expand.
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { FlatList } from 'react-native';
@@ -29,18 +29,18 @@ function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; c
       <Pressable
         className="min-h-[44px] flex-row items-center justify-between active:opacity-70"
         accessibilityRole="button"
-        accessibilityLabel={expanded ? 'Tutup KPI Area' : 'Lihat KPI Area template'}
+        accessibilityLabel={expanded ? 'Tutup Strategy' : 'Lihat Strategy template'}
         accessibilityState={{ expanded }}
         onPress={() => setExpanded((v) => !v)}>
-        <Text className="text-sm text-neutral-500 dark:text-neutral-400">Blueprint KPI Area</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400">Blueprint Strategy</Text>
         <Text className="text-sm font-semibold text-brand-dark">
-          {expanded ? 'Tutup' : 'Lihat KPI Area'}
+          {expanded ? 'Tutup' : 'Lihat Strategy'}
         </Text>
       </Pressable>
 
       {expanded ? (
         isLoading ? (
-          <Text className="text-sm text-neutral-400">Memuat KPI Area…</Text>
+          <Text className="text-sm text-neutral-400">Memuat Strategy…</Text>
         ) : items.length ? (
           <View className="gap-2">
             {items.map((k) => (
@@ -66,7 +66,7 @@ function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; c
             ))}
           </View>
         ) : (
-          <Text className="text-sm text-neutral-400">Template ini belum punya KPI Area.</Text>
+          <Text className="text-sm text-neutral-400">Template ini belum punya Strategy.</Text>
         )
       ) : null}
 
@@ -103,7 +103,7 @@ export default function SettingsGoalTemplatesScreen() {
     <View className="gap-1 pb-3">
       <Text className="text-2xl font-bold text-black dark:text-white">Goal Template Library</Text>
       <Text className="text-base text-neutral-500 dark:text-neutral-400">
-        Blueprint Goal + KPI Area siap pakai. {canCreate ? 'Pilih untuk membuat Goal lewat wizard.' : 'Hanya untuk referensi.'}
+        Blueprint Goal + Strategy siap pakai. {canCreate ? 'Pilih untuk membuat Goal lewat wizard.' : 'Hanya untuk referensi.'}
       </Text>
     </View>
   );

@@ -1,4 +1,4 @@
-// UI Fase 2/instance lifecycle — Action Plan Instance Detail (mockup 23) + Review Flow (mockup 24).
+// UI Fase 2/instance lifecycle — Task Instance Detail (mockup 23) + Review Flow (mockup 24).
 // Menutup celah: submission instance repeat sebelumnya tak punya jalur review di UI
 // (reviewInstanceSubmission ada di data layer, tak pernah dipanggil). Layar ini menyurfacekan
 // detail instance + approve/reject untuk reviewer. Anti-self-approval ditegakkan server + UI.

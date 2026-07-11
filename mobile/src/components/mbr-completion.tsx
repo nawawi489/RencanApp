@@ -1,5 +1,5 @@
 // Komponen bersama Fase 5 — indikator Kelengkapan Perencanaan + gating aktivasi (popup ramah).
-// Dipakai di KPI Area / Initiative / ActionPlan detail. Server (RPC activate_*) tetap penegak akhir;
+// Dipakai di Strategy / Initiative / Action Plan detail. Server (RPC activate_*) tetap penegak akhir;
 // gating klien hanya pre-flight untuk mode 'blokir_aktivasi' agar UX jelas sebelum network call.
 import { Alert } from 'react-native';
 import { Text, View } from 'react-native-css/components';

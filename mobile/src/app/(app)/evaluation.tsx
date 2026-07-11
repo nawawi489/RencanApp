@@ -1,4 +1,4 @@
-// Fase 8 — Evaluation ActionPlan (opsional, setelah selesai). Anti-self (PIC ≠ evaluator).
+// Fase 8 — Evaluation Action Plan (opsional, setelah selesai). Anti-self (PIC ≠ evaluator).
 // UPSERT: pre-fill bila evaluation sudah ada. Prompt hanya saat status 'done'/'active'.
 // UI-S-EV1: tambah checklist "Perlu jadi SOP?" + "Perlu rollout?" (loop balik ke Development) + catatan rollout.
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -108,7 +108,7 @@ export function LiveEvaluationScreen() {
           <SectionCard>
             <Text className="text-base font-semibold text-black dark:text-white">Evaluasi belum tersedia</Text>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Evaluasi tersedia setelah ActionPlan berjalan atau selesai.
+              Evaluasi tersedia setelah Action Plan berjalan atau selesai.
             </Text>
           </SectionCard>
         </View>

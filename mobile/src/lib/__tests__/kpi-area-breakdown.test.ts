@@ -1,4 +1,4 @@
-// KPI Area Target Breakdown — pure helpers (PRD V1.8.2 §12). Migrasi 0021.
+// Strategy Target Breakdown — pure helpers (PRD V1.8.2 §12). Migrasi 0021.
 jest.mock('../supabase', () => ({ supabase: {} }));
 
 import {

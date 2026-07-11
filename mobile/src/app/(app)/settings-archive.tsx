@@ -16,10 +16,10 @@ import { CARD_TYPE_LABEL, type CardType } from '@/lib/settings-mbr';
 const FILTER_CHIPS: { key: 'semua' | CardEntityType; label: string }[] = [
   { key: 'semua', label: 'Semua' },
   { key: 'goal', label: 'Goal' },
-  { key: 'strategy', label: 'KPI Area' },
+  { key: 'strategy', label: 'Strategy' },
   { key: 'initiative', label: 'Initiative' },
-  { key: 'action_plan', label: 'ActionPlan' },
-  { key: 'task', label: 'Action Plan' },
+  { key: 'action_plan', label: 'Action Plan' },
+  { key: 'task', label: 'Task' },
   { key: 'development_area', label: 'Dev Area' },
   { key: 'problem_statement', label: 'Problem' },
 ];

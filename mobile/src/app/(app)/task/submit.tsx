@@ -1,4 +1,4 @@
-// UI-S-AP5 + UI-S-AP6 — submit Action Plan dgn file upload + KPI Area linkage.
+// UI-S-AP5 + UI-S-AP6 — submit Task dgn file upload + Strategy linkage.
 // 2-phase commit (createSubmissionDraft → upload parallel → submit_task) via useSubmissionFlow.
 // Mode instance (repeat) tetap pakai jalur lama submitInstance (OUT OF SCOPE OD-3).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -97,7 +97,7 @@ function KpiResultRow({
       {/* KPI picker (auto-select bila hanya 1 kandidat). */}
       {candidates.length > 1 ? (
         <View className="gap-2">
-          <Text className="text-xs font-semibold uppercase text-neutral-500">Pilih KPI Area</Text>
+          <Text className="text-xs font-semibold uppercase text-neutral-500">Pilih Strategy</Text>
           <View className="flex-row flex-wrap gap-2">
             {candidates.map((c) => {
               const active = row.strategy_id === c.id;
@@ -119,7 +119,7 @@ function KpiResultRow({
       ) : null}
 
       {selectedKpi ? (
-        <KpiLinkageCard kpiName={selectedKpi.name} sourceLabel="Sumber: Action Plan ini" />
+        <KpiLinkageCard kpiName={selectedKpi.name} sourceLabel="Sumber: Task ini" />
       ) : null}
 
       <TextInput
