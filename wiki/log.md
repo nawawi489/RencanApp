@@ -1581,4 +1581,12 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 - **F6a replay-safety (0046)**: forward re-apply `0046` setelah rollback drill dulu gagal (policy + trigger collision). Fix: S2 tambah `DROP POLICY IF EXISTS <new-name>` sebelum 19 CREATE POLICY; S5 tambah `DROP TRIGGER IF EXISTS <new-name>` sebelum 3 CREATE TRIGGER. Kombinasi CREATE OR REPLACE (function) + DO-block (constraint) + DROP-IF-EXISTS (policy/trigger) = `0046` fully replay-safe.
 - **Full drill lolos**: `forward(0045+0046+0047) → 0045R → forward(0045+0046+0047)` semua COMMIT tanpa error. Post-drill: 4 tabel new-name, 7 guidance row, helper `map_legacy_entity_type('kpi_area')` = `'strategy'`.
 - Verifikasi: tsc 0, grep-guard clean, guidance test (fase8-settings) tetap hijau (pakai mocked body, tidak assert DB seed).
-- Yang tidak dikerjakan (sesuai penilaian): type-identifier Indonesian→English revert (owner tandai optional/berisiko); pg_dump snapshot (langkah operasional owner sebelum merge); RN-Web e2e verify (butuh dev-server + env, ditawarkan sbg langkah berikut).
+- Yang tidak dikerjakan (sesuai penilaian): type-identifier Indonesian→English revert (owner tandai optional/berisiko); pg_dump snapshot (langkah operasional owner sebelum merge).
+
+## [2026-07-11] verify | RN-Web e2e boot + copy check (partial — auth-gated)
+
+- Web preview `ems-web` (Expo web, port 8091) di-start terhadap Supabase local (skema V1.8.3 sudah applied). Metro bundle sukses, server 200.
+- **Boot bersih**: 0 console error, 0 runtime warning terkait rename. Aplikasi compile + boot penuh di skema baru (tabel/RPC/policy rename).
+- **Copy Indonesian render benar**: login screen menampilkan tagline "Masuk ke pusat eksekusi target, **Tugas**, dan review kerja tim" — kata "Tugas" (label level-4 baru RWT-12) render benar (dulu "Action Plan"). Field: "Email perusahaan", "Kata sandi", "Masuk".
+- **Auth-gated (tidak diverifikasi)**: layar Workspace (tempat pill Strategi/Inisiatif/Rencana Aksi/Tugas + tree muncul) ada di balik login. Aturan operasi agent melarang memasukkan password untuk autentikasi → owner perlu login sendiri di localhost:8091 untuk cek authenticated flow (Workspace pill huruf S/I/AP/T, glossary help-popup, MBR modal).
+- Kesimpulan: stack terbukti boot + render Indonesian copy end-to-end sampai lapis login; verifikasi Workspace authenticated diserahkan ke owner.
