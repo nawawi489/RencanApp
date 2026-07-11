@@ -1505,3 +1505,13 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **DEFERRED ke RWT-12 (Content Lead DRI, PENDING)**: copy-localization — `glossary.ts` VALUES (keys benar, display title/body ter-mangle: key `strategy` → title "KPI Area"); label UI 2-kata English "KPI Area"→"Strategy" & "Action Plan"→"Task" masih stale; rewrite body help-popup. KEYS/identifier sudah benar; hanya display copy → Indonesian (Strategi/Inisiatif/Rencana Aksi/Tugas) per PRD V1.8.3 §5.
 - **DEFERRED F5 cosmetic**: nama file/folder test masih lama (`kpi-area-breakdown-panel.test.tsx`, route `__tests__/` dir) — test hijau, rename kosmetik.
 - Berikutnya: F5 smoke/integration + grep-guard, F6 rollback drill, F7 docs sync. RN-Web e2e happy-path verification (butuh Supabase+env) belum dijalankan.
+
+## [2026-07-11] update | F4 copy — shift label UI ke hierarki baru (English), tsc 0 + jest 1163/1163
+
+- Owner (2026-07-11): pilih **shifted-English** untuk label UI (bukan Indonesian localization sekarang). Display label konsisten dgn level baru: L1 "KPI Area"→"Strategy", L2 "Strategy"→"Initiative" (sudah via symbol rename), L3 "Initiative"→"Action Plan", L4 "Action Plan"→"Task".
+- Perubahan copy: "KPI Area" (2-kata)→"Strategy" (135×); "Action Plan" (2-kata stale L4)→"Task"; "ActionPlan" corruption (Pascal, dari symbol rename kata "Initiative" di copy)→"Action Plan" via standalone-word replacement dgn tsc sbg safety-net; leak type-identifier (`type ActionPlan`, `: ActionPlan`, `Promise<ActionPlan>`, `as ActionPlan[]`) di-revert presisi.
+- `glossary.ts` titles benar (`strategy`→"Strategy", `action_plan`→"Action Plan"); body coherent. `workspace-copy.ts` subtitle: "Goal, Strategy, Initiative, Action Plan & Task".
+- Applied ke source + test uniform → assertion tetap align. Verifikasi: tsc 0, jest 104 suite / 1163 test PASS.
+- Commit: `d53a41a` (85 file, 451+/451−) di branch `feat/rename-workspace-terminology`.
+- **RWT-12 (Content Lead DRI, PENDING) tetap deferred**: Indonesian localization (Strategi/Inisiatif/Rencana Aksi/Tugas per PRD V1.8.3 §5) + rewrite body help-popup edukatif. English labels sekarang = interim; glossary body = placeholder coherent.
+- **Status branch**: F0–F4 SELESAI & hijau (DB migrasi 0045+0046 applied lokal; mobile tsc 0 + jest 1163/1163). Sisa: F5 (grep-guard + DB smoke SQL + rename file test kosmetik), F6 (rollback drill 0045R/0046R), F7 (DESIGN.md + wiki entities/concepts + specs sync), RWT-12 (copy Indonesian, blocked owner DRI), RN-Web e2e verify.
