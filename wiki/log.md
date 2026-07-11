@@ -1491,3 +1491,17 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
   - Update Bahasa Indonesia labels di `glossary.ts` + `workspace-copy.ts` + ~400 literal string di 60+ file layar
   - Rename 45 file test
 - Commit: `5b4dede` di branch `feat/rename-workspace-terminology`.
+
+## [2026-07-11] update | Rename Workspace Terminology F4 FULL symbol rename — tsc 0 + jest 1163/1163 hijau
+
+- Owner (2026-07-11): pilih **full symbol rename** (bukan DB-identifier-only) — rename semua snake_case + camelCase + PascalCase code symbol agar konsisten dgn skema DB baru.
+- Sed lama (commit 5b4dede) mengorupsi camelCase (`initiativeId` → `action_planId` broken). 22 file di-reset ke baseline bersih (commit 4384654), `database.types.ts` dipertahankan (regenerated benar).
+- **Comprehensive renamer** (Node, `scratchpad/comprehensive_rename.js`): placeholder-safe two-pass, case-context-aware (Pascal plural irregular `KpiAreas`→`Strategies`; camelCase `strategy(?=[A-Z])` vs snake `strategy`). Di-apply ke 257 file src (kecuali database.types.ts) → 134 file berubah. tsc error 317 → 0 lewat beberapa pass.
+- **Lib file rename** (git mv bottom-up): `strategies.ts`→`initiatives.ts`, `kpi-areas.ts`→`strategies.ts`, `kpi-area-breakdown.ts`→`strategy-breakdown.ts`, `kpi-gap.ts`→`strategy-gap.ts`, `components/kpi-area-breakdown-panel.tsx`→`strategy-breakdown-panel.tsx`. Import path (alias `@/lib` + relative) di-fix; koreksi collision sub-path (`/strategy` match `/strategy-breakdown`).
+- **Route folder rename** (git mv via temp bottom-up): `action-plan/`→`task/`, `initiative/`→`action-plan/`, `strategy/`→`initiative/`, `kpi-area/`→`strategy/`. Router `push()/href()` path string di-shift placeholder-safe.
+- **RPC param alignment**: client param KEY `p_task_id`→`p_action_plan_id` (8 call sites) agar match F3 frozen DB param. **Debt**: task-level function tetap `p_action_plan_id` param (efek F3 global revert) — cosmetic, non-functional, follow-up.
+- **Verifikasi**: `npm run type-check` = 0 error; `npm run test:ci` = **104 suite / 1163 test PASS** (0 fail).
+- Commit: `b90ff87` di branch `feat/rename-workspace-terminology`.
+- **DEFERRED ke RWT-12 (Content Lead DRI, PENDING)**: copy-localization — `glossary.ts` VALUES (keys benar, display title/body ter-mangle: key `strategy` → title "KPI Area"); label UI 2-kata English "KPI Area"→"Strategy" & "Action Plan"→"Task" masih stale; rewrite body help-popup. KEYS/identifier sudah benar; hanya display copy → Indonesian (Strategi/Inisiatif/Rencana Aksi/Tugas) per PRD V1.8.3 §5.
+- **DEFERRED F5 cosmetic**: nama file/folder test masih lama (`kpi-area-breakdown-panel.test.tsx`, route `__tests__/` dir) — test hijau, rename kosmetik.
+- Berikutnya: F5 smoke/integration + grep-guard, F6 rollback drill, F7 docs sync. RN-Web e2e happy-path verification (butuh Supabase+env) belum dijalankan.
