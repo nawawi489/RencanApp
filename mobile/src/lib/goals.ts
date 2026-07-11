@@ -8,13 +8,13 @@ import { supabase } from './supabase';
 
 export type Goal = Tables<'goals'>;
 export type GoalTemplate = Tables<'goal_templates'>;
-export type KpiAreaTemplate = Tables<'kpi_area_templates'>;
+export type KpiAreaTemplate = Tables<'strategy_templates'>;
 /** Goal + jumlah KPI Area (embedded count via PostgREST) — satu query, hindari N+1 per baris. */
-export type GoalWithKpiCount = Goal & { kpi_areas: { count: number }[] };
+export type GoalWithKpiCount = Goal & { strategies: { count: number }[] };
 
 /** Ekstrak jumlah KPI Area dari hasil embedded; null bila tak tersedia (tampil '—'). */
 export function kpiCountOf(goal: GoalWithKpiCount): number | null {
-  return goal.kpi_areas?.[0]?.count ?? null;
+  return goal.strategies?.[0]?.count ?? null;
 }
 
 // Re-export agar konsumen UI tidak perlu impor dari dua modul; nilai TIDAK diduplikasi.
@@ -32,10 +32,10 @@ export const PLANNING_STATUS_LABEL: Record<string, string> = {
 // ---------------------------------------------------------------- queries
 
 export async function listGoals(): Promise<GoalWithKpiCount[]> {
-  // Embedded aggregate kpi_areas(count): jumlah KPI Area ikut dalam SATU query (cegah N+1 per Goal).
+  // Embedded aggregate strategies(count): jumlah KPI Area ikut dalam SATU query (cegah N+1 per Goal).
   const { data, error } = await supabase
     .from('goals')
-    .select('*, kpi_areas(count)')
+    .select('*, strategies(count)')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data as unknown as GoalWithKpiCount[];
@@ -59,7 +59,7 @@ export async function listGoalTemplates(): Promise<GoalTemplate[]> {
 export async function listKpiAreaTemplates(goalTemplateId: string): Promise<KpiAreaTemplate[]> {
   if (!goalTemplateId) return [];
   const { data, error } = await supabase
-    .from('kpi_area_templates')
+    .from('strategy_templates')
     .select('*')
     .eq('goal_template_id', goalTemplateId)
     .order('sort_order', { ascending: true });
@@ -74,7 +74,7 @@ export type KpiAreaTemplateWithParent = KpiAreaTemplate & {
 
 export async function listAllKpiAreaTemplates(): Promise<KpiAreaTemplateWithParent[]> {
   const { data, error } = await supabase
-    .from('kpi_area_templates')
+    .from('strategy_templates')
     .select('*, goal_templates(id, name)')
     .order('sort_order', { ascending: true });
   if (error) throw error;

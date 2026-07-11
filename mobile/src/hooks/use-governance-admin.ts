@@ -107,7 +107,7 @@ export function useArchiveActions() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goals'] });
       qc.invalidateQueries({ queryKey: ['goal'] });
-      qc.invalidateQueries({ queryKey: ['kpi_areas'] });
+      qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['initiatives'] });
       qc.invalidateQueries({ queryKey: ['development_areas'] });

@@ -3,7 +3,7 @@
 // Aturan kunci:
 //   - Σ kontribusi Quarter wajib 100% (4 entri Q1..Q4).
 //   - Σ kontribusi Month wajib 100% PER Quarter (3 entri/quarter).
-//   - Mutasi WAJIB lewat RPC `kpi_area_breakdown_replace` (RLS direct DML ditutup).
+//   - Mutasi WAJIB lewat RPC `strategy_breakdown_replace` (RLS direct DML ditutup).
 //   - Edit periode berjalan WAJIB sertakan `reason` ≥ 8 char (audit ke activity_log).
 import { supabase } from './supabase';
 
@@ -18,7 +18,7 @@ export type MonthKey = (typeof MONTH_KEYS)[number];
 export type BreakdownRow = {
   id: string;
   organization_id: string;
-  kpi_area_id: string;
+  strategy_id: string;
   period_type: 'quarter' | 'month';
   period_key: QuarterKey | MonthKey;
   parent_quarter_key: QuarterKey | null;
@@ -71,9 +71,9 @@ export function indexMonthRowsPerQuarter(
 export async function listKpiAreaBreakdown(kpiAreaId: string): Promise<BreakdownRow[]> {
   if (!kpiAreaId) return [];
   const { data, error } = await supabase
-    .from('kpi_area_target_breakdowns')
+    .from('strategy_target_breakdowns')
     .select('*')
-    .eq('kpi_area_id', kpiAreaId)
+    .eq('strategy_id', kpiAreaId)
     .order('period_type', { ascending: true })
     .order('period_key', { ascending: true });
   if (error) throw error;
@@ -101,8 +101,8 @@ export type ReplaceArgs = {
  * Server validasi & emit activity_log.
  */
 export async function replaceKpiAreaBreakdown(args: ReplaceArgs): Promise<BreakdownRow[]> {
-  const { data, error } = await supabase.rpc('kpi_area_breakdown_replace', {
-    p_kpi_area_id: args.kpiAreaId,
+  const { data, error } = await supabase.rpc('strategy_breakdown_replace', {
+    p_strategy_id: args.kpiAreaId,
     p_quarter: args.quarter,
     p_month: args.month,
     p_reason: args.reason,

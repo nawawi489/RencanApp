@@ -56,7 +56,7 @@ import {
   type Initiative,
 } from '@/lib/cards';
 import type { KpiArea } from '@/lib/kpi-areas';
-import type { Strategy } from '@/lib/strategies';
+import type { Strategy } from '@/lib/initiatives';
 import type { ProblemStatement } from '@/lib/problem-statements';
 import {
   problemCountOf,
@@ -86,8 +86,8 @@ import {
 } from '@/lib/workspace-hub-stats';
 import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY, WS_TREE_COMPACT_COPY } from '@/lib/workspace-copy';
 
-// Tree merender status dari beberapa jenis kartu: planning (goal/kpi/strategy/dev-area/PS),
-// initiative, dan action plan (execution). PLANNING_STATUS_LABEL saja bocorkan enum mentah
+// Tree merender status dari beberapa jenis kartu: planning (goal/kpi/initiative/dev-area/PS),
+// action_plan, dan action plan (execution). PLANNING_STATUS_LABEL saja bocorkan enum mentah
 // (mis. `in_progress`) untuk Action Plan → gabung ketiga map (nilai konsisten, tanpa konflik).
 const TREE_STATUS_LABEL: Record<string, string> = {
   ...PLANNING_STATUS_LABEL,
@@ -482,15 +482,15 @@ function useTreeRowActions(
 
 /**
  * Sub-row level 3: Strategy di bawah satu KPI Area. WSA-01: expandable → Initiative (level 4).
- * "+ Initiative" gated `create_initiative`, past-period lock, guard MBR kpi_area→strategy.
+ * "+ Initiative" gated `create_action_plan`, past-period lock, guard MBR strategy→initiative.
  */
 const StrategySubRow = memo(function StrategySubRow({
-  strategy,
+  initiative,
   parentCompliance,
   progress,
 }: {
-  strategy: Strategy;
-  /** Kepatuhan MBR kpi_area→strategy (parent). Non-compliant → "+ Initiative" ter-guard (WSA-04). */
+  initiative: Strategy;
+  /** Kepatuhan MBR strategy→initiative (parent). Non-compliant → "+ Initiative" ter-guard (WSA-04). */
   parentCompliance?: MbrCompliance;
   progress: number | null;
 }) {
@@ -498,22 +498,22 @@ const StrategySubRow = memo(function StrategySubRow({
   const { can } = useProfile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const { initiatives, isLoading, isError, refetch } = useStrategyInitiatives(strategy.id, expanded);
-  const initiativeIds = useMemo(
-    () => (expanded ? initiatives.map((i) => i.id) : EMPTY_IDS),
-    [expanded, initiatives],
+  const { action_plans, isLoading, isError, refetch } = useStrategyInitiatives(initiative.id, expanded);
+  const action_planIds = useMemo(
+    () => (expanded ? action_plans.map((i) => i.id) : EMPTY_IDS),
+    [expanded, action_plans],
   );
-  const { progressOf: initProgressOf } = useCardProgress(initiativeIds);
+  const { progressOf: initProgressOf } = useCardProgress(action_planIds);
   const { focus, now } = usePeriodFocus();
-  const past = isAddLocked(strategy, focus, now);
-  const canAddInit = can('create_initiative');
-  const rowActions = useTreeRowActions('strategy', strategy.id, strategy.name);
-  const periodLabel = treePeriodPillLabel(strategy, focus);
-  const metaLines = WS_TREE_COMPACT_COPY.strategyMeta({
+  const past = isAddLocked(initiative, focus, now);
+  const canAddInit = can('create_action_plan');
+  const rowActions = useTreeRowActions('initiative', initiative.id, initiative.name);
+  const periodLabel = treePeriodPillLabel(initiative, focus);
+  const metaLines = WS_TREE_COMPACT_COPY.initiativeMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[strategy.status] ?? strategy.status,
-    contribution: strategy.contribution_pct == null ? null : `${strategy.contribution_pct}%`,
-    risk: strategy.main_risk,
+    statusLabel: TREE_STATUS_LABEL[initiative.status] ?? initiative.status,
+    contribution: initiative.contribution_pct == null ? null : `${initiative.contribution_pct}%`,
+    risk: initiative.main_risk,
   });
   // WSA-04 — guard MBR: fail-open saat data belum ada (undefined); guard hanya saat tahu non-compliant.
   const mbrGuarded = !!parentCompliance && !parentCompliance.is_compliant;
@@ -521,8 +521,8 @@ const StrategySubRow = memo(function StrategySubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/strategy/${strategy.id}` as Href),
-    [router, strategy.id],
+    () => router.push(`/initiative/${initiative.id}` as Href),
+    [router, initiative.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
   const onAddInitiative = useCallback(() => {
@@ -535,8 +535,8 @@ const StrategySubRow = memo(function StrategySubRow({
       showPastPeriodAlert();
       return;
     }
-    router.push(`/initiative/new?strategyId=${strategy.id}` as Href);
-  }, [mbrGuarded, parentCompliance, past, router, strategy.id, strategy.name]);
+    router.push(`/action_plan/new?initiativeId=${initiative.id}` as Href);
+  }, [mbrGuarded, parentCompliance, past, router, initiative.id, initiative.name]);
   // Tombol redup bila past ATAU ter-guard MBR (spec §11: tetap terlihat, tapi redup).
   const addDimmed = past || mbrGuarded;
 
@@ -548,36 +548,36 @@ const StrategySubRow = memo(function StrategySubRow({
         {/* Spec §6.6 + §8: level-3 (indent 20px), border kiri 5px warna Strategy (#6941c6). */}
         <View
           className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
-          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy }}>
-          <TreeCardBody cardLabel={strategy.name} onPress={openDetail} overlayRightInset={52}>
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative }}>
+          <TreeCardBody cardLabel={initiative.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
-              <CompactHeaderPills kind="strategy" periodLabel={periodLabel} />
+              <CompactHeaderPills kind="initiative" periodLabel={periodLabel} />
               <Text
                 className="text-sm font-medium text-black dark:text-white"
                 numberOfLines={2}
-                accessibilityLabel={`Strategy ${strategy.name}`}>
-                {strategy.name}
+                accessibilityLabel={`Strategy ${initiative.name}`}>
+                {initiative.name}
               </Text>
               <CompactMeta lines={metaLines} />
             </View>
             <View className="items-center gap-1">
-              <TreeOrbCell kind="strategy" value={progress} compact />
+              <TreeOrbCell kind="initiative" value={progress} compact />
               <TreeToggleButton
                 expanded={expanded}
-                label={`Toggle Initiative ${strategy.name}`}
+                label={`Toggle Initiative ${initiative.name}`}
                 onPress={toggleExpanded}
               />
             </View>
           </TreeCardBody>
           <CompactActionRow
-            cardLabel={strategy.name}
-            detailLabel={`Detail ${strategy.name}`}
+            cardLabel={initiative.name}
+            detailLabel={`Detail ${initiative.name}`}
             onDetail={openDetail}
             onMore={openMenu}
             past={past}
             onAddPress={canAddInit ? onAddInitiative : undefined}
             addDimmed={addDimmed}
-            addLabel={`Tambah Initiative ke ${strategy.name}`}
+            addLabel={`Tambah Initiative ke ${initiative.name}`}
             addButtonLabel="+ Initiative"
           />
         </View>
@@ -587,14 +587,14 @@ const StrategySubRow = memo(function StrategySubRow({
             <SkeletonList count={2} />
           ) : isError ? (
             <ErrorState onRetry={retryChildren} />
-          ) : initiatives.length === 0 ? (
+          ) : action_plans.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Initiative. Tambah Initiative untuk eksekusi Strategy ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
               <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[4] - 10} />
-              {initiatives.map((i) => (
+              {action_plans.map((i) => (
                 <InitiativeSubRow
                   key={i.id}
                   item={i}
@@ -608,7 +608,7 @@ const StrategySubRow = memo(function StrategySubRow({
       <RowActionsMenu
         open={menuOpen}
         onClose={closeMenu}
-        title={strategy.name}
+        title={initiative.name}
         items={rowActions}
       />
     </View>
@@ -630,19 +630,19 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { strategies, isLoading, isError, refetch } = useStrategies(kpi.id, expanded);
-  const strategyIds = useMemo(
-    () => (expanded ? strategies.map((s) => s.id) : EMPTY_IDS),
-    [expanded, strategies],
+  const { initiatives, isLoading, isError, refetch } = useStrategies(kpi.id, expanded);
+  const initiativeIds = useMemo(
+    () => (expanded ? initiatives.map((s) => s.id) : EMPTY_IDS),
+    [expanded, initiatives],
   );
-  const { progressOf: stratProgressOf } = useCardProgress(strategyIds);
-  // WSA-04 — guard MBR: fetch kepatuhan kpi_area→strategy hanya saat expanded (parentType ''
+  const { progressOf: stratProgressOf } = useCardProgress(initiativeIds);
+  // WSA-04 — guard MBR: fetch kepatuhan strategy→initiative hanya saat expanded (parentType ''
   // menonaktifkan query di useMbrCompliance). Diteruskan ke StrategySubRow untuk guard "+ Initiative".
-  const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'kpi_area' : '', kpi.id);
+  const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'strategy' : '', kpi.id);
   const { focus, now } = usePeriodFocus();
   const past = isAddLocked(kpi, focus, now);
-  const canAddStrategy = can('create_strategy'); // WSA-13 — key presisi (bukan proxy create_kpi_area)
-  const rowActions = useTreeRowActions('kpi_area', kpi.id, kpi.name);
+  const canAddStrategy = can('create_initiative'); // WSA-13 — key presisi (bukan proxy create_strategy)
+  const rowActions = useTreeRowActions('strategy', kpi.id, kpi.name);
   const periodLabel = treePeriodPillLabel(kpi, focus);
   const metaLines = WS_TREE_COMPACT_COPY.kpiMeta({
     past,
@@ -658,7 +658,7 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
     [router, kpi.id],
   );
   const addStrategy = useCallback(
-    () => router.push(`/strategy/new?kpiAreaId=${kpi.id}` as Href),
+    () => router.push(`/initiative/new?kpiAreaId=${kpi.id}` as Href),
     [router, kpi.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -671,17 +671,17 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
         {/* Spec §6.5 + §8: level-2 (indent 16px), border kiri 5px warna KPI Area (#b76b00). */}
         <View
           className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-700 dark:bg-neutral-800"
-          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.kpi_area }}>
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy }}>
           <TreeCardBody cardLabel={kpi.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
-              <CompactHeaderPills kind="kpi_area" periodLabel={periodLabel} />
+              <CompactHeaderPills kind="strategy" periodLabel={periodLabel} />
               <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>
                 {kpi.name}
               </Text>
               <CompactMeta lines={metaLines} />
             </View>
             <View className="items-center gap-1">
-              <TreeOrbCell kind="kpi_area" value={progress} compact />
+              <TreeOrbCell kind="strategy" value={progress} compact />
               <TreeToggleButton
                 expanded={expanded}
                 label={`Toggle Strategy ${kpi.name}`}
@@ -706,17 +706,17 @@ const KpiAreaSubRow = memo(function KpiAreaSubRow({
             <SkeletonList count={2} />
           ) : isError ? (
             <ErrorState onRetry={retryChildren} />
-          ) : strategies.length === 0 ? (
+          ) : initiatives.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Strategy. Tambah Strategy untuk pecah KPI Area ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
               <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[3] - 10} />
-              {strategies.map((s) => (
+              {initiatives.map((s) => (
                 <StrategySubRow
                   key={s.id}
-                  strategy={s}
+                  initiative={s}
                   parentCompliance={mbrCompliance}
                   progress={stratProgressOf(s.id)}
                 />
@@ -756,13 +756,13 @@ const GoalRow = memo(function GoalRow({
 
   const count = kpiCountOf(goal);
   const past = isAddLocked(goal, focus, now);
-  const canAddKpi = can('create_kpi_area');
+  const canAddKpi = can('create_strategy');
   const rowActions = useTreeRowActions('goal', goal.id, goal.name);
   const periodLabel = treePeriodPillLabel(goal, focus);
   const metaLines = WS_TREE_COMPACT_COPY.goalMeta({
     past,
     statusLabel: TREE_STATUS_LABEL[goal.status] ?? goal.status,
-    // Kolom tabel `goals` bernama `target_value` (bukan `target_result` — itu milik `initiatives`).
+    // Kolom tabel `goals` bernama `target_value` (bukan `target_result` — itu milik `action_plans`).
     // Referensi lama menghasilkan `undefined` → target Goal tak pernah tampil di tree meta.
     target: goal.target_value,
   });
@@ -869,7 +869,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const { focus, now } = usePeriodFocus();
   const past = isAddLocked(item, focus, now);
-  const rowActions = useTreeRowActions('action_plan', item.id, item.name);
+  const rowActions = useTreeRowActions('task', item.id, item.name);
   const periodLabel = treePeriodPillLabel(item, focus);
   const metaLines = WS_TREE_COMPACT_COPY.actionPlanMeta({
     past,
@@ -891,10 +891,10 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
     <View>
       <View
         className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
-        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan, marginLeft: TREE_LEVEL_INDENT[level] }}>
+        style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.task, marginLeft: TREE_LEVEL_INDENT[level] }}>
         <TreeCardBody cardLabel={item.name} onPress={openDetail}>
           <View className="flex-1 gap-1.5">
-            <CompactHeaderPills kind="action_plan" periodLabel={periodLabel} />
+            <CompactHeaderPills kind="task" periodLabel={periodLabel} />
             <Text
               className="text-sm font-medium text-black dark:text-white"
               numberOfLines={2}
@@ -903,7 +903,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
             </Text>
             <CompactMeta lines={metaLines} />
           </View>
-          <TreeOrbCell kind="action_plan" value={orbValue} compact />
+          <TreeOrbCell kind="task" value={orbValue} compact />
         </TreeCardBody>
         {/* Action Plan = leaf: tanpa panah/+. Tetap pakai pola compact Detail + ⋯. */}
         <CompactActionRow
@@ -927,7 +927,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
 /**
  * Sub-row Initiative. WSA-01: expandable → Action Plan (level terbawah). Dipakai di Performance
  * (di bawah Strategy, level 4) dan Development (di bawah Problem Statement, level 3).
- * "+ Plan" gated `create_action_plan`, past-period lock.
+ * "+ Plan" gated `create_task`, past-period lock.
  */
 const InitiativeSubRow = memo(function InitiativeSubRow({
   item,
@@ -946,10 +946,10 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const { actionPlans, isLoading, isError, refetch } = useInitiativeActionPlans(item.id, expanded);
   const { focus, now } = usePeriodFocus();
   const past = isAddLocked(item, focus, now);
-  const canAddPlan = can('create_action_plan');
-  const rowActions = useTreeRowActions('initiative', item.id, item.name);
+  const canAddPlan = can('create_task');
+  const rowActions = useTreeRowActions('action_plan', item.id, item.name);
   const periodLabel = treePeriodPillLabel(item, focus);
-  const metaLines = WS_TREE_COMPACT_COPY.initiativeMeta({
+  const metaLines = WS_TREE_COMPACT_COPY.action_planMeta({
     past,
     statusLabel: TREE_STATUS_LABEL[item.status] ?? item.status,
     target: item.target_result,
@@ -959,11 +959,11 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/initiative/${item.id}` as Href),
+    () => router.push(`/action_plan/${item.id}` as Href),
     [router, item.id],
   );
   const addPlan = useCallback(
-    () => router.push(`/action-plan/new?initiativeId=${item.id}` as Href),
+    () => router.push(`/action-plan/new?action_planId=${item.id}` as Href),
     [router, item.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -976,10 +976,10 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
         {/* Spec §6.7/§7.5 + §8: border kiri 5px warna Initiative (#14845c). */}
         <View
           className="gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-800"
-          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative }}>
+          style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan }}>
           <TreeCardBody cardLabel={item.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
-              <CompactHeaderPills kind="initiative" periodLabel={periodLabel} />
+              <CompactHeaderPills kind="action_plan" periodLabel={periodLabel} />
               <Text
                 className="text-sm font-medium text-black dark:text-white"
                 numberOfLines={2}
@@ -989,7 +989,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
               <CompactMeta lines={metaLines} />
             </View>
             <View className="items-center gap-1">
-              <TreeOrbCell kind="initiative" value={progress} compact />
+              <TreeOrbCell kind="action_plan" value={progress} compact />
               <TreeToggleButton
                 expanded={expanded}
                 label={`Toggle Action Plan ${item.name}`}
@@ -1053,15 +1053,15 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
   const { can } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { initiatives, isLoading, isError, refetch } = useProblemStatementInitiatives(ps.id, expanded);
-  const initiativeIds = useMemo(
-    () => (expanded ? initiatives.map((i) => i.id) : EMPTY_IDS),
-    [expanded, initiatives],
+  const { action_plans, isLoading, isError, refetch } = useProblemStatementInitiatives(ps.id, expanded);
+  const action_planIds = useMemo(
+    () => (expanded ? action_plans.map((i) => i.id) : EMPTY_IDS),
+    [expanded, action_plans],
   );
-  const { progressOf: initProgressOf } = useCardProgress(initiativeIds);
+  const { progressOf: initProgressOf } = useCardProgress(action_planIds);
   const { focus, now } = usePeriodFocus();
   const past = isAddLocked(ps, focus, now);
-  const canAddInit = can('create_initiative');
+  const canAddInit = can('create_action_plan');
   const rowActions = useTreeRowActions('problem_statement', ps.id, ps.name);
   const periodLabel = treePeriodPillLabel(ps, focus);
   const metaLines = WS_TREE_COMPACT_COPY.problemStatementMeta({
@@ -1078,7 +1078,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
     [router, ps.id],
   );
   const addInitiative = useCallback(
-    () => router.push(`/initiative/new?problemStatementId=${ps.id}` as Href),
+    () => router.push(`/action_plan/new?problemStatementId=${ps.id}` as Href),
     [router, ps.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -1124,14 +1124,14 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
             <SkeletonList count={2} />
           ) : isError ? (
             <ErrorState onRetry={retryChildren} />
-          ) : initiatives.length === 0 ? (
+          ) : action_plans.length === 0 ? (
             <Text className="px-1 py-1 text-xs text-neutral-500 dark:text-neutral-400">
               Belum ada Initiative. Tambah Initiative untuk eksekusi Problem Statement ini.
             </Text>
           ) : (
             <View className="gap-2" style={{ position: 'relative' }}>
               <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[3] - 10} />
-              {initiatives.map((i) => (
+              {action_plans.map((i) => (
                 <InitiativeSubRow
                   key={i.id}
                   item={i}

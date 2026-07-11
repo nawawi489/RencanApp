@@ -206,12 +206,12 @@ describe('listInitiativesByProblemStatementIds (UI-S-DA2)', () => {
 });
 
 describe('listKpiAreaResultValueSources (UI-S-KD2/KD3)', () => {
-  it('[17] filter kpi_area_id, order terbaru dahulu', async () => {
+  it('[17] filter strategy_id, order terbaru dahulu', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'rv1' }], error: null });
     mockFrom.mockReturnValue(builder);
     const rows = await listKpiAreaResultValueSources('k1');
-    expect(mockFrom).toHaveBeenCalledWith('action_plan_result_values');
-    expect(calls.eq).toEqual(['kpi_area_id', 'k1']);
+    expect(mockFrom).toHaveBeenCalledWith('task_result_values');
+    expect(calls.eq).toEqual(['strategy_id', 'k1']);
     expect(calls.order).toEqual(['created_at', { ascending: false }]);
     expect(rows).toEqual([{ id: 'rv1' }]);
   });
@@ -285,14 +285,14 @@ describe('countCompletedActionPlansInPeriod — PPL-06 Kontribusi (OQ-6, approks
     expect(called).toBe(false);
   });
 
-  it('[D9] query shape: from(action_plans) eq(pic_id,userId) eq(status,done) gte(updated_at,start) lte(updated_at,end)', async () => {
+  it('[D9] query shape: from(tasks) eq(pic_id,userId) eq(status,done) gte(updated_at,start) lte(updated_at,end)', async () => {
     const { builder } = makeQueryThenable({
       data: [{ id: 'ap1' }, { id: 'ap2' }, { id: 'ap3' }],
       error: null,
     });
     mockFrom.mockReturnValue(builder);
     const n = await countCompletedActionPlansInPeriod('u1', period);
-    expect(mockFrom).toHaveBeenCalledWith('action_plans');
+    expect(mockFrom).toHaveBeenCalledWith('tasks');
     const eqCalls = (builder.eq as jest.Mock).mock.calls;
     expect(eqCalls).toEqual(
       expect.arrayContaining([

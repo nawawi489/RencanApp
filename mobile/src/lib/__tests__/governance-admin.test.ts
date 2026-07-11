@@ -190,8 +190,8 @@ describe('evaluation', () => {
 describe('archive + search + settings', () => {
   it('[24] archiveCard memanggil rpc archive_card', async () => {
     mockRpc.mockResolvedValue({ data: null, error: null });
-    await archiveCard('action_plan', 'ap1');
-    expect(mockRpc).toHaveBeenCalledWith('archive_card', { p_entity_type: 'action_plan', p_entity_id: 'ap1' });
+    await archiveCard('task', 'ap1');
+    expect(mockRpc).toHaveBeenCalledWith('archive_card', { p_entity_type: 'task', p_entity_id: 'ap1' });
   });
 
   it('[31] searchCards memanggil rpc search_cards return array', async () => {

@@ -95,7 +95,7 @@ describe('useSubmissionFlow — 2-phase commit', () => {
       { uri: 'file:///b.png', name: 'b.png', size: 200, mimeType: 'image/png' },
     ],
     staticEvidence: [{ kind: 'text_note', text_content: 'catatan' }],
-    resultValues: [{ kpi_area_id: 'k1', label: 'r', value_type: 'number', value_text: '145', value_numeric: 145 }],
+    resultValues: [{ strategy_id: 'k1', label: 'r', value_type: 'number', value_text: '145', value_numeric: 145 }],
     note: 'oke',
   };
 

@@ -1,5 +1,5 @@
 // Data layer Fase 4 — strategies.ts. Mock ../supabase. Menguji createStrategy (INSERT ber-RLS:
-// payload memuat kpi_area_id + field kedalaman + organization_id + created_by; rpc TIDAK dipanggil),
+// payload memuat strategy_id + field kedalaman + organization_id + created_by; rpc TIDAK dipanggil),
 // activateStrategy (rpc activate_strategy), listStrategies (guard kosong + eq/order), getStrategy
 // (single), propagasi error.
 const mockRpc = jest.fn();
@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 const NEW: Parameters<typeof createStrategy>[0] = {
-  kpi_area_id: 'k1',
+  strategy_id: 'k1',
   name: 'Strategi A',
   description: 'desc',
   reason: 'alasan',
@@ -63,7 +63,7 @@ const NEW: Parameters<typeof createStrategy>[0] = {
 };
 
 describe('createStrategy', () => {
-  it('[1] INSERT memuat kpi_area_id + field kedalaman + organization_id + created_by; rpc tidak dipanggil', async () => {
+  it('[1] INSERT memuat strategy_id + field kedalaman + organization_id + created_by; rpc tidak dipanggil', async () => {
     const profiles = makeProfilesBuilder('org1');
     const { builder, calls } = makeQueryThenable({ data: { id: 's1' }, error: null });
     mockFrom.mockImplementation((table: string) => (table === 'profiles' ? profiles : builder));
@@ -74,7 +74,7 @@ describe('createStrategy', () => {
     expect(mockFrom).toHaveBeenCalledWith('strategies');
     expect(calls.insert).toEqual([
       {
-        kpi_area_id: 'k1',
+        strategy_id: 'k1',
         name: 'Strategi A',
         description: 'desc',
         reason: 'alasan',
@@ -119,13 +119,13 @@ describe('listStrategies', () => {
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
-  it('[6] query eq(kpi_area_id) + order created_at asc', async () => {
+  it('[6] query eq(strategy_id) + order created_at asc', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 's1' }], error: null });
     mockFrom.mockReturnValue(builder);
     const rows = await listStrategies('k1');
     expect(mockFrom).toHaveBeenCalledWith('strategies');
     expect(calls.select).toEqual(['*']);
-    expect(calls.eq).toEqual(['kpi_area_id', 'k1']);
+    expect(calls.eq).toEqual(['strategy_id', 'k1']);
     expect(calls.order).toEqual(['created_at', { ascending: true }]);
     expect(rows).toEqual([{ id: 's1' }]);
   });

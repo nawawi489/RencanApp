@@ -9,7 +9,7 @@ import { supabase } from './supabase';
 export { STATUS_TONE } from './cards';
 export type { PersonRef } from './cards';
 
-export type KpiArea = Tables<'kpi_areas'>;
+export type KpiArea = Tables<'strategies'>;
 
 export { PLANNING_STATUS_LABEL } from './goals';
 
@@ -18,7 +18,7 @@ export { PLANNING_STATUS_LABEL } from './goals';
 export async function listKpiAreas(goalId: string): Promise<KpiArea[]> {
   if (!goalId) return [];
   const { data, error } = await supabase
-    .from('kpi_areas')
+    .from('strategies')
     .select('*')
     .eq('goal_id', goalId)
     .order('created_at', { ascending: true });
@@ -27,7 +27,7 @@ export async function listKpiAreas(goalId: string): Promise<KpiArea[]> {
 }
 
 export async function getKpiArea(id: string): Promise<KpiArea> {
-  const { data, error } = await supabase.from('kpi_areas').select('*').eq('id', id).single();
+  const { data, error } = await supabase.from('strategies').select('*').eq('id', id).single();
   if (error) throw error;
   return data;
 }
@@ -53,7 +53,7 @@ export type NewKpiArea = {
 export async function createKpiArea(input: NewKpiArea): Promise<KpiArea> {
   const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
-    .from('kpi_areas')
+    .from('strategies')
     .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
@@ -63,7 +63,7 @@ export async function createKpiArea(input: NewKpiArea): Promise<KpiArea> {
 
 /**
  * Lengkapi/ubah KPI Area Draft (mis. isi Target untuk KPI Area hasil template yang awalnya null).
- * Update ber-RLS (policy kpi_areas_update: creator/PIC/manage_others). Server tetap penegak akhir.
+ * Update ber-RLS (policy strategies_update: creator/PIC/manage_others). Server tetap penegak akhir.
  */
 export type KpiAreaPatch = Partial<
   Pick<
@@ -82,7 +82,7 @@ export type KpiAreaPatch = Partial<
 
 export async function updateKpiArea(id: string, patch: KpiAreaPatch): Promise<KpiArea> {
   const { data, error } = await supabase
-    .from('kpi_areas')
+    .from('strategies')
     .update(patch)
     .eq('id', id)
     .select('*')
@@ -94,6 +94,6 @@ export async function updateKpiArea(id: string, patch: KpiAreaPatch): Promise<Kp
 // ---------------------------------------------------------------- RPC (lifecycle)
 
 export async function activateKpiArea(id: string): Promise<void> {
-  const { error } = await supabase.rpc('activate_kpi_area', { p_kpi_area_id: id });
+  const { error } = await supabase.rpc('activate_strategy', { p_strategy_id: id });
   if (error) throw error;
 }

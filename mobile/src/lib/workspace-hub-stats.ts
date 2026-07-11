@@ -26,7 +26,7 @@ function ratioActive(items: { status: string }[]): number | null {
 
 export function derivePerformanceHubStats(goals: GoalWithKpiCount[]): HubStats {
   const childCount = goals.reduce((sum, g) => {
-    const c = g.kpi_areas?.[0]?.count ?? 0;
+    const c = g.strategies?.[0]?.count ?? 0;
     return sum + (typeof c === 'number' ? c : 0);
   }, 0);
   const activeCount = goals.filter((g) => g.status === 'active').length;

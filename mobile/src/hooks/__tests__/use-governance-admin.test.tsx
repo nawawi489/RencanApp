@@ -227,7 +227,7 @@ describe('archive', () => {
     expect(mockGov.archiveCard).toHaveBeenCalledWith('goal', 'g1');
     // Key nyata yang dipakai use-workspace.ts; key 'workspace' tidak pernah ada di kode.
     expect(spy).toHaveBeenCalledWith({ queryKey: ['goals'] });
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['kpi_areas'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['strategies'] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['strategies'] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['initiatives'] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['development_areas'] });

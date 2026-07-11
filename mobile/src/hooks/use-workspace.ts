@@ -1,6 +1,6 @@
 // Hooks Fase 4 — Workspace (Goal → KPI Area → Strategy → Initiative). Pemanggil tipis di atas
 // @/lib/goals, @/lib/kpi-areas, @/lib/strategies, @/lib/cards. Query keys TERKUNCI (lihat kontrak):
-// ['goals'], ['goal', id], ['kpi_areas', goalId], ['strategies', kpiAreaId],
+// ['goals'], ['goal', id], ['strategies', goalId], ['strategies', kpiAreaId],
 // ['goal_templates']. Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -130,7 +130,7 @@ export function useGoal(id: string) {
  */
 export function useKpiAreas(goalId: string, enabled = true) {
   const q = useQuery({
-    queryKey: ['kpi_areas', goalId],
+    queryKey: ['strategies', goalId],
     queryFn: () => listKpiAreas(goalId),
     enabled: !!goalId && enabled,
   });
@@ -184,7 +184,7 @@ export function useStrategyInitiatives(strategyId: string, enabled = true) {
 /** Action Plan di bawah satu Initiative. Lazy-fetch di tree (WSA-01, level terbawah). */
 export function useInitiativeActionPlans(initiativeId: string, enabled = true) {
   const q = useQuery({
-    queryKey: ['action_plans', 'initiative', initiativeId],
+    queryKey: ['tasks', 'initiative', initiativeId],
     queryFn: () => listActionPlans(initiativeId),
     enabled: !!initiativeId && enabled,
   });
@@ -210,7 +210,7 @@ export function usePerson(id: string | null | undefined) {
 /** KPI Area template di bawah satu Goal Template (untuk isian Target di Wizard). */
 export function useKpiAreaTemplates(goalTemplateId: string) {
   const q = useQuery({
-    queryKey: ['kpi_area_templates', goalTemplateId],
+    queryKey: ['strategy_templates', goalTemplateId],
     queryFn: () => listKpiAreaTemplates(goalTemplateId),
     enabled: !!goalTemplateId,
   });
@@ -275,7 +275,7 @@ export function useGoalActions() {
     mutationFn: (goalId: string) => restoreGoalTemplateItems(goalId),
     onSuccess: (_data, goalId) => {
       qc.invalidateQueries({ queryKey: ['goal', goalId] });
-      qc.invalidateQueries({ queryKey: ['kpi_areas', goalId] });
+      qc.invalidateQueries({ queryKey: ['strategies', goalId] });
     },
   });
 
@@ -302,7 +302,7 @@ export function useGoalActions() {
 /** Baris breakdown periode untuk satu KPI Area. Hanya fetch saat kpiAreaId terisi. */
 export function useKpiAreaBreakdown(kpiAreaId: string) {
   const q = useQuery({
-    queryKey: ['kpi_area_breakdown', kpiAreaId],
+    queryKey: ['strategy_breakdown', kpiAreaId],
     queryFn: () => listKpiAreaBreakdown(kpiAreaId),
     enabled: !!kpiAreaId,
   });
@@ -321,7 +321,7 @@ export function useKpiAreaBreakdownActions(kpiAreaId: string) {
     mutationFn: (args: Omit<ReplaceArgs, 'kpiAreaId'>) =>
       replaceKpiAreaBreakdown({ ...args, kpiAreaId }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['kpi_area_breakdown', kpiAreaId] });
+      qc.invalidateQueries({ queryKey: ['strategy_breakdown', kpiAreaId] });
     },
   });
   return {
@@ -338,7 +338,7 @@ export function useKpiAreaActions(goalId: string) {
     mutationFn: (input: NewKpiArea) => createKpiArea(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goal', goalId] });
-      qc.invalidateQueries({ queryKey: ['kpi_areas', goalId] });
+      qc.invalidateQueries({ queryKey: ['strategies', goalId] });
       // Anak baru → total anak Goal berubah → capaian Goal (orb) bisa berubah.
       qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
@@ -347,7 +347,7 @@ export function useKpiAreaActions(goalId: string) {
   const activateM = useMutation({
     mutationFn: (id: string) => activateKpiArea(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['kpi_areas', goalId] });
+      qc.invalidateQueries({ queryKey: ['strategies', goalId] });
       qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
   });
@@ -474,7 +474,7 @@ export function useStrategyActions(kpiAreaId: string) {
       qc.invalidateQueries({ queryKey: ['strategies', kpiAreaId] });
       // KPI Area & Goal punya embedded count anak → wajib refresh agar badge tidak basi.
       // Tidak ada goalId di scope; pakai prefix.
-      qc.invalidateQueries({ queryKey: ['kpi_areas'] });
+      qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['goal'] });
       qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },
@@ -484,7 +484,7 @@ export function useStrategyActions(kpiAreaId: string) {
     mutationFn: (id: string) => activateStrategy(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['strategies', kpiAreaId] });
-      qc.invalidateQueries({ queryKey: ['kpi_areas'] });
+      qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['goal'] });
       qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
     },

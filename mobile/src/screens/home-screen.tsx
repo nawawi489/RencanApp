@@ -156,7 +156,7 @@ export default function LiveHomeScreen() {
     router.push(
       (item.kind === 'instance'
         ? `/action-plan/instance/${item.id}`
-        : `/action-plan/${item.action_plan_id}`) as Href,
+        : `/action-plan/${item.task_id}`) as Href,
     );
 
   const todayQ = useQuery({ queryKey: ['org-today'], queryFn: getOrgToday, staleTime: Infinity });

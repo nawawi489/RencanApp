@@ -6,7 +6,7 @@ import type { Tables } from './database.types';
 import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
-export type Strategy = Tables<'strategies'>;
+export type Strategy = Tables<'initiatives'>;
 
 export { STATUS_TONE };
 
@@ -18,16 +18,16 @@ export { PLANNING_STATUS_LABEL } from './goals';
 export async function listStrategies(kpiAreaId: string): Promise<Strategy[]> {
   if (!kpiAreaId) return [];
   const { data, error } = await supabase
-    .from('strategies')
+    .from('initiatives')
     .select('*')
-    .eq('kpi_area_id', kpiAreaId)
+    .eq('strategy_id', kpiAreaId)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data;
 }
 
 export async function getStrategy(id: string): Promise<Strategy> {
-  const { data, error } = await supabase.from('strategies').select('*').eq('id', id).single();
+  const { data, error } = await supabase.from('initiatives').select('*').eq('id', id).single();
   if (error) throw error;
   return data;
 }
@@ -35,7 +35,7 @@ export async function getStrategy(id: string): Promise<Strategy> {
 // ---------------------------------------------------------------- mutations
 
 export type NewStrategy = {
-  kpi_area_id: string;
+  strategy_id: string;
   name: string;
   description?: string | null;
   reason: string | null;
@@ -51,7 +51,7 @@ export type NewStrategy = {
 export async function createStrategy(input: NewStrategy): Promise<Strategy> {
   const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
-    .from('strategies')
+    .from('initiatives')
     .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
@@ -62,6 +62,6 @@ export async function createStrategy(input: NewStrategy): Promise<Strategy> {
 // ---------------------------------------------------------------- RPC (lifecycle)
 
 export async function activateStrategy(id: string): Promise<void> {
-  const { error } = await supabase.rpc('activate_strategy', { p_strategy_id: id });
+  const { error } = await supabase.rpc('activate_initiative', { p_initiative_id: id });
   if (error) throw error;
 }
