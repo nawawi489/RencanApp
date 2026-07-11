@@ -1529,3 +1529,34 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - **wiki/concepts/**{execution-loop,permission-model,scope-guardrails,audit-governance}**.md**: shift 2-kata "Action Plan"→"Task", "KPI Area"→"Strategy" via placeholder-safe sed batch.
 - **Historicals TIDAK disentuh** (refleksi keputusan waktu itu): `fase5-tdd-plan.md`, `fase6-spec.md`, `fase6-tdd-plan.md`, `fase7-spec.md`, `fase7-tdd-plan.md`, `fase8-*`, `bugfix-*`, source pages di `wiki/sources/`.
 - Sisa nanti (F7-continue): specs/ (10 file) mendokumentasikan bagian yang stale — sebagian dari mereka adalah historical (fase-N-spec.md), sebagian aktif (mis. status-priority-descope). Yang aktif akan disentuh; historicals skip.
+
+## [2026-07-11] update | F5 grep-guard + F6 rollback drill — semua fase SELESAI
+
+- **F5 grep-guard**: `scripts/ci/no-old-names.sh` (ripgrep) memindai `mobile/src`, `supabase/migrations|tests`, `wiki/`, `specs/`, `DESIGN.md`, `PRD.md` untuk identifier legacy (`kpi_area_id`, `kpi_areas`, `KpiArea`, `action_plan_instances`, dll). Allowlist: migrasi historis (0000..0044), migrasi rename (0045/0045R/0046), fase historicals (fase-*-spec/tdd-plan), wiki/sources, wiki/test-reports, entities mapping section, generated types file. Di-wire ke `.github/workflows/ci.yml` sbg job `no-old-names` yang jalan sebelum quality (lint/type/test).
+- Sisa leak wiki: `tech-stack.md` (`action_plan_submissions`→`task_submissions` + "Diskusi Rencana Aksi"), `scope-guardrails.md` (`kpi_area_id`→`strategy_id` di contoh key), `specs/inbox-chat-ui.md` (`action_plan_submissions`→`task_submissions`, `can_access_action_plan`→`can_access_task`).
+- **F6 rollback drill**:
+  - `supabase/migrations/0045R_revert_workspace_terminology.sql` — DDL revert simetris bottom-up (drop view → revert FK top-down → revert tabel top-down → revert index mirror → recreate view legacy) dalam satu BEGIN/COMMIT.
+  - Drill lokal terungkap: constraint `initiatives_single_parent` di-rename `0046` S0 tapi tidak di-revert `0045R` awal → di-fix (0045R §0R + 0046 S0 wrapped DO block idempotent).
+  - Drill exposed policy-replay collision saat `0046` forward di-re-run setelah revert (tidak-realistis di produksi tapi umum di dev). Dokumentasikan sbg F6a follow-up (tambah `DROP POLICY IF EXISTS <new-name>` di generator). Tidak block produksi karena flow produksi = forward-satu-arah + snapshot restore.
+  - `specs/rollback-plan.md` — runbook R0..R5 lengkap: pre-check → 0045R DDL revert → function/policy restore (Option A pg_dump snapshot / Option B re-run migrations 0005..0044) → mobile revert → verifikasi → post-mortem. Owner sign-off required (Super Admin + CTO).
+- **Verifikasi drill**: 0045R applied clean, 10 legacy tabel restored + 4 rows tiap level (seed intact), 0 new-name lingering, view `kpi_area_current_values` recreated. Post-drill re-apply mengembalikan lokal ke state V1.8.3 penuh (`map_legacy_entity_type('kpi_area')` = `'strategy'`). Grep-guard clean (10 patterns × 6 roots). jest hijau.
+- Commit: `4678d60` di branch `feat/rename-workspace-terminology`.
+
+## [2026-07-11] milestone | Rename V1.8.3 semua fase SELESAI di branch feat/rename-workspace-terminology
+
+Status akhir:
+- **F0** (owner gate + PRD.md V1.8.3 + spec + mapping): ✅
+- **F1** (DB rename tabel/kolom/index/view via 0045): ✅
+- **F2** (enum backfill + map_legacy_entity_type helper, bundled di 0046): ✅
+- **F3** (62 function + 19 policy + 3 trigger rewrite via 0046): ✅
+- **F4** (mobile client full symbol rename + copy shifted-English + lib/route mv): ✅ **tsc 0 + jest 1163/1163**
+- **F5** (grep-guard `no-old-names.sh` + wire ke CI): ✅
+- **F6** (rollback drill + 0045R + rollback-plan.md): ✅ (F6a policy-replay follow-up documented)
+- **F7** (DESIGN.md + wiki overview/entities/concepts + specs sync section-scoped): ✅
+
+Sisa BLOCKED owner action:
+- **RWT-12** (Content Lead DRI + tanggal deliverable copy edukasi Indonesian: Strategi/Inisiatif/Rencana Aksi/Tugas + rewrite body help-popup) — masih PENDING. Label UI sekarang = shifted-English (interim per keputusan owner 2026-07-11).
+- **RN-Web e2e verify** (happy-path di browser preview dgn Supabase env aktif) — belum dijalankan.
+- **F6a policy replay idempotency** — dokumentasi cukup, produksi tidak block.
+
+PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berubah, 60+ RPC + 19 RLS + 3 trigger + 10 tabel + 14 FK + view + 4 route folder + 5 lib file + 1 komponen file semua rename konsisten dgn tsc+jest+grep-guard hijau.
