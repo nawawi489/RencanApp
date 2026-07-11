@@ -168,7 +168,7 @@ values
 on conflict (id) do nothing;
 
 -- KPI Areas (4)
-insert into public.kpi_areas (id, organization_id, goal_id, name, target, target_numeric, target_unit, pic_id, period_start, period_end, status)
+insert into public.strategies (id, organization_id, goal_id, name, target, target_numeric, target_unit, pic_id, period_start, period_end, status)
 values
   ('77777777-7777-7777-7777-000000000001', (select id from public.organizations limit 1),
    '66666666-6666-6666-6666-000000000001', 'Akuisisi Customer Baru',
@@ -189,7 +189,7 @@ values
 on conflict (id) do nothing;
 
 -- Strategies (4)
-insert into public.strategies (id, organization_id, kpi_area_id, name, reason, main_risk, alternative, pic_id, period_start, period_end, status)
+insert into public.initiatives (id, organization_id, strategy_id, name, reason, main_risk, alternative, pic_id, period_start, period_end, status)
 values
   ('88888888-8888-8888-8888-000000000001', (select id from public.organizations limit 1),
    '77777777-7777-7777-7777-000000000001', 'Campaign Referral Customer Aktif',
@@ -218,7 +218,7 @@ values
 on conflict (id) do nothing;
 
 -- Initiatives (4)
-insert into public.initiatives (id, organization_id, strategy_id, name, description, target_result, pic_id, period_start, period_end, status, created_by)
+insert into public.action_plans (id, organization_id, initiative_id, name, description, target_result, pic_id, period_start, period_end, status, created_by)
 values
   ('99999999-9999-9999-9999-000000000001', (select id from public.organizations limit 1),
    '88888888-8888-8888-8888-000000000001', 'Launch Program Referral',
@@ -272,7 +272,7 @@ on conflict (id) do nothing;
 -- 4. ACTION PLANS & EXECUTION
 -- =============================================================================
 -- Action plans (4)
-insert into public.action_plans (id, organization_id, initiative_id, name, description, pic_id, reviewer_id,
+insert into public.tasks (id, organization_id, action_plan_id, name, description, pic_id, reviewer_id,
   start_date, deadline, expected_output, definition_of_done, priority, repeat_setting,
   evidence_required, result_value_required, review_required, status, created_by)
 values
@@ -307,8 +307,8 @@ values
 on conflict (id) do nothing;
 
 -- Repeat rules (untuk AP #2 dan #4)
-insert into public.action_plan_repeat_rules (
-  id, organization_id, action_plan_id, frequency, weekdays, repeat_start_date, repeat_end_date,
+insert into public.task_repeat_rules (
+  id, organization_id, task_id, frequency, weekdays, repeat_start_date, repeat_end_date,
   time_of_day, missed_rule, grace_period_minutes, created_by
 ) values
   ('dddddddd-dddd-dddd-dddd-000000000001', (select id from public.organizations limit 1),
@@ -325,8 +325,8 @@ on conflict (id) do nothing;
 -- reviewer_id di-set agar layar instance menampilkan reviewer + panel review.
 -- #2 (2026-07-02) berstatus 'submitted' — submission f..002 masih 'pending' menunggu
 -- review Dewi (…003); current_submission_id di-set via UPDATE setelah submissions dibuat.
-insert into public.action_plan_instances (
-  id, organization_id, action_plan_id, repeat_rule_id, instance_date, instance_time,
+insert into public.task_instances (
+  id, organization_id, task_id, repeat_rule_id, instance_date, instance_time,
   deadline_at, status, pic_id, reviewer_id, submitted_at, submitted_late
 ) values
   ('eeeeeeee-eeee-eeee-eeee-000000000001', (select id from public.organizations limit 1),
@@ -351,10 +351,10 @@ insert into public.action_plan_instances (
    '2026-07-06 08:55:00+07', false)
 on conflict (id) do nothing;
 
--- Submissions (2). action_plan_instance_id WAJIB di-set agar submission tampil di
+-- Submissions (2). task_instance_id WAJIB di-set agar submission tampil di
 -- "Riwayat Submission" layar instance + jadi current_submission yang bisa direview.
-insert into public.action_plan_submissions (
-  id, action_plan_id, action_plan_instance_id, version_number, submitted_by, submitted_at, note, review_status, reviewed_by, reviewed_at
+insert into public.task_submissions (
+  id, task_id, task_instance_id, version_number, submitted_by, submitted_at, note, review_status, reviewed_by, reviewed_at
 ) values
   ('ffffffff-ffff-ffff-ffff-000000000001', 'cccccccc-cccc-cccc-cccc-000000000002',
    'eeeeeeee-eeee-eeee-eeee-000000000001', 1,
@@ -369,10 +369,10 @@ insert into public.action_plan_submissions (
 on conflict (id) do nothing;
 
 -- Tautkan current_submission_id instance (FK → submissions, di-set setelah insert submissions).
-update public.action_plan_instances i
+update public.task_instances i
   set current_submission_id = s.id
-  from public.action_plan_submissions s
-  where s.action_plan_instance_id = i.id
+  from public.task_submissions s
+  where s.task_instance_id = i.id
     and i.id in ('eeeeeeee-eeee-eeee-eeee-000000000001', 'eeeeeeee-eeee-eeee-eeee-000000000002');
 
 -- Evidence files (2)
@@ -388,7 +388,7 @@ values
 on conflict (id) do nothing;
 
 -- Reviews (1)
-insert into public.reviews (id, action_plan_id, submission_id, reviewer_id, decision, reason)
+insert into public.reviews (id, task_id, submission_id, reviewer_id, decision, reason)
 values
   ('88888888-ffff-ffff-ffff-000000000001', 'cccccccc-cccc-cccc-cccc-000000000002',
    'ffffffff-ffff-ffff-ffff-000000000001', '11111111-1111-1111-1111-000000000003',
@@ -420,7 +420,7 @@ insert into public.score_formula_versions (
   ('66666666-ffff-ffff-ffff-000000000001', '66666666-eeee-eeee-eeee-000000000001',
    1, 'staff', (select id from public.organizations limit 1), 'active',
    '[
-     {"code": "EXECUTION", "label": "Eksekusi Action Plan", "weight": 50, "source_metric": "action_plan_completion"},
+     {"code": "EXECUTION", "label": "Eksekusi Action Plan", "weight": 50, "source_metric": "task_completion"},
      {"code": "QUALITY",   "label": "Kualitas Hasil",      "weight": 30, "source_metric": "review_pass_rate"},
      {"code": "GOVERNANCE","label": "Disiplin Governance", "weight": 20, "source_metric": "governance_discipline"}
    ]'::jsonb,
@@ -460,7 +460,7 @@ insert into public.governance_violations (
   id, organization_id, user_id, violation_type, entity_type, entity_id, detail, severity, resolution_status
 ) values
   ('66666666-cccc-cccc-cccc-000000000001', (select id from public.organizations limit 1),
-   '11111111-1111-1111-1111-000000000005', 'self_approval_attempt', 'action_plan',
+   '11111111-1111-1111-1111-000000000005', 'self_approval_attempt', 'task',
    'cccccccc-cccc-cccc-cccc-000000000002',
    '{"note": "Staff mencoba approve submission miliknya sendiri (di-block trigger)"}'::jsonb,
    'low', 'open')
@@ -469,16 +469,16 @@ on conflict (id) do nothing;
 -- =============================================================================
 -- 6. CHAT & NOTIFICATIONS (ringan, agar inbox tidak kosong)
 -- =============================================================================
--- Catatan: tabel chat_rooms punya trigger `initiative_chat_room` yang auto-create
--- chat_room setiap kali initiatives di-insert — jadi kita UPDATE name-nya saja,
+-- Catatan: tabel chat_rooms punya trigger `action_plan_chat_room` yang auto-create
+-- chat_room setiap kali action_plans di-insert — jadi kita UPDATE name-nya saja,
 -- lalu tambahkan chat_room_members, chat_messages, dan notifications.
 
--- Rename chat_room auto-created untuk initiative 'Launch Program Referral'
+-- Rename chat_room auto-created untuk action_plan 'Launch Program Referral'
 update public.chat_rooms cr set name = 'Diskusi Launch Program Referral'
-from public.initiatives i
-where cr.initiative_id = i.id and i.id = '99999999-9999-9999-9999-000000000001';
+from public.action_plans i
+where cr.action_plan_id = i.id and i.id = '99999999-9999-9999-9999-000000000001';
 
--- Chat room members (PIC + manager untuk initiative Launch Program Referral)
+-- Chat room members (PIC + manager untuk action_plan Launch Program Referral)
 insert into public.chat_room_members (chat_room_id, member_id)
 select cr.id, m.id
 from public.chat_rooms cr
@@ -486,7 +486,7 @@ cross join (values
   ('11111111-1111-1111-1111-000000000003'::uuid),
   ('11111111-1111-1111-1111-000000000005'::uuid)
 ) as m(id)
-where cr.initiative_id = '99999999-9999-9999-9999-000000000001'
+where cr.action_plan_id = '99999999-9999-9999-9999-000000000001'
 on conflict do nothing;
 
 -- Chat messages (menggunakan chat_room_id dari trigger)
@@ -497,7 +497,7 @@ select '66666666-eeee-eeee-eeee-000000000001'::uuid,
        '11111111-1111-1111-1111-000000000003'::uuid,
        'Mohon draft landing page paling lambat 10 Juli ya.'
 from public.chat_rooms cr
-where cr.initiative_id = '99999999-9999-9999-9999-000000000001'
+where cr.action_plan_id = '99999999-9999-9999-9999-000000000001'
 union all
 select '66666666-eeee-eeee-eeee-000000000002'::uuid,
        cr.organization_id,
@@ -505,20 +505,20 @@ select '66666666-eeee-eeee-eeee-000000000002'::uuid,
        '11111111-1111-1111-1111-000000000005'::uuid,
        'Siap kak, draft sedang dibuat, design sudah disetujui marketing.'
 from public.chat_rooms cr
-where cr.initiative_id = '99999999-9999-9999-9999-000000000001'
+where cr.action_plan_id = '99999999-9999-9999-9999-000000000001'
 on conflict (id) do nothing;
 
 insert into public.notifications (id, organization_id, recipient_id, actor_id, type, entity_type, entity_id, title, body, is_read)
 values
-  -- review_request instance: entity_type=action_plan_instance + entity_id=instance (WS-3b).
+  -- review_request instance: entity_type=task_instance + entity_id=instance (WS-3b).
   -- CTA "Review Sekarang" harus membuka layar instance e..002 (submission f..002 pending), bukan parent AP.
   ('66666666-ffff-ffff-ffff-000000000010', (select id from public.organizations limit 1),
    '11111111-1111-1111-1111-000000000003', '11111111-1111-1111-1111-000000000005',
-   'review_request', 'action_plan_instance', 'eeeeeeee-eeee-eeee-eeee-000000000002',
+   'review_request', 'task_instance', 'eeeeeeee-eeee-eeee-eeee-000000000002',
    'Review Submission Baru', 'Submission baru menunggu review kamu', false),
   ('66666666-ffff-ffff-ffff-000000000011', (select id from public.organizations limit 1),
    '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
-   'approved', 'action_plan_instance', 'eeeeeeee-eeee-eeee-eeee-000000000001',
+   'approved', 'task_instance', 'eeeeeeee-eeee-eeee-eeee-000000000001',
    'Submission Disetujui', 'Submission basket size Senin disetujui', true)
 on conflict (id) do nothing;
 
@@ -529,7 +529,7 @@ commit;
 -- =============================================================================
 -- Setelah file ini jalan, coba query:
 --   select email from auth.users where email like '%@rencan.local';
---   select count(*) from public.action_plans;
+--   select count(*) from public.tasks;
 --   select u.email, r.auto_calculated_score
 --   from public.user_score_results r join auth.users u on u.id = r.user_id;
 --
