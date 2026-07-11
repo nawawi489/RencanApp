@@ -1479,3 +1479,15 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
   - 3 trigger baru aktif; 0 lingering kpi_area_* function.
 - Commit: `c850a4c` di branch `feat/rename-workspace-terminology`.
 - Berikutnya: F4 Mobile client rewrite (route folder mv bottom-up + lib/hooks/components + glossary/workspace-copy + PostgREST embed + realtime filter). Estimasi 3–5 jam kerja fokus karena menyentuh ~50 file source + 45 file test.
+
+## [2026-07-11] update | F4 partial — regen types + sed rename di 22 file lib/hooks/screens
+
+- `mobile/src/lib/database.types.ts` di-regenerate dari local Supabase via `npx supabase gen types typescript --local`. Sekarang shape: `strategies`, `initiatives`, `action_plans`, `tasks`, `task_instances`, `strategy_templates`, `strategy_target_breakdowns` (semua new-schema names).
+- Placeholder-safe sed pipeline diterapkan ke 22 file (lib/*, lib/__tests__/*, hooks/*, hooks/__tests__/*, screens/*, components/submission-card.tsx). tsc error 317 → 55 (turun 83%).
+- Sisa 55 error butuh review manual per-file. Root cause: sed level-shift bertabrakan dengan ambiguitas semantik (mis. `NewInitiative` type post-sed punya field `initiative_id` tetapi harusnya `strategy_id` mengikuti kolom F1-renamed).
+- Belum dilakukan (spec §10 F4 sisa work):
+  - Rename folder route: `mobile/src/app/(app)/kpi-area/` → `strategy/` dst (collision handling via bottom-up)
+  - Rename lib file: `kpi-areas.ts` → `strategies.ts` dst
+  - Update Bahasa Indonesia labels di `glossary.ts` + `workspace-copy.ts` + ~400 literal string di 60+ file layar
+  - Rename 45 file test
+- Commit: `5b4dede` di branch `feat/rename-workspace-terminology`.
