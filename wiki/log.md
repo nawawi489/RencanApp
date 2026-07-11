@@ -1438,3 +1438,13 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - Client: layar `mobile/src/app/(app)/settings-user-new.tsx` (form nama/email/password sementara ≥8 kar/pill role, gate `manage_users_permissions`, pill C-Level terkunci untuk non-CEO) + tombol "Tambah User" di `settings-permission-users.tsx`; lib `users-admin.ts` (invoke function, surface pesan domain) + hook `use-users-admin.ts` (invalidate `org-profiles`, `org-profiles-with-roles`).
 - Infra: `supabase/config.toml` minimal ditambahkan (dibutuhkan CLI untuk `functions serve/deploy`); deploy staging: `npx supabase link --project-ref fhnqwytqprsptjshoxfn` lalu `npx supabase functions deploy create-user`.
 - Verifikasi: jest `users-admin.test.ts` 4/4, `settings-user-new.test.tsx` 8/8, `settings-permission-users.test.tsx` 8/8 (P-UI-08 baru); manual test ADM-16 ditambahkan ke `docs/manual-testing.md`.
+
+## [2026-07-11] update | Rename Workspace Terminology F0 — PRD.md V1.8.3 + spec
+
+- Owner (2026-07-11): scope Full rename UI+code+DB, geser bottom-up: `KPI Area→Strategy`, `Strategy→Initiative`, `Initiative→Action Plan`, `Action Plan→Task`. Task = rename label saja (tidak entitas baru).
+- Branch: `feat/rename-workspace-terminology` (base `origin/staging`). Snapshot working tree admin di-stash `stash@{0}` sebelum switch.
+- Spec: [specs/rename-workspace-terminology.md](../specs/rename-workspace-terminology.md) (19.9KB, 16 section, 47 acceptance criteria, 12 RWT decision, fase F0–F7). Dihasilkan lewat `/sdd-plan` workflow multi-agent (14 agent, 24 menit).
+- Mapping PRD.md: [specs/rename-workspace-terminology-prd-mapping.md](../specs/rename-workspace-terminology-prd-mapping.md) — mapping section-per-section owner-approved 2026-07-11.
+- PRD.md updated (13 section: §2, §3, §5, §6, §7, §9, §10, §11, §12, §13–15, §18–19, §20–22, §24, §29–30, §31, §33, §34.4, §35, §36, §38, §41, §42, §43, §44). Positioning §2 diperkuat: "Task tunduk Reviewer, evidence, Score Formula — bukan checklist bebas". Catatan V1.8.3 di §5 (identifier snake_case) + §35 (audit historis freeze via `map_legacy_entity_type`).
+- Owner default DECIDED (2026-07-11) untuk 11 RWT (A untuk 10, B untuk RWT-03). RWT-12 (Content Lead DRI + tanggal rewrite copy edukasi) tetap PENDING — tidak block F1, harus diisi sebelum F4.
+- Berikutnya: F1 = migrasi 0045–0048 bottom-up + hygiene 0050 (ALTER TABLE + ALTER RENAME CONSTRAINT), lalu F2 enum backfill (0049) + `map_legacy_entity_type` helper.
