@@ -4,8 +4,8 @@ import type { CardEntityType } from './governance-admin';
 export const ENTITY_ROUTE_SEGMENT: Record<CardEntityType, string> = {
   goal: 'goal',
   strategy: 'kpi-area',
-  strategy: 'strategy',
   initiative: 'initiative',
+  action_plan: 'action_plan',
   task: 'action-plan',
   development_area: 'development-area',
   problem_statement: 'problem-statement',

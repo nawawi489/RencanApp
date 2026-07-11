@@ -1,5 +1,5 @@
 // KPI gap (0032, override PRD §18) — derivasi "% capaian vs target" untuk KPI Area bertarget numerik.
-// Pure: current = numeric_total approved (VIEW kpi_area_current_values) ÷ target_numeric.
+// Pure: current = numeric_total approved (VIEW strategy_current_values) ÷ target_numeric.
 // KPI tanpa target numerik (kualitatif) → hasTarget=false, tidak dihitung %.
 
 export type KpiGap = {

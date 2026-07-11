@@ -5,7 +5,7 @@ import { Text, View } from 'react-native-css/components';
  *
  * Dua ukuran nyata dari code yang ada:
  * - `sm` (default): rounded-lg px-3 py-1.5, label 10px, value 14px semibold.
- *   Dipakai untuk chip status di Ruang Eksekusi Initiative & Ringkasan Hari Ini
+ *   Dipakai untuk chip status di Ruang Eksekusi ActionPlan & Ringkasan Hari Ini
  *   di Action Plan Instance.
  * - `md`: flex-1 gap-0.5 rounded-lg px-3 py-2, label 10px, value 16px bold.
  *   Dipakai untuk strip ringkasan Development Area (tiga tile mengisi baris).

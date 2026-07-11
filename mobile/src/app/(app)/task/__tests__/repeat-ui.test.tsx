@@ -9,12 +9,12 @@ import { createElement } from 'react';
 // Render RN pertama (cold transform react-native-css) bisa >5s; longgarkan timeout.
 jest.setTimeout(30000);
 
-const mockGetActionPlan = jest.fn();
+const mockGetTask = jest.fn();
 const mockListSubmissions = jest.fn();
 const mockListInstances = jest.fn();
 const mockGetCompliance = jest.fn();
 const mockRouterPush = jest.fn();
-let mockParams: Record<string, string> = { id: 'ap-1', initiativeId: 'init-1' };
+let mockParams: Record<string, string> = { id: 'ap-1', actionPlanId: 'init-1' };
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
@@ -36,12 +36,12 @@ jest.mock('@/hooks/use-profile', () => ({
 
 jest.mock('@/lib/cards', () => ({
   ...jest.requireActual('@/lib/cards'),
-  getActionPlan: (...a: unknown[]) => mockGetActionPlan(...a),
+  getTask: (...a: unknown[]) => mockGetTask(...a),
   listSubmissions: (...a: unknown[]) => mockListSubmissions(...a),
-  activateActionPlan: jest.fn(),
-  startActionPlan: jest.fn(),
+  activateTask: jest.fn(),
+  startTask: jest.fn(),
   reviewSubmission: jest.fn(),
-  createActionPlan: jest.fn(),
+  createTask: jest.fn(),
 }));
 
 jest.mock('@/lib/repeat', () => ({
@@ -53,8 +53,8 @@ jest.mock('@/lib/repeat', () => ({
 
 /* eslint-disable import/first -- jest.mock must precede the imports it mocks */
 import { INSTANCE_STATUS_LABEL, INSTANCE_STATUS_TONE } from '@/lib/repeat';
-import NewActionPlanScreen from '../new';
-import ActionPlanDetailScreen from '../[id]';
+import NewTaskScreen from '../new';
+import TaskDetailScreen from '../[id]';
 /* eslint-enable import/first */
 
 function wrap(node: React.ReactElement) {
@@ -88,14 +88,14 @@ function makeInstance(over: Record<string, unknown>) {
     status: 'assigned',
     pic_id: 'me',
     reviewer_id: 'rev',
-    action_plan_submissions: [],
+    task_submissions: [],
     ...over,
   };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockParams = { id: 'ap-1', initiativeId: 'init-1' };
+  mockParams = { id: 'ap-1', actionPlanId: 'init-1' };
   mockListSubmissions.mockResolvedValue([]);
   mockListInstances.mockResolvedValue([]);
   mockGetCompliance.mockResolvedValue({
@@ -123,7 +123,7 @@ describe('label/tone instance (terpisah dari parent)', () => {
 
 describe('new.tsx — form Repeat', () => {
   it('[3] toggle Repeat memunculkan field konfigurasi (frequency, periode, jam, aturan terlewat)', async () => {
-    await wrap(<NewActionPlanScreen />);
+    await wrap(<NewTaskScreen />);
     expect(screen.queryByTestId('repeat-config')).toBeNull();
     fireEvent(screen.getByTestId('repeat-toggle'), 'valueChange', true);
     expect(await screen.findByTestId('repeat-config')).toBeTruthy();
@@ -135,7 +135,7 @@ describe('new.tsx — form Repeat', () => {
   });
 
   it('[4] field grace_period hanya muncul saat missed_rule = grace_period', async () => {
-    await wrap(<NewActionPlanScreen />);
+    await wrap(<NewTaskScreen />);
     fireEvent(screen.getByTestId('repeat-toggle'), 'valueChange', true);
     await screen.findByTestId('repeat-config');
     expect(screen.queryByTestId('grace-input')).toBeNull();
@@ -148,12 +148,12 @@ describe('new.tsx — form Repeat', () => {
 
 describe('[id].tsx — detail repeat', () => {
   it('[5] menampilkan daftar instance dengan tanggal, deadline & badge status', async () => {
-    mockGetActionPlan.mockResolvedValue(REPEAT_AP);
+    mockGetTask.mockResolvedValue(REPEAT_AP);
     mockListInstances.mockResolvedValue([
       makeInstance({ id: 'i1', instance_date: '2026-06-01', status: 'done' }),
       makeInstance({ id: 'i2', instance_date: '2026-06-02', status: 'assigned' }),
     ]);
-    await wrap(<ActionPlanDetailScreen />);
+    await wrap(<TaskDetailScreen />);
     expect(await screen.findByText('2026-06-01')).toBeTruthy();
     expect(screen.getByText('2026-06-02')).toBeTruthy();
     expect(screen.getAllByText(/Deadline 23:00/).length).toBeGreaterThan(0);
@@ -161,15 +161,15 @@ describe('[id].tsx — detail repeat', () => {
   });
 
   it('[6] menampilkan metrik compliance On-time N/total (persen%)', async () => {
-    mockGetActionPlan.mockResolvedValue(REPEAT_AP);
+    mockGetTask.mockResolvedValue(REPEAT_AP);
     mockListInstances.mockResolvedValue([makeInstance({ status: 'done' })]);
-    await wrap(<ActionPlanDetailScreen />);
+    await wrap(<TaskDetailScreen />);
     const metric = await screen.findByTestId('compliance-metric');
     expect(metric).toHaveTextContent('On-time: 28/30 (93%)');
   });
 
   it('[7] compliance menampilkan "—" bukan "0%" saat expected_count = 0', async () => {
-    mockGetActionPlan.mockResolvedValue(REPEAT_AP);
+    mockGetTask.mockResolvedValue(REPEAT_AP);
     mockGetCompliance.mockResolvedValue({
       expected_count: 0,
       on_time_count: 0,
@@ -177,25 +177,25 @@ describe('[id].tsx — detail repeat', () => {
       done_count: 0,
       compliance: null,
     });
-    await wrap(<ActionPlanDetailScreen />);
+    await wrap(<TaskDetailScreen />);
     const metric = await screen.findByTestId('compliance-metric');
     expect(metric).toHaveTextContent('On-time: —');
     expect(metric).not.toHaveTextContent('0%');
   });
 
   it('[8] instance missed menyembunyikan Submit & menampilkan keterangan terlewat', async () => {
-    mockGetActionPlan.mockResolvedValue(REPEAT_AP);
+    mockGetTask.mockResolvedValue(REPEAT_AP);
     mockListInstances.mockResolvedValue([makeInstance({ id: 'i1', status: 'missed', pic_id: 'me' })]);
-    await wrap(<ActionPlanDetailScreen />);
+    await wrap(<TaskDetailScreen />);
     expect(await screen.findByText(/Terlewat — deadline terlewati/)).toBeTruthy();
     expect(screen.queryByText('Submit Bukti & Nilai Hasil')).toBeNull();
   });
 
   it('[3d] WS-3d: listInstances gagal → pesan gagal + "Coba lagi", BUKAN "Belum ada instance" (compliance tetap tampil)', async () => {
-    mockGetActionPlan.mockResolvedValue(REPEAT_AP);
+    mockGetTask.mockResolvedValue(REPEAT_AP);
     mockListInstances.mockRejectedValue(new Error('rls/jaringan'));
     // compliance (query terpisah) tetap sukses (default 28/30) → replikasi kontradiksi laporan.
-    await wrap(<ActionPlanDetailScreen />);
+    await wrap(<TaskDetailScreen />);
     expect(await screen.findByText(/Gagal memuat daftar instance/)).toBeTruthy();
     expect(screen.getByText('Coba lagi')).toBeTruthy();
     // Kunci anti-regresi: JANGAN tampilkan empty-state menyesatkan saat sebenarnya gagal.
@@ -205,8 +205,8 @@ describe('[id].tsx — detail repeat', () => {
   });
 
   it('[9] action plan one_time menyembunyikan bagian instance & compliance', async () => {
-    mockGetActionPlan.mockResolvedValue(ONE_TIME_AP);
-    await wrap(<ActionPlanDetailScreen />);
+    mockGetTask.mockResolvedValue(ONE_TIME_AP);
+    await wrap(<TaskDetailScreen />);
     // Tunggu detail termuat (PIC field), lalu pastikan compliance & instance tidak ada.
     expect(await screen.findByText('Riwayat Submission')).toBeTruthy();
     expect(screen.queryByTestId('compliance-metric')).toBeNull();

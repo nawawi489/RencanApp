@@ -1,4 +1,4 @@
-// Layar Chat Initiative — UI-S-IN2/IN3/IN4.
+// Layar Chat ActionPlan — UI-S-IN2/IN3/IN4.
 // Tata letak: header banner governance (tutup) → daftar pesan kronologis-menaik (date divider antar-hari)
 // dengan bubble me/them (Avatar + nama untuk them) → composer circular Kirim pesan.
 // Guard: roomId undefined → ErrorState (markRead TIDAK dipanggil).
@@ -163,7 +163,7 @@ export default function ChatRoomScreen() {
   // Guard: roomId undefined → ErrorState (Critic §8.5).
   if (!roomId) {
     return (
-      <Screen title="Diskusi Initiative">
+      <Screen title="Diskusi ActionPlan">
         <ErrorState
           title="Room tidak ditemukan"
           description="Buka room dari Inbox untuk memulai diskusi."
@@ -176,7 +176,7 @@ export default function ChatRoomScreen() {
   const composerDisabled = isInputBlank || isSending;
 
   return (
-    <Screen title="Diskusi Initiative">
+    <Screen title="Diskusi ActionPlan">
       {!bannerDismissed ? <GovernanceBanner onClose={() => setBannerDismissed(true)} /> : null}
 
       {isLoading ? (

@@ -71,11 +71,11 @@ const INSTANCE_SELECT =
   '*, evidence_files(*), task_result_values(*), ' +
   'submitter:submitted_by(id, full_name, email), reviewer:reviewed_by(id, full_name, email))';
 
-export async function listInstances(actionPlanId: string): Promise<InstanceWithSubmissions[]> {
+export async function listInstances(taskId: string): Promise<InstanceWithSubmissions[]> {
   const { data, error } = await supabase
     .from('task_instances')
     .select(INSTANCE_SELECT)
-    .eq('task_id', actionPlanId)
+    .eq('task_id', taskId)
     .order('instance_date', { ascending: true });
   if (error) throw error;
   return data as unknown as InstanceWithSubmissions[];
@@ -120,9 +120,9 @@ export type RepeatRuleInput = {
   gracePeriodMinutes: number | null;
 };
 
-export async function setRepeatRule(actionPlanId: string, input: RepeatRuleInput): Promise<string> {
+export async function setRepeatRule(taskId: string, input: RepeatRuleInput): Promise<string> {
   const { data, error } = await supabase.rpc('set_task_repeat_rule', {
-    p_task_id: actionPlanId,
+    p_action_plan_id: taskId,
     p_frequency: input.frequency,
     p_weekdays: input.weekdays as never,
     p_month_days: input.monthDays as never,
@@ -167,9 +167,9 @@ export async function reviewInstanceSubmission(args: {
   if (error) throw error;
 }
 
-export async function getRepeatCompliance(actionPlanId: string): Promise<RepeatCompliance> {
+export async function getRepeatCompliance(taskId: string): Promise<RepeatCompliance> {
   const { data, error } = await supabase.rpc('get_repeat_compliance', {
-    p_task_id: actionPlanId,
+    p_action_plan_id: taskId,
   });
   if (error) throw error;
   const rows = (data ?? []) as RepeatCompliance[];

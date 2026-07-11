@@ -1,5 +1,5 @@
-// Workspace (Fase 4) — dua section: Hierarki Strategis (Goal+KPI count-only) & Initiative Tanpa Goal.
-// Data layer dimock di tingkat hooks (use-workspace); useKpiAreas dipanggil per-GoalRow.
+// Workspace (Fase 4) — dua section: Hierarki Strategis (Goal+KPI count-only) & ActionPlan Tanpa Goal.
+// Data layer dimock di tingkat hooks (use-workspace); useStrategies dipanggil per-GoalRow.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -14,31 +14,31 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockUseGoals = jest.fn();
-const mockUseFlatInitiatives = jest.fn();
-const mockUseKpiAreas = jest.fn();
+const mockUseFlatActionPlans = jest.fn();
 const mockUseStrategies = jest.fn();
+const mockUseInitiatives = jest.fn();
 const mockUseDevelopmentAreas = jest.fn();
 const mockUseProblemStatements = jest.fn();
-const mockUseProblemStatementInitiatives = jest.fn();
-const mockUseStrategyInitiatives = jest.fn();
+const mockUseProblemStatementActionPlans = jest.fn();
 const mockUseInitiativeActionPlans = jest.fn();
+const mockUseActionPlanTasks = jest.fn();
 const mockUseCardProgress = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useCardProgress: (ids: string[]) => mockUseCardProgress(ids),
   useGoals: () => mockUseGoals(),
-  useFlatInitiatives: () => mockUseFlatInitiatives(),
-  useKpiAreas: (goalId: string, enabled?: boolean) => mockUseKpiAreas(goalId, enabled),
-  useStrategies: (kpiAreaId: string, enabled?: boolean) => mockUseStrategies(kpiAreaId, enabled),
+  useFlatActionPlans: () => mockUseFlatActionPlans(),
+  useStrategies: (goalId: string, enabled?: boolean) => mockUseStrategies(goalId, enabled),
+  useInitiatives: (strategyId: string, enabled?: boolean) => mockUseInitiatives(strategyId, enabled),
   useDevelopmentAreas: () => mockUseDevelopmentAreas(),
   useProblemStatements: (devAreaId: string, enabled?: boolean) =>
     mockUseProblemStatements(devAreaId, enabled),
-  useProblemStatementInitiatives: (psId: string, enabled?: boolean) =>
-    mockUseProblemStatementInitiatives(psId, enabled),
-  useStrategyInitiatives: (strategyId: string, enabled?: boolean) =>
-    mockUseStrategyInitiatives(strategyId, enabled),
+  useProblemStatementActionPlans: (psId: string, enabled?: boolean) =>
+    mockUseProblemStatementActionPlans(psId, enabled),
   useInitiativeActionPlans: (initiativeId: string, enabled?: boolean) =>
     mockUseInitiativeActionPlans(initiativeId, enabled),
+  useActionPlanTasks: (actionPlanId: string, enabled?: boolean) =>
+    mockUseActionPlanTasks(actionPlanId, enabled),
 }));
 
 const mockCan = jest.fn();
@@ -47,7 +47,7 @@ jest.mock('@/hooks/use-profile', () => ({
   useProfile: () => ({ profile: { id: 'u1' }, isLoading: false, can: mockCan }),
 }));
 
-// WSA-04 — guard MBR di tree: KpiAreaSubRow fetch compliance kpi_area→strategy.
+// WSA-04 — guard MBR di tree: StrategySubRow fetch compliance strategy→initiative.
 const mockUseMbrCompliance = jest.fn();
 jest.mock('@/hooks/use-mbr', () => ({
   __esModule: true,
@@ -105,13 +105,13 @@ function goalsResult(over: Record<string, unknown> = {}) {
   return { goals: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
 function flatResult(over: Record<string, unknown> = {}) {
-  return { initiatives: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
+  return { action_plans: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
 function kpiResult(over: Record<string, unknown> = {}) {
-  return { kpiAreas: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
-}
-function strategiesResult(over: Record<string, unknown> = {}) {
   return { strategies: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
+}
+function initiativesResult(over: Record<string, unknown> = {}) {
+  return { initiatives: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
 function devResult(over: Record<string, unknown> = {}) {
   return { developmentAreas: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
@@ -120,13 +120,13 @@ function psResult(over: Record<string, unknown> = {}) {
   return { problemStatements: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
 function psInitResult(over: Record<string, unknown> = {}) {
-  return { initiatives: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
+  return { action_plans: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
 function stratInitResult(over: Record<string, unknown> = {}) {
-  return { initiatives: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
+  return { action_plans: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
-function actionPlanResult(over: Record<string, unknown> = {}) {
-  return { actionPlans: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
+function taskResult(over: Record<string, unknown> = {}) {
+  return { tasks: [], isLoading: false, isError: false, refetch: jest.fn(), ...over };
 }
 
 /**
@@ -175,13 +175,13 @@ function findClosestSectionCardHost(node: RntlInstance): RntlInstance | null {
 }
 
 const GOAL = { id: 'g1', name: 'Tumbuhkan Revenue', status: 'active' };
-const FLAT = { id: 'fi1', name: 'Initiative Lepas', status: 'draft' };
+const FLAT = { id: 'fi1', name: 'ActionPlan Lepas', status: 'draft' };
 
 beforeEach(async () => {
   await AsyncStorage.clear();
   mockUseGoals.mockReset();
-  mockUseFlatInitiatives.mockReset();
-  mockUseKpiAreas.mockReset();
+  mockUseFlatActionPlans.mockReset();
+  mockUseStrategies.mockReset();
   mockCan.mockReset();
   mockPush.mockReset();
   mockReplace.mockReset();
@@ -190,23 +190,23 @@ beforeEach(async () => {
   mockCanGoBack.mockReturnValue(true);
   mockCan.mockReturnValue(false);
   mockUseGoals.mockReturnValue(goalsResult());
-  mockUseFlatInitiatives.mockReturnValue(flatResult());
-  mockUseKpiAreas.mockReturnValue(kpiResult());
-  mockUseStrategies.mockReset();
-  mockUseStrategies.mockReturnValue(strategiesResult());
+  mockUseFlatActionPlans.mockReturnValue(flatResult());
+  mockUseStrategies.mockReturnValue(kpiResult());
+  mockUseInitiatives.mockReset();
+  mockUseInitiatives.mockReturnValue(initiativesResult());
   mockUseDevelopmentAreas.mockReset();
   mockUseDevelopmentAreas.mockReturnValue(devResult());
   mockUseProblemStatements.mockReset();
   mockUseProblemStatements.mockReturnValue(psResult());
-  mockUseProblemStatementInitiatives.mockReset();
-  mockUseProblemStatementInitiatives.mockReturnValue(psInitResult());
+  mockUseProblemStatementActionPlans.mockReset();
+  mockUseProblemStatementActionPlans.mockReturnValue(psInitResult());
   mockUseMbrCompliance.mockReset();
   // Default: compliance belum ada (fail-open di tree — jangan blokir sebelum data tahu).
   mockUseMbrCompliance.mockReturnValue({ compliance: undefined, isCompliant: true });
-  mockUseStrategyInitiatives.mockReset();
-  mockUseStrategyInitiatives.mockReturnValue(stratInitResult());
   mockUseInitiativeActionPlans.mockReset();
-  mockUseInitiativeActionPlans.mockReturnValue(actionPlanResult());
+  mockUseInitiativeActionPlans.mockReturnValue(stratInitResult());
+  mockUseActionPlanTasks.mockReset();
+  mockUseActionPlanTasks.mockReturnValue(taskResult());
   mockUseCardProgress.mockReset();
   // Default WSA-15: progress belum ada → progressOf null (orb render '—'); test orb override per-kasus.
   mockUseCardProgress.mockReturnValue({ progressOf: () => null, isLoading: false, isError: false });
@@ -240,16 +240,16 @@ const renderHub = async () => {
 };
 
 describe('WorkspaceScreen', () => {
-  it('[1] hierarki Goal render; WSA-16: section "Initiative Tanpa Goal" TIDAK ada di pane', async () => {
+  it('[1] hierarki Goal render; WSA-16: section "ActionPlan Tanpa Goal" TIDAK ada di pane', async () => {
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
-    mockUseFlatInitiatives.mockReturnValue(flatResult({ initiatives: [FLAT] }));
+    mockUseFlatActionPlans.mockReturnValue(flatResult({ action_plans: [FLAT] }));
     await renderScreen();
 
     expect(await screen.findByText('Hierarki Strategis')).toBeTruthy();
     expect(screen.getByText('Tumbuhkan Revenue')).toBeTruthy();
-    // WSA-16 — Initiative yatim pindah ke Search/Menu; section + card tak dirender di pane.
-    expect(screen.queryByText('Initiative Tanpa Goal')).toBeNull();
-    expect(screen.queryByText('Initiative Lepas')).toBeNull();
+    // WSA-16 — ActionPlan yatim pindah ke Search/Menu; section + card tak dirender di pane.
+    expect(screen.queryByText('ActionPlan Tanpa Goal')).toBeNull();
+    expect(screen.queryByText('ActionPlan Lepas')).toBeNull();
   });
 
   it('[2a] can(create_goal) true → tombol tampil & push goal-wizard', async () => {
@@ -343,7 +343,7 @@ describe('WorkspaceScreen', () => {
         'Periode ini sudah menjadi Archive',
         'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
       );
-      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/kpi-area/new'));
+      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/strategy/new'));
       alertSpy.mockRestore();
     });
 
@@ -373,14 +373,14 @@ describe('WorkspaceScreen', () => {
     const cardsModule = require('@/lib/cards');
     const exports = Object.keys(cardsModule);
     expect(exports).not.toContain('create_goal');
-    expect(exports).not.toContain('create_kpi_area');
     expect(exports).not.toContain('create_strategy');
+    expect(exports).not.toContain('create_initiative');
   });
 
   it('[compact-meta] Goal merender meta ringkas alih-alih count lama', async () => {
     mockUseGoals.mockReturnValue(
       goalsResult({
-        goals: [{ ...GOAL, target_value: 'Omset 48M', kpi_areas: [{ count: 2 }] }],
+        goals: [{ ...GOAL, target_value: 'Omset 48M', strategies: [{ count: 2 }] }],
       }),
     );
     await renderScreen();
@@ -394,7 +394,7 @@ describe('WorkspaceScreen', () => {
   it('[compact-meta] Goal tanpa KPI Area menampilkan label "Belum ada KPI"', async () => {
     mockUseGoals.mockReturnValue(
       goalsResult({
-        goals: [{ ...GOAL, kpi_areas: [{ count: 0 }] }],
+        goals: [{ ...GOAL, strategies: [{ count: 0 }] }],
       }),
     );
     await renderScreen();
@@ -425,8 +425,8 @@ describe('WorkspaceScreen', () => {
 
   it('[4] expand/collapse anak KPI', async () => {
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
-    mockUseKpiAreas.mockReturnValue(
-      kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
+    mockUseStrategies.mockReturnValue(
+      kpiResult({ strategies: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
     );
     await renderScreen();
 
@@ -441,15 +441,15 @@ describe('WorkspaceScreen', () => {
   it('[tree-compact] tombol tambah tetap terlihat setelah row diringkas', async () => {
     mockCan.mockReturnValue(true);
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
-    mockUseKpiAreas.mockReturnValue(
-      kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
+    mockUseStrategies.mockReturnValue(
+      kpiResult({ strategies: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
     );
     await renderScreen();
 
     expect(await screen.findByText('+ Goal')).toBeTruthy();
     expect(screen.getByText('+ KPI Area')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Toggle KPI Area Tumbuhkan Revenue'));
-    expect(await screen.findByText('+ Strategy')).toBeTruthy();
+    expect(await screen.findByText('+ Initiative')).toBeTruthy();
   });
 
   it('[tree-compact] CardActionRow memakai kontrol compact tanpa hilangkan tap target', async () => {
@@ -483,8 +483,8 @@ describe('WorkspaceScreen', () => {
 
   it('[tree-compact] expand/collapse tetap jalan setelah action row dipadatkan', async () => {
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
-    mockUseKpiAreas.mockReturnValue(
-      kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
+    mockUseStrategies.mockReturnValue(
+      kpiResult({ strategies: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
     );
     await renderScreen();
 
@@ -496,8 +496,8 @@ describe('WorkspaceScreen', () => {
 
   it('[tree-layout] KPI child dirender sebagai sibling block di luar card parent Goal', async () => {
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
-    mockUseKpiAreas.mockReturnValue(
-      kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
+    mockUseStrategies.mockReturnValue(
+      kpiResult({ strategies: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
     );
     await renderScreen();
 
@@ -536,9 +536,9 @@ describe('WorkspaceScreen', () => {
         ],
       }),
     );
-    mockUseKpiAreas.mockReturnValue(
+    mockUseStrategies.mockReturnValue(
       kpiResult({
-        kpiAreas: [
+        strategies: [
           {
             id: 'k-q2',
             name: 'KPI Penjualan',
@@ -558,8 +558,8 @@ describe('WorkspaceScreen', () => {
 
   it('[compact-header] chevron di kanan atas mengontrol expand KPI Area', async () => {
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
-    mockUseKpiAreas.mockReturnValue(
-      kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
+    mockUseStrategies.mockReturnValue(
+      kpiResult({ strategies: [{ id: 'k1', name: 'KPI Penjualan', status: 'active' }] }),
     );
     await renderScreen();
 
@@ -658,8 +658,8 @@ describe('WorkspaceScreen', () => {
         goals: [{ id: 'g1', name: 'Goal A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }],
       }),
     );
-    mockUseKpiAreas.mockReturnValue(
-      kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
+    mockUseStrategies.mockReturnValue(
+      kpiResult({ strategies: [{ id: 'k1', name: 'KPI A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
     );
     await renderScreen();
     expect(await screen.findByLabelText('Kategori: Goal')).toBeTruthy();
@@ -679,27 +679,27 @@ describe('WorkspaceScreen', () => {
     expect(await screen.findByText('+ KPI Area')).toBeTruthy();
   });
 
-  it('[WSA-17·2] KPI Area "+" menampilkan teks "+ Strategy"; Strategy "+" teks "+ Initiative"', async () => {
+  it('[WSA-17·2] KPI Area "+" menampilkan teks "+ Initiative"; Initiative "+" teks "+ ActionPlan"', async () => {
     mockCan.mockReturnValue(true);
     mockUseGoals.mockReturnValue(
       goalsResult({
         goals: [{ id: 'g1', name: 'Goal A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }],
       }),
     );
-    mockUseKpiAreas.mockReturnValue(
-      kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
-    );
     mockUseStrategies.mockReturnValue(
-      strategiesResult({ strategies: [{ id: 's1', name: 'Strat A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
+      kpiResult({ strategies: [{ id: 'k1', name: 'KPI A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
+    );
+    mockUseInitiatives.mockReturnValue(
+      initiativesResult({ initiatives: [{ id: 's1', name: 'Strat A', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
     );
     await renderScreen();
     fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal A'));
-    expect(await screen.findByText('+ Strategy')).toBeTruthy();
-    fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI A'));
     expect(await screen.findByText('+ Initiative')).toBeTruthy();
+    fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI A'));
+    expect(await screen.findByText('+ ActionPlan')).toBeTruthy();
   });
 
-  it('[S3-2] tombol "+" current period → push /kpi-area/new?goalId=...', async () => {
+  it('[S3-2] tombol "+" current period → push /strategy/new?goalId=...', async () => {
     mockCan.mockReturnValue(true);
     mockUseGoals.mockReturnValue(
       goalsResult({
@@ -716,7 +716,7 @@ describe('WorkspaceScreen', () => {
     );
     await renderScreen();
     fireEvent.press(await screen.findByLabelText('Tambah KPI Area ke Goal Cur'));
-    expect(mockPush).toHaveBeenCalledWith('/kpi-area/new?goalId=g-cur');
+    expect(mockPush).toHaveBeenCalledWith('/strategy/new?goalId=g-cur');
   });
 
   it('[S3-3] tombol "+" past period → showPastPeriodAlert dipanggil, push TIDAK', async () => {
@@ -741,7 +741,7 @@ describe('WorkspaceScreen', () => {
       'Periode ini sudah menjadi Archive',
       'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
     );
-    expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/kpi-area/new'));
+    expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/strategy/new'));
     alertSpy.mockRestore();
   });
 
@@ -836,7 +836,7 @@ describe('WorkspaceScreen', () => {
     expect(screen.queryByText('Workspace')).toBeNull();
   });
 
-  // [UI-N-003 (Stage 1 B′) — tree 3-level inline: Goal → KPI Area → Strategy.
+  // [UI-N-003 (Stage 1 B′) — tree 3-level inline: Goal → KPI Area → Initiative.
   describe('[UI-N-003 tree 3-level] Performance pane', () => {
     const GOAL_NOW = {
       id: 'g1',
@@ -860,216 +860,216 @@ describe('WorkspaceScreen', () => {
       period_end: '2026-12-31',
     };
 
-    async function expandToStrategy() {
+    async function expandToInitiative() {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       await screen.findByText('KPI Penjualan');
-      fireEvent.press(screen.getByLabelText('Toggle Strategy KPI Penjualan'));
+      fireEvent.press(screen.getByLabelText('Toggle Initiative KPI Penjualan'));
       await screen.findByText('Akuisisi Lewat Meta Ads');
     }
 
-    it('[UI-N-003·1] KPI sub-row punya tombol "Lihat Strategy"; lazy fetch (enabled=false saat collapse)', async () => {
+    it('[UI-N-003·1] KPI sub-row punya tombol "Lihat Initiative"; lazy fetch (enabled=false saat collapse)', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       await screen.findByText('KPI Penjualan');
-      // Sebelum tap "Lihat Strategy", useStrategies dipanggil dgn enabled=false.
-      expect(mockUseStrategies).toHaveBeenCalledWith('k1', false);
-      fireEvent.press(screen.getByLabelText('Toggle Strategy KPI Penjualan'));
+      // Sebelum tap "Lihat Initiative", useInitiatives dipanggil dgn enabled=false.
+      expect(mockUseInitiatives).toHaveBeenCalledWith('k1', false);
+      fireEvent.press(screen.getByLabelText('Toggle Initiative KPI Penjualan'));
       // Setelah expand, dipanggil dgn enabled=true (waitFor agar React re-render selesai).
-      await waitFor(() => expect(mockUseStrategies).toHaveBeenCalledWith('k1', true));
+      await waitFor(() => expect(mockUseInitiatives).toHaveBeenCalledWith('k1', true));
     });
 
-    it('[UI-N-003·2] expand Strategy → render nama Strategy; collapse → sembunyi', async () => {
-      await expandToStrategy();
-      fireEvent.press(screen.getByLabelText('Toggle Strategy KPI Penjualan'));
-      await screen.findByLabelText('Toggle Strategy KPI Penjualan');
+    it('[UI-N-003·2] expand Initiative → render nama Initiative; collapse → sembunyi', async () => {
+      await expandToInitiative();
+      fireEvent.press(screen.getByLabelText('Toggle Initiative KPI Penjualan'));
+      await screen.findByLabelText('Toggle Initiative KPI Penjualan');
       expect(screen.queryByText('Akuisisi Lewat Meta Ads')).toBeNull();
     });
 
-    it('[UI-N-003·3] empty state: tidak ada Strategy → text "Belum ada Strategy"', async () => {
+    it('[UI-N-003·3] empty state: tidak ada Initiative → text "Belum ada Initiative"', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
-      expect(await screen.findByText(/Belum ada Strategy/)).toBeTruthy();
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
+      expect(await screen.findByText(/Belum ada Initiative/)).toBeTruthy();
     });
 
-    it('[UI-N-003·4] error state Strategy fetch → ErrorState + retry', async () => {
+    it('[UI-N-003·4] error state Initiative fetch → ErrorState + retry', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
       const refetchSpy = jest.fn();
-      mockUseStrategies.mockReturnValue(
-        strategiesResult({ isError: true, refetch: refetchSpy }),
+      mockUseInitiatives.mockReturnValue(
+        initiativesResult({ isError: true, refetch: refetchSpy }),
       );
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
       expect(await screen.findByText('Gagal memuat')).toBeTruthy();
     });
 
-    it('[UI-N-003·5] Strategy "+ Initiative" current period → push /initiative/new?strategyId=...', async () => {
-      await expandToStrategy();
-      fireEvent.press(screen.getByLabelText('Tambah Initiative ke Akuisisi Lewat Meta Ads'));
-      expect(mockPush).toHaveBeenCalledWith('/initiative/new?strategyId=s1');
+    it('[UI-N-003·5] Initiative "+ ActionPlan" current period → push /action_plan/new?initiativeId=...', async () => {
+      await expandToInitiative();
+      fireEvent.press(screen.getByLabelText('Tambah ActionPlan ke Akuisisi Lewat Meta Ads'));
+      expect(mockPush).toHaveBeenCalledWith('/action_plan/new?initiativeId=s1');
     });
 
-    it('[UI-N-003·6] Strategy past period → tombol "+" Alert past period, tidak push', async () => {
+    it('[UI-N-003·6] Initiative past period → tombol "+" Alert past period, tidak push', async () => {
       const PAST_STRATEGY = { ...STRATEGY_NOW, id: 's-past', period_end: '2025-12-31' };
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [PAST_STRATEGY] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [PAST_STRATEGY] }));
       const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
       await screen.findByText('Akuisisi Lewat Meta Ads');
-      fireEvent.press(screen.getByLabelText('Tambah Initiative ke Akuisisi Lewat Meta Ads'));
+      fireEvent.press(screen.getByLabelText('Tambah ActionPlan ke Akuisisi Lewat Meta Ads'));
       expect(alertSpy).toHaveBeenCalled();
-      expect(mockPush).not.toHaveBeenCalledWith('/initiative/new?strategyId=s-past');
+      expect(mockPush).not.toHaveBeenCalledWith('/action_plan/new?initiativeId=s-past');
       alertSpy.mockRestore();
     });
 
-    it('[UI-N-003·7] permission false (create_initiative=false) → tombol "+" tidak ada di Strategy', async () => {
-      mockCan.mockImplementation((key: string) => key !== 'create_initiative');
+    it('[UI-N-003·7] permission false (create_action_plan=false) → tombol "+" tidak ada di Initiative', async () => {
+      mockCan.mockImplementation((key: string) => key !== 'create_action_plan');
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
       await screen.findByText('Akuisisi Lewat Meta Ads');
-      expect(screen.queryByLabelText('Tambah Initiative ke Akuisisi Lewat Meta Ads')).toBeNull();
+      expect(screen.queryByLabelText('Tambah ActionPlan ke Akuisisi Lewat Meta Ads')).toBeNull();
     });
 
-    it('[UI-N-003·8] RowActionsMenu dari Strategy ⋯ → menu Aksi muncul', async () => {
-      await expandToStrategy();
+    it('[UI-N-003·8] RowActionsMenu dari Initiative ⋯ → menu Aksi muncul', async () => {
+      await expandToInitiative();
       fireEvent.press(screen.getByLabelText('Aksi lain Akuisisi Lewat Meta Ads'));
       expect(await screen.findByLabelText('Aksi: Akuisisi Lewat Meta Ads')).toBeTruthy();
     });
 
-    // WSA-13 — "+ Strategy" digate key presisi `create_strategy` (bukan proxy `create_kpi_area`).
-    it('[WSA-13·1] "+ Strategy" digate create_strategy: create_kpi_area true tapi create_strategy false → tombol sembunyi', async () => {
-      mockCan.mockImplementation((key: string) => key !== 'create_strategy');
+    // WSA-13 — "+ Initiative" digate key presisi `create_initiative` (bukan proxy `create_strategy`).
+    it('[WSA-13·1] "+ Initiative" digate create_initiative: create_strategy true tapi create_initiative false → tombol sembunyi', async () => {
+      mockCan.mockImplementation((key: string) => key !== 'create_initiative');
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       await screen.findByText('KPI Penjualan');
-      expect(screen.queryByLabelText('Tambah Strategy ke KPI Penjualan')).toBeNull();
+      expect(screen.queryByLabelText('Tambah Initiative ke KPI Penjualan')).toBeNull();
     });
 
-    it('[WSA-13·2] "+ Strategy" tampil saat create_strategy true (create_kpi_area false)', async () => {
-      mockCan.mockImplementation((key: string) => key === 'create_strategy');
+    it('[WSA-13·2] "+ Initiative" tampil saat create_initiative true (create_strategy false)', async () => {
+      mockCan.mockImplementation((key: string) => key === 'create_initiative');
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       await screen.findByText('KPI Penjualan');
-      expect(screen.getByLabelText('Tambah Strategy ke KPI Penjualan')).toBeTruthy();
+      expect(screen.getByLabelText('Tambah Initiative ke KPI Penjualan')).toBeTruthy();
     });
 
-    // WSA-01 — tree 4–5 level: Strategy expand → Initiative; Initiative expand → Action Plan.
-    it('[WSA-01·1] expand Strategy → "Lihat Initiative" → render Initiative (lazy fetch)', async () => {
+    // WSA-01 — tree 4–5 level: Initiative expand → ActionPlan; ActionPlan expand → Action Plan.
+    it('[WSA-01·1] expand Initiative → "Lihat ActionPlan" → render ActionPlan (lazy fetch)', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
-      mockUseStrategyInitiatives.mockReturnValue(
-        stratInitResult({ initiatives: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
-      );
-      await renderScreen();
-      fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
-      await screen.findByText('Akuisisi Lewat Meta Ads');
-      // Sebelum expand Initiative: useStrategyInitiatives dipanggil enabled=false.
-      expect(mockUseStrategyInitiatives).toHaveBeenCalledWith('s1', false);
-      fireEvent.press(await screen.findByLabelText('Toggle Initiative Akuisisi Lewat Meta Ads'));
-      expect(await screen.findByText('Campaign Meta Ads')).toBeTruthy();
-      await waitFor(() => expect(mockUseStrategyInitiatives).toHaveBeenCalledWith('s1', true));
-    });
-
-    it('[WSA-01·2] expand Initiative → "Lihat Action Plan" → render Action Plan (leaf: tanpa panah/+)', async () => {
-      mockCan.mockReturnValue(true);
-      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
-      mockUseStrategyInitiatives.mockReturnValue(
-        stratInitResult({ initiatives: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
-      );
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
       mockUseInitiativeActionPlans.mockReturnValue(
-        actionPlanResult({ actionPlans: [{ id: 'ap1', name: 'Setup pixel tracking', status: 'active', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
+        stratInitResult({ action_plans: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
       );
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
-      fireEvent.press(await screen.findByLabelText('Toggle Initiative Akuisisi Lewat Meta Ads'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
+      await screen.findByText('Akuisisi Lewat Meta Ads');
+      // Sebelum expand ActionPlan: useInitiativeActionPlans dipanggil enabled=false.
+      expect(mockUseInitiativeActionPlans).toHaveBeenCalledWith('s1', false);
+      fireEvent.press(await screen.findByLabelText('Toggle ActionPlan Akuisisi Lewat Meta Ads'));
+      expect(await screen.findByText('Campaign Meta Ads')).toBeTruthy();
+      await waitFor(() => expect(mockUseInitiativeActionPlans).toHaveBeenCalledWith('s1', true));
+    });
+
+    it('[WSA-01·2] expand ActionPlan → "Lihat Action Plan" → render Action Plan (leaf: tanpa panah/+)', async () => {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
+      mockUseInitiativeActionPlans.mockReturnValue(
+        stratInitResult({ action_plans: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
+      );
+      mockUseActionPlanTasks.mockReturnValue(
+        taskResult({ tasks: [{ id: 'ap1', name: 'Setup pixel tracking', status: 'active', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
+      );
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle ActionPlan Akuisisi Lewat Meta Ads'));
       await screen.findByText('Campaign Meta Ads');
       fireEvent.press(await screen.findByLabelText('Toggle Action Plan Campaign Meta Ads'));
       expect(await screen.findByText('Setup pixel tracking')).toBeTruthy();
       // Action Plan = leaf: tidak ada tombol tambah turunan / panah di bawahnya.
       expect(screen.queryByLabelText('Tambah Action Plan ke Setup pixel tracking')).toBeNull();
-      await waitFor(() => expect(mockUseInitiativeActionPlans).toHaveBeenCalledWith('i1', true));
+      await waitFor(() => expect(mockUseActionPlanTasks).toHaveBeenCalledWith('i1', true));
     });
 
     it('[compact-actions] Action Plan leaf tidak merender tombol tambah child', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
-      mockUseStrategyInitiatives.mockReturnValue(
-        stratInitResult({ initiatives: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
-      );
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
       mockUseInitiativeActionPlans.mockReturnValue(
-        actionPlanResult({ actionPlans: [{ id: 'ap1', name: 'Setup pixel tracking', status: 'active', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
+        stratInitResult({ action_plans: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
+      );
+      mockUseActionPlanTasks.mockReturnValue(
+        taskResult({ tasks: [{ id: 'ap1', name: 'Setup pixel tracking', status: 'active', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
       );
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
-      fireEvent.press(await screen.findByLabelText('Toggle Initiative Akuisisi Lewat Meta Ads'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle ActionPlan Akuisisi Lewat Meta Ads'));
       fireEvent.press(await screen.findByLabelText('Toggle Action Plan Campaign Meta Ads'));
 
       expect(await screen.findByText('Setup pixel tracking')).toBeTruthy();
       expect(screen.getByLabelText('Detail Setup pixel tracking')).toBeTruthy();
       expect(screen.getByLabelText('Aksi lain Setup pixel tracking')).toBeTruthy();
       // Action Plan = leaf: TIDAK punya tombol tambah turunan. (Tombol "+ Plan" milik baris
-      // Initiative — legitimate saat create_action_plan aktif — jadi assert label leaf spesifik,
-      // bukan queryByText('+ Plan') yang menangkap tombol Initiative.)
+      // ActionPlan — legitimate saat create_task aktif — jadi assert label leaf spesifik,
+      // bukan queryByText('+ Plan') yang menangkap tombol ActionPlan.)
       expect(screen.queryByLabelText('Tambah Action Plan ke Setup pixel tracking')).toBeNull();
     });
 
-    it('[WSA-01·3] Initiative "+ Plan" current period → push /action-plan/new', async () => {
+    it('[WSA-01·3] ActionPlan "+ Plan" current period → push /task/new', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
-      mockUseStrategyInitiatives.mockReturnValue(
-        stratInitResult({ initiatives: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
+      mockUseInitiativeActionPlans.mockReturnValue(
+        stratInitResult({ action_plans: [{ id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' }] }),
       );
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
-      fireEvent.press(await screen.findByLabelText('Toggle Initiative Akuisisi Lewat Meta Ads'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle ActionPlan Akuisisi Lewat Meta Ads'));
       fireEvent.press(await screen.findByLabelText('Tambah Action Plan ke Campaign Meta Ads'));
-      expect(mockPush).toHaveBeenCalledWith('/action-plan/new?initiativeId=i1');
+      expect(mockPush).toHaveBeenCalledWith('/task/new?actionPlanId=i1');
     });
 
-    // WSA-04 — guard MBR: KPI Area belum cukup Strategy → tombol "+ Initiative" di Strategy
+    // WSA-04 — guard MBR: KPI Area belum cukup Initiative → tombol "+ ActionPlan" di Initiative
     // card ter-guard: tap TIDAK push, tampilkan Alert §12.3.
     const INCOMPLETE_KPI_MBR = {
       compliance: {
-        child_card_type: 'strategy' as const,
+        child_card_type: 'initiative' as const,
         child_count: 2,
         min_count: 3,
         enforcement_mode: 'blokir_akses_turunan' as const,
@@ -1078,45 +1078,45 @@ describe('WorkspaceScreen', () => {
       isCompliant: false,
     };
 
-    it('[WSA-04·1] KPI belum cukup Strategy → tap "+ Initiative" → Alert §12.3, TIDAK push', async () => {
+    it('[WSA-04·1] KPI belum cukup Initiative → tap "+ ActionPlan" → Alert §12.3, TIDAK push', async () => {
       mockCan.mockReturnValue(true);
       mockUseMbrCompliance.mockReturnValue(INCOMPLETE_KPI_MBR);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
       const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
       await screen.findByText('Akuisisi Lewat Meta Ads');
-      fireEvent.press(screen.getByLabelText('Tambah Initiative ke Akuisisi Lewat Meta Ads'));
+      fireEvent.press(screen.getByLabelText('Tambah ActionPlan ke Akuisisi Lewat Meta Ads'));
       expect(alertSpy).toHaveBeenCalledWith(
         'Kelengkapan Perencanaan',
-        expect.stringContaining('baru tombol + Initiative aktif'),
+        expect.stringContaining('baru tombol + ActionPlan aktif'),
       );
-      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/initiative/new'));
+      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/action_plan/new'));
       alertSpy.mockRestore();
     });
 
-    it('[WSA-04·2] KPI compliant → "+ Initiative" push normal (tanpa Alert guard)', async () => {
+    it('[WSA-04·2] KPI compliant → "+ ActionPlan" push normal (tanpa Alert guard)', async () => {
       mockCan.mockReturnValue(true);
       mockUseMbrCompliance.mockReturnValue({
         compliance: { ...INCOMPLETE_KPI_MBR.compliance, child_count: 3, is_compliant: true },
         isCompliant: true,
       });
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [KPI_NOW] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [STRATEGY_NOW] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [KPI_NOW] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [STRATEGY_NOW] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI Penjualan'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI Penjualan'));
       await screen.findByText('Akuisisi Lewat Meta Ads');
-      fireEvent.press(screen.getByLabelText('Tambah Initiative ke Akuisisi Lewat Meta Ads'));
-      expect(mockPush).toHaveBeenCalledWith('/initiative/new?strategyId=s1');
+      fireEvent.press(screen.getByLabelText('Tambah ActionPlan ke Akuisisi Lewat Meta Ads'));
+      expect(mockPush).toHaveBeenCalledWith('/action_plan/new?initiativeId=s1');
     });
   });
 
-  // UI-N-003 Development pane — symmetric: DevArea → Problem Statement → Initiative.
+  // UI-N-003 Development pane — symmetric: DevArea → Problem Statement → ActionPlan.
   describe('[UI-N-003 tree 3-level] Development pane symmetry', () => {
     const DEV = {
       id: 'd1',
@@ -1140,17 +1140,17 @@ describe('WorkspaceScreen', () => {
       period_end: '2026-12-31',
     };
 
-    it('[UI-N-003·DEV·1] PS sub-row tampil "Lihat Initiative" → expand fetch Initiative', async () => {
+    it('[UI-N-003·DEV·1] PS sub-row tampil "Lihat ActionPlan" → expand fetch ActionPlan', async () => {
       mockCan.mockReturnValue(true);
       mockUseDevelopmentAreas.mockReturnValue(devResult({ developmentAreas: [DEV] }));
       mockUseProblemStatements.mockReturnValue(psResult({ problemStatements: [PS] }));
-      mockUseProblemStatementInitiatives.mockReturnValue(psInitResult({ initiatives: [INIT] }));
+      mockUseProblemStatementActionPlans.mockReturnValue(psInitResult({ action_plans: [INIT] }));
       await renderScreen('development');
       fireEvent.press(await screen.findByLabelText('Toggle Problem Statement Development Area Ops'));
       await screen.findByText('Problem WA respon lambat');
-      fireEvent.press(screen.getByLabelText('Toggle Initiative Problem WA respon lambat'));
+      fireEvent.press(screen.getByLabelText('Toggle ActionPlan Problem WA respon lambat'));
       await screen.findByText('Auto-reply WA jam sibuk');
-      expect(mockUseProblemStatementInitiatives).toHaveBeenCalledWith('p1', true);
+      expect(mockUseProblemStatementActionPlans).toHaveBeenCalledWith('p1', true);
     });
 
     // WSA-13 — "+ Problem Statement" digate key presisi `create_problem_statement`.
@@ -1260,8 +1260,8 @@ describe('WorkspaceScreen', () => {
       mockUseGoals.mockReturnValue(
         goalsResult({
           goals: [
-            { id: 'g1', name: 'G1', status: 'active', kpi_areas: [{ count: 3 }] },
-            { id: 'g2', name: 'G2', status: 'draft', kpi_areas: [{ count: 2 }] },
+            { id: 'g1', name: 'G1', status: 'active', strategies: [{ count: 3 }] },
+            { id: 'g2', name: 'G2', status: 'draft', strategies: [{ count: 2 }] },
           ],
         }),
       );
@@ -1302,14 +1302,14 @@ describe('WorkspaceScreen', () => {
     it('[WSA-06] search bar overview → placeholder spec, tap navigasi /search', async () => {
       await renderHub();
       const search = await screen.findByLabelText('Cari Workspace');
-      expect(screen.getByText('Cari Goal, KPI Area, Initiative, Action Plan')).toBeTruthy();
+      expect(screen.getByText('Cari Goal, KPI Area, ActionPlan, Action Plan')).toBeTruthy();
       fireEvent.press(search);
       expect(mockPush).toHaveBeenCalledWith('/search');
     });
   });
 
   // UI-S-W07 (design-consultation 2026-07-02) — expand level-1 (Goal/Dev Area) wajib punya
-  // state loading/kosong/error, paritas dgn level-2 (KpiAreaSubRow/ProblemStatementSubRow).
+  // state loading/kosong/error, paritas dgn level-2 (StrategySubRow/ProblemStatementSubRow).
   describe('[UI-S-W07] expand level-1: loading/kosong/error', () => {
     const GOAL_NOW = {
       id: 'g1',
@@ -1328,7 +1328,7 @@ describe('WorkspaceScreen', () => {
 
     it('[W07·1] expand Goal saat KPI loading → SkeletonList tampil', async () => {
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ isLoading: true }));
+      mockUseStrategies.mockReturnValue(kpiResult({ isLoading: true }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       expect((await screen.findAllByLabelText('Memuat…')).length).toBeGreaterThan(0);
@@ -1336,7 +1336,7 @@ describe('WorkspaceScreen', () => {
 
     it('[W07·2] expand Goal tanpa KPI Area → hint "Belum ada KPI Area"', async () => {
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [] }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       expect(await screen.findByText(/Belum ada KPI Area/)).toBeTruthy();
@@ -1344,7 +1344,7 @@ describe('WorkspaceScreen', () => {
 
     it('[W07·3] expand Goal error fetch KPI → ErrorState', async () => {
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL_NOW] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ isError: true }));
+      mockUseStrategies.mockReturnValue(kpiResult({ isError: true }));
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       expect(await screen.findByText('Gagal memuat')).toBeTruthy();
@@ -1366,46 +1366,46 @@ describe('WorkspaceScreen', () => {
     const PAST_PERIOD = { period_start: '2025-01-01', period_end: '2025-12-31' };
     const NOW_PERIOD = { period_start: '2026-01-01', period_end: '2026-12-31' };
 
-    it('[W08·1] Goal+KPI+Strategy semuanya past → tanpa opacity dim, badge tetap 3×', async () => {
+    it('[W08·1] Goal+KPI+Initiative semuanya past → tanpa opacity dim, badge tetap 3×', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(
         goalsResult({ goals: [{ id: 'g', name: 'Goal Past', status: 'active', ...PAST_PERIOD }] }),
       );
-      mockUseKpiAreas.mockReturnValue(
-        kpiResult({ kpiAreas: [{ id: 'k', name: 'KPI Past', status: 'active', ...PAST_PERIOD }] }),
-      );
       mockUseStrategies.mockReturnValue(
-        strategiesResult({
-          strategies: [{ id: 's', name: 'Strategy Past', status: 'active', ...PAST_PERIOD }],
+        kpiResult({ strategies: [{ id: 'k', name: 'KPI Past', status: 'active', ...PAST_PERIOD }] }),
+      );
+      mockUseInitiatives.mockReturnValue(
+        initiativesResult({
+          initiatives: [{ id: 's', name: 'Initiative Past', status: 'active', ...PAST_PERIOD }],
         }),
       );
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Past'));
       await screen.findByText('KPI Past');
-      fireEvent.press(screen.getByLabelText('Toggle Strategy KPI Past'));
-      await screen.findByText('Strategy Past');
+      fireEvent.press(screen.getByLabelText('Toggle Initiative KPI Past'));
+      await screen.findByText('Initiative Past');
       expect(countOpacityHalf(screen.toJSON())).toBe(0);
       expect(screen.getAllByText(/Periode lewat/).length).toBe(3);
     });
 
-    it('[W08·2] hanya Strategy yang past → tanpa opacity dim di level-3, badge tetap tampil', async () => {
+    it('[W08·2] hanya Initiative yang past → tanpa opacity dim di level-3, badge tetap tampil', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(
         goalsResult({ goals: [{ id: 'g', name: 'Goal Aktif', status: 'active', ...NOW_PERIOD }] }),
       );
-      mockUseKpiAreas.mockReturnValue(
-        kpiResult({ kpiAreas: [{ id: 'k', name: 'KPI Aktif', status: 'active', ...NOW_PERIOD }] }),
-      );
       mockUseStrategies.mockReturnValue(
-        strategiesResult({
-          strategies: [{ id: 's', name: 'Strategy Past', status: 'active', ...PAST_PERIOD }],
+        kpiResult({ strategies: [{ id: 'k', name: 'KPI Aktif', status: 'active', ...NOW_PERIOD }] }),
+      );
+      mockUseInitiatives.mockReturnValue(
+        initiativesResult({
+          initiatives: [{ id: 's', name: 'Initiative Past', status: 'active', ...PAST_PERIOD }],
         }),
       );
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Aktif'));
       await screen.findByText('KPI Aktif');
-      fireEvent.press(screen.getByLabelText('Toggle Strategy KPI Aktif'));
-      await screen.findByText('Strategy Past');
+      fireEvent.press(screen.getByLabelText('Toggle Initiative KPI Aktif'));
+      await screen.findByText('Initiative Past');
       expect(countOpacityHalf(screen.toJSON())).toBe(0);
       expect(screen.getAllByText(/Periode lewat/).length).toBe(1);
     });
@@ -1428,57 +1428,57 @@ describe('WorkspaceScreen', () => {
       expect(screen.getByLabelText('Capaian 82 persen')).toBeTruthy();
     });
 
-    it('[ORB2] StrategySubRow render orb label "Progress" (bukan "Capaian")', async () => {
+    it('[ORB2] InitiativeSubRow render orb label "Progress" (bukan "Capaian")', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
       setProgress({ s1: 20 });
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Orb'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI A'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI A'));
       expect(await screen.findByText('20%')).toBeTruthy();
       expect(screen.getByLabelText('Progress 20 persen')).toBeTruthy();
       expect(screen.queryByLabelText('Capaian 20 persen')).toBeNull();
     });
 
-    it('[ORB3] ActionPlanSubRow leaf: orb "Progress" dari computeActionPlanProgress (submitted→80)', async () => {
+    it('[ORB3] TaskSubRow leaf: orb "Progress" dari computeTaskProgress (submitted→80)', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
-      mockUseStrategyInitiatives.mockReturnValue(stratInitResult({ initiatives: [{ id: 'i1', name: 'Init A', status: 'active', ...PERIOD }] }));
-      mockUseInitiativeActionPlans.mockReturnValue(
-        actionPlanResult({ actionPlans: [{ id: 'ap1', name: 'Setup pixel', status: 'submitted', repeat_setting: 'one_time', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
+      mockUseInitiativeActionPlans.mockReturnValue(stratInitResult({ action_plans: [{ id: 'i1', name: 'Init A', status: 'active', ...PERIOD }] }));
+      mockUseActionPlanTasks.mockReturnValue(
+        taskResult({ tasks: [{ id: 'ap1', name: 'Setup pixel', status: 'submitted', repeat_setting: 'one_time', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
       );
       setProgress({}); // induk tak diset — fokus ke leaf yang dihitung klien
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Orb'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI A'));
-      fireEvent.press(await screen.findByLabelText('Toggle Initiative Strat A'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI A'));
+      fireEvent.press(await screen.findByLabelText('Toggle ActionPlan Strat A'));
       fireEvent.press(await screen.findByLabelText('Toggle Action Plan Init A'));
       expect(await screen.findByText('80%')).toBeTruthy();
       expect(screen.getByLabelText('Progress 80 persen')).toBeTruthy();
     });
 
-    it('[ORB4] ActionPlan repeat tanpa compliance → "—" (bukan 0% menyesatkan)', async () => {
+    it('[ORB4] Task repeat tanpa compliance → "—" (bukan 0% menyesatkan)', async () => {
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
-      mockUseKpiAreas.mockReturnValue(kpiResult({ kpiAreas: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
-      mockUseStrategies.mockReturnValue(strategiesResult({ strategies: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
-      mockUseStrategyInitiatives.mockReturnValue(stratInitResult({ initiatives: [{ id: 'i1', name: 'Init A', status: 'active', ...PERIOD }] }));
-      mockUseInitiativeActionPlans.mockReturnValue(
-        actionPlanResult({ actionPlans: [{ id: 'ap2', name: 'Rutin harian', status: 'active', repeat_setting: 'repeat', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [{ id: 'k1', name: 'KPI A', status: 'active', ...PERIOD }] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [{ id: 's1', name: 'Strat A', status: 'active', ...PERIOD }] }));
+      mockUseInitiativeActionPlans.mockReturnValue(stratInitResult({ action_plans: [{ id: 'i1', name: 'Init A', status: 'active', ...PERIOD }] }));
+      mockUseActionPlanTasks.mockReturnValue(
+        taskResult({ tasks: [{ id: 'ap2', name: 'Rutin harian', status: 'active', repeat_setting: 'repeat', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
       );
       // Induk diberi nilai agar hanya AP repeat leaf yang jadi '—' (unik untuk assertion).
       setProgress({ k1: 50, s1: 50, i1: 50 });
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle KPI Area Goal Orb'));
-      fireEvent.press(await screen.findByLabelText('Toggle Strategy KPI A'));
-      fireEvent.press(await screen.findByLabelText('Toggle Initiative Strat A'));
+      fireEvent.press(await screen.findByLabelText('Toggle Initiative KPI A'));
+      fireEvent.press(await screen.findByLabelText('Toggle ActionPlan Strat A'));
       fireEvent.press(await screen.findByLabelText('Toggle Action Plan Init A'));
       await screen.findByText('Rutin harian');
-      // AP repeat leaf: computeActionPlanProgress tak dipakai (compliance absen) → '—', bukan 0%.
+      // AP repeat leaf: computeTaskProgress tak dipakai (compliance absen) → '—', bukan 0%.
       expect(screen.queryByText('0%')).toBeNull();
       expect(screen.getByLabelText('Progress belum tersedia')).toBeTruthy();
     });

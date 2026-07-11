@@ -13,15 +13,15 @@ const mockActivateGoal = jest.fn();
 const mockApplyGoalTemplate = jest.fn();
 const mockRestoreGoalTemplateItems = jest.fn();
 
-const mockListKpiAreas = jest.fn();
-const mockCreateKpiArea = jest.fn();
-const mockActivateKpiArea = jest.fn();
-
 const mockListStrategies = jest.fn();
 const mockCreateStrategy = jest.fn();
 const mockActivateStrategy = jest.fn();
 
 const mockListInitiatives = jest.fn();
+const mockCreateInitiative = jest.fn();
+const mockActivateInitiative = jest.fn();
+
+const mockListActionPlans = jest.fn();
 const mockGetPersonRef = jest.fn();
 
 // Fase 6 — Development Workspace mocks
@@ -42,20 +42,20 @@ jest.mock('@/lib/goals', () => ({
   restoreGoalTemplateItems: (...a: unknown[]) => mockRestoreGoalTemplateItems(...a),
 }));
 
-jest.mock('@/lib/kpi-areas', () => ({
-  listKpiAreas: (...a: unknown[]) => mockListKpiAreas(...a),
-  createKpiArea: (...a: unknown[]) => mockCreateKpiArea(...a),
-  activateKpiArea: (...a: unknown[]) => mockActivateKpiArea(...a),
-}));
-
 jest.mock('@/lib/strategies', () => ({
   listStrategies: (...a: unknown[]) => mockListStrategies(...a),
   createStrategy: (...a: unknown[]) => mockCreateStrategy(...a),
   activateStrategy: (...a: unknown[]) => mockActivateStrategy(...a),
 }));
 
-jest.mock('@/lib/cards', () => ({
+jest.mock('@/lib/initiatives', () => ({
   listInitiatives: (...a: unknown[]) => mockListInitiatives(...a),
+  createInitiative: (...a: unknown[]) => mockCreateInitiative(...a),
+  activateInitiative: (...a: unknown[]) => mockActivateInitiative(...a),
+}));
+
+jest.mock('@/lib/cards', () => ({
+  listActionPlans: (...a: unknown[]) => mockListActionPlans(...a),
   getPersonRef: (...a: unknown[]) => mockGetPersonRef(...a),
 }));
 
@@ -72,10 +72,10 @@ jest.mock('@/lib/problem-statements', () => ({
 }));
 
 // S2 — KPI Area Target Breakdown (lib menyentuh supabase; mock untuk hindari env throw).
-jest.mock('@/lib/kpi-area-breakdown', () => ({
+jest.mock('@/lib/strategy-breakdown', () => ({
   __esModule: true,
-  listKpiAreaBreakdown: jest.fn(),
-  replaceKpiAreaBreakdown: jest.fn(),
+  listStrategyBreakdown: jest.fn(),
+  replaceStrategyBreakdown: jest.fn(),
 }));
 
 // WSA-15 — progress orb rollup (lib menyentuh supabase.rpc; mock titik ini).
@@ -91,14 +91,14 @@ import {
   useGoal,
   useGoalActions,
   useGoals,
-  useKpiAreaActions,
-  useKpiAreas,
+  useStrategyActions,
+  useStrategies,
   usePerson,
   useProblemStatementActions,
-  useProblemStatementInitiatives,
+  useProblemStatementActionPlans,
   useProblemStatements,
-  useStrategies,
-  useStrategyActions,
+  useInitiatives,
+  useInitiativeActions,
   useCardProgress,
 } from '../use-workspace';
 
@@ -118,13 +118,13 @@ beforeEach(() => {
   mockActivateGoal.mockResolvedValue(undefined);
   mockApplyGoalTemplate.mockResolvedValue('g-from-template');
   mockRestoreGoalTemplateItems.mockResolvedValue(2);
-  mockListKpiAreas.mockResolvedValue([{ id: 'k1' }]);
-  mockCreateKpiArea.mockResolvedValue({ id: 'k-new' });
-  mockActivateKpiArea.mockResolvedValue(undefined);
-  mockListStrategies.mockResolvedValue([{ id: 's1' }]);
-  mockCreateStrategy.mockResolvedValue({ id: 's-new' });
+  mockListStrategies.mockResolvedValue([{ id: 'k1' }]);
+  mockCreateStrategy.mockResolvedValue({ id: 'k-new' });
   mockActivateStrategy.mockResolvedValue(undefined);
-  mockListInitiatives.mockResolvedValue([{ id: 'i1' }]);
+  mockListInitiatives.mockResolvedValue([{ id: 's1' }]);
+  mockCreateInitiative.mockResolvedValue({ id: 's-new' });
+  mockActivateInitiative.mockResolvedValue(undefined);
+  mockListActionPlans.mockResolvedValue([{ id: 'i1' }]);
   mockListDevelopmentAreas.mockResolvedValue([{ id: 'd1', name: 'Org Dev' }]);
   mockCreateDevelopmentArea.mockResolvedValue({ id: 'd-new' });
   mockActivateDevelopmentArea.mockResolvedValue(undefined);
@@ -148,17 +148,17 @@ describe('useGoals / useGoal (enabled gate)', () => {
   });
 });
 
-describe('useKpiAreas / useStrategies (enabled gate)', () => {
-  it('[2] id kosong tidak fetch; useKpiAreas("g1") memanggil listKpiAreas("g1")', async () => {
+describe('useStrategies / useInitiatives (enabled gate)', () => {
+  it('[2] id kosong tidak fetch; useStrategies("g1") memanggil listStrategies("g1")', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(
-      () => ({ ke: useKpiAreas(''), se: useStrategies(''), k: useKpiAreas('g1') }),
+      () => ({ ke: useStrategies(''), se: useInitiatives(''), k: useStrategies('g1') }),
       { wrapper },
     );
-    await waitFor(() => expect(result.current.k.kpiAreas.length).toBe(1));
-    expect(mockListKpiAreas).toHaveBeenCalledTimes(1);
-    expect(mockListKpiAreas).toHaveBeenCalledWith('g1');
-    expect(mockListStrategies).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.k.strategies.length).toBe(1));
+    expect(mockListStrategies).toHaveBeenCalledTimes(1);
+    expect(mockListStrategies).toHaveBeenCalledWith('g1');
+    expect(mockListInitiatives).not.toHaveBeenCalled();
   });
 });
 
@@ -213,11 +213,11 @@ describe('useGoalActions', () => {
   });
 });
 
-describe('useKpiAreaActions', () => {
-  it('[7] create invalidate ["goal",goalId] & ["kpi_areas",goalId]', async () => {
+describe('useStrategyActions', () => {
+  it('[7] create invalidate ["goal",goalId] & ["strategies",goalId]', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useKpiAreaActions('g1'), { wrapper });
+    const { result } = await renderHook(() => useStrategyActions('g1'), { wrapper });
     await act(async () => {
       await result.current.create({
         goal_id: 'g1',
@@ -228,23 +228,23 @@ describe('useKpiAreaActions', () => {
         period_end: null,
       });
     });
-    expect(mockCreateKpiArea).toHaveBeenCalled();
+    expect(mockCreateStrategy).toHaveBeenCalled();
     expect(spy).toHaveBeenCalledWith({ queryKey: ['goal', 'g1'] });
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['kpi_areas', 'g1'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['strategies', 'g1'] });
   });
 });
 
-describe('useStrategyActions', () => {
-  it('[8] activate invalidate ["strategies",kpiAreaId]; propagate error', async () => {
+describe('useInitiativeActions', () => {
+  it('[8] activate invalidate ["initiatives",strategyId]; propagate error', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useStrategyActions('k1'), { wrapper });
+    const { result } = await renderHook(() => useInitiativeActions('k1'), { wrapper });
     await act(async () => {
       await result.current.activate('s1');
     });
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['strategies', 'k1'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['initiatives', 'k1'] });
 
-    mockActivateStrategy.mockRejectedValueOnce(new Error('depth'));
+    mockActivateInitiative.mockRejectedValueOnce(new Error('depth'));
     await act(async () => {
       await expect(result.current.activate('s1')).rejects.toThrow('depth');
     });
@@ -278,12 +278,12 @@ describe('useProblemStatements (enabled gate)', () => {
   });
 });
 
-describe('useProblemStatementInitiatives', () => {
-  it('[F6-3] memanggil listInitiatives({ problemStatementId })', async () => {
+describe('useProblemStatementActionPlans', () => {
+  it('[F6-3] memanggil listActionPlans({ problemStatementId })', async () => {
     const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useProblemStatementInitiatives('p1'), { wrapper });
-    await waitFor(() => expect(result.current.initiatives.length).toBe(1));
-    expect(mockListInitiatives).toHaveBeenCalledWith({ problemStatementId: 'p1' });
+    const { result } = await renderHook(() => useProblemStatementActionPlans('p1'), { wrapper });
+    await waitFor(() => expect(result.current.action_plans.length).toBe(1));
+    expect(mockListActionPlans).toHaveBeenCalledWith({ problemStatementId: 'p1' });
   });
 });
 
@@ -457,10 +457,10 @@ describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
 });
 
 describe('invalidasi progress orb pada mutasi status anak (WSA-15)', () => {
-  it('[P6] useStrategyActions.activate meng-invalidate ["workspace_card_progress"]', async () => {
+  it('[P6] useInitiativeActions.activate meng-invalidate ["workspace_card_progress"]', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useStrategyActions('k1'), { wrapper });
+    const { result } = await renderHook(() => useInitiativeActions('k1'), { wrapper });
     await act(async () => {
       await result.current.activate('s1');
     });

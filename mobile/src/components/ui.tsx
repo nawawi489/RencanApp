@@ -591,7 +591,7 @@ export function ProgressBar({
 // ---------------------------------------------------------------- ProgressOrb (UI-G-001)
 
 /**
- * Orb capaian sistemik untuk header detail Goal/KPI/Strategy/Initiative/Action Plan.
+ * Orb capaian sistemik untuk header detail Goal/KPI/Initiative/ActionPlan/Action Plan.
  * Discrete size 56 (compact) atau 72 (hero). Tone otomatis dari nilai bila tidak diisi:
  *   - 0–34 → danger (merah) "Perlu perhatian"
  *   - 35–69 → warn  (amber) "Berjalan"

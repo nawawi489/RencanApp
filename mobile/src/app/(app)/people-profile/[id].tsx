@@ -24,12 +24,12 @@ import {
 import {
   ACTION_PLAN_STATUS_LABEL,
   STATUS_TONE,
-  countCompletedActionPlansInPeriod,
+  countCompletedTasksInPeriod,
   getOrgProfileDetail,
-  listActionPlansByPic,
+  listTasksByPic,
   listOrgProfiles,
   personLabel,
-  type ActionPlanWithPeople,
+  type TaskWithPeople,
   type PersonRef,
 } from '@/lib/cards';
 import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
@@ -98,10 +98,10 @@ export function LivePeopleProfileScreen() {
   const [tasksOpen, setTasksOpen] = useState(false);
   const tasksQ = useQuery({
     queryKey: ['person-tasks', id],
-    queryFn: () => listActionPlansByPic(id ?? ''),
+    queryFn: () => listTasksByPic(id ?? ''),
     enabled: !!id && tasksOpen,
   });
-  const tasks = (tasksQ.data ?? []) as ActionPlanWithPeople[];
+  const tasks = (tasksQ.data ?? []) as TaskWithPeople[];
 
   const isSelf = profile?.id === id;
   const canManage = can('manage_score_formula');
@@ -112,7 +112,7 @@ export function LivePeopleProfileScreen() {
   // bila count=0 untuk menghindari ambiguitas 0-nyata vs RLS-hidden.
   const contributionQ = useQuery({
     queryKey: ['contribution', id, active?.id ?? 'none'],
-    queryFn: () => countCompletedActionPlansInPeriod(id ?? '', active ?? null),
+    queryFn: () => countCompletedTasksInPeriod(id ?? '', active ?? null),
     enabled: !!id && !!active,
   });
   const contributionCount = contributionQ.data ?? 0;
@@ -339,7 +339,7 @@ export function LivePeopleProfileScreen() {
                     key={t.id}
                     accessibilityRole="button"
                     accessibilityLabel={`Buka ${t.name}`}
-                    onPress={() => router.push(`/action-plan/${t.id}` as Href)}
+                    onPress={() => router.push(`/task/${t.id}` as Href)}
                     className="gap-1 rounded-xl bg-neutral-50 p-3 active:opacity-70 dark:bg-neutral-900">
                     <View className="flex-row items-start justify-between gap-2">
                       <Text className="flex-1 text-sm font-medium text-black dark:text-white">

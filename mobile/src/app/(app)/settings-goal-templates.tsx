@@ -1,5 +1,5 @@
 // UI — Goal Template Library (mockup 37) + KPI Area Template (mockup 38, nested).
-// Browse read-only template blueprint Fase 4 (data layer sudah ada: goal_templates / kpi_area_templates).
+// Browse read-only template blueprint Fase 4 (data layer sudah ada: goal_templates / strategy_templates).
 // CTA "Buat Goal dari Template" → goal-wizard (yang menjalankan apply_goal_template). Hanya tampil
 // bila create_goal. Lazy: KPI Area template di-fetch saat baris template di-expand.
 import { Stack, useRouter, type Href } from 'expo-router';
@@ -8,14 +8,14 @@ import { FlatList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { Badge, Button, EmptyState, ErrorState, SkeletonList } from '@/components/ui';
-import { useGoalTemplates, useKpiAreaTemplates } from '@/hooks/use-workspace';
+import { useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import type { GoalTemplate } from '@/lib/goals';
 
 function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; canCreate: boolean; onUse: () => void }) {
   const [expanded, setExpanded] = useState(false);
   // Lazy: id kosong saat collapsed → hook disabled (enabled: !!goalTemplateId).
-  const { items, isLoading } = useKpiAreaTemplates(expanded ? template.id : '');
+  const { items, isLoading } = useStrategyTemplates(expanded ? template.id : '');
 
   return (
     <View className="gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">

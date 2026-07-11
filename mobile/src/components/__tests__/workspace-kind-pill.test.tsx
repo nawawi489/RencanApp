@@ -15,8 +15,8 @@ describe('WorkspaceKindPill', () => {
     expect(screen.getByText('Goal')).toBeTruthy();
   });
 
-  it('action_plan → letter "AP" (dua huruf) + label "Action Plan"', async () => {
-    await render(<WorkspaceKindPill kind="action_plan" />);
+  it('task → letter "AP" (dua huruf) + label "Action Plan"', async () => {
+    await render(<WorkspaceKindPill kind="task" />);
     expect(screen.getByText('AP')).toBeTruthy();
     expect(screen.getByText('Action Plan')).toBeTruthy();
   });
@@ -24,10 +24,10 @@ describe('WorkspaceKindPill', () => {
   it('mapping huruf per kategori sesuai spec §9', () => {
     const expected: Record<string, string> = {
       goal: 'G',
-      kpi_area: 'K',
-      strategy: 'S',
-      initiative: 'I',
-      action_plan: 'AP',
+      strategy: 'K',
+      initiative: 'S',
+      action_plan: 'I',
+      task: 'AP',
       development_area: 'D',
       problem_statement: 'P',
     };

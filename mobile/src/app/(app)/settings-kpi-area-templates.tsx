@@ -10,18 +10,18 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/c
 import { AccessDenied } from '@/components/access-denied';
 import { Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
-import { listAllKpiAreaTemplates, type KpiAreaTemplateWithParent } from '@/lib/goals';
+import { listAllStrategyTemplates, type StrategyTemplateWithParent } from '@/lib/goals';
 
-export default function SettingsKpiAreaTemplatesScreen() {
+export default function SettingsStrategyTemplatesScreen() {
   const router = useRouter();
   const { can } = useProfile();
-  const allowed = can('manage_kpi_area_templates') || can('manage_goal_templates');
+  const allowed = can('manage_strategy_templates') || can('manage_goal_templates');
   const placeholderColor = usePlaceholderColor();
   const [q, setQ] = useState('');
 
   const tplQ = useQuery({
-    queryKey: ['kpi_area_templates', 'all'],
-    queryFn: listAllKpiAreaTemplates,
+    queryKey: ['strategy_templates', 'all'],
+    queryFn: listAllStrategyTemplates,
     enabled: allowed,
   });
 
@@ -32,7 +32,7 @@ export default function SettingsKpiAreaTemplatesScreen() {
       const hay = `${r.name ?? ''} ${r.goal_templates?.name ?? ''}`.toLowerCase();
       return hay.includes(needle);
     });
-    const map = new Map<string, { parent: { id: string; name: string } | null; rows: KpiAreaTemplateWithParent[] }>();
+    const map = new Map<string, { parent: { id: string; name: string } | null; rows: StrategyTemplateWithParent[] }>();
     for (const r of filtered) {
       const key = r.goal_template_id ?? 'orphan';
       const slot = map.get(key) ?? { parent: r.goal_templates, rows: [] };

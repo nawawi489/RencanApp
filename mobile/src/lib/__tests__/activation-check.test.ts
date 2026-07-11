@@ -29,18 +29,18 @@ describe('missingRequiredFor', () => {
       'Nama', 'PIC', 'Periode mulai', 'Periode selesai',
     ]);
   });
-  it('kpi_area + Target wajib', () => {
-    const m = missingRequiredFor('kpi_area', { ...FULL, target: '   ' });
+  it('strategy + Target wajib', () => {
+    const m = missingRequiredFor('strategy', { ...FULL, target: '   ' });
     expect(m).toEqual(['Target']);
   });
-  it('strategy + reason/main_risk/alternative wajib', () => {
-    const m = missingRequiredFor('strategy', {
+  it('initiative + reason/main_risk/alternative wajib', () => {
+    const m = missingRequiredFor('initiative', {
       ...FULL, reason: '', main_risk: ' ', alternative: '',
     });
     expect(m).toEqual(['Alasan', 'Risiko Utama', 'Alternatif']);
   });
-  it('initiative + target_result wajib', () => {
-    const m = missingRequiredFor('initiative', { ...FULL, target_result: '' });
+  it('action_plan + target_result wajib', () => {
+    const m = missingRequiredFor('action_plan', { ...FULL, target_result: '' });
     expect(m).toEqual(['Target Hasil']);
   });
   it('development_area: shared field only (tidak ada extra)', () => {
@@ -62,7 +62,7 @@ describe('guardActivationFields', () => {
   });
   it('kosong → return true + popup berisi label CARD + daftar field', () => {
     const alertSpy = jest.fn();
-    const blocked = guardActivationFields('kpi_area', { name: 'KPI X' }, alertSpy);
+    const blocked = guardActivationFields('strategy', { name: 'KPI X' }, alertSpy);
     expect(blocked).toBe(true);
     expect(alertSpy).toHaveBeenCalledTimes(1);
     const [title, msg] = alertSpy.mock.calls[0];
@@ -72,10 +72,10 @@ describe('guardActivationFields', () => {
     expect(msg).toContain('Periode mulai');
     expect(msg).toContain('Target');
   });
-  it('strategy 3 reason fields kosong → semua dilist', () => {
+  it('initiative 3 reason fields kosong → semua dilist', () => {
     const alertSpy = jest.fn();
     const card = { ...FULL, reason: '', main_risk: '', alternative: '' };
-    guardActivationFields('strategy', card, alertSpy);
+    guardActivationFields('initiative', card, alertSpy);
     const [, msg] = alertSpy.mock.calls[0];
     expect(msg).toContain('Alasan');
     expect(msg).toContain('Risiko Utama');
@@ -85,19 +85,19 @@ describe('guardActivationFields', () => {
 
 // WSA-04 — pesan guard tree §12.3: pola persis spec, mengacu type parent + next button.
 describe('mbrBreakdownGuardMessage', () => {
-  const kpiToStrategy: MbrCompliance = {
-    child_card_type: 'strategy',
+  const kpiToInitiative: MbrCompliance = {
+    child_card_type: 'initiative',
     child_count: 2,
     min_count: 3,
     enforcement_mode: 'blokir_akses_turunan',
     is_compliant: false,
   };
 
-  it('KPI Area 2/3 Strategy → kalimat §12.3 persis (next button Initiative)', () => {
-    const { title, message } = mbrBreakdownGuardMessage('KPI Area', kpiToStrategy, 'Initiative');
+  it('KPI Area 2/3 Initiative → kalimat §12.3 persis (next button ActionPlan)', () => {
+    const { title, message } = mbrBreakdownGuardMessage('KPI Area', kpiToInitiative, 'ActionPlan');
     expect(title).toBe('Kelengkapan Perencanaan');
     expect(message).toBe(
-      'KPI Area ini baru punya 2 dari 3 Strategy. Tambahkan 1 Strategy lagi dulu, baru tombol + Initiative aktif.',
+      'KPI Area ini baru punya 2 dari 3 Initiative. Tambahkan 1 Initiative lagi dulu, baru tombol + ActionPlan aktif.',
     );
   });
 });

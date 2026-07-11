@@ -1,5 +1,5 @@
 // Smoke test end-to-end wire Sentry. Diakses via URL /dev-sentry-test (tidak di-link
-// dari navigasi). Tombol hanya render saat EXPO_PUBLIC_APP_ENV !== 'production' — safety
+// dari navigasi). Tombol hanya render saat EXPO_PUBLIactionPlanP_ENV !== 'production' — safety
 // guard bila route ini bocor ke build produksi (mis. developer lupa hapus).
 //
 // Cara pakai:
@@ -13,7 +13,7 @@ import { createLogger } from '@/lib/logger';
 const log = createLogger('DevSmokeTest');
 
 function isProduction(): boolean {
-  return process.env.EXPO_PUBLIC_APP_ENV === 'production';
+  return process.env.EXPO_PUBLIactionPlanP_ENV === 'production';
 }
 
 export default function DevSentryTest() {

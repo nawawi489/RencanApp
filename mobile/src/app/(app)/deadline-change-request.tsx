@@ -20,10 +20,10 @@ const STATUS_TONE: Record<string, 'neutral' | 'warn' | 'success' | 'danger'> = {
 
 export default function DeadlineChangeRequestScreen() {
   const { profile, can } = useProfile();
-  const params = useLocalSearchParams<{ actionPlanId?: string; oldDeadline?: string }>();
-  const actionPlanId = params.actionPlanId ?? '';
+  const params = useLocalSearchParams<{ taskId?: string; oldDeadline?: string }>();
+  const taskId = params.taskId ?? '';
   const oldDeadline = params.oldDeadline ?? '';
-  const { requests } = useDeadlineChangeRequests(actionPlanId);
+  const { requests } = useDeadlineChangeRequests(taskId);
   const { createRequest, reviewRequest, resubmitRequest, isPending } = useDeadlineChangeActions();
 
   const [newDeadline, setNewDeadline] = useState('');
@@ -55,7 +55,7 @@ export default function DeadlineChangeRequestScreen() {
       return;
     }
     try {
-      await createRequest({ entityId: actionPlanId, oldDeadline, newDeadline: next, reason: reason.trim(), impact });
+      await createRequest({ entityId: taskId, oldDeadline, newDeadline: next, reason: reason.trim(), impact });
       setNewDeadline('');
       setReason('');
       setImpact('');

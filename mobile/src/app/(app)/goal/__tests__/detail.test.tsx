@@ -10,12 +10,12 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockUseGoal = jest.fn();
-const mockUseKpiAreas = jest.fn();
+const mockUseStrategies = jest.fn();
 const mockActivate = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useGoal: (id: string) => mockUseGoal(id),
-  useKpiAreas: (id: string) => mockUseKpiAreas(id),
+  useStrategies: (id: string) => mockUseStrategies(id),
   useGoalActions: () => ({ activate: mockActivate, isPending: false }),
 }));
 
@@ -46,11 +46,11 @@ const refetch = jest.fn();
 
 beforeEach(() => {
   mockUseGoal.mockReset();
-  mockUseKpiAreas.mockReset();
+  mockUseStrategies.mockReset();
   mockActivate.mockReset();
   refetch.mockReset();
   // default: KPI list resolved kosong; tiap test override yang relevan.
-  mockUseKpiAreas.mockReturnValue({ kpiAreas: [], isLoading: false, isError: false, refetch });
+  mockUseStrategies.mockReturnValue({ strategies: [], isLoading: false, isError: false, refetch });
 });
 
 describe('GoalDetailScreen', () => {
@@ -69,8 +69,8 @@ describe('GoalDetailScreen', () => {
       isError: false,
       refetch,
     });
-    mockUseKpiAreas.mockReturnValue({
-      kpiAreas: [{ id: 'k1', name: 'Akuisisi Pelanggan', status: 'active' }],
+    mockUseStrategies.mockReturnValue({
+      strategies: [{ id: 'k1', name: 'Akuisisi Pelanggan', status: 'active' }],
       isLoading: false,
       isError: false,
       refetch,

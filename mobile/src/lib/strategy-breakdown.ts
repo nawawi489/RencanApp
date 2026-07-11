@@ -68,12 +68,12 @@ export function indexMonthRowsPerQuarter(
 
 // ---------------------------------------------------------------- queries
 
-export async function listKpiAreaBreakdown(kpiAreaId: string): Promise<BreakdownRow[]> {
-  if (!kpiAreaId) return [];
+export async function listStrategyBreakdown(strategyId: string): Promise<BreakdownRow[]> {
+  if (!strategyId) return [];
   const { data, error } = await supabase
     .from('strategy_target_breakdowns')
     .select('*')
-    .eq('strategy_id', kpiAreaId)
+    .eq('strategy_id', strategyId)
     .order('period_type', { ascending: true })
     .order('period_key', { ascending: true });
   if (error) throw error;
@@ -86,7 +86,7 @@ export type QuarterInput = { period_key: QuarterKey; pct: number };
 export type MonthInput = { period_key: MonthKey; parent_quarter_key: QuarterKey; pct: number };
 
 export type ReplaceArgs = {
-  kpiAreaId: string;
+  strategyId: string;
   quarter: QuarterInput[] | null;
   month: MonthInput[] | null;
   reason: string;
@@ -100,9 +100,9 @@ export type ReplaceArgs = {
  * - `month` array (3 entri × N quarter Σ=100/quarter) → upsert per Q.
  * Server validasi & emit activity_log.
  */
-export async function replaceKpiAreaBreakdown(args: ReplaceArgs): Promise<BreakdownRow[]> {
+export async function replaceStrategyBreakdown(args: ReplaceArgs): Promise<BreakdownRow[]> {
   const { data, error } = await supabase.rpc('strategy_breakdown_replace', {
-    p_strategy_id: args.kpiAreaId,
+    p_strategy_id: args.strategyId,
     p_quarter: args.quarter,
     p_month: args.month,
     p_reason: args.reason,

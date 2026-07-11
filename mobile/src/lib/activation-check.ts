@@ -11,17 +11,17 @@ import { CARD_TYPE_LABEL, type MbrCompliance } from './settings-mbr';
 
 export type ActivatableCardType =
   | 'goal'
-  | 'kpi_area'
   | 'strategy'
   | 'initiative'
+  | 'action_plan'
   | 'development_area'
   | 'problem_statement';
 
 const CARD_LABEL: Record<ActivatableCardType, string> = {
   goal: 'Goal',
-  kpi_area: 'KPI Area',
-  strategy: 'Strategy',
+  strategy: 'KPI Area',
   initiative: 'Initiative',
+  action_plan: 'ActionPlan',
   development_area: 'Development Area',
   problem_statement: 'Problem Statement',
 };
@@ -61,15 +61,15 @@ export function missingRequiredFor(cardType: ActivatableCardType, card: CardForC
   if (!card.period_end) missing.push('Periode selesai');
 
   switch (cardType) {
-    case 'kpi_area':
+    case 'strategy':
       if (trimEmpty(card.target)) missing.push('Target');
       break;
-    case 'strategy':
+    case 'initiative':
       if (trimEmpty(card.reason)) missing.push('Alasan');
       if (trimEmpty(card.main_risk)) missing.push('Risiko Utama');
       if (trimEmpty(card.alternative)) missing.push('Alternatif');
       break;
-    case 'initiative':
+    case 'action_plan':
       if (trimEmpty(card.target_result)) missing.push('Target Hasil');
       break;
     case 'goal':
@@ -102,7 +102,7 @@ export function guardActivationFields(
  * "<ParentType> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu,
  *  baru tombol + <NextButton> aktif."
  * `parentTypeLabel` = label TIPE parent (mis. "KPI Area"); `nextButtonLabel` = turunan yang
- * tombolnya di-guard (mis. "Initiative"); jenis child yang dihitung diambil dari compliance.
+ * tombolnya di-guard (mis. "ActionPlan"); jenis child yang dihitung diambil dari compliance.
  */
 export function mbrBreakdownGuardMessage(
   parentTypeLabel: string,

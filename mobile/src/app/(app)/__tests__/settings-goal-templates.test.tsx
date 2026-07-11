@@ -8,11 +8,11 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockUseGoalTemplates = jest.fn();
-const mockUseKpiAreaTemplates = jest.fn();
+const mockUseStrategyTemplates = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useGoalTemplates: (...a: unknown[]) => mockUseGoalTemplates(...a),
-  useKpiAreaTemplates: (...a: unknown[]) => mockUseKpiAreaTemplates(...a),
+  useStrategyTemplates: (...a: unknown[]) => mockUseStrategyTemplates(...a),
 }));
 
 const mockCan = jest.fn();
@@ -41,10 +41,10 @@ function wrapper() {
 
 beforeEach(() => {
   mockUseGoalTemplates.mockReset();
-  mockUseKpiAreaTemplates.mockReset();
+  mockUseStrategyTemplates.mockReset();
   mockCan.mockReset();
   mockPush.mockReset();
-  mockUseKpiAreaTemplates.mockReturnValue({ items: [], isLoading: false, isError: false });
+  mockUseStrategyTemplates.mockReturnValue({ items: [], isLoading: false, isError: false });
   mockCan.mockReturnValue(true);
 });
 
@@ -84,7 +84,7 @@ describe('SettingsGoalTemplatesScreen', () => {
       isLoading: false,
       isError: false,
     });
-    mockUseKpiAreaTemplates.mockReturnValue({
+    mockUseStrategyTemplates.mockReturnValue({
       items: [{ id: 'k1', name: 'Revenue', division_label: 'Sales', goal_template_id: 't1' }],
       isLoading: false,
       isError: false,

@@ -1,16 +1,16 @@
-// Hooks Fase 4 — Workspace (Goal → KPI Area → Strategy → Initiative). Pemanggil tipis di atas
-// @/lib/goals, @/lib/kpi-areas, @/lib/strategies, @/lib/cards. Query keys TERKUNCI (lihat kontrak):
-// ['goals'], ['goal', id], ['strategies', goalId], ['strategies', kpiAreaId],
+// Hooks Fase 4 — Workspace (Goal → KPI Area → Initiative → ActionPlan). Pemanggil tipis di atas
+// @/lib/goals, @/lib/strategies, @/lib/initiatives, @/lib/cards. Query keys TERKUNCI (lihat kontrak):
+// ['goals'], ['goal', id], ['strategies', goalId], ['initiatives', strategyId],
 // ['goal_templates']. Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   getPersonRef,
+  listTasks,
   listActionPlans,
-  listInitiatives,
-  type ActionPlanWithPeople,
-  type Initiative,
+  type TaskWithPeople,
+  type ActionPlan,
   type PersonRef,
 } from '@/lib/cards';
 import {
@@ -20,34 +20,34 @@ import {
   getGoal,
   listGoalTemplates,
   listGoals,
-  listKpiAreaTemplates,
+  listStrategyTemplates,
   restoreGoalTemplateItems,
   type GoalTemplate,
-  type KpiAreaTemplate,
+  type StrategyTemplate,
   type Goal,
   type GoalWithKpiCount,
   type NewGoal,
 } from '@/lib/goals';
 import {
-  activateKpiArea,
-  createKpiArea,
-  listKpiAreas,
-  type KpiArea,
-  type NewKpiArea,
-} from '@/lib/kpi-areas';
-import {
-  listKpiAreaBreakdown,
-  replaceKpiAreaBreakdown,
-  type BreakdownRow,
-  type ReplaceArgs,
-} from '@/lib/kpi-area-breakdown';
-import {
   activateStrategy,
   createStrategy,
   listStrategies,
-  type NewStrategy,
   type Strategy,
+  type NewStrategy,
 } from '@/lib/strategies';
+import {
+  listStrategyBreakdown,
+  replaceStrategyBreakdown,
+  type BreakdownRow,
+  type ReplaceArgs,
+} from '@/lib/strategy-breakdown';
+import {
+  activateInitiative,
+  createInitiative,
+  listInitiatives,
+  type NewInitiative,
+  type Initiative,
+} from '@/lib/initiatives';
 import {
   activateDevelopmentArea,
   createDevelopmentArea,
@@ -128,30 +128,11 @@ export function useGoal(id: string) {
  * KPI Area di bawah satu Goal. Hanya fetch saat goalId terisi DAN `enabled` (lazy: child tree
  * Workspace baru di-fetch saat baris Goal di-expand — jumlah KPI Area collapsed pakai embedded count).
  */
-export function useKpiAreas(goalId: string, enabled = true) {
+export function useStrategies(goalId: string, enabled = true) {
   const q = useQuery({
     queryKey: ['strategies', goalId],
-    queryFn: () => listKpiAreas(goalId),
+    queryFn: () => listStrategies(goalId),
     enabled: !!goalId && enabled,
-  });
-
-  return {
-    kpiAreas: (q.data ?? []) as KpiArea[],
-    isLoading: q.isLoading,
-    isError: q.isError,
-    refetch: q.refetch,
-  };
-}
-
-/**
- * Strategy di bawah satu KPI Area. Hanya fetch saat kpiAreaId terisi DAN `enabled` (lazy:
- * dipakai oleh KpiAreaSubRow di Workspace tree 3-level — fetch saat user expand baris KPI).
- */
-export function useStrategies(kpiAreaId: string, enabled = true) {
-  const q = useQuery({
-    queryKey: ['strategies', kpiAreaId],
-    queryFn: () => listStrategies(kpiAreaId),
-    enabled: !!kpiAreaId && enabled,
   });
 
   return {
@@ -163,13 +144,13 @@ export function useStrategies(kpiAreaId: string, enabled = true) {
 }
 
 /**
- * Initiative di bawah satu Strategy. `enabled` opsional untuk lazy-fetch di tree
- * (default true agar detail page yang memanggil tanpa arg tetap fetch begitu strategyId ada).
+ * Initiative di bawah satu KPI Area. Hanya fetch saat strategyId terisi DAN `enabled` (lazy:
+ * dipakai oleh StrategySubRow di Workspace tree 3-level — fetch saat user expand baris KPI).
  */
-export function useStrategyInitiatives(strategyId: string, enabled = true) {
+export function useInitiatives(strategyId: string, enabled = true) {
   const q = useQuery({
-    queryKey: ['initiatives', 'strategy', strategyId],
-    queryFn: () => listInitiatives({ strategyId }),
+    queryKey: ['initiatives', strategyId],
+    queryFn: () => listInitiatives(strategyId),
     enabled: !!strategyId && enabled,
   });
 
@@ -181,16 +162,35 @@ export function useStrategyInitiatives(strategyId: string, enabled = true) {
   };
 }
 
-/** Action Plan di bawah satu Initiative. Lazy-fetch di tree (WSA-01, level terbawah). */
+/**
+ * ActionPlan di bawah satu Initiative. `enabled` opsional untuk lazy-fetch di tree
+ * (default true agar detail page yang memanggil tanpa arg tetap fetch begitu initiativeId ada).
+ */
 export function useInitiativeActionPlans(initiativeId: string, enabled = true) {
   const q = useQuery({
-    queryKey: ['tasks', 'initiative', initiativeId],
-    queryFn: () => listActionPlans(initiativeId),
+    queryKey: ['action_plans', 'initiative', initiativeId],
+    queryFn: () => listActionPlans({ initiativeId }),
     enabled: !!initiativeId && enabled,
   });
 
   return {
-    actionPlans: (q.data ?? []) as ActionPlanWithPeople[],
+    action_plans: (q.data ?? []) as ActionPlan[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
+  };
+}
+
+/** Action Plan di bawah satu ActionPlan. Lazy-fetch di tree (WSA-01, level terbawah). */
+export function useActionPlanTasks(actionPlanId: string, enabled = true) {
+  const q = useQuery({
+    queryKey: ['tasks', 'action_plan', actionPlanId],
+    queryFn: () => listTasks(actionPlanId),
+    enabled: !!actionPlanId && enabled,
+  });
+
+  return {
+    tasks: (q.data ?? []) as TaskWithPeople[],
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,
@@ -208,15 +208,15 @@ export function usePerson(id: string | null | undefined) {
 }
 
 /** KPI Area template di bawah satu Goal Template (untuk isian Target di Wizard). */
-export function useKpiAreaTemplates(goalTemplateId: string) {
+export function useStrategyTemplates(goalTemplateId: string) {
   const q = useQuery({
     queryKey: ['strategy_templates', goalTemplateId],
-    queryFn: () => listKpiAreaTemplates(goalTemplateId),
+    queryFn: () => listStrategyTemplates(goalTemplateId),
     enabled: !!goalTemplateId,
   });
 
   return {
-    items: (q.data ?? []) as KpiAreaTemplate[],
+    items: (q.data ?? []) as StrategyTemplate[],
     isLoading: q.isLoading,
     isError: q.isError,
   };
@@ -299,12 +299,12 @@ export function useGoalActions() {
 
 // ---------------------------------------------------------------- KPI Area Target Breakdown (S2)
 
-/** Baris breakdown periode untuk satu KPI Area. Hanya fetch saat kpiAreaId terisi. */
-export function useKpiAreaBreakdown(kpiAreaId: string) {
+/** Baris breakdown periode untuk satu KPI Area. Hanya fetch saat strategyId terisi. */
+export function useStrategyBreakdown(strategyId: string) {
   const q = useQuery({
-    queryKey: ['strategy_breakdown', kpiAreaId],
-    queryFn: () => listKpiAreaBreakdown(kpiAreaId),
-    enabled: !!kpiAreaId,
+    queryKey: ['strategy_breakdown', strategyId],
+    queryFn: () => listStrategyBreakdown(strategyId),
+    enabled: !!strategyId,
   });
   return {
     rows: (q.data ?? []) as BreakdownRow[],
@@ -315,27 +315,27 @@ export function useKpiAreaBreakdown(kpiAreaId: string) {
 }
 
 /** Aksi tulis Target Breakdown KPI Area: replace atomik (Σ=100% per Q dan per Q-bulan). */
-export function useKpiAreaBreakdownActions(kpiAreaId: string) {
+export function useStrategyBreakdownActions(strategyId: string) {
   const qc = useQueryClient();
   const replaceM = useMutation({
-    mutationFn: (args: Omit<ReplaceArgs, 'kpiAreaId'>) =>
-      replaceKpiAreaBreakdown({ ...args, kpiAreaId }),
+    mutationFn: (args: Omit<ReplaceArgs, 'strategyId'>) =>
+      replaceStrategyBreakdown({ ...args, strategyId }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['strategy_breakdown', kpiAreaId] });
+      qc.invalidateQueries({ queryKey: ['strategy_breakdown', strategyId] });
     },
   });
   return {
-    replace: (args: Omit<ReplaceArgs, 'kpiAreaId'>) => replaceM.mutateAsync(args),
+    replace: (args: Omit<ReplaceArgs, 'strategyId'>) => replaceM.mutateAsync(args),
     isPending: replaceM.isPending,
   };
 }
 
 /** Aksi tulis KPI Area di bawah satu Goal: create, activate. */
-export function useKpiAreaActions(goalId: string) {
+export function useStrategyActions(goalId: string) {
   const qc = useQueryClient();
 
   const createM = useMutation({
-    mutationFn: (input: NewKpiArea) => createKpiArea(input),
+    mutationFn: (input: NewStrategy) => createStrategy(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goal', goalId] });
       qc.invalidateQueries({ queryKey: ['strategies', goalId] });
@@ -345,7 +345,7 @@ export function useKpiAreaActions(goalId: string) {
   });
 
   const activateM = useMutation({
-    mutationFn: (id: string) => activateKpiArea(id),
+    mutationFn: (id: string) => activateStrategy(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['strategies', goalId] });
       qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
@@ -353,7 +353,7 @@ export function useKpiAreaActions(goalId: string) {
   });
 
   return {
-    create: (input: NewKpiArea) => createM.mutateAsync(input),
+    create: (input: NewStrategy) => createM.mutateAsync(input),
     activate: (id: string) => activateM.mutateAsync(id),
     isPending: createM.isPending || activateM.isPending,
   };
@@ -391,17 +391,17 @@ export function useProblemStatements(developmentAreaId: string, enabled = true) 
 }
 
 /**
- * Initiative di bawah satu Problem Statement (jalur Development).
+ * ActionPlan di bawah satu Problem Statement (jalur Development).
  * Lazy: dipakai oleh ProblemStatementSubRow di Workspace tree 3-level (Stage 1 B′).
  */
-export function useProblemStatementInitiatives(problemStatementId: string, enabled = true) {
+export function useProblemStatementActionPlans(problemStatementId: string, enabled = true) {
   const q = useQuery({
-    queryKey: ['initiatives', 'problem_statement', problemStatementId],
-    queryFn: () => listInitiatives({ problemStatementId }),
+    queryKey: ['action_plans', 'problem_statement', problemStatementId],
+    queryFn: () => listActionPlans({ problemStatementId }),
     enabled: !!problemStatementId && enabled,
   });
   return {
-    initiatives: (q.data ?? []) as Initiative[],
+    action_plans: (q.data ?? []) as ActionPlan[],
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,
@@ -464,14 +464,14 @@ export function useProblemStatementActions(developmentAreaId: string) {
   };
 }
 
-/** Aksi tulis Strategy di bawah satu KPI Area: create, activate. */
-export function useStrategyActions(kpiAreaId: string) {
+/** Aksi tulis Initiative di bawah satu KPI Area: create, activate. */
+export function useInitiativeActions(strategyId: string) {
   const qc = useQueryClient();
 
   const createM = useMutation({
-    mutationFn: (input: NewStrategy) => createStrategy(input),
+    mutationFn: (input: NewInitiative) => createInitiative(input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['strategies', kpiAreaId] });
+      qc.invalidateQueries({ queryKey: ['initiatives', strategyId] });
       // KPI Area & Goal punya embedded count anak → wajib refresh agar badge tidak basi.
       // Tidak ada goalId di scope; pakai prefix.
       qc.invalidateQueries({ queryKey: ['strategies'] });
@@ -481,9 +481,9 @@ export function useStrategyActions(kpiAreaId: string) {
   });
 
   const activateM = useMutation({
-    mutationFn: (id: string) => activateStrategy(id),
+    mutationFn: (id: string) => activateInitiative(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['strategies', kpiAreaId] });
+      qc.invalidateQueries({ queryKey: ['initiatives', strategyId] });
       qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['goal'] });
       qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
@@ -491,7 +491,7 @@ export function useStrategyActions(kpiAreaId: string) {
   });
 
   return {
-    create: (input: NewStrategy) => createM.mutateAsync(input),
+    create: (input: NewInitiative) => createM.mutateAsync(input),
     activate: (id: string) => activateM.mutateAsync(id),
     isPending: createM.isPending || activateM.isPending,
   };

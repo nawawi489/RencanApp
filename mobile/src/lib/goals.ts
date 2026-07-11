@@ -1,6 +1,6 @@
-// Data layer Fase 4 — Goals & Perencanaan Strategis (Goal → KPI Area → Strategy).
+// Data layer Fase 4 — Goals & Perencanaan Strategis (Goal → KPI Area → Initiative).
 // Pemanggil tipis: otorisasi ditegakkan di server (RLS untuk INSERT, RPC SECURITY DEFINER untuk
-// lifecycle & template). Mirror pola createInitiative (cards.ts) byte-for-byte.
+// lifecycle & template). Mirror pola createActionPlan (cards.ts) byte-for-byte.
 import { STATUS_TONE, type PersonRef } from './cards';
 import type { Tables } from './database.types';
 import { getOrgContext } from './org-context';
@@ -8,7 +8,7 @@ import { supabase } from './supabase';
 
 export type Goal = Tables<'goals'>;
 export type GoalTemplate = Tables<'goal_templates'>;
-export type KpiAreaTemplate = Tables<'strategy_templates'>;
+export type StrategyTemplate = Tables<'strategy_templates'>;
 /** Goal + jumlah KPI Area (embedded count via PostgREST) — satu query, hindari N+1 per baris. */
 export type GoalWithKpiCount = Goal & { strategies: { count: number }[] };
 
@@ -56,7 +56,7 @@ export async function listGoalTemplates(): Promise<GoalTemplate[]> {
   return data;
 }
 
-export async function listKpiAreaTemplates(goalTemplateId: string): Promise<KpiAreaTemplate[]> {
+export async function listStrategyTemplates(goalTemplateId: string): Promise<StrategyTemplate[]> {
   if (!goalTemplateId) return [];
   const { data, error } = await supabase
     .from('strategy_templates')
@@ -68,17 +68,17 @@ export async function listKpiAreaTemplates(goalTemplateId: string): Promise<KpiA
 }
 
 /** UI-S-KT1 — semua KPI Area Template join nama Goal Template (proxy "divisi"). */
-export type KpiAreaTemplateWithParent = KpiAreaTemplate & {
+export type StrategyTemplateWithParent = StrategyTemplate & {
   goal_templates: { id: string; name: string } | null;
 };
 
-export async function listAllKpiAreaTemplates(): Promise<KpiAreaTemplateWithParent[]> {
+export async function listAllStrategyTemplates(): Promise<StrategyTemplateWithParent[]> {
   const { data, error } = await supabase
     .from('strategy_templates')
     .select('*, goal_templates(id, name)')
     .order('sort_order', { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as KpiAreaTemplateWithParent[];
+  return (data ?? []) as unknown as StrategyTemplateWithParent[];
 }
 
 // ---------------------------------------------------------------- mutations (INSTANT ber-RLS)

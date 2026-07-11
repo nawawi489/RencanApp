@@ -9,13 +9,13 @@ import {
   indexQuarterRows,
   indexMonthRowsPerQuarter,
   type BreakdownRow,
-} from '../kpi-area-breakdown';
+} from '../strategy-breakdown';
 
 function row(over: Partial<BreakdownRow>): BreakdownRow {
   return {
     id: 'x',
     organization_id: 'org',
-    kpi_area_id: 'k',
+    strategy_id: 'k',
     period_type: 'quarter',
     period_key: 'Q1',
     parent_quarter_key: null,

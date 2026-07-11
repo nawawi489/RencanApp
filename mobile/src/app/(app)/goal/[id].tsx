@@ -7,7 +7,7 @@ import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
 import { DetailChildRow } from '@/components/detail-child-row';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressBar, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
-import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
+import { useGoal, useGoalActions, useStrategies } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
@@ -17,7 +17,7 @@ export function LiveGoalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const goalQ = useGoal(id);
-  const kpiQ = useKpiAreas(id);
+  const kpiQ = useStrategies(id);
   const { activate, restore, activatePending, restorePending } = useGoalActions();
   // WSA-08 §14.4 — CTA "+ Tambah" dihapus dari detail page; tambah turunan HANYA dari tree Workspace.
 
@@ -71,8 +71,8 @@ export function LiveGoalDetailScreen() {
                 </View>
                 <ProgressOrb
                   size={72}
-                  value={ratioDoneOfChildren(kpiQ.kpiAreas ?? [])}
-                  sublabel={childrenSublabel(kpiQ.kpiAreas ?? [])}
+                  value={ratioDoneOfChildren(kpiQ.strategies ?? [])}
+                  sublabel={childrenSublabel(kpiQ.strategies ?? [])}
                 />
               </View>
               <MetaGrid
@@ -95,19 +95,19 @@ export function LiveGoalDetailScreen() {
                 <View className="flex-row items-center justify-between">
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400">Progress kerja</Text>
                   <Text className="text-xs font-semibold text-black dark:text-white">
-                    {ratioActiveOfChildren(kpiQ.kpiAreas ?? [])}%
+                    {ratioActiveOfChildren(kpiQ.strategies ?? [])}%
                   </Text>
                 </View>
-                <ProgressBar value={ratioActiveOfChildren(kpiQ.kpiAreas ?? [])} tone="brand" />
+                <ProgressBar value={ratioActiveOfChildren(kpiQ.strategies ?? [])} tone="brand" />
               </View>
               <View className="gap-1.5">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400">Capaian hasil</Text>
                   <Text className="text-xs font-semibold text-black dark:text-white">
-                    {ratioDoneOfChildren(kpiQ.kpiAreas ?? [])}%
+                    {ratioDoneOfChildren(kpiQ.strategies ?? [])}%
                   </Text>
                 </View>
-                <ProgressBar value={ratioDoneOfChildren(kpiQ.kpiAreas ?? [])} tone="success" />
+                <ProgressBar value={ratioDoneOfChildren(kpiQ.strategies ?? [])} tone="success" />
               </View>
             </SectionCard>
 
@@ -134,27 +134,27 @@ export function LiveGoalDetailScreen() {
             <View className="gap-3">
               <View className="flex-row items-center gap-2">
                 <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
-                <CardHelpTrigger topic="kpi_area" />
+                <CardHelpTrigger topic="strategy" />
               </View>
 
               {kpiQ.isLoading ? (
                 <SkeletonList count={2} />
               ) : kpiQ.isError ? (
                 <ErrorState onRetry={() => kpiQ.refetch()} />
-              ) : kpiQ.kpiAreas.length > 0 ? (
-                kpiQ.kpiAreas.map((item) => (
+              ) : kpiQ.strategies.length > 0 ? (
+                kpiQ.strategies.map((item) => (
                   <DetailChildRow
                     key={item.id}
                     name={item.name}
                     statusLabel={PLANNING_STATUS_LABEL[item.status] ?? item.status}
                     statusTone={STATUS_TONE[item.status]}
-                    onPress={() => router.push(`/kpi-area/${item.id}` as Href)}
+                    onPress={() => router.push(`/strategy/${item.id}` as Href)}
                   />
                 ))
               ) : (
                 <EmptyState
                   title="Belum ada KPI Area"
-                  description="Pecah Goal ini menjadi KPI Area terukur, lalu turunkan jadi Strategy dan Initiative."
+                  description="Pecah Goal ini menjadi KPI Area terukur, lalu turunkan jadi Initiative dan ActionPlan."
                 />
               )}
             </View>

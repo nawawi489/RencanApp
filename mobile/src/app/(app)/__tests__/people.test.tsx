@@ -171,7 +171,7 @@ describe('PeopleScreen — Fase 7 score states', () => {
       score: {
         auto_calculated_score: 80,
         manual_adjusted_score: null,
-        metric_breakdown: { action_plan_completion: 90, governance_discipline: 70 },
+        metric_breakdown: { task_completion: 90, governance_discipline: 70 },
       },
       isLoading: false,
       isError: false,

@@ -107,7 +107,7 @@ type CardDates = {
  * - 'future'  : card.start > window.end → belum dimulai (treat seperti current di S1; nanti dim juga jika diputuskan).
  * - 'current' : default (overlap atau kartu tanpa info tanggal).
  *
- * Aturan: kartu tanpa periode (mis. flat initiative tanpa periode) selalu 'current'.
+ * Aturan: kartu tanpa periode (mis. flat action_plan tanpa periode) selalu 'current'.
  */
 export function cardPeriodStatus(card: CardDates, focus: PeriodFocus): CardPeriodStatus {
   const win = periodWindow(focus);
@@ -174,7 +174,7 @@ export function focusPeriodStatus(focus: PeriodFocus, now: Date): CardPeriodStat
  * tanpa cek fokus, tombol "+" tetap aktif saat user membuka periode arsip.
  *
  * Dipakai sebagai satu sumber `past`/`addDimmed`/guard di semua row tree
- * (Goal/KPI Area/Strategy/Development Area/Problem Statement) agar keputusan
+ * (Goal/KPI Area/Initiative/Development Area/Problem Statement) agar keputusan
  * navigasi-vs-alert dan a11y-disabled konsisten.
  */
 export function isAddLocked(card: CardDates, focus: PeriodFocus, now: Date): boolean {

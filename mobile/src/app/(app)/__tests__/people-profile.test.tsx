@@ -8,11 +8,11 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockListOrgProfiles = jest.fn();
-const mockCountCompletedActionPlansInPeriod = jest.fn();
+const mockCountCompletedTasksInPeriod = jest.fn();
 jest.mock('@/lib/cards', () => ({
   __esModule: true,
   listOrgProfiles: () => mockListOrgProfiles(),
-  countCompletedActionPlansInPeriod: (...a: unknown[]) => mockCountCompletedActionPlansInPeriod(...a),
+  countCompletedTasksInPeriod: (...a: unknown[]) => mockCountCompletedTasksInPeriod(...a),
   personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
     p?.full_name?.trim() || p?.email || fallback,
 }));
@@ -85,8 +85,8 @@ beforeEach(() => {
   mockUseRanking.mockReturnValue({ ranking: [], isLoading: false, isError: false, refetch: jest.fn() });
   mockUseMyScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
   mockUseUserScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
-  mockCountCompletedActionPlansInPeriod.mockReset();
-  mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+  mockCountCompletedTasksInPeriod.mockReset();
+  mockCountCompletedTasksInPeriod.mockResolvedValue(0);
   mockCan.mockReturnValue(false);
 });
 
@@ -112,7 +112,7 @@ describe('PeopleProfileScreen', () => {
       score: {
         auto_calculated_score: 88,
         manual_adjusted_score: null,
-        metric_breakdown: { action_plan_completion: 90, governance_discipline: 70 },
+        metric_breakdown: { task_completion: 90, governance_discipline: 70 },
       },
       isLoading: false,
       isError: false,
@@ -240,7 +240,7 @@ describe('PeopleProfileScreen', () => {
       isLoading: false,
       isError: false,
     });
-    mockCountCompletedActionPlansInPeriod.mockResolvedValue(5);
+    mockCountCompletedTasksInPeriod.mockResolvedValue(5);
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     // Header 'Kontribusi bulan ini' + jumlah 5 tampil.
     expect(await screen.findByText('Kontribusi bulan ini')).toBeTruthy();
@@ -254,7 +254,7 @@ describe('PeopleProfileScreen', () => {
       isLoading: false,
       isError: false,
     });
-    mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+    mockCountCompletedTasksInPeriod.mockResolvedValue(0);
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     // Seksi tetap render untuk isSelf, tapi copy = 'Belum ada AP selesai bulan ini' (disambiguasi 0-nyata).
     expect(await screen.findByText('Kontribusi bulan ini')).toBeTruthy();
@@ -268,7 +268,7 @@ describe('PeopleProfileScreen', () => {
       isLoading: false,
       isError: false,
     });
-    mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+    mockCountCompletedTasksInPeriod.mockResolvedValue(0);
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     await screen.findByText('Rina Jaya');
     // Untuk profil orang lain + count=0: seksi TIDAK render (ambigu 0 nyata vs RLS-hidden).

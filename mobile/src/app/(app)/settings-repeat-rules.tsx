@@ -40,11 +40,11 @@ export default function SettingsRepeatRulesScreen() {
         ) : !q.data || q.data.length === 0 ? (
           <EmptyState
             title="Belum ada Action Plan repeat"
-            description="Buat Action Plan dengan mode Repeat dari Initiative untuk menjadwalkan pekerjaan berulang."
+            description="Buat Action Plan dengan mode Repeat dari ActionPlan untuk menjadwalkan pekerjaan berulang."
           />
         ) : (
           q.data.map((r) => {
-            const ap = r.action_plan;
+            const ap = r.task;
             const apName = ap?.name ?? '—';
             const apStatus = ap?.status ?? 'draft';
             const time = (r.time_of_day ?? '').slice(0, 5);
@@ -52,7 +52,7 @@ export default function SettingsRepeatRulesScreen() {
             return (
               <SectionCard
                 key={r.id}
-                onPress={ap ? () => router.push(`/action-plan/${ap.id}` as Href) : undefined}>
+                onPress={ap ? () => router.push(`/task/${ap.id}` as Href) : undefined}>
                 <View className="flex-row items-start justify-between gap-3">
                   <Text className="flex-1 text-base font-semibold text-black dark:text-white">
                     {apName}

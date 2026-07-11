@@ -105,7 +105,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
           status: 'active',
           level: 'staff',
           categories: [
-            { code: 'action_plan_completion', weight: 60, source_metric: 'a' },
+            { code: 'task_completion', weight: 60, source_metric: 'a' },
             { code: 'repeat_compliance', weight: 40, source_metric: 'r' },
           ],
         },
@@ -249,7 +249,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
       versions: [{
         id: 'v-draft', version_number: 4, status: 'draft', level: 'staff',
         categories: [
-          { code: 'action_plan_completion', weight: 60, source_metric: 'm1' },
+          { code: 'task_completion', weight: 60, source_metric: 'm1' },
           { code: 'repeat_compliance', weight: 40, source_metric: 'm2' },
         ],
       }],

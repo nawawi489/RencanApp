@@ -1,8 +1,8 @@
 // Hooks Fase 4 ext — UI-S-AP5 + UI-S-AP6 submission flow.
 // Tiga hook:
-//   1. useKpiCandidates(actionPlanId) — list kandidat KPI Area untuk picker. 0 hasil = OD-1 fallback.
-//   2. useKpiCurrentValue(kpiAreaId) — agregat "nilai lama" untuk DeltaArrow.
-//   3. useSubmissionFlow(actionPlanId) — state machine 2-phase commit dgn anti double-tap + parallel uploads
+//   1. useKpiCandidates(taskId) — list kandidat KPI Area untuk picker. 0 hasil = OD-1 fallback.
+//   2. useKpiCurrentValue(strategyId) — agregat "nilai lama" untuk DeltaArrow.
+//   3. useSubmissionFlow(taskId) — state machine 2-phase commit dgn anti double-tap + parallel uploads
 //      + cleanup orphan saat gagal. Single mutation hook untuk submit.tsx.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
@@ -10,37 +10,37 @@ import { useRef } from 'react';
 import {
   createSubmissionDraft,
   finalizeSubmission,
-  getKpiAreaCurrentValue,
-  listKpiAreaCandidates,
+  getStrategyCurrentValue,
+  listStrategyCandidates,
   type EvidenceInput,
-  type KpiAreaCandidate,
-  type KpiAreaCurrentValue,
+  type StrategyCandidate,
+  type StrategyCurrentValue,
   type ResultValueInput,
 } from '@/lib/cards';
 import { cleanupOrphanUpload, uploadEvidenceFile, type LocalFile } from '@/lib/storage';
 
-export function useKpiCandidates(actionPlanId: string | undefined) {
+export function useKpiCandidates(taskId: string | undefined) {
   const q = useQuery({
-    queryKey: ['kpi_candidates', actionPlanId],
-    queryFn: () => listKpiAreaCandidates(actionPlanId!),
-    enabled: !!actionPlanId,
+    queryKey: ['kpi_candidates', taskId],
+    queryFn: () => listStrategyCandidates(taskId!),
+    enabled: !!taskId,
   });
   return {
-    candidates: (q.data ?? []) as KpiAreaCandidate[],
+    candidates: (q.data ?? []) as StrategyCandidate[],
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,
   };
 }
 
-export function useKpiCurrentValue(kpiAreaId: string | undefined | null) {
+export function useKpiCurrentValue(strategyId: string | undefined | null) {
   const q = useQuery({
-    queryKey: ['kpi_current_value', kpiAreaId],
-    queryFn: () => getKpiAreaCurrentValue(kpiAreaId!),
-    enabled: !!kpiAreaId,
+    queryKey: ['kpi_current_value', strategyId],
+    queryFn: () => getStrategyCurrentValue(strategyId!),
+    enabled: !!strategyId,
   });
   return {
-    value: (q.data ?? null) as KpiAreaCurrentValue | null,
+    value: (q.data ?? null) as StrategyCurrentValue | null,
     isLoading: q.isLoading,
     isError: q.isError,
   };
@@ -60,17 +60,17 @@ export type SubmissionFlowInput = {
  * Anti double-tap: in-flight promise di-cache; tap kedua return promise yg sama.
  * Cleanup orphan: bila finalize gagal SETELAH ada file ter-upload, cleanup path-path tsb.
  */
-export function useSubmissionFlow(actionPlanId: string | undefined) {
+export function useSubmissionFlow(taskId: string | undefined) {
   const qc = useQueryClient();
   const inFlight = useRef<Promise<string> | null>(null);
 
   const mutation = useMutation({
     mutationFn: async (input: SubmissionFlowInput): Promise<string> => {
-      if (!actionPlanId) throw new Error('Action Plan ID tidak valid.');
+      if (!taskId) throw new Error('Action Plan ID tidak valid.');
 
       const attachmentCount = input.pendingFiles.length;
       // Phase 1: create draft.
-      const draftId = await createSubmissionDraft(actionPlanId, attachmentCount);
+      const draftId = await createSubmissionDraft(taskId, attachmentCount);
 
       const uploadedPaths: string[] = [];
       try {
@@ -79,7 +79,7 @@ export function useSubmissionFlow(actionPlanId: string | undefined) {
           input.pendingFiles.map((file) =>
             uploadEvidenceFile({
               orgId: input.orgId,
-              actionPlanId,
+              taskId,
               submissionDraftId: draftId,
               file,
             }).then(({ path, mimeType }) => {
@@ -112,9 +112,9 @@ export function useSubmissionFlow(actionPlanId: string | undefined) {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['action-plan', actionPlanId] });
-      qc.invalidateQueries({ queryKey: ['action-plan-submissions', actionPlanId] });
-      qc.invalidateQueries({ queryKey: ['kpi_candidates', actionPlanId] });
+      qc.invalidateQueries({ queryKey: ['action-plan', taskId] });
+      qc.invalidateQueries({ queryKey: ['action-plan-submissions', taskId] });
+      qc.invalidateQueries({ queryKey: ['kpi_candidates', taskId] });
       qc.invalidateQueries({ queryKey: ['kpi_current_value'] });
     },
   });

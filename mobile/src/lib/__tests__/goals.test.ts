@@ -1,6 +1,6 @@
 // Data layer Fase 4 — goals.ts. Mock ../supabase. Menguji createGoal (INSERT ber-RLS dengan
 // organization_id + created_by; bukan RPC), activateGoal/applyGoalTemplate/restoreGoalTemplateItems
-// (RPC), listGoals/getGoal, listGoalTemplates, listKpiAreaTemplates (guard kosong + query), propagasi error.
+// (RPC), listGoals/getGoal, listGoalTemplates, listStrategyTemplates (guard kosong + query), propagasi error.
 const mockRpc = jest.fn();
 const mockFrom = jest.fn();
 const mockGetUser = jest.fn();
@@ -21,7 +21,7 @@ import {
   getGoal,
   listGoalTemplates,
   listGoals,
-  listKpiAreaTemplates,
+  listStrategyTemplates,
   restoreGoalTemplateItems,
 } from '../goals';
 
@@ -192,7 +192,7 @@ describe('listGoals', () => {
     mockFrom.mockReturnValue(builder);
     const goals = await listGoals();
     expect(mockFrom).toHaveBeenCalledWith('goals');
-    expect(calls.select).toEqual(['*, kpi_areas(count)']);
+    expect(calls.select).toEqual(['*, strategies(count)']);
     expect(calls.order).toEqual(['created_at', { ascending: false }]);
     expect(goals).toEqual([{ id: 'g1' }]);
   });
@@ -238,17 +238,17 @@ describe('listGoalTemplates', () => {
   });
 });
 
-describe('listKpiAreaTemplates', () => {
+describe('listStrategyTemplates', () => {
   it('[15] goalTemplateId kosong → [] tanpa query', async () => {
-    expect(await listKpiAreaTemplates('')).toEqual([]);
+    expect(await listStrategyTemplates('')).toEqual([]);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('[16] query eq(goal_template_id) + order sort_order asc', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'k1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const items = await listKpiAreaTemplates('tmpl1');
-    expect(mockFrom).toHaveBeenCalledWith('kpi_area_templates');
+    const items = await listStrategyTemplates('tmpl1');
+    expect(mockFrom).toHaveBeenCalledWith('strategy_templates');
     expect(calls.eq).toEqual(['goal_template_id', 'tmpl1']);
     expect(calls.order).toEqual(['sort_order', { ascending: true }]);
     expect(items).toEqual([{ id: 'k1' }]);
@@ -257,6 +257,6 @@ describe('listKpiAreaTemplates', () => {
   it('[17] propagasi error', async () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'x' } });
     mockFrom.mockReturnValue(builder);
-    await expect(listKpiAreaTemplates('tmpl1')).rejects.toEqual({ message: 'x' });
+    await expect(listStrategyTemplates('tmpl1')).rejects.toEqual({ message: 'x' });
   });
 });

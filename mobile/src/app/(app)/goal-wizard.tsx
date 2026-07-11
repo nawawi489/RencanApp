@@ -1,6 +1,6 @@
 // Goal Wizard (Fase 4, PRD §49) — satu layar berurutan: (1) pilih Goal Template (atau Goal kosong),
 // (2) periode + PIC + Target tiap KPI Area, (3) Generate via applyGoalTemplate (atomik di server).
-// Meniru pola initiative/new.tsx: onError → Alert, validasi tanggal DATE_RE.
+// Meniru pola action_plan/new.tsx: onError → Alert, validasi tanggal DATE_RE.
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
@@ -8,7 +8,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
-import { useGoalActions, useGoalTemplates, useKpiAreaTemplates } from '@/hooks/use-workspace';
+import { useGoalActions, useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
 import type { PersonRef } from '@/lib/goals';
@@ -27,7 +27,7 @@ export default function GoalWizardScreen() {
   const [pic, setPic] = useState<Person | null>(null);
   const [targets, setTargets] = useState<Record<string, string>>({});
 
-  const { items: kpiTemplates } = useKpiAreaTemplates(templateId ?? '');
+  const { items: kpiTemplates } = useStrategyTemplates(templateId ?? '');
 
   function next() {
     if (step === 0 && !templateId) {

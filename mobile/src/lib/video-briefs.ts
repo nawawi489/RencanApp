@@ -7,21 +7,21 @@ import { supabase } from './supabase';
 export type VideoBrief = Tables<'video_briefs'>;
 export type BriefUnderstandingRecord = Tables<'brief_understanding_records'>;
 
-export async function listVideoBriefs(action_planId: string): Promise<VideoBrief[]> {
+export async function listVideoBriefs(actionPlanId: string): Promise<VideoBrief[]> {
   const { data, error } = await supabase
     .from('video_briefs')
     .select('*')
-    .eq('action_plan_id', action_planId)
+    .eq('action_plan_id', actionPlanId)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as VideoBrief[];
 }
 
-export async function getVideoBrief(action_planId: string): Promise<VideoBrief | null> {
+export async function getVideoBrief(actionPlanId: string): Promise<VideoBrief | null> {
   const { data, error } = await supabase
     .from('video_briefs')
     .select('*')
-    .eq('action_plan_id', action_planId)
+    .eq('action_plan_id', actionPlanId)
     .maybeSingle();
   if (error) throw error;
   return data as VideoBrief | null;

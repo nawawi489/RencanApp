@@ -16,7 +16,7 @@ import {
   SkeletonList,
 } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
-import { useProblemStatementInitiatives } from '@/hooks/use-workspace';
+import { useProblemStatementActionPlans } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL, STATUS_TONE as INIT_TONE } from '@/lib/cards';
 import {
   PLANNING_STATUS_LABEL,
@@ -37,17 +37,17 @@ export function LiveProblemStatementDetailScreen() {
     queryFn: () => getProblemStatement(id),
   });
   const {
-    initiatives,
-    isLoading: initiativesLoading,
-    isError: initiativesError,
-    refetch: refetchInitiatives,
-  } = useProblemStatementInitiatives(id);
+    action_plans,
+    isLoading: action_plansLoading,
+    isError: action_plansError,
+    refetch: refetchActionPlans,
+  } = useProblemStatementActionPlans(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('problem_statement', id);
 
   useFocusEffect(
     useCallback(() => {
       psQ.refetch();
-      refetchInitiatives();
+      refetchActionPlans();
       refetchCompliance();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
@@ -64,13 +64,13 @@ export function LiveProblemStatementDetailScreen() {
   });
 
   const ps = psQ.data;
-  // WSA-08 §14.4 — CTA "+ Tambah Initiative" dihapus; tambah turunan hanya dari tree Workspace.
+  // WSA-08 §14.4 — CTA "+ Tambah ActionPlan" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (ps && guardActivationFields('problem_statement', ps)) return;
     const blocked = guardMbrActivation(compliance, {
-      childLabel: 'Initiative',
-      onAddChild: () => router.push(`/initiative/new?problemStatementId=${id}` as Href),
+      childLabel: 'ActionPlan',
+      onAddChild: () => router.push(`/action_plan/new?problemStatementId=${id}` as Href),
     });
     if (blocked) return;
     activateM.mutate();
@@ -133,26 +133,26 @@ export function LiveProblemStatementDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
+              <Text className="text-lg font-bold text-black dark:text-white">ActionPlan</Text>
 
-              {initiativesLoading ? (
+              {action_plansLoading ? (
                 <SkeletonList count={2} />
-              ) : initiativesError ? (
-                <ErrorState onRetry={() => refetchInitiatives()} />
-              ) : initiatives.length > 0 ? (
-                initiatives.map((item) => (
+              ) : action_plansError ? (
+                <ErrorState onRetry={() => refetchActionPlans()} />
+              ) : action_plans.length > 0 ? (
+                action_plans.map((item) => (
                   <DetailChildRow
                     key={item.id}
                     name={item.name}
                     statusLabel={INITIATIVE_STATUS_LABEL[item.status] ?? item.status}
                     statusTone={INIT_TONE[item.status]}
-                    onPress={() => router.push(`/initiative/${item.id}` as Href)}
+                    onPress={() => router.push(`/action_plan/${item.id}` as Href)}
                   />
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada Initiative"
-                  description="Turunkan Problem Statement ini menjadi Initiative konkret lalu pecah jadi Action Plan."
+                  title="Belum ada ActionPlan"
+                  description="Turunkan Problem Statement ini menjadi ActionPlan konkret lalu pecah jadi Action Plan."
                 />
               )}
             </View>

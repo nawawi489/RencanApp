@@ -4,10 +4,10 @@
 
 export type GlossaryTopic =
   | 'goal'
-  | 'kpi_area'
   | 'strategy'
   | 'initiative'
   | 'action_plan'
+  | 'task'
   | 'development_area'
   | 'problem_statement'
   | 'mbr'
@@ -24,29 +24,29 @@ const ENTRIES: Record<GlossaryTopic, GlossaryEntry> = {
     title: 'Goal',
     body: 'Tujuan strategis organisasi untuk satu periode. Goal dipecah menjadi KPI Area terukur sebelum dapat diaktifkan.',
   },
-  kpi_area: {
+  strategy: {
     title: 'KPI Area',
     body: 'Bidang ukur di bawah Goal — punya target & nilai hasil. Pecahan Target per kuartal/bulan menjelaskan distribusi target sepanjang periode.',
   },
-  strategy: {
-    title: 'Strategy',
-    body: 'Pendekatan kunci untuk mencapai KPI Area, lengkap dengan alasan, risiko, dan alternatif. Strategy dipecah menjadi Initiative.',
-  },
   initiative: {
     title: 'Initiative',
-    body: 'Inisiatif konkret yang dieksekusi oleh PIC. Boleh punya banyak Action Plan; setelah selesai dapat dievaluasi.',
+    body: 'Pendekatan kunci untuk mencapai KPI Area, lengkap dengan alasan, risiko, dan alternatif. Initiative dipecah menjadi ActionPlan.',
   },
   action_plan: {
+    title: 'ActionPlan',
+    body: 'Inisiatif konkret yang dieksekusi oleh PIC. Boleh punya banyak Action Plan; setelah selesai dapat dievaluasi.',
+  },
+  task: {
     title: 'Action Plan',
     body: 'Pekerjaan terjadwal dengan PIC + Reviewer + bukti & nilai hasil. Bisa one-time atau Repeat (dgn instance harian/mingguan).',
   },
   development_area: {
     title: 'Development Area',
-    body: 'Bidang pengembangan organisasi (bukan target performa). Diisi Problem Statement yang dipecah jadi Initiative.',
+    body: 'Bidang pengembangan organisasi (bukan target performa). Diisi Problem Statement yang dipecah jadi ActionPlan.',
   },
   problem_statement: {
     title: 'Problem Statement',
-    body: 'Pernyataan masalah di bawah Development Area — fokus, bukan keluhan. Ditangani melalui Initiative + Action Plan.',
+    body: 'Pernyataan masalah di bawah Development Area — fokus, bukan keluhan. Ditangani melalui ActionPlan + Action Plan.',
   },
   mbr: {
     title: 'Minimum Breakdown Rule',
@@ -65,8 +65,8 @@ const ENTRIES: Record<GlossaryTopic, GlossaryEntry> = {
     body: 'Catatan append-only setiap perubahan signifikan pada card ini. Tidak dapat diubah atau dihapus — jejak audit penuh.',
   },
   evaluation: {
-    title: 'Evaluasi Initiative',
-    body: 'Refleksi setelah Initiative berjalan/selesai. Bisa ditandai untuk menjadi SOP atau di-rollout ke Development Workspace.',
+    title: 'Evaluasi ActionPlan',
+    body: 'Refleksi setelah ActionPlan berjalan/selesai. Bisa ditandai untuk menjadi SOP atau di-rollout ke Development Workspace.',
   },
   target_breakdown: {
     title: 'Pecahan Target',

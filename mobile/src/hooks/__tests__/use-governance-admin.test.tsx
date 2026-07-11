@@ -183,26 +183,26 @@ describe('deadline change requests', () => {
 });
 
 describe('evaluation', () => {
-  it('[F8-H16] useEvaluation mengambil evaluation utk initiativeId', async () => {
+  it('[F8-H16] useEvaluation mengambil evaluation utk actionPlanId', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useEvaluation('i1'), { wrapper });
     await waitFor(() => expect(result.current.evaluation).toEqual({ id: 'e1' }));
     expect(mockGov.getEvaluation).toHaveBeenCalledWith('i1');
   });
 
-  it('[F8-H17] useEvaluation enabled:false saat initiativeId kosong', async () => {
+  it('[F8-H17] useEvaluation enabled:false saat actionPlanId kosong', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useEvaluation(''), { wrapper });
     await waitFor(() => expect(result.current.enabled).toBe(false));
     expect(mockGov.getEvaluation).not.toHaveBeenCalled();
   });
 
-  it('[F8-H18] recordEvaluation invalidate ["evaluations", initiativeId]', async () => {
+  it('[F8-H18] recordEvaluation invalidate ["evaluations", actionPlanId]', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useEvaluationActions(), { wrapper });
     await act(async () => {
-      await result.current.record({ initiativeId: 'i1', targetAchieved: 'ya' });
+      await result.current.record({ actionPlanId: 'i1', targetAchieved: 'ya' });
     });
     expect(mockGov.recordEvaluation).toHaveBeenCalled();
     expect(spy).toHaveBeenCalledWith({ queryKey: ['evaluations', 'i1'] });
@@ -212,7 +212,7 @@ describe('evaluation', () => {
     mockGov.recordEvaluation.mockRejectedValue(new Error('PIC tidak dapat'));
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useEvaluationActions(), { wrapper });
-    await expect(result.current.record({ initiativeId: 'i1' })).rejects.toThrow('PIC tidak dapat');
+    await expect(result.current.record({ actionPlanId: 'i1' })).rejects.toThrow('PIC tidak dapat');
   });
 });
 
@@ -228,8 +228,8 @@ describe('archive', () => {
     // Key nyata yang dipakai use-workspace.ts; key 'workspace' tidak pernah ada di kode.
     expect(spy).toHaveBeenCalledWith({ queryKey: ['goals'] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['strategies'] });
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['strategies'] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['initiatives'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['action_plans'] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['development_areas'] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['problem_statements'] });
   });

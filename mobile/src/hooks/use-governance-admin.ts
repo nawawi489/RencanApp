@@ -1,5 +1,5 @@
 // Hooks Fase 8 — Governance & Admin lifecycle (DCR, Evaluation, Archive).
-// Query keys: ['deadline_change_requests', entityId], ['evaluations', initiativeId].
+// Query keys: ['deadline_change_requests', entityId], ['evaluations', actionPlanId].
 // Mutasi invalidate key terkait via mutation variables.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -68,11 +68,11 @@ export function useDeadlineChangeActions() {
 
 // ---------------------------------------------------------------- Evaluation
 
-export function useEvaluation(initiativeId: string | null | undefined) {
-  const enabled = !!initiativeId;
+export function useEvaluation(actionPlanId: string | null | undefined) {
+  const enabled = !!actionPlanId;
   const q = useQuery({
-    queryKey: ['evaluations', initiativeId],
-    queryFn: () => getEvaluation(initiativeId as string),
+    queryKey: ['evaluations', actionPlanId],
+    queryFn: () => getEvaluation(actionPlanId as string),
     enabled,
   });
   return {
@@ -87,7 +87,7 @@ export function useEvaluationActions() {
   const qc = useQueryClient();
   const recordM = useMutation({
     mutationFn: (input: NewEvaluation) => recordEvaluation(input),
-    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['evaluations', vars.initiativeId] }),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['evaluations', vars.actionPlanId] }),
   });
   return {
     record: (input: NewEvaluation) => recordM.mutateAsync(input),
@@ -103,13 +103,13 @@ export function useArchiveActions() {
     mutationFn: (input: { entityType: CardEntityType; entityId: string }) =>
       archiveCard(input.entityType, input.entityId),
     // Invalidate semua key list workspace nyata (use-workspace.ts). Key 'workspace' tidak dipakai
-    // di mana pun — sebelumnya cuma 'initiatives' yang ke-invalidate karena prefix match.
+    // di mana pun — sebelumnya cuma 'action_plans' yang ke-invalidate karena prefix match.
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goals'] });
       qc.invalidateQueries({ queryKey: ['goal'] });
       qc.invalidateQueries({ queryKey: ['strategies'] });
-      qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['initiatives'] });
+      qc.invalidateQueries({ queryKey: ['action_plans'] });
       qc.invalidateQueries({ queryKey: ['development_areas'] });
       qc.invalidateQueries({ queryKey: ['problem_statements'] });
       // WSA-15 — archive mengubah status anak → keluar dari denominator %done induk → orb refresh.

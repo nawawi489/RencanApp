@@ -15,15 +15,15 @@ import {
   SkeletonList,
   StatPill,
 } from '@/components/ui';
-import { computeActionPlanProgress } from '@/lib/progress';
-import { formatRemaining } from '@/lib/kpi-gap';
+import { computeTaskProgress } from '@/lib/progress';
+import { formatRemaining } from '@/lib/strategy-gap';
 import { getProfileAgeInDays, useProfile } from '@/hooks/use-profile';
 import {
   ACTION_PLAN_STATUS_LABEL,
   STATUS_TONE,
-  listMyActionPlans,
+  listMyTasks,
   listPendingReviews,
-  type ActionPlanWithPeople,
+  type TaskWithPeople,
 } from '@/lib/cards';
 import {
   getOrgToday,
@@ -48,9 +48,9 @@ function TypeBadge({ repeat }: { repeat: boolean }) {
   );
 }
 
-function TaskRow({ item, onPress }: { item: ActionPlanWithPeople; onPress: () => void }) {
+function TaskRow({ item, onPress }: { item: TaskWithPeople; onPress: () => void }) {
   const repeat = item.repeat_setting === 'repeat';
-  const progress = computeActionPlanProgress({ status: item.status, repeat, compliancePercent: null });
+  const progress = computeTaskProgress({ status: item.status, repeat, compliancePercent: null });
   return (
     <SectionCard onPress={onPress}>
       <View className="flex-row items-start gap-3">
@@ -147,20 +147,20 @@ function Section({
 export default function LiveHomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
-  const openActionPlan = (id: string) => router.push(`/action-plan/${id}` as Href);
-  const openKpiArea = (id: string) => router.push(`/kpi-area/${id}` as Href);
+  const openTask = (id: string) => router.push(`/task/${id}` as Href);
+  const openStrategy = (id: string) => router.push(`/strategy/${id}` as Href);
   // WS-3a (AP-03) — baris section campuran (Repeat/Terlewat/Deadline) memuat one-time AP
   // DAN Repeat Instance. Instance harus membuka layar instance-nya sendiri; one-time AP
   // membuka parent AP. Satu helper dipakai ketiga section agar routing konsisten.
   const openHomeItem = (item: HomeItem) =>
     router.push(
       (item.kind === 'instance'
-        ? `/action-plan/instance/${item.id}`
-        : `/action-plan/${item.task_id}`) as Href,
+        ? `/task/instance/${item.id}`
+        : `/task/${item.task_id}`) as Href,
     );
 
   const todayQ = useQuery({ queryKey: ['org-today'], queryFn: getOrgToday, staleTime: Infinity });
-  const mineQ = useQuery({ queryKey: ['home-my-plans'], queryFn: listMyActionPlans });
+  const mineQ = useQuery({ queryKey: ['home-my-plans'], queryFn: listMyTasks });
   const reviewQ = useQuery({ queryKey: ['home-reviews'], queryFn: listPendingReviews });
   const reviewInstQ = useQuery({ queryKey: ['home-review-instances'], queryFn: listPendingInstanceReviews });
   const todayRepeatQ = useQuery({ queryKey: ['home-today-repeat'], queryFn: listTodayRepeatInstances });
@@ -291,7 +291,7 @@ export default function LiveHomeScreen() {
                 <StatPill label="KPI perlu progres" value={String(kpiAttnQ.data!.length)} tone="warn" />
               </View>
               {kpiAttnQ.data!.slice(0, 3).map((k) => (
-                <SectionCard key={k.id} onPress={() => openKpiArea(k.id)}>
+                <SectionCard key={k.id} onPress={() => openStrategy(k.id)}>
                   <View className="gap-1.5">
                     <View className="flex-row items-center justify-between gap-3">
                       <Text
@@ -331,7 +331,7 @@ export default function LiveHomeScreen() {
           emptyTitle="Tidak ada tugas aktif"
           emptyDesc="Action Plan yang Anda jadi PIC-nya akan muncul di sini.">
           {todo.map((item) => (
-            <TaskRow key={item.id} item={item} onPress={() => openActionPlan(item.id)} />
+            <TaskRow key={item.id} item={item} onPress={() => openTask(item.id)} />
           ))}
         </Section>
 
@@ -360,7 +360,7 @@ export default function LiveHomeScreen() {
           emptyTitle="Tidak ada yang menunggu review"
           emptyDesc="Submission yang menunggu persetujuan Anda akan muncul di sini.">
           {(reviewQ.data ?? []).map((item) => (
-            <TaskRow key={item.id} item={item} onPress={() => openActionPlan(item.id)} />
+            <TaskRow key={item.id} item={item} onPress={() => openTask(item.id)} />
           ))}
           {(reviewInstQ.data ?? []).map((item) => (
             <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
@@ -402,7 +402,7 @@ export default function LiveHomeScreen() {
           emptyTitle="Tidak ada revisi"
           emptyDesc="Pekerjaan yang ditolak reviewer dan perlu diperbaiki akan muncul di sini.">
           {revisi.map((item) => (
-            <TaskRow key={item.id} item={item} onPress={() => openActionPlan(item.id)} />
+            <TaskRow key={item.id} item={item} onPress={() => openTask(item.id)} />
           ))}
         </Section>
       </View>

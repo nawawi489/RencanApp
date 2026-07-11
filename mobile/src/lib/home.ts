@@ -1,7 +1,7 @@
 // Data layer Fase 3 — Home (Today Command Center). Per-section (retry granular AC-H11), tanggal
 // "hari ini" dihitung di SERVER (org timezone) via RPC; klien tak pernah menghitung tanggal (CF-3).
 // getOrgToday() hanya untuk label/orkestrasi UI — nilainya TIDAK dikirim balik ke RPC.
-import { computeKpiGap } from './kpi-gap';
+import { computeKpiGap } from './strategy-gap';
 import { supabase } from './supabase';
 
 /** Baris seragam section Home (one-time Action Plan + Repeat Instance disatukan). */

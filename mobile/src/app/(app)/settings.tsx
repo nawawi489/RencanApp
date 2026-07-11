@@ -119,7 +119,7 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
       {
         label: 'KPI Area Template',
         href: '/settings-kpi-area-templates' as Href,
-        permission: 'manage_kpi_area_templates',
+        permission: 'manage_strategy_templates',
         icon: 'bar-chart-outline',
         tone: 'warn',
       },

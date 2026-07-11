@@ -5,14 +5,14 @@ import { Text, View } from 'react-native-css/components';
 
 /** Warna border kiri card per kategori (spec §6.4–6.8): dipakai `borderColor` di TreeCard. */
 export const WORKSPACE_KIND_BORDER: Record<
-  'goal' | 'kpi_area' | 'strategy' | 'initiative' | 'action_plan' | 'development_area' | 'problem_statement',
+  'goal' | 'strategy' | 'initiative' | 'action_plan' | 'task' | 'development_area' | 'problem_statement',
   string
 > = {
   goal: '#1877f2',
-  kpi_area: '#b76b00',
-  strategy: '#6941c6',
-  initiative: '#14845c',
-  action_plan: '#145ebc',
+  strategy: '#b76b00',
+  initiative: '#6941c6',
+  action_plan: '#14845c',
+  task: '#145ebc',
   development_area: '#0f766e',
   problem_statement: '#c2410c',
 };
@@ -29,10 +29,10 @@ export const TREE_LEVEL_INDENT: Record<0 | 1 | 2 | 3 | 4 | 5, number> = {
 
 export type WorkspaceKind =
   | 'goal'
-  | 'kpi_area'
   | 'strategy'
   | 'initiative'
   | 'action_plan'
+  | 'task'
   | 'development_area'
   | 'problem_statement';
 
@@ -49,10 +49,10 @@ type KindStyle = {
 /** Mapping terkunci spec §9 (warna, huruf, label). */
 export const WORKSPACE_KIND: Record<WorkspaceKind, KindStyle> = {
   goal: { letter: 'G', label: 'Goal', text: '#145ebc', bg: '#e8f2ff', border: '#cce2ff', circleBg: '#1877f2', circleFontSize: 10 },
-  kpi_area: { letter: 'K', label: 'KPI Area', text: '#b76b00', bg: '#fff3d7', border: '#ffe1a1', circleBg: '#b76b00', circleFontSize: 10 },
-  strategy: { letter: 'S', label: 'Strategy', text: '#6941c6', bg: '#f1ebff', border: '#dfd1ff', circleBg: '#6941c6', circleFontSize: 10 },
-  initiative: { letter: 'I', label: 'Initiative', text: '#14845c', bg: '#e7f7ef', border: '#c9ebda', circleBg: '#14845c', circleFontSize: 10 },
-  action_plan: { letter: 'AP', label: 'Action Plan', text: '#145ebc', bg: '#eef6ff', border: '#cce2ff', circleBg: '#145ebc', circleFontSize: 8 },
+  strategy: { letter: 'K', label: 'KPI Area', text: '#b76b00', bg: '#fff3d7', border: '#ffe1a1', circleBg: '#b76b00', circleFontSize: 10 },
+  initiative: { letter: 'S', label: 'Initiative', text: '#6941c6', bg: '#f1ebff', border: '#dfd1ff', circleBg: '#6941c6', circleFontSize: 10 },
+  action_plan: { letter: 'I', label: 'ActionPlan', text: '#14845c', bg: '#e7f7ef', border: '#c9ebda', circleBg: '#14845c', circleFontSize: 10 },
+  task: { letter: 'AP', label: 'Action Plan', text: '#145ebc', bg: '#eef6ff', border: '#cce2ff', circleBg: '#145ebc', circleFontSize: 8 },
   development_area: { letter: 'D', label: 'Development Area', text: '#0f766e', bg: '#e6fffb', border: '#99f6e4', circleBg: '#0f766e', circleFontSize: 10 },
   problem_statement: { letter: 'P', label: 'Problem Statement', text: '#c2410c', bg: '#fff7ed', border: '#fed7aa', circleBg: '#c2410c', circleFontSize: 10 },
 };

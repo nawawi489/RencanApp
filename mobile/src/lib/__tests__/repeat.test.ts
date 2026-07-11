@@ -86,7 +86,7 @@ describe('setRepeatRule', () => {
     const id = await setRepeatRule('ap-1', RULE_INPUT);
     expect(id).toBe('rule-1');
     expect(mockRpc).toHaveBeenCalledWith('set_task_repeat_rule', {
-      p_task_id: 'ap-1',
+      p_action_plan_id: 'ap-1',
       p_frequency: 'daily',
       p_weekdays: null,
       p_month_days: null,
@@ -202,7 +202,7 @@ describe('getRepeatCompliance', () => {
       error: null,
     });
     const out = await getRepeatCompliance('ap-1');
-    expect(mockRpc).toHaveBeenCalledWith('get_repeat_compliance', { p_task_id: 'ap-1' });
+    expect(mockRpc).toHaveBeenCalledWith('get_repeat_compliance', { p_action_plan_id: 'ap-1' });
     expect(out.expected_count).toBe(30);
     expect(out.on_time_count).toBe(28);
     expect(out.compliance).toBe(0.9333);

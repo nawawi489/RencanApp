@@ -95,7 +95,7 @@ describe('useProfile select created_at', () => {
 // K4 — guard regresi cermin client-side dari public.has_permission.
 // can() di use-profile.ts HANYA mirror; penegak akhir tetap server (RLS/RPC),
 // diuji terpisah di supabase/tests contract (A-INS). Test ini menjaga agar
-// ROLE_DEFAULTS + grant eksplisit tidak bocor (mis. create_goal/create_kpi_area
+// ROLE_DEFAULTS + grant eksplisit tidak bocor (mis. create_goal/create_strategy
 // TIDAK boleh tersedia ke c_level default).
 describe('K4 — permission create planning card', () => {
   // Helper: bentuk profil mengikuti ProfileRow (lihat use-profile.ts).
@@ -124,18 +124,18 @@ describe('K4 — permission create planning card', () => {
     const { result } = await renderHook(() => useProfile(), { wrapper });
     await waitFor(() => expect(result.current.profile).toBeTruthy());
     expect(result.current.can('create_goal')).toBe(true);
-    expect(result.current.can('create_kpi_area')).toBe(true);
     expect(result.current.can('create_strategy')).toBe(true);
+    expect(result.current.can('create_initiative')).toBe(true);
   });
 
-  it('[K4-2] C-Level default: strategy boleh, goal/kpi_area tidak (tidak bocor)', async () => {
+  it('[K4-2] C-Level default: initiative boleh, goal/initiative tidak (tidak bocor)', async () => {
     mockSingle.mockResolvedValue(profileRow('c_level', []));
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useProfile(), { wrapper });
     await waitFor(() => expect(result.current.profile).toBeTruthy());
     expect(result.current.can('create_goal')).toBe(false);
-    expect(result.current.can('create_kpi_area')).toBe(false);
-    expect(result.current.can('create_strategy')).toBe(true);
+    expect(result.current.can('create_strategy')).toBe(false);
+    expect(result.current.can('create_initiative')).toBe(true);
   });
 
   it('[K4-3] grant eksplisit: hanya key yang di-grant yang boleh', async () => {
@@ -146,7 +146,7 @@ describe('K4 — permission create planning card', () => {
     const { result } = await renderHook(() => useProfile(), { wrapper });
     await waitFor(() => expect(result.current.profile).toBeTruthy());
     expect(result.current.can('create_goal')).toBe(true);
-    expect(result.current.can('create_kpi_area')).toBe(false);
+    expect(result.current.can('create_strategy')).toBe(false);
   });
 
   // Fase 6 — create_development_area mirror server (CN-7). Server-side test ada di
@@ -193,9 +193,9 @@ describe('K4 — permission create planning card', () => {
     it('[K6-1] MGR_DEFAULT_KEYS = 5 key kanonik (sumber tunggal klien; create_department admin-only per PRD)', () => {
       expect([...MGR_DEFAULT_KEYS].sort()).toEqual(
         [
+          'create_task',
           'create_action_plan',
           'create_initiative',
-          'create_strategy',
           'manage_teams',
           'review_deadline_changes',
         ].sort(),

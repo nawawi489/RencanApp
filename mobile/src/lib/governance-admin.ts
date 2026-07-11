@@ -104,7 +104,7 @@ export async function resubmitDeadlineChangeRequest(
 // ---------------------------------------------------------------- Evaluation
 
 export type NewEvaluation = {
-  action_planId: string;
+  actionPlanId: string;
   targetAchieved?: 'ya' | 'sebagian' | 'tidak' | null;
   results?: string;
   successFactors?: string[];
@@ -117,7 +117,7 @@ export type NewEvaluation = {
 
 export async function recordEvaluation(input: NewEvaluation): Promise<string> {
   const { data, error } = await supabase.rpc('record_evaluation', {
-    p_action_plan_id: input.action_planId,
+    p_action_plan_id: input.actionPlanId,
     p_target_achieved: (input.targetAchieved ?? null) as unknown as string,
     p_results: input.results ?? '',
     p_success_factors: input.successFactors ?? [],
@@ -131,11 +131,11 @@ export async function recordEvaluation(input: NewEvaluation): Promise<string> {
   return data as string;
 }
 
-export async function getEvaluation(action_planId: string): Promise<Evaluation | null> {
+export async function getEvaluation(actionPlanId: string): Promise<Evaluation | null> {
   const { data, error } = await supabase
     .from('evaluations')
     .select('*')
-    .eq('action_plan_id', action_planId)
+    .eq('action_plan_id', actionPlanId)
     .maybeSingle();
   if (error) throw error;
   return data as Evaluation | null;

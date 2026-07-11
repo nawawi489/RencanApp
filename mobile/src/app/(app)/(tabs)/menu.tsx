@@ -99,7 +99,7 @@ const AKSES_CEPAT: MenuItem[] = [
 
 const TEMPLATE_ITEMS: MenuItem[] = [
   { label: 'Goal Template', description: 'Library Goal', icon: 'document-text-outline', tone: 'success', href: '/settings-goal-templates' as Href },
-  { label: 'KPI Area Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-kpi-area-templates' as Href, permission: 'manage_kpi_area_templates' },
+  { label: 'KPI Area Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-kpi-area-templates' as Href, permission: 'manage_strategy_templates' },
 ];
 
 // Bantuan — spec §13. Belum ada layar (help-center/support); tap → toast (owner decision).

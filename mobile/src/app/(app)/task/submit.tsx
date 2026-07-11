@@ -1,5 +1,5 @@
 // UI-S-AP5 + UI-S-AP6 — submit Action Plan dgn file upload + KPI Area linkage.
-// 2-phase commit (createSubmissionDraft → upload parallel → submit_action_plan) via useSubmissionFlow.
+// 2-phase commit (createSubmissionDraft → upload parallel → submit_task) via useSubmissionFlow.
 // Mode instance (repeat) tetap pakai jalur lama submitInstance (OUT OF SCOPE OD-3).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,7 +23,7 @@ import { useKpiCandidates, useKpiCurrentValue, useSubmissionFlow } from '@/hooks
 import {
   EVIDENCE_KIND_LABEL,
   RESULT_VALUE_TYPE_LABEL,
-  getActionPlan,
+  getTask,
   type EvidenceInput,
   type ResultValueInput,
 } from '@/lib/cards';
@@ -36,7 +36,7 @@ const EVIDENCE_KINDS = ['text_note', 'report', 'link_doc', 'link_gdrive', 'link_
 const VALUE_TYPES = ['number', 'currency', 'percentage', 'boolean', 'text', 'link'] as const;
 
 type EvidenceRow = { kind: string; content: string };
-type ResultRow = { kpi_area_id: string | null; label: string; value_type: string; value_text: string };
+type ResultRow = { strategy_id: string | null; label: string; value_type: string; value_text: string };
 
 function isLinkKind(kind: string) {
   return kind === 'link_doc' || kind === 'link_gdrive' || kind === 'link_generic';
@@ -86,10 +86,10 @@ function KpiResultRow({
   onRemove: () => void;
 }) {
   const placeholderColor = usePlaceholderColor();
-  const selectedKpi = candidates.find((c) => c.id === row.kpi_area_id) ?? null;
+  const selectedKpi = candidates.find((c) => c.id === row.strategy_id) ?? null;
   const proposed = parseFloat(row.value_text);
   const proposedValid = !Number.isNaN(proposed);
-  const { value: currentSnapshot } = useKpiCurrentValue(row.kpi_area_id);
+  const { value: currentSnapshot } = useKpiCurrentValue(row.strategy_id);
   const previousNum = currentSnapshot?.numeric_total ?? null;
 
   return (
@@ -100,14 +100,14 @@ function KpiResultRow({
           <Text className="text-xs font-semibold uppercase text-neutral-500">Pilih KPI Area</Text>
           <View className="flex-row flex-wrap gap-2">
             {candidates.map((c) => {
-              const active = row.kpi_area_id === c.id;
+              const active = row.strategy_id === c.id;
               return (
                 <Pressable
                   key={c.id}
                   accessibilityRole="button"
                   accessibilityLabel={`Pilih ${c.name}`}
                   className={`min-h-[44px] items-center justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
-                  onPress={() => onChange({ ...row, kpi_area_id: c.id })}>
+                  onPress={() => onChange({ ...row, strategy_id: c.id })}>
                   <Text className={active ? 'text-xs font-semibold text-white' : 'text-xs text-black dark:text-white'}>
                     {c.name}
                   </Text>
@@ -161,7 +161,7 @@ function KpiResultRow({
   );
 }
 
-export function LiveActionPlanSubmitScreen() {
+export function LiveTaskSubmitScreen() {
   const { id, instanceId } = useLocalSearchParams<{ id?: string; instanceId?: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -171,10 +171,10 @@ export function LiveActionPlanSubmitScreen() {
     queryFn: () => getInstance(instanceId!),
     enabled: !!instanceId,
   });
-  const apId = instanceId ? instanceQ.data?.action_plan_id : id;
+  const apId = instanceId ? instanceQ.data?.task_id : id;
   const apQ = useQuery({
     queryKey: ['action-plan', apId],
-    queryFn: () => getActionPlan(apId!),
+    queryFn: () => getTask(apId!),
     enabled: !!apId,
   });
   const ap = apQ.data;
@@ -205,7 +205,7 @@ export function LiveActionPlanSubmitScreen() {
     const rv: ResultValueInput[] = results
       .filter((r) => r.value_text.trim() || r.label.trim())
       .map((r) => ({
-        kpi_area_id: r.kpi_area_id ?? autoKpiId,
+        strategy_id: r.strategy_id ?? autoKpiId,
         label: r.label.trim() || null,
         value_type: r.value_type,
         value_text: r.value_text.trim() || null,
@@ -256,7 +256,7 @@ export function LiveActionPlanSubmitScreen() {
     });
   }
 
-  async function submitActionPlanFlow() {
+  async function submitTaskFlow() {
     if (!ap || !id) return;
     const { evidence: staticEvidence, resultValues, note: noteVal } = buildPayload();
 
@@ -331,7 +331,7 @@ export function LiveActionPlanSubmitScreen() {
             Bukti{ap.evidence_required ? <Text className="text-red-500"> *</Text> : null}
           </Text>
 
-          {/* File upload (AP5) — hanya untuk mode action_plan (instance mode pakai jalur lama). */}
+          {/* File upload (AP5) — hanya untuk mode task (instance mode pakai jalur lama). */}
           {!instanceId ? (
             <>
               <UploadButton onPress={pickFiles} count={pendingFiles.length} max={5} disabled={isSubmitting} />
@@ -417,7 +417,7 @@ export function LiveActionPlanSubmitScreen() {
               onPress={() =>
                 setResults((prev) => [
                   ...prev,
-                  { kpi_area_id: autoKpiId, label: '', value_type: 'number', value_text: '' },
+                  { strategy_id: autoKpiId, label: '', value_type: 'number', value_text: '' },
                 ])
               }>
               <Text className="text-sm font-semibold text-brand-dark">+ Tambah Nilai Hasil</Text>
@@ -427,7 +427,7 @@ export function LiveActionPlanSubmitScreen() {
 
         <Button
           label="Submit untuk Review"
-          onPress={instanceId ? () => instanceMutation.mutate() : submitActionPlanFlow}
+          onPress={instanceId ? () => instanceMutation.mutate() : submitTaskFlow}
           loading={isSubmitting}
         />
       </View>
@@ -435,6 +435,6 @@ export function LiveActionPlanSubmitScreen() {
   );
 }
 
-export default function ActionPlanSubmitRoute() {
-  return <LiveActionPlanSubmitScreen />;
+export default function TaskSubmitRoute() {
+  return <LiveTaskSubmitScreen />;
 }
