@@ -1590,3 +1590,14 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 - **Copy Indonesian render benar**: login screen menampilkan tagline "Masuk ke pusat eksekusi target, **Tugas**, dan review kerja tim" — kata "Tugas" (label level-4 baru RWT-12) render benar (dulu "Action Plan"). Field: "Email perusahaan", "Kata sandi", "Masuk".
 - **Auth-gated (tidak diverifikasi)**: layar Workspace (tempat pill Strategi/Inisiatif/Rencana Aksi/Tugas + tree muncul) ada di balik login. Aturan operasi agent melarang memasukkan password untuk autentikasi → owner perlu login sendiri di localhost:8091 untuk cek authenticated flow (Workspace pill huruf S/I/AP/T, glossary help-popup, MBR modal).
 - Kesimpulan: stack terbukti boot + render Indonesian copy end-to-end sampai lapis login; verifikasi Workspace authenticated diserahkan ke owner.
+
+## [2026-07-11] verify | RN-Web audit lengkap (login screen non-auth) — full green
+
+- Owner minta cek manual via browser. Login authenticated tidak bisa saya lakukan (agent rule melarang input password/auth), tapi audit menyeluruh area non-auth dilakukan.
+- **DOM audit** (mobile viewport 375×812, dark mode aktif `<html class="dark">`, 67 element, 16 text node, `document.readyState = complete`, all images loaded):
+  - Legacy identifiers rendered: **0** (`KPI Area: 0`, `kpi_area: 0`, `Action Plan: 0`, `ActionPlan: 0`, `Initiative: 0`, `Strategy: 0`, `Task: 0`).
+  - Indonesian identifiers rendered: `Tugas: 1` (di tagline; `Strategi/Inisiatif/Rencana Aksi` di layar authenticated).
+- **DESIGN.md compliance** (login primary button "Masuk"): background `rgb(21,100,179)` = `#1564b3` = `brand-dark` (workspace-lock a11y §Rekonsiliasi 2026-07-03 doktrin #1). `min-height: 44px` (touch target §4 rule 1).
+- **Environment**: Supabase URL bundle-config = `http://localhost:54321` (local dev correct). Metro bundle sukses. 0 console error.
+- **Yang saya tidak lakukan** (dengan alasan): screenshot binary capture (browser MCP screenshot API stuck di React Native Web renderer — bukan issue app), auth-gated flow (agent rule prohibits password entry — owner login sendiri), anon-key materialization ke transcript (auto-mode classifier denied — kredensial hygiene).
+- **Yang tersisa untuk owner** cek di [localhost:8091](http://localhost:8091) setelah login: (a) Workspace pill huruf S/I/AP/T dengan palet posisi hierarki tetap (DESIGN.md §Workspace V1.8.3), (b) glossary help-popup 5 topik Indonesian body voice PRD §7.8, (c) MBR modal "Tidak Dapat Melanjutkan" copy "Strategi 2/3, Belum Lengkap" dsb.
