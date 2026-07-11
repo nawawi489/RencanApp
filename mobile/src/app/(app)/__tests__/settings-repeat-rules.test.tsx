@@ -45,7 +45,7 @@ describe('Settings > Repeat Setting (inventory)', () => {
   it('empty state — tidak ada repeat rule', async () => {
     mockListAll.mockResolvedValue([]);
     await render(<SettingsRepeatRulesScreen />, { wrapper: wrapper() });
-    await waitFor(() => expect(screen.getByText(/Belum ada Task repeat/i)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Belum ada Tugas repeat/i)).toBeTruthy());
   });
 
   it('list — render frequency + range + status badge', async () => {

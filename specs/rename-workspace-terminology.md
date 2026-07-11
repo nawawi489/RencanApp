@@ -1,6 +1,6 @@
 # Spec: Rename Workspace Performance Terminology
 
-Status: **F0 IN PROGRESS** — 11/12 RWT DECIDED (2026-07-11); RWT-12 PENDING (tidak block F1).
+Status: **ALL DECIDED** — 12/12 RWT DECIDED (2026-07-11).
 Branch kerja: `feat/rename-workspace-terminology` (base: `origin/staging`).
 Dokumen ini adalah SUMBER KEBENARAN eksekusi rename. Kalau bertabrakan dengan PRD/Wiki, dokumen ini menang SAMPAI PRD/Wiki di-update di F7.
 
@@ -10,6 +10,7 @@ Dokumen ini adalah SUMBER KEBENARAN eksekusi rename. Kalau bertabrakan dengan PR
 - 2026-07-11: F1 DDL (tables/columns/indexes/view) applied lokal via satu file `0045_rename_workspace_terminology.sql` — commit `f90ba06`. **Deviasi struktur file** dari spec §10 (4 file 0045–0048 + 0050 hygiene) → satu file atomik dengan section internal. Alasan: dalam satu BEGIN/COMMIT, urutan statement mengontrol bottom-up ordering; multi-file tidak menambah safety.
 - 2026-07-11: F2 + F3 bundled applied lokal via `0046_rewrite_bodies_and_policies.sql` — commit `c850a4c`. Menggabungkan CHECK constraint enum backfill (S0) + 62 function body rewrite + 19 RLS policy rewrite + 3 trigger recreate + `map_legacy_entity_type` helper. Approach: DROP FUNCTION CASCADE untuk semua 62 lalu CREATE OR REPLACE fresh — sidesteps parameter/return signature mismatch di CREATE OR REPLACE. Verifikasi lokal: smoke RPC hijau, 0 lingering kpi_area function, helper `map_legacy_entity_type('action_plan')` = `'task'`.
 - RWT-12 (Content Lead DRI + tanggal deliverable copy edukasi) DIMINTA owner sebelum F4 mulai.
+- 2026-07-11: **RWT-12 DECIDED** — DRI = owner (self); mobile client copy sudah shifted ke Indonesian labels + glossary.ts body rewritten dgn voice PRD §7.8. Commit F4b copy. Follow-up iteratif untuk seed `card_guidance_contents` (butuh SME review per topik) — tidak block release.
 
 ---
 
@@ -67,7 +68,7 @@ F1 TIDAK BOLEH mulai sebelum 12 RWT berikut ber-status `DECIDED: <opsi>` dengan 
 | RWT-09 | MBR default action_plan→task | P1 | (A) 3 (mengikuti 3/3/3/3) | DECIDED 2026-07-11 |
 | RWT-10 | Label 'Instance' di UI | P2 | (A) pertahankan Inggris | DECIDED 2026-07-11 |
 | RWT-11 | Deep-link stub lifetime | P2 | (A) 30 hari, drop v1.8.5 | DECIDED 2026-07-11 |
-| RWT-12 | Content Lead DRI copy rewrite | P1 | (nama + tanggal) | **PENDING — owner isi sebelum F4** |
+| RWT-12 | Content Lead DRI copy rewrite | P1 | (nama + tanggal) | **DECIDED 2026-07-11** — DRI = owner (self); label + glossary rewritten; card_guidance_contents seed iteratif follow-up |
 
 ## 5. User Stories (ringkas)
 

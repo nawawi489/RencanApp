@@ -9,13 +9,13 @@ import { supabase } from './supabase';
 export { STATUS_TONE } from './cards';
 export type { PersonRef } from './cards';
 
-export type Strategy = Tables<'strategies'>;
+export type Strategi = Tables<'strategies'>;
 
 export { PLANNING_STATUS_LABEL } from './goals';
 
 // ---------------------------------------------------------------- queries
 
-export async function listStrategies(goalId: string): Promise<Strategy[]> {
+export async function listStrategies(goalId: string): Promise<Strategi[]> {
   if (!goalId) return [];
   const { data, error } = await supabase
     .from('strategies')
@@ -26,7 +26,7 @@ export async function listStrategies(goalId: string): Promise<Strategy[]> {
   return data;
 }
 
-export async function getStrategy(id: string): Promise<Strategy> {
+export async function getStrategy(id: string): Promise<Strategi> {
   const { data, error } = await supabase.from('strategies').select('*').eq('id', id).single();
   if (error) throw error;
   return data;
@@ -50,7 +50,7 @@ export type NewStrategy = {
   period_end: string | null;
 };
 
-export async function createStrategy(input: NewStrategy): Promise<Strategy> {
+export async function createStrategy(input: NewStrategy): Promise<Strategi> {
   const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('strategies')
@@ -62,7 +62,7 @@ export async function createStrategy(input: NewStrategy): Promise<Strategy> {
 }
 
 /**
- * Lengkapi/ubah Strategy Draft (mis. isi Target untuk Strategy hasil template yang awalnya null).
+ * Lengkapi/ubah Strategi Draft (mis. isi Target untuk Strategi hasil template yang awalnya null).
  * Update ber-RLS (policy strategies_update: creator/PIC/manage_others). Server tetap penegak akhir.
  */
 export type StrategyPatch = Partial<
@@ -80,7 +80,7 @@ export type StrategyPatch = Partial<
   >
 >;
 
-export async function updateStrategy(id: string, patch: StrategyPatch): Promise<Strategy> {
+export async function updateStrategy(id: string, patch: StrategyPatch): Promise<Strategi> {
   const { data, error } = await supabase
     .from('strategies')
     .update(patch)

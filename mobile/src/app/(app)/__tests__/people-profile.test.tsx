@@ -119,7 +119,7 @@ describe('PeopleProfileScreen', () => {
     });
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Score 88 · On track')).toBeTruthy();
-    expect(screen.getByText('Task Completion')).toBeTruthy();
+    expect(screen.getByText('Tugas Completion')).toBeTruthy();
     expect(screen.getByText('Governance Discipline')).toBeTruthy();
   });
 

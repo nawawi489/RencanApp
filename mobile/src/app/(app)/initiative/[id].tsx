@@ -34,7 +34,7 @@ export function LiveInitiativeDetailScreen() {
     useCallback(() => {
       initiativeQ.refetch();
       refetchActionPlans();
-      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Action Plan
+      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Rencana Aksi
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -45,16 +45,16 @@ export function LiveInitiativeDetailScreen() {
       qc.invalidateQueries({ queryKey: ['initiative', id] });
       qc.invalidateQueries({ queryKey: ['initiatives'] });
     },
-    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Initiative belum bisa diaktifkan. Periksa kelengkapan lalu coba lagi.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Inisiatif belum bisa diaktifkan. Periksa kelengkapan lalu coba lagi.'),
   });
 
   const initiative = initiativeQ.data;
-  // WSA-08 §14.4 — CTA "+ Tambah Action Plan" dihapus; tambah turunan hanya dari tree Workspace.
+  // WSA-08 §14.4 — CTA "+ Tambah Rencana Aksi" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (initiative && guardActivationFields('initiative', initiative)) return;
     const blocked = guardMbrActivation(compliance, {
-      childLabel: 'Action Plan',
+      childLabel: 'Rencana Aksi',
       onAddChild: () => router.push(`/action_plan/new?initiativeId=${id}` as Href),
     });
     if (blocked) return;
@@ -63,7 +63,7 @@ export function LiveInitiativeDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: initiative?.name ?? 'Initiative' }} />
+      <Stack.Screen options={{ title: initiative?.name ?? 'Inisiatif' }} />
       <View className="gap-5 p-5">
         {initiativeQ.isLoading || !initiative ? (
           initiativeQ.isError ? (
@@ -114,14 +114,14 @@ export function LiveInitiativeDetailScreen() {
 
             {initiative.status === 'draft' ? (
               <Button
-                label="Aktifkan Initiative"
+                label="Aktifkan Inisiatif"
                 onPress={handleActivate}
                 loading={activateM.isPending}
               />
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Action Plan</Text>
+              <Text className="text-lg font-bold text-black dark:text-white">Rencana Aksi</Text>
 
               {action_plansLoading ? (
                 <SkeletonList count={2} />
@@ -139,8 +139,8 @@ export function LiveInitiativeDetailScreen() {
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada Action Plan"
-                  description="Turunkan Initiative ini menjadi Action Plan konkret lalu pecah jadi Task."
+                  title="Belum ada Rencana Aksi"
+                  description="Turunkan Inisiatif ini menjadi Rencana Aksi konkret lalu pecah jadi Tugas."
                 />
               )}
             </View>

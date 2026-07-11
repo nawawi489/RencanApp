@@ -19,9 +19,9 @@ export type ActivatableCardType =
 
 const CARD_LABEL: Record<ActivatableCardType, string> = {
   goal: 'Goal',
-  strategy: 'Strategy',
-  initiative: 'Initiative',
-  action_plan: 'Action Plan',
+  strategy: 'Strategi',
+  initiative: 'Inisiatif',
+  action_plan: 'Rencana Aksi',
   development_area: 'Development Area',
   problem_statement: 'Problem Statement',
 };
@@ -101,8 +101,8 @@ export function guardActivationFields(
  * Kalimat guard MBR §12.3 untuk tombol "+ <next>" di tree (terkunci spec §6.6/§12.3):
  * "<ParentType> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu,
  *  baru tombol + <NextButton> aktif."
- * `parentTypeLabel` = label TIPE parent (mis. "Strategy"); `nextButtonLabel` = turunan yang
- * tombolnya di-guard (mis. "Action Plan"); jenis child yang dihitung diambil dari compliance.
+ * `parentTypeLabel` = label TIPE parent (mis. "Strategi"); `nextButtonLabel` = turunan yang
+ * tombolnya di-guard (mis. "Rencana Aksi"); jenis child yang dihitung diambil dari compliance.
  */
 export function mbrBreakdownGuardMessage(
   parentTypeLabel: string,

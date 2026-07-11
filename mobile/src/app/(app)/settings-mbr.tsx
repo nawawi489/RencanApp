@@ -14,7 +14,7 @@ import {
   type MbrRule,
 } from '@/lib/settings-mbr';
 
-/** Aturan Goal → Strategy dikunci: konsisten dgn gerbang aktivasi Goal (≥1 Strategy) Fase 4. */
+/** Aturan Goal → Strategi dikunci: konsisten dgn gerbang aktivasi Goal (≥1 Strategi) Fase 4. */
 function isLocked(rule: MbrRule): boolean {
   return rule.parent_card_type === 'goal' && rule.child_card_type === 'strategy';
 }
@@ -39,20 +39,20 @@ function MbrExampleCard() {
       </Text>
       <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
         <View className="flex-row items-center justify-between gap-2">
-          <Text className="text-sm font-medium text-black dark:text-white">Initiative: &ldquo;Tingkatkan retensi&rdquo;</Text>
+          <Text className="text-sm font-medium text-black dark:text-white">Inisiatif: &ldquo;Tingkatkan retensi&rdquo;</Text>
           <Badge label="Draft" tone="neutral" />
         </View>
         <View className="flex-row items-center gap-2">
-          <Text className="text-xs text-neutral-500 dark:text-neutral-400">Action Plan</Text>
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">Rencana Aksi</Text>
           <Text className="text-xs font-semibold text-amber-700 dark:text-amber-400">1 / 2 (50%)</Text>
         </View>
         <View
           aria-disabled
           className="min-h-[44px] items-center justify-center rounded-xl bg-brand-dark opacity-40">
-          <Text className="text-base font-semibold text-white">Aktifkan Initiative</Text>
+          <Text className="text-base font-semibold text-white">Aktifkan Inisiatif</Text>
         </View>
         <Text className="text-xs text-neutral-400">
-          Tap akan menampilkan dialog: <Text className="italic">&ldquo;Butuh minimal 2 Action Plan; saat ini 1.&rdquo;</Text>
+          Tap akan menampilkan dialog: <Text className="italic">&ldquo;Butuh minimal 2 Rencana Aksi; saat ini 1.&rdquo;</Text>
         </Text>
       </View>
     </SectionCard>

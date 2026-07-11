@@ -1,4 +1,4 @@
-// UI Fase 5 — indikator Kelengkapan + gating MBR di Initiative detail (parent='initiative').
+// UI Fase 5 — indikator Kelengkapan + gating MBR di Inisiatif detail (parent='initiative').
 // Verifikasi: useMbrCompliance dipanggil dgn ('initiative', id); gating blokir_aktivasi cegah aktivasi.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -36,7 +36,7 @@ jest.mock('@/hooks/use-mbr', () => ({
   useMbrCompliance: (...a: unknown[]) => mockUseMbrCompliance(...a),
 }));
 
-// WSA-08 — Initiative detail kini men-gate CTA "+ Tambah Action Plan" via useProfile().can().
+// WSA-08 — Inisiatif detail kini men-gate CTA "+ Tambah Rencana Aksi" via useProfile().can().
 jest.mock('@/hooks/use-profile', () => ({
   __esModule: true,
   useProfile: () => ({ profile: { id: 'u1' }, isLoading: false, can: () => true }),
@@ -119,7 +119,7 @@ describe('InitiativeDetailScreen — MBR', () => {
       isCompliant: false,
     });
     await render(<InitiativeDetailScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByText('Aktifkan Initiative'));
+    fireEvent.press(await screen.findByText('Aktifkan Inisiatif'));
     const calls = (Alert.alert as jest.Mock).mock.calls;
     expect(calls[0][0]).toBe('Tidak Dapat Melanjutkan');
     expect(mockActivateInitiative).not.toHaveBeenCalled();
@@ -138,7 +138,7 @@ describe('InitiativeDetailScreen — MBR', () => {
       isCompliant: true,
     });
     await render(<InitiativeDetailScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByText('Aktifkan Initiative'));
+    fireEvent.press(await screen.findByText('Aktifkan Inisiatif'));
     await waitFor(() => expect(mockActivateInitiative).toHaveBeenCalledWith('s1'));
   });
 });

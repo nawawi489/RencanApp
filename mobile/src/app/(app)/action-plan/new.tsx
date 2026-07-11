@@ -75,8 +75,8 @@ function TeamChipSelector({
 export function LiveNewActionPlanScreen() {
   const router = useRouter();
   const qc = useQueryClient();
-  // Fase 4 (initiativeId) / Fase 6 (problemStatementId) — Action Plan ditautkan ke salah satu induk
-  // (mutually exclusive via CHECK action_plans_single_parent di DB). Tanpa param → Action Plan datar.
+  // Fase 4 (initiativeId) / Fase 6 (problemStatementId) — Rencana Aksi ditautkan ke salah satu induk
+  // (mutually exclusive via CHECK action_plans_single_parent di DB). Tanpa param → Rencana Aksi datar.
   const { initiativeId, problemStatementId } = useLocalSearchParams<{
     initiativeId?: string;
     problemStatementId?: string;
@@ -118,7 +118,7 @@ export function LiveNewActionPlanScreen() {
 
   function submit() {
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Action Plan wajib diisi.');
+      Alert.alert('Belum lengkap', 'Nama Rencana Aksi wajib diisi.');
       return;
     }
     const dateErr = periodError(periodStart, periodEnd);
@@ -143,12 +143,12 @@ export function LiveNewActionPlanScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
-          title="Action Plan — Program eksekusi"
-          body="Action Plan adalah program konkret untuk menjalankan strategi. Isi Target Hasil, lalu pecah jadi Task. Card disimpan sebagai Draft dulu; aktifkan setelah kelengkapan terpenuhi."
+          title="Rencana Aksi — Program eksekusi"
+          body="Rencana Aksi adalah program konkret untuk menjalankan strategi. Isi Target Hasil, lalu pecah jadi Tugas. Card disimpan sebagai Draft dulu; aktifkan setelah kelengkapan terpenuhi."
         />
 
         <SectionCard>
-          <LabeledInput label="Nama Action Plan" value={name} onChangeText={setName} required placeholder="mis. Kampanye Konten Q3" />
+          <LabeledInput label="Nama Rencana Aksi" value={name} onChangeText={setName} required placeholder="mis. Kampanye Konten Q3" />
           <LabeledInput
             label="Target Hasil"
             value={target}

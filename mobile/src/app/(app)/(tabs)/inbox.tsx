@@ -64,14 +64,14 @@ function InboxHeader({
     <View className="gap-3 pb-3">
       <View className="gap-1">
         <Text className="text-2xl font-bold text-black dark:text-white">Inbox</Text>
-        <Text className="text-base text-neutral-500 dark:text-neutral-400">Khusus chat Action Plan.</Text>
+        <Text className="text-base text-neutral-500 dark:text-neutral-400">Khusus chat Rencana Aksi.</Text>
       </View>
       <TextInput
-        placeholder="Cari Action Plan"
+        placeholder="Cari Rencana Aksi"
         placeholderTextColor={placeholderColor}
         value={q}
         onChangeText={setQ}
-        accessibilityLabel="Cari Action Plan"
+        accessibilityLabel="Cari Rencana Aksi"
         className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
       />
       <TabBar tabs={FILTER_TABS} active={filter} onChange={setFilter} />
@@ -96,7 +96,7 @@ export function LiveInboxScreen() {
 
   if (isLoading) {
     return (
-      <Screen title="Inbox" subtitle="Khusus chat Action Plan.">
+      <Screen title="Inbox" subtitle="Khusus chat Rencana Aksi.">
         <SkeletonList count={4} />
       </Screen>
     );
@@ -104,7 +104,7 @@ export function LiveInboxScreen() {
 
   if (isError) {
     return (
-      <Screen title="Inbox" subtitle="Khusus chat Action Plan.">
+      <Screen title="Inbox" subtitle="Khusus chat Rencana Aksi.">
         <ErrorState
           title="Gagal memuat Inbox"
           description="Tidak bisa mengambil daftar percakapan."
@@ -147,10 +147,10 @@ export function LiveInboxScreen() {
       ? 'Tidak ada yang belum dibaca'
       : 'Belum ada percakapan';
   const emptyDescription = isSearching
-    ? `Tidak ada Action Plan cocok dengan "${trimmedQ}".`
+    ? `Tidak ada Rencana Aksi cocok dengan "${trimmedQ}".`
     : isUnreadFilter
       ? 'Semua percakapan sudah dibaca.'
-      : 'Setiap Action Plan otomatis punya chat room. Akan muncul di sini.';
+      : 'Setiap Rencana Aksi otomatis punya chat room. Akan muncul di sini.';
 
   return (
     <View className="flex-1 bg-white dark:bg-black">

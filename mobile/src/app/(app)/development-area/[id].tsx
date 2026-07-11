@@ -30,7 +30,7 @@ import { ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
 
-/** UI-S-DA2 — Progress (Problem Statement selesai), jumlah Problem Statement, jumlah Action Plan turunan. */
+/** UI-S-DA2 — Progress (Problem Statement selesai), jumlah Problem Statement, jumlah Rencana Aksi turunan. */
 function DevAreaSummaryStrip({
   problemStatements,
   actionPlanCount,
@@ -57,7 +57,7 @@ function DevAreaSummaryStrip({
       />
       <StatTile
         size="md"
-        label="Action Plan"
+        label="Rencana Aksi"
         value={String(actionPlanCount)}
         containerCls="bg-emerald-100 dark:bg-emerald-950"
         textCls="text-emerald-700 dark:text-emerald-300"

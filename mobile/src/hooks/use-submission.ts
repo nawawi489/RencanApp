@@ -1,6 +1,6 @@
 // Hooks Fase 4 ext — UI-S-AP5 + UI-S-AP6 submission flow.
 // Tiga hook:
-//   1. useKpiCandidates(taskId) — list kandidat Strategy untuk picker. 0 hasil = OD-1 fallback.
+//   1. useKpiCandidates(taskId) — list kandidat Strategi untuk picker. 0 hasil = OD-1 fallback.
 //   2. useKpiCurrentValue(strategyId) — agregat "nilai lama" untuk DeltaArrow.
 //   3. useSubmissionFlow(taskId) — state machine 2-phase commit dgn anti double-tap + parallel uploads
 //      + cleanup orphan saat gagal. Single mutation hook untuk submit.tsx.
@@ -66,7 +66,7 @@ export function useSubmissionFlow(taskId: string | undefined) {
 
   const mutation = useMutation({
     mutationFn: async (input: SubmissionFlowInput): Promise<string> => {
-      if (!taskId) throw new Error('Task ID tidak valid.');
+      if (!taskId) throw new Error('Tugas ID tidak valid.');
 
       const attachmentCount = input.pendingFiles.length;
       // Phase 1: create draft.

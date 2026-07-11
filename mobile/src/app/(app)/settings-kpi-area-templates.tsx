@@ -1,4 +1,4 @@
-// UI-S-KT1 — Layar mandiri Strategy Template, grouping per Goal Template (proxy divisi).
+// UI-S-KT1 — Layar mandiri Strategi Template, grouping per Goal Template (proxy divisi).
 // Read-only V1; edit/tambah baris dilakukan di Goal Template Library (settings-goal-templates)
 // karena baris template anak dimiliki goal template parent. Tombol "Edit di Template"
 // melempar ke parent Goal Template.
@@ -44,26 +44,26 @@ export default function SettingsStrategyTemplatesScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Strategy Template' }} />
+      <Stack.Screen options={{ title: 'Strategi Template' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Strategy Template</Text>
+          <Text className="text-2xl font-bold text-black dark:text-white">Strategi Template</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
-            Library Strategy siap pakai, dikelompokkan per Goal Template.
+            Library Strategi siap pakai, dikelompokkan per Goal Template.
           </Text>
         </View>
         {!allowed ? (
-          <AccessDenied message="Pengelolaan Strategy Template memerlukan izin Goal/Strategy Template." />
+          <AccessDenied message="Pengelolaan Strategi Template memerlukan izin Goal/Strategi Template." />
         ) : tplQ.isLoading ? (
           <SkeletonList count={5} />
         ) : (
           <>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Strategy Template di-grup per Goal Template parent. Edit baris dilakukan di Goal Template Library.
+              Strategi Template di-grup per Goal Template parent. Edit baris dilakukan di Goal Template Library.
             </Text>
             <TextInput
-              accessibilityLabel="Cari Strategy Template"
-              placeholder="Cari nama Strategy atau Goal Template…"
+              accessibilityLabel="Cari Strategi Template"
+              placeholder="Cari nama Strategi atau Goal Template…"
               placeholderTextColor={placeholderColor}
               value={q}
               onChangeText={setQ}
@@ -71,8 +71,8 @@ export default function SettingsStrategyTemplatesScreen() {
             />
             {grouped.length === 0 ? (
               <EmptyState
-                title="Belum ada Strategy Template"
-                description="Buat Goal Template + Strategy Template di Goal Template Library."
+                title="Belum ada Strategi Template"
+                description="Buat Goal Template + Strategi Template di Goal Template Library."
                 action={{
                   label: 'Buka Goal Template Library',
                   onPress: () => router.push('/settings-goal-templates' as Href),

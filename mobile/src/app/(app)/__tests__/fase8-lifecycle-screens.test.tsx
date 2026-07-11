@@ -337,6 +337,6 @@ describe('search', () => {
     });
     await render(<SearchScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Migrasi Server')).toBeTruthy();
-    expect(screen.getByText('Action Plan')).toBeTruthy();
+    expect(screen.getByText('Rencana Aksi')).toBeTruthy();
   });
 });

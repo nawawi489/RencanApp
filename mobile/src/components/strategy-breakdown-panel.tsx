@@ -1,8 +1,8 @@
-// Panel "Pecahan Target Strategy" (UI-S-K01) — PRD V1.8.2 §12.
+// Panel "Pecahan Target Strategi" (UI-S-K01) — PRD V1.8.2 §12.
 //
 // Tampil di kpi-area/[id]. Membaca breakdown via useStrategyBreakdown; gating Edit lewat:
 //   - has_permission('manage_others_cards')
-//   - ATAU current user = pic_id / created_by Strategy (server tetap penegak akhir di RPC).
+//   - ATAU current user = pic_id / created_by Strategi (server tetap penegak akhir di RPC).
 //
 // Editor modal:
 //   - Tab Quarter: 4 input numerik (Q1..Q4), bar progress Σ live (target 100%).

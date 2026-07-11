@@ -1,5 +1,5 @@
 // UI Fase 5 — Indikator Kelengkapan Perencanaan + gating popup "Tidak Dapat Melanjutkan"
-// di layar Strategy detail. Otoritas akhir tetap server (onError aktivasi); klien hanya gating
+// di layar Strategi detail. Otoritas akhir tetap server (onError aktivasi); klien hanya gating
 // pre-flight untuk mode 'blokir_aktivasi' + indikator visual berdasarkan compliance.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -10,7 +10,7 @@ jest.setTimeout(30000);
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
-// Data layer Strategy — dimock seluruhnya agar useQuery inline ['strategy', id] resolve sesuai test.
+// Data layer Strategi — dimock seluruhnya agar useQuery inline ['strategy', id] resolve sesuai test.
 const mockGetStrategy = jest.fn();
 const mockActivateStrategy = jest.fn();
 const mockUpdateStrategy = jest.fn();
@@ -141,7 +141,7 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
       isCompliant: false,
     });
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
-    const btn = await screen.findByText('Aktifkan Strategy');
+    const btn = await screen.findByText('Aktifkan Strategi');
     fireEvent.press(btn);
     const calls = (Alert.alert as jest.Mock).mock.calls;
     expect(calls.length).toBeGreaterThan(0);
@@ -162,7 +162,7 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
       isCompliant: true,
     });
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
-    const btn = await screen.findByText('Aktifkan Strategy');
+    const btn = await screen.findByText('Aktifkan Strategi');
     fireEvent.press(btn);
     await waitFor(() => expect(mockActivateStrategy).toHaveBeenCalledWith('k1'));
     // tidak ada popup gating
@@ -172,14 +172,14 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
     expect(popupCalls).toHaveLength(0);
   });
 
-  // WSA-08 tahap 2 (§14.4) — CTA "+ Tambah Initiative" DIHAPUS dari detail page; tambah turunan
+  // WSA-08 tahap 2 (§14.4) — CTA "+ Tambah Inisiatif" DIHAPUS dari detail page; tambah turunan
   // hanya dari tree Workspace. Tidak pernah dirender meski punya izin.
-  it('[WSA-08] CTA "+ Tambah Initiative" tidak dirender di detail page (izin apa pun)', async () => {
+  it('[WSA-08] CTA "+ Tambah Inisiatif" tidak dirender di detail page (izin apa pun)', async () => {
     mockCan.mockReturnValue(true);
     mockUseMbrCompliance.mockReturnValue({ compliance: undefined, isLoading: false, isCompliant: true });
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
-    await screen.findByText('Initiative');
-    expect(screen.queryByText('+ Tambah Initiative')).toBeNull();
+    await screen.findByText('Inisiatif');
+    expect(screen.queryByText('+ Tambah Inisiatif')).toBeNull();
   });
 
   it('[5] compliance undefined (loading) → fail-open: Aktifkan tetap memanggil activateStrategy (server otoritatif)', async () => {
@@ -189,7 +189,7 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
       isCompliant: true,
     });
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
-    const btn = await screen.findByText('Aktifkan Strategy');
+    const btn = await screen.findByText('Aktifkan Strategi');
     fireEvent.press(btn);
     await waitFor(() => expect(mockActivateStrategy).toHaveBeenCalledWith('k1'));
   });

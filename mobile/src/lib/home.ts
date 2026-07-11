@@ -4,7 +4,7 @@
 import { computeKpiGap } from './strategy-gap';
 import { supabase } from './supabase';
 
-/** Baris seragam section Home (one-time Task + Repeat Instance disatukan). */
+/** Baris seragam section Home (one-time Tugas + Repeat Instance disatukan). */
 export type HomeItem = {
   kind: 'task' | 'instance';
   id: string;
@@ -82,7 +82,7 @@ export async function listPendingInstanceReviews(): Promise<HomeItem[]> {
   });
 }
 
-/** Strategy aktif yang perlu dipantau di Home (snapshot tim). */
+/** Strategi aktif yang perlu dipantau di Home (snapshot tim). */
 export type KpiAttentionItem = {
   id: string;
   name: string;
@@ -95,7 +95,7 @@ export type KpiAttentionItem = {
 };
 
 /**
- * Strategy aktif yang perlu dipantau (0032, override PRD §18):
+ * Strategi aktif yang perlu dipantau (0032, override PRD §18):
  *   - Bertarget numerik (`target_numeric > 0`): masuk bila capaian < target (current/target via
  *     VIEW strategy_current_values.numeric_total). Membawa percent + remaining untuk "% gap" prototype.
  *   - Kualitatif (tanpa target numerik): masuk bila BELUM ada progres approved (absen dari view) —

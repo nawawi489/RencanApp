@@ -19,7 +19,7 @@ export function LiveNewInitiativeScreen() {
   const { strategyId } = useLocalSearchParams<{ strategyId: string }>();
   const router = useRouter();
   const { create, isPending } = useInitiativeActions(strategyId);
-  // Default PIC turunan (PRD §52): picker di-prefill PIC Strategy induk (terlihat & bisa diubah).
+  // Default PIC turunan (PRD §52): picker di-prefill PIC Strategi induk (terlihat & bisa diubah).
   const parentQ = useQuery({ queryKey: ['strategy', strategyId], queryFn: () => getStrategy(strategyId), enabled: !!strategyId });
   const { person: inheritedPic } = usePerson(parentQ.data?.pic_id);
 
@@ -36,7 +36,7 @@ export function LiveNewInitiativeScreen() {
 
   async function submit() {
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Initiative wajib diisi.');
+      Alert.alert('Belum lengkap', 'Nama Inisiatif wajib diisi.');
       return;
     }
     const dateErr = periodError(periodStart, periodEnd);
@@ -76,13 +76,13 @@ export function LiveNewInitiativeScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
-          title="Initiative — Pendekatan mencapai KPI"
-          body="Initiative menjelaskan cara mencapai target Strategy. Alasan, Risiko Utama, dan Alternatif wajib lengkap saat aktivasi (gate kualitas). Card disimpan sebagai Draft dulu."
+          title="Inisiatif — Pendekatan mencapai KPI"
+          body="Inisiatif menjelaskan cara mencapai target Strategi. Alasan, Risiko Utama, dan Alternatif wajib lengkap saat aktivasi (gate kualitas). Card disimpan sebagai Draft dulu."
         />
 
         <SectionCard>
           <LabeledInput
-            label="Nama Initiative"
+            label="Nama Inisiatif"
             value={name}
             onChangeText={setName}
             required

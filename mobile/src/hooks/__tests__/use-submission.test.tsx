@@ -133,7 +133,7 @@ describe('useSubmissionFlow — 2-phase commit', () => {
   it('[H8] taskId undefined → reject tanpa panggil RPC', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useSubmissionFlow(undefined), { wrapper });
-    await expect(result.current.runSubmission(baseInput)).rejects.toThrow(/Task ID/);
+    await expect(result.current.runSubmission(baseInput)).rejects.toThrow(/Tugas ID/);
     expect(mockCreateDraft).not.toHaveBeenCalled();
   });
 

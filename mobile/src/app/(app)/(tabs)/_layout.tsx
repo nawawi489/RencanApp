@@ -45,7 +45,7 @@ export default function TabsLayout() {
         name="inbox"
         options={{
           title: 'Inbox',
-          header: () => <AppHeader kicker="Khusus chat Action Plan" />,
+          header: () => <AppHeader kicker="Khusus chat Rencana Aksi" />,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" color={color} size={size} />
           ),

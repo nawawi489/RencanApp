@@ -15,14 +15,14 @@ export default function AppLayout() {
       <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
       <Stack.Screen
         name="action_plan/new"
-        options={{ headerShown: true, title: 'Action Plan Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Rencana Aksi Baru', presentation: 'modal' }}
       />
-      <Stack.Screen name="action_plan/[id]" options={{ headerShown: true, title: 'Action Plan' }} />
+      <Stack.Screen name="action_plan/[id]" options={{ headerShown: true, title: 'Rencana Aksi' }} />
       <Stack.Screen
         name="action-plan/new"
-        options={{ headerShown: true, title: 'Task Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Tugas Baru', presentation: 'modal' }}
       />
-      <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Task' }} />
+      <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Tugas' }} />
       <Stack.Screen
         name="action-plan/instance/[id]"
         options={{ headerShown: true, title: 'Instance' }}
@@ -31,7 +31,7 @@ export default function AppLayout() {
         name="action-plan/submit"
         options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
       />
-      <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Action Plan' }} />
+      <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Rencana Aksi' }} />
 
       {/* Fase 4 — Performance Workspace (Hierarki Strategis) */}
       <Stack.Screen
@@ -42,14 +42,14 @@ export default function AppLayout() {
       <Stack.Screen name="goal/[id]" options={{ headerShown: true, title: 'Goal' }} />
       <Stack.Screen
         name="kpi-area/new"
-        options={{ headerShown: true, title: 'Strategy Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Strategi Baru', presentation: 'modal' }}
       />
-      <Stack.Screen name="kpi-area/[id]" options={{ headerShown: true, title: 'Strategy' }} />
+      <Stack.Screen name="kpi-area/[id]" options={{ headerShown: true, title: 'Strategi' }} />
       <Stack.Screen
         name="initiative/new"
-        options={{ headerShown: true, title: 'Initiative Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Inisiatif Baru', presentation: 'modal' }}
       />
-      <Stack.Screen name="initiative/[id]" options={{ headerShown: true, title: 'Initiative' }} />
+      <Stack.Screen name="initiative/[id]" options={{ headerShown: true, title: 'Inisiatif' }} />
 
       {/* Fase 6 — Development Workspace */}
       <Stack.Screen
@@ -105,7 +105,7 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="settings-kpi-area-templates"
-        options={{ headerShown: true, title: 'Strategy Template' }}
+        options={{ headerShown: true, title: 'Strategi Template' }}
       />
       <Stack.Screen name="search" options={{ headerShown: true, title: 'Cari' }} />
 

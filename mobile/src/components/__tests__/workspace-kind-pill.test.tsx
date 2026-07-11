@@ -15,10 +15,10 @@ describe('WorkspaceKindPill', () => {
     expect(screen.getByText('Goal')).toBeTruthy();
   });
 
-  it('action_plan → letter "AP" (dua huruf) + label "Action Plan"', async () => {
+  it('action_plan → letter "AP" (dua huruf) + label "Rencana Aksi"', async () => {
     await render(<WorkspaceKindPill kind="action_plan" />);
     expect(screen.getByText('AP')).toBeTruthy();
-    expect(screen.getByText('Action Plan')).toBeTruthy();
+    expect(screen.getByText('Rencana Aksi')).toBeTruthy();
   });
 
   it('mapping huruf per posisi hierarki (RWT-03 B: warna+huruf terikat POSISI, bukan nama)', () => {

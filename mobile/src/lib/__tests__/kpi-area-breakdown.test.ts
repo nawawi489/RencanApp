@@ -1,4 +1,4 @@
-// Strategy Target Breakdown — pure helpers (PRD V1.8.2 §12). Migrasi 0021.
+// Strategi Target Breakdown — pure helpers (PRD V1.8.2 §12). Migrasi 0021.
 jest.mock('../supabase', () => ({ supabase: {} }));
 
 import {

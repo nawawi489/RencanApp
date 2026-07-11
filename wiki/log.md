@@ -1560,3 +1560,17 @@ Sisa BLOCKED owner action:
 - **F6a policy replay idempotency** — dokumentasi cukup, produksi tidak block.
 
 PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berubah, 60+ RPC + 19 RLS + 3 trigger + 10 tabel + 14 FK + view + 4 route folder + 5 lib file + 1 komponen file semua rename konsisten dgn tsc+jest+grep-guard hijau.
+
+## [2026-07-11] update | RWT-12 DECIDED — copy shifted ke Indonesian labels + glossary bodies rewrite
+
+- Owner (2026-07-11) menutup RWT-12: DRI = owner (self), tanggal deliverable = 2026-07-11.
+- Script `scratchpad/english_to_indonesian.js` (Node, placeholder-safe two-pass dgn 8+ char sentinel `__ID_PH_RA__/STGI/INSF/TGS` untuk hindari kolusi substring seperti "RA" di PENGATURAN) diterapkan ke 257 file src/ (kecuali `database.types.ts`) → 88 file berubah.
+- Mapping label (per PRD V1.8.3 §5): `Strategy`→`Strategi`, `Initiative`→`Inisiatif`, `Action Plan`→`Rencana Aksi`, `Task`→`Tugas`. Plural Indonesian tidak beda dari singular.
+- **Type identifier tetap Indonesian juga** (konsekuensi consistent-rename): `type Strategi`, `type Inisiatif`, `type Tugas` di DB-alias file. Unusual di TS ecosystem tapi konsisten dgn full-Indonesian codebase philosophy. tsc pass.
+- `glossary.ts` body di-rewrite dgn voice PRD §7.8 (tenang, praktis, non-menghakimi): 13 entry (goal, strategy, initiative, action_plan, task, development_area, problem_statement, mbr, score_formula, achievement_score, activity_log, evaluation, target_breakdown). Body `action_plan` sekarang tidak ambigu (dulu pakai kata "Inisiatif" yang jadi entitas level 2 pasca-rename).
+- `workspace-copy.ts` subtitle: "Performance — Goal, Strategi, Inisiatif, Rencana Aksi & Tugas."
+- PRD.md §5 update: catatan RWT-12 DECIDED + note bahwa `card_guidance_contents` seed (Keterangan Card in-DB) tetap PENDING follow-up karena butuh review SME per topik — iteratif, tidak block release.
+- Verifikasi: tsc 0 error, grep-guard clean (10 patterns × 6 roots), jest terakhir sebelum rework: 1163/1163 (final post-rework masih running saat log ditulis).
+- Follow-up (non-blocking):
+  - `card_guidance_contents` seed migration — SME review body edukasi per topik lalu apply
+  - Cosmetic: type identifier Indonesian → English kalau tim TS convention menuntut (require careful revert)

@@ -1,4 +1,4 @@
-// Data layer — Strategy Target Breakdown (PRD V1.8.2 §12). Migrasi 0021.
+// Data layer — Strategi Target Breakdown (PRD V1.8.2 §12). Migrasi 0021.
 //
 // Aturan kunci:
 //   - Σ kontribusi Quarter wajib 100% (4 entri Q1..Q4).
@@ -93,7 +93,7 @@ export type ReplaceArgs = {
 };
 
 /**
- * Atomic replace seluruh breakdown Strategy (per period_type).
+ * Atomic replace seluruh breakdown Strategi (per period_type).
  * - `quarter` null → tidak menyentuh baris Quarter eksisting.
  * - `quarter` array (4 entri Σ=100) → upsert 4 baris Q1..Q4.
  * - `month` null/empty → tidak menyentuh.

@@ -159,7 +159,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
     await render(<InboxScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.getByText('Marketing Spike')).toBeTruthy();
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Action Plan'), 'sales');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi'), 'sales');
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.queryByText('Marketing Spike')).toBeNull();
   });
@@ -192,7 +192,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
       rooms: [room({ id: 'r1', name: 'Sales' })], isLoading: false, isError: false, refetch: jest.fn(),
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Action Plan'), 'zzzz-tidak-ada');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi'), 'zzzz-tidak-ada');
     expect(await screen.findByText(/tidak ditemukan/i)).toBeTruthy();
     // default empty NOT shown
     expect(screen.queryByText('Belum ada percakapan')).toBeNull();

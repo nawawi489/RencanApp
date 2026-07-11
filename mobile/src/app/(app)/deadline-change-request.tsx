@@ -1,4 +1,4 @@
-// Fase 8 — Deadline Change Request (Task). PIC mengajukan; Reviewer approve/reject/minta-revisi.
+// Fase 8 — Deadline Change Request (Tugas). PIC mengajukan; Reviewer approve/reject/minta-revisi.
 // Anti-self UI gate: requestor = user → tombol review disembunyikan (server tetap penegak akhir).
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';

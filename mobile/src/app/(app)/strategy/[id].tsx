@@ -55,14 +55,14 @@ function NilaiHasilCard({ pending, onOpenReview }: { pending: KpiResultValueSour
         <Badge label="Menunggu Review" tone="warn" />
       </View>
       <Text className="text-sm text-neutral-600 dark:text-neutral-400">
-        {resultValueLabel(pending)} · dari {pending.submission?.task?.name ?? 'Task'}
+        {resultValueLabel(pending)} · dari {pending.submission?.task?.name ?? 'Tugas'}
       </Text>
       <Button label="Buka Review" variant="secondary" onPress={onOpenReview} />
     </SectionCard>
   );
 }
 
-/** UI-S-KD3 — sumber Nilai Hasil (submission per Task) yang membentuk "Capaian vs Target" di atas. */
+/** UI-S-KD3 — sumber Nilai Hasil (submission per Tugas) yang membentuk "Capaian vs Target" di atas. */
 function SumberNilaiHasilPanel({
   sources,
   onOpenTask,
@@ -75,7 +75,7 @@ function SumberNilaiHasilPanel({
     <SectionCard>
       <Text className="text-sm font-bold text-black dark:text-white">Sumber Nilai Hasil</Text>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        Submission Task yang berkontribusi ke nilai di atas, terbaru dahulu.
+        Submission Tugas yang berkontribusi ke nilai di atas, terbaru dahulu.
       </Text>
       <View className="gap-2 pt-1">
         {sources.map((s) => {
@@ -87,11 +87,11 @@ function SumberNilaiHasilPanel({
               disabled={!apId}
               onPress={() => apId && onOpenTask(apId)}
               accessibilityRole={apId ? 'button' : undefined}
-              accessibilityLabel={`Buka Task ${s.submission?.task?.name ?? ''}`}
+              accessibilityLabel={`Buka Tugas ${s.submission?.task?.name ?? ''}`}
               className="gap-0.5 rounded-xl bg-neutral-50 px-3 py-2 active:opacity-70 dark:bg-neutral-900">
               <View className="flex-row items-start justify-between gap-2">
                 <Text className="flex-1 text-sm font-medium text-black dark:text-white" numberOfLines={1}>
-                  {s.submission?.task?.name ?? 'Task'}
+                  {s.submission?.task?.name ?? 'Tugas'}
                 </Text>
                 <Badge label={status.label} tone={status.tone} />
               </View>
@@ -112,7 +112,7 @@ function SumberNilaiHasilPanel({
 }
 
 /**
- * Editor kelengkapan Strategy Draft (Target & PIC wajib saat aktivasi). Dirender hanya setelah Strategy
+ * Editor kelengkapan Strategi Draft (Target & PIC wajib saat aktivasi). Dirender hanya setelah Strategi
  * dimuat & berstatus draft → useState ter-init benar tanpa effect sinkronisasi. `initialPic` (PIC tersimpan,
  * mis. warisan dari Goal Wizard) jadi nilai awal picker; bisa diubah agar Draft tanpa PIC tetap bisa aktif.
  */
@@ -153,7 +153,7 @@ function DraftCompletion({
         loading={saving}
         disabled={unchanged}
       />
-      <Button label="Aktifkan Strategy" onPress={onActivate} loading={activating} />
+      <Button label="Aktifkan Strategi" onPress={onActivate} loading={activating} />
     </SectionCard>
   );
 }
@@ -169,7 +169,7 @@ export function LiveStrategyDetailScreen() {
     queryKey: ['strategy_current_value', id],
     queryFn: () => getStrategyCurrentValue(id),
   });
-  // UI-S-KD2/KD3 — sumber Nilai Hasil lintas Task (proposed pending + riwayat approved/rejected).
+  // UI-S-KD2/KD3 — sumber Nilai Hasil lintas Tugas (proposed pending + riwayat approved/rejected).
   const resultSourcesQ = useQuery({
     queryKey: ['strategy_result_sources', id],
     queryFn: () => listStrategyResultValueSources(id),
@@ -187,7 +187,7 @@ export function LiveStrategyDetailScreen() {
       currentValueQ.refetch();
       resultSourcesQ.refetch();
       refetchInitiatives();
-      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Initiative
+      refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Inisiatif
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -199,25 +199,25 @@ export function LiveStrategyDetailScreen() {
       qc.invalidateQueries({ queryKey: ['strategies'] });
       qc.invalidateQueries({ queryKey: ['goals'] });
     },
-    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Strategy belum bisa diaktifkan. Periksa kelengkapan lalu coba lagi.'),
+    onError: (e) => alertFriendlyError('Tidak bisa diaktifkan', e, 'Strategi belum bisa diaktifkan. Periksa kelengkapan lalu coba lagi.'),
   });
 
   const strategy = strategyQ.data;
   // PIC tersimpan (mis. warisan Goal Wizard) untuk prefill picker editor.
   const { person: currentPic } = usePerson(strategy?.pic_id);
-  // WSA-08 §14.4 — CTA "+ Tambah Initiative" dihapus; tambah turunan hanya dari tree Workspace.
+  // WSA-08 §14.4 — CTA "+ Tambah Inisiatif" dihapus; tambah turunan hanya dari tree Workspace.
 
   function handleActivate() {
     if (strategy && guardActivationFields('strategy', strategy)) return;
     const blocked = guardMbrActivation(compliance, {
-      childLabel: 'Initiative',
+      childLabel: 'Inisiatif',
       onAddChild: () => router.push(`/action-plan/new?strategyId=${id}` as Href),
     });
     if (blocked) return;
     activateM.mutate();
   }
 
-  // Target & PIC wajib saat aktivasi. Strategy dari Goal Wizard bisa lahir tanpa Target/PIC → editor
+  // Target & PIC wajib saat aktivasi. Strategi dari Goal Wizard bisa lahir tanpa Target/PIC → editor
   // inline (DraftCompletion) agar bisa dilengkapi sebelum aktivasi; tanpa ini Draft template terjebak.
   const saveM = useMutation({
     mutationFn: (patch: StrategyPatch) => updateStrategy(id, patch),
@@ -230,7 +230,7 @@ export function LiveStrategyDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: strategy?.name ?? 'Strategy' }} />
+      <Stack.Screen options={{ title: strategy?.name ?? 'Strategi' }} />
       <View className="gap-5 p-5">
         {strategyQ.isLoading || !strategy ? (
           strategyQ.isError ? (
@@ -309,7 +309,7 @@ export function LiveStrategyDetailScreen() {
               ) : null;
             })()}
 
-            {/* UI-S-KD3 — Sumber Nilai Hasil (riwayat submission lintas Task). */}
+            {/* UI-S-KD3 — Sumber Nilai Hasil (riwayat submission lintas Tugas). */}
             {resultSourcesQ.data && resultSourcesQ.data.length > 0 ? (
               <SumberNilaiHasilPanel
                 sources={resultSourcesQ.data}
@@ -345,7 +345,7 @@ export function LiveStrategyDetailScreen() {
 
             <View className="gap-3">
               <View className="flex-row items-center gap-2">
-                <Text className="text-lg font-bold text-black dark:text-white">Initiative</Text>
+                <Text className="text-lg font-bold text-black dark:text-white">Inisiatif</Text>
                 <CardHelpTrigger topic="initiative" />
               </View>
 
@@ -365,8 +365,8 @@ export function LiveStrategyDetailScreen() {
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada Initiative"
-                  description="Turunkan Strategy ini menjadi Initiative konkret beserta alasan, risiko, dan alternatifnya."
+                  title="Belum ada Inisiatif"
+                  description="Turunkan Strategi ini menjadi Inisiatif konkret beserta alasan, risiko, dan alternatifnya."
                 />
               )}
             </View>

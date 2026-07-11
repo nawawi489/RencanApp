@@ -1,5 +1,5 @@
 // Komponen bersama Fase 5: MbrCompletionIndicator (visual) + guardMbrActivation (gating popup).
-// Dipakai ulang di Strategy / Initiative / Action Plan detail. Otoritas akhir tetap server.
+// Dipakai ulang di Strategi / Inisiatif / Rencana Aksi detail. Otoritas akhir tetap server.
 import { render, screen } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -51,18 +51,18 @@ describe('guardMbrActivation', () => {
     (Alert.alert as jest.Mock).mockRestore?.();
   });
 
-  it('[4] blokir_aktivasi + non-compliant → blocked=true + Alert "Tidak Dapat Melanjutkan" + tombol "+ Tambah Initiative"', () => {
+  it('[4] blokir_aktivasi + non-compliant → blocked=true + Alert "Tidak Dapat Melanjutkan" + tombol "+ Tambah Inisiatif"', () => {
     const onAddChild = jest.fn();
     const blocked = guardMbrActivation(
       compliance({ enforcement_mode: 'blokir_aktivasi' }),
-      { childLabel: 'Initiative', onAddChild },
+      { childLabel: 'Inisiatif', onAddChild },
     );
     expect(blocked).toBe(true);
     const calls = (Alert.alert as jest.Mock).mock.calls;
     expect(calls[0][0]).toBe('Tidak Dapat Melanjutkan');
     // tombol kedua memicu onAddChild
     const buttons = calls[0][2] as { text: string; onPress?: () => void }[];
-    const addBtn = buttons.find((b) => b.text.includes('Tambah Initiative'));
+    const addBtn = buttons.find((b) => b.text.includes('Tambah Inisiatif'));
     expect(addBtn).toBeTruthy();
     addBtn!.onPress?.();
     expect(onAddChild).toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe('guardMbrActivation', () => {
   it('[5] blokir_aktivasi + compliant → blocked=false, tanpa popup', () => {
     const blocked = guardMbrActivation(
       compliance({ enforcement_mode: 'blokir_aktivasi', child_count: 3, is_compliant: true }),
-      { childLabel: 'Initiative', onAddChild: jest.fn() },
+      { childLabel: 'Inisiatif', onAddChild: jest.fn() },
     );
     expect(blocked).toBe(false);
     expect((Alert.alert as jest.Mock).mock.calls).toHaveLength(0);
@@ -80,13 +80,13 @@ describe('guardMbrActivation', () => {
   it('[6] hanya_peringatan non-compliant → blocked=false (mode bukan blokir aktivasi)', () => {
     const blocked = guardMbrActivation(
       compliance({ enforcement_mode: 'hanya_peringatan' }),
-      { childLabel: 'Initiative', onAddChild: jest.fn() },
+      { childLabel: 'Inisiatif', onAddChild: jest.fn() },
     );
     expect(blocked).toBe(false);
   });
 
   it('[7] compliance undefined → blocked=false (fail-open; server otoritatif)', () => {
-    const blocked = guardMbrActivation(undefined, { childLabel: 'Initiative', onAddChild: jest.fn() });
+    const blocked = guardMbrActivation(undefined, { childLabel: 'Inisiatif', onAddChild: jest.fn() });
     expect(blocked).toBe(false);
   });
 });

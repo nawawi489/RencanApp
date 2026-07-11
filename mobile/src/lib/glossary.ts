@@ -22,55 +22,55 @@ export type GlossaryEntry = { title: string; body: string };
 const ENTRIES: Record<GlossaryTopic, GlossaryEntry> = {
   goal: {
     title: 'Goal',
-    body: 'Tujuan strategis organisasi untuk satu periode. Goal dipecah menjadi Strategy terukur sebelum dapat diaktifkan.',
+    body: 'Tujuan strategis organisasi untuk satu periode. Goal dipecah menjadi beberapa Strategi terukur sebelum dapat diaktifkan.',
   },
   strategy: {
-    title: 'Strategy',
-    body: 'Bidang ukur di bawah Goal — punya target & nilai hasil. Pecahan Target per kuartal/bulan menjelaskan distribusi target sepanjang periode.',
+    title: 'Strategi',
+    body: 'Area hasil di bawah Goal — punya target dan nilai capaian. Pecahan Target per kuartal atau bulan menjelaskan distribusi target sepanjang periode.',
   },
   initiative: {
-    title: 'Initiative',
-    body: 'Pendekatan kunci untuk mencapai Strategy, lengkap dengan alasan, risiko, dan alternatif. Initiative dipecah menjadi Action Plan.',
+    title: 'Inisiatif',
+    body: 'Pendekatan utama untuk mencapai Strategi, disertai alasan, risiko, dan alternatif. Inisiatif dipecah menjadi Rencana Aksi.',
   },
   action_plan: {
-    title: 'Action Plan',
-    body: 'Inisiatif konkret yang dieksekusi oleh PIC. Boleh punya banyak Task; setelah selesai dapat dievaluasi.',
+    title: 'Rencana Aksi',
+    body: 'Program eksekusi konkret di bawah Inisiatif atau Problem Statement. Otomatis mendapat ruang Diskusi Rencana Aksi dan bisa memiliki banyak Tugas.',
   },
   task: {
-    title: 'Task',
-    body: 'Pekerjaan terjadwal dengan PIC + Reviewer + bukti & nilai hasil. Bisa one-time atau Repeat (dgn instance harian/mingguan).',
+    title: 'Tugas',
+    body: 'Pekerjaan terjadwal dengan PIC, Reviewer, bukti, dan nilai hasil. Bisa one-time atau Repeat (menghasilkan instance harian/mingguan/bulanan).',
   },
   development_area: {
     title: 'Development Area',
-    body: 'Bidang pengembangan organisasi (bukan target performa). Diisi Problem Statement yang dipecah jadi Action Plan.',
+    body: 'Bidang pengembangan organisasi — bukan target performa. Diisi Problem Statement yang dipecah menjadi Rencana Aksi dan Tugas.',
   },
   problem_statement: {
     title: 'Problem Statement',
-    body: 'Pernyataan masalah di bawah Development Area — fokus, bukan keluhan. Ditangani melalui Action Plan + Task.',
+    body: 'Pernyataan masalah di bawah Development Area — fokus pada apa yang perlu diperbaiki, bukan keluhan. Ditangani melalui Rencana Aksi.',
   },
   mbr: {
     title: 'Minimum Breakdown Rule',
-    body: 'Aturan jumlah turunan minimum agar induk bisa diaktifkan (mis. Goal butuh ≥1 Strategy). Mode penegakan: peringatan, blok, atau off.',
+    body: 'Aturan jumlah turunan minimum agar induk bisa diaktifkan (mis. Goal butuh ≥1 Strategi). Mode penegakan: peringatan, blok aktivasi, atau blok tombol tambah.',
   },
   score_formula: {
     title: 'Formula Skor',
-    body: 'Pembagi bobot metrik (Completion, OnTime, Quality, dll.) per level role. Total bobot tiap level wajib 100%.',
+    body: 'Pembagi bobot metrik (Completion, OnTime, Quality, dst.) per level peran. Total bobot tiap level wajib 100%.',
   },
   achievement_score: {
     title: 'Achievement Score',
-    body: 'Skor periodik gabungan kontribusi anggota. Hanya muncul setelah perhitungan periode berjalan atau periode tertutup.',
+    body: 'Skor periodik hasil gabungan kontribusi anggota. Muncul setelah perhitungan periode berjalan atau periode tertutup.',
   },
   activity_log: {
     title: 'Log Aktivitas',
-    body: 'Catatan append-only setiap perubahan signifikan pada card ini. Tidak dapat diubah atau dihapus — jejak audit penuh.',
+    body: 'Catatan append-only untuk setiap perubahan signifikan pada card ini. Tidak dapat diubah atau dihapus — jejak audit penuh.',
   },
   evaluation: {
-    title: 'Evaluasi Action Plan',
-    body: 'Refleksi setelah Action Plan berjalan/selesai. Bisa ditandai untuk menjadi SOP atau di-rollout ke Development Workspace.',
+    title: 'Evaluasi Rencana Aksi',
+    body: 'Refleksi setelah Rencana Aksi berjalan atau selesai. Bisa ditandai untuk menjadi SOP atau di-rollout ke Development Workspace.',
   },
   target_breakdown: {
     title: 'Pecahan Target',
-    body: 'Distribusi target Strategy per kuartal (Σ=100%). Opsional dipecah lebih halus per bulan dalam tiap kuartal.',
+    body: 'Distribusi target Strategi per kuartal (total 100%). Opsional dipecah lebih halus per bulan dalam tiap kuartal.',
   },
 };
 

@@ -255,7 +255,7 @@ export default function LiveHomeScreen() {
             />
             <PriorityCard
               icon="K"
-              title="Gap Strategy"
+              title="Gap Strategi"
               subtitle={
                 kpiAttnQ.isError
                   ? 'Gagal memuat.'
@@ -282,8 +282,8 @@ export default function LiveHomeScreen() {
           ) : (kpiAttnQ.data?.length ?? 0) === 0 ? (
             <EmptyState
               tone="success"
-              title="Semua Strategy terpantau"
-              description="Strategy aktif sudah punya progres tercatat."
+              title="Semua Strategi terpantau"
+              description="Strategi aktif sudah punya progres tercatat."
             />
           ) : (
             <View className="gap-3">
@@ -329,7 +329,7 @@ export default function LiveHomeScreen() {
           onRetry={() => mineQ.refetch()}
           isEmpty={todo.length === 0}
           emptyTitle="Tidak ada tugas aktif"
-          emptyDesc="Task yang Anda jadi PIC-nya akan muncul di sini.">
+          emptyDesc="Tugas yang Anda jadi PIC-nya akan muncul di sini.">
           {todo.map((item) => (
             <TaskRow key={item.id} item={item} onPress={() => openTask(item.id)} />
           ))}
@@ -342,7 +342,7 @@ export default function LiveHomeScreen() {
           onRetry={() => todayRepeatQ.refetch()}
           isEmpty={(todayRepeatQ.data?.length ?? 0) === 0}
           emptyTitle="Tidak ada tugas rutin hari ini"
-          emptyDesc="Instance Task Repeat yang jatuh tempo hari ini akan muncul di sini.">
+          emptyDesc="Instance Tugas Repeat yang jatuh tempo hari ini akan muncul di sini.">
           {(todayRepeatQ.data ?? []).map((item) => (
             <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
           ))}
@@ -374,7 +374,7 @@ export default function LiveHomeScreen() {
           onRetry={() => overdueQ.refetch()}
           isEmpty={(overdueQ.data?.length ?? 0) === 0}
           emptyTitle="Tidak ada yang terlewat"
-          emptyDesc="Task & instance yang lewat deadline akan muncul di sini.">
+          emptyDesc="Tugas & instance yang lewat deadline akan muncul di sini.">
           {(overdueQ.data ?? []).map((item) => (
             <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
           ))}

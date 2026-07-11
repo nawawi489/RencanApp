@@ -5,7 +5,7 @@ import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type ActionPlan = Tables<'action_plans'>;
-export type Task = Tables<'tasks'>;
+export type Tugas = Tables<'tasks'>;
 export type Submission = Tables<'task_submissions'>;
 export type EvidenceFile = Tables<'evidence_files'>;
 export type ResultValue = Tables<'task_result_values'>;
@@ -17,7 +17,7 @@ export function personLabel(p: PersonRef | undefined, fallback = 'Tanpa nama'): 
   return p?.full_name?.trim() || p?.email || fallback;
 }
 
-export type TaskWithPeople = Task & {
+export type TaskWithPeople = Tugas & {
   pic: PersonRef;
   reviewer: PersonRef;
 };
@@ -92,8 +92,8 @@ export const RESULT_VALUE_TYPE_LABEL: Record<string, string> = {
 // ---------------------------------------------------------------- queries
 
 /**
- * Daftar Action Plan. Fase 4: `opts.initiativeId` memfilter berdasarkan induk Initiative —
- * `null` = Action Plan datar (tanpa Initiative, section "Tanpa Goal"); string = anak Initiative tertentu.
+ * Daftar Rencana Aksi. Fase 4: `opts.initiativeId` memfilter berdasarkan induk Inisiatif —
+ * `null` = Rencana Aksi datar (tanpa Inisiatif, section "Tanpa Goal"); string = anak Inisiatif tertentu.
  * Fase 6: `opts.problemStatementId` memfilter berdasarkan induk Problem Statement (sama semantik).
  * Tanpa opts = semua (backward-compat Fase 1, pemanggil lama tak berubah).
  */
@@ -116,7 +116,7 @@ export async function listActionPlans(opts?: {
   return data;
 }
 
-/** UI-S-DA2 — hitung Action Plan di bawah beberapa Problem Statement sekaligus (satu query, hindari N+1). */
+/** UI-S-DA2 — hitung Rencana Aksi di bawah beberapa Problem Statement sekaligus (satu query, hindari N+1). */
 export async function listActionPlansByProblemStatementIds(ids: string[]): Promise<ActionPlan[]> {
   if (ids.length === 0) return [];
   const { data, error } = await supabase.from('action_plans').select('*').in('problem_statement_id', ids);
@@ -316,7 +316,7 @@ export type NewActionPlan = {
   period_start: string | null;
   period_end: string | null;
   description?: string | null;
-  /** Fase 4: induk Initiative. null/absen = Action Plan datar (backward-compat Fase 1). */
+  /** Fase 4: induk Inisiatif. null/absen = Rencana Aksi datar (backward-compat Fase 1). */
   initiative_id?: string | null;
   /** Fase 6: induk Problem Statement (jalur Development). Mutually exclusive dgn initiative_id (CHECK action_plans_single_parent). */
   problem_statement_id?: string | null;
@@ -354,7 +354,7 @@ export type NewTask = {
   description?: string | null;
 };
 
-export async function createTask(input: NewTask): Promise<Task> {
+export async function createTask(input: NewTask): Promise<Tugas> {
   const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('tasks')
@@ -400,7 +400,7 @@ export type ResultValueInput = {
   value_numeric?: number | null;
 };
 
-/** Kandidat Strategy untuk picker (RPC list_strategy_candidates_for_task). */
+/** Kandidat Strategi untuk picker (RPC list_strategy_candidates_for_task). */
 export type StrategyCandidate = { id: string; name: string };
 
 /** Snapshot agregat dari VIEW strategy_current_values (untuk render "nilai lama"). */
@@ -448,7 +448,7 @@ export async function finalizeSubmission(args: {
   return data as string;
 }
 
-/** List Strategy kandidat untuk Task ini (chain action_plan→initiative→strategy).
+/** List Strategi kandidat untuk Tugas ini (chain action_plan→initiative→strategy).
  * 0 baris = Fase 1 fallback (OD-1 → UI hide section Nilai Hasil). */
 export async function listStrategyCandidates(taskId: string): Promise<StrategyCandidate[]> {
   const { data, error } = await supabase.rpc('list_strategy_candidates_for_task', {
@@ -458,7 +458,7 @@ export async function listStrategyCandidates(taskId: string): Promise<StrategyCa
   return (data ?? []) as StrategyCandidate[];
 }
 
-/** Read current aggregate value untuk Strategy (sumber "nilai lama" di UI DeltaArrow). */
+/** Read current aggregate value untuk Strategi (sumber "nilai lama" di UI DeltaArrow). */
 export async function getStrategyCurrentValue(strategyId: string): Promise<StrategyCurrentValue | null> {
   const { data, error } = await supabase
     .from('strategy_current_values')
@@ -469,7 +469,7 @@ export async function getStrategyCurrentValue(strategyId: string): Promise<Strat
   return (data as StrategyCurrentValue | null) ?? null;
 }
 
-/** UI-S-KD2/KD3 — satu submission yang menyumbang Nilai Hasil ke Strategy ini (approved/pending/rejected). */
+/** UI-S-KD2/KD3 — satu submission yang menyumbang Nilai Hasil ke Strategi ini (approved/pending/rejected). */
 export type KpiResultValueSource = {
   id: string;
   value_numeric: number | null;
@@ -485,7 +485,7 @@ export type KpiResultValueSource = {
 };
 
 /**
- * Daftar Nilai Hasil (result value) yang menunjuk ke Strategy ini, lintas Task, terurut terbaru.
+ * Daftar Nilai Hasil (result value) yang menunjuk ke Strategi ini, lintas Tugas, terurut terbaru.
  * Dipakai untuk kartu "Nilai Hasil" (proposed vs current) dan panel "Sumber Nilai Hasil".
  */
 export async function listStrategyResultValueSources(strategyId: string): Promise<KpiResultValueSource[]> {
@@ -516,7 +516,7 @@ export async function reviewSubmission(args: {
 // ---------------------------------------------------------------- PPL-06 Kontribusi (OQ-6)
 
 /**
- * Jumlah Task yang telah selesai (status='done') oleh PIC pada rentang periode aktif.
+ * Jumlah Tugas yang telah selesai (status='done') oleh PIC pada rentang periode aktif.
  * PPL-06 / OQ-6 diputuskan 2026-07-05: metrik "Kontribusi bulan ini" = count AP done PIC pada periode.
  *
  * SEMANTIK APPROKSIMASI: idealnya filter pakai kolom `completed_at`, tapi schema tak punya kolom

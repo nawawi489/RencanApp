@@ -54,7 +54,7 @@ beforeEach(() => {
 });
 
 describe('GoalDetailScreen', () => {
-  it('data → nama goal + status badge + Strategy tampil', async () => {
+  it('data → nama goal + status badge + Strategi tampil', async () => {
     mockUseGoal.mockReturnValue({
       goal: {
         id: 'g1',
@@ -80,7 +80,7 @@ describe('GoalDetailScreen', () => {
 
     expect(await screen.findByText('Tumbuhkan pendapatan')).toBeTruthy();
     expect(screen.getByText('Draft')).toBeTruthy(); // status badge goal
-    expect(screen.getByText('Akuisisi Pelanggan')).toBeTruthy(); // minimal satu Strategy
+    expect(screen.getByText('Akuisisi Pelanggan')).toBeTruthy(); // minimal satu Strategi
   });
 
   it('deep-link luar scope → ErrorState generik, tidak membocorkan nama card', async () => {

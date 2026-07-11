@@ -67,7 +67,7 @@ describe('guardActivationFields', () => {
     expect(alertSpy).toHaveBeenCalledTimes(1);
     const [title, msg] = alertSpy.mock.calls[0];
     expect(title).toBe('Lengkapi data wajib');
-    expect(msg).toContain('Strategy ini belum bisa diaktifkan');
+    expect(msg).toContain('Strategi ini belum bisa diaktifkan');
     expect(msg).toContain('PIC');
     expect(msg).toContain('Periode mulai');
     expect(msg).toContain('Target');
@@ -93,11 +93,11 @@ describe('mbrBreakdownGuardMessage', () => {
     is_compliant: false,
   };
 
-  it('Strategy 2/3 Initiative → kalimat §12.3 persis (next button Action Plan)', () => {
-    const { title, message } = mbrBreakdownGuardMessage('Strategy', kpiToInitiative, 'Action Plan');
+  it('Strategi 2/3 Inisiatif → kalimat §12.3 persis (next button Rencana Aksi)', () => {
+    const { title, message } = mbrBreakdownGuardMessage('Strategi', kpiToInitiative, 'Rencana Aksi');
     expect(title).toBe('Kelengkapan Perencanaan');
     expect(message).toBe(
-      'Strategy ini baru punya 2 dari 3 Initiative. Tambahkan 1 Initiative lagi dulu, baru tombol + Action Plan aktif.',
+      'Strategi ini baru punya 2 dari 3 Inisiatif. Tambahkan 1 Inisiatif lagi dulu, baru tombol + Rencana Aksi aktif.',
     );
   });
 });

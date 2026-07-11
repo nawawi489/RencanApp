@@ -54,7 +54,7 @@ export function LiveNewGoalScreen() {
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal — Sasaran strategis"
-          body="Goal adalah sasaran tahunan tingkat tinggi. Periode otomatis mengikuti tahun Goal (1 Jan – 31 Des). Pecah jadi Strategy, lalu Initiative dan Action Plan. Card disimpan sebagai Draft dulu."
+          body="Goal adalah sasaran tahunan tingkat tinggi. Periode otomatis mengikuti tahun Goal (1 Jan – 31 Des). Pecah jadi Strategi, lalu Inisiatif dan Rencana Aksi. Card disimpan sebagai Draft dulu."
         />
 
         <SectionCard>

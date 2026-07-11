@@ -112,7 +112,7 @@ export function LiveNewTaskScreen() {
   const { actionPlanId } = useLocalSearchParams<{ actionPlanId: string }>();
   const router = useRouter();
   const qc = useQueryClient();
-  // UI-S-AP4 context-bar — tampilkan parent Action Plan supaya PIC tahu "AP ini di bawah apa".
+  // UI-S-AP4 context-bar — tampilkan parent Rencana Aksi supaya PIC tahu "AP ini di bawah apa".
   const parentActionPlanQ = useQuery({
     queryKey: ['action_plan', actionPlanId],
     queryFn: () => getActionPlan(actionPlanId),
@@ -204,7 +204,7 @@ export function LiveNewTaskScreen() {
 
   function submit() {
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Task wajib diisi.');
+      Alert.alert('Belum lengkap', 'Nama Tugas wajib diisi.');
       return;
     }
     if (pic && reviewer && pic.id === reviewer.id) {
@@ -243,10 +243,10 @@ export function LiveNewTaskScreen() {
         {parentActionPlanQ.data ? (
           <View
             accessible
-            accessibilityLabel={`Task di bawah Action Plan ${parentActionPlanQ.data.name}`}
+            accessibilityLabel={`Tugas di bawah Rencana Aksi ${parentActionPlanQ.data.name}`}
             className="rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-900">
             <Text className="text-[11px] font-semibold uppercase text-neutral-500 dark:text-neutral-400">
-              Action Plan induk
+              Rencana Aksi induk
             </Text>
             <Text className="text-sm font-semibold text-black dark:text-white">
               {parentActionPlanQ.data.name}
@@ -255,13 +255,13 @@ export function LiveNewTaskScreen() {
         ) : null}
 
         <GuidanceNote
-          title="Task — Siapa melakukan apa & kapan"
+          title="Tugas — Siapa melakukan apa & kapan"
           body="Unit eksekusi paling konkret. PIC (eksekutor) & Reviewer wajib dan harus berbeda. Card disimpan Draft; aktifkan setelah semua field wajib terisi."
         />
 
         <SectionCard>
-          <Text className="text-sm font-bold text-black dark:text-white">Detail Task</Text>
-          <LabeledInput label="Nama Task" value={name} onChangeText={setName} required placeholder="mis. Buat 20 Konten Iklan" />
+          <Text className="text-sm font-bold text-black dark:text-white">Detail Tugas</Text>
+          <LabeledInput label="Nama Tugas" value={name} onChangeText={setName} required placeholder="mis. Buat 20 Konten Iklan" />
           <UserPicker label="PIC (eksekutor)" required value={pic} onChange={setPic} excludeId={reviewer?.id} />
           <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />
           <DateField label="Tanggal Mulai" value={startDate} onChange={setStartDate} />
@@ -301,7 +301,7 @@ export function LiveNewTaskScreen() {
           />
         </View>
 
-        {/* ---- Repeat (Task berulang) ---- */}
+        {/* ---- Repeat (Tugas berulang) ---- */}
         <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
           <View className="flex-row items-center justify-between gap-3">
             <View className="flex-1 gap-0.5">

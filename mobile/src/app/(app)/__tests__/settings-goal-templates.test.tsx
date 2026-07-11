@@ -1,4 +1,4 @@
-// UI — Goal Template Library. Browse template + nested Strategy (lazy expand) + CTA gated create_goal.
+// UI — Goal Template Library. Browse template + nested Strategi (lazy expand) + CTA gated create_goal.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -78,7 +78,7 @@ describe('SettingsGoalTemplatesScreen', () => {
     expect(screen.queryByLabelText('Buat Goal dari Template')).toBeNull();
   });
 
-  it('[4] expand → Strategy template muncul (lazy)', async () => {
+  it('[4] expand → Strategi template muncul (lazy)', async () => {
     mockUseGoalTemplates.mockReturnValue({
       templates: [{ id: 't1', name: 'Pertumbuhan Omset', description: null, sort_order: 1 }],
       isLoading: false,
@@ -91,7 +91,7 @@ describe('SettingsGoalTemplatesScreen', () => {
     });
     await render(<SettingsGoalTemplatesScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Lihat Strategy template'));
+      fireEvent.press(await screen.findByLabelText('Lihat Strategi template'));
     });
     expect(screen.getByText('Revenue')).toBeTruthy();
     expect(screen.getByText('Sales')).toBeTruthy();

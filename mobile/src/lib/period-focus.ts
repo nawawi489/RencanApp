@@ -174,7 +174,7 @@ export function focusPeriodStatus(focus: PeriodFocus, now: Date): CardPeriodStat
  * tanpa cek fokus, tombol "+" tetap aktif saat user membuka periode arsip.
  *
  * Dipakai sebagai satu sumber `past`/`addDimmed`/guard di semua row tree
- * (Goal/Strategy/Initiative/Development Area/Problem Statement) agar keputusan
+ * (Goal/Strategi/Inisiatif/Development Area/Problem Statement) agar keputusan
  * navigasi-vs-alert dan a11y-disabled konsisten.
  */
 export function isAddLocked(card: CardDates, focus: PeriodFocus, now: Date): boolean {

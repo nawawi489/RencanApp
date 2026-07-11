@@ -36,15 +36,15 @@ export function LiveGoalDetailScreen() {
     try {
       await activate(id);
     } catch (e) {
-      alertFriendlyError('Tidak bisa diaktifkan', e, 'Goal butuh minimal 1 Strategy sebelum diaktifkan.');
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Goal butuh minimal 1 Strategi sebelum diaktifkan.');
     }
   }
 
-  // PRD §50: pulihkan Strategy dari template yang belum ada (idempoten, tak menimpa data aktif).
+  // PRD §50: pulihkan Strategi dari template yang belum ada (idempoten, tak menimpa data aktif).
   async function onRestore() {
     try {
       const added = await restore(id);
-      Alert.alert('Pulihkan dari template', added > 0 ? `${added} Strategy ditambahkan.` : 'Semua item template sudah ada.');
+      Alert.alert('Pulihkan dari template', added > 0 ? `${added} Strategi ditambahkan.` : 'Semua item template sudah ada.');
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan. Coba lagi.');
     }
@@ -87,8 +87,8 @@ export function LiveGoalDetailScreen() {
               />
             </View>
 
-            {/* UI-S-GD1 — Progress vs Capaian: "Progress kerja" (Strategy sudah bergerak dari draft)
-                vs "Capaian hasil" (Strategy selesai). Indikatif dari status anak, lihat lib/progress.ts. */}
+            {/* UI-S-GD1 — Progress vs Capaian: "Progress kerja" (Strategi sudah bergerak dari draft)
+                vs "Capaian hasil" (Strategi selesai). Indikatif dari status anak, lihat lib/progress.ts. */}
             <SectionCard>
               <Text className="text-sm font-bold text-black dark:text-white">Progress vs Capaian</Text>
               <View className="gap-1.5">
@@ -133,7 +133,7 @@ export function LiveGoalDetailScreen() {
 
             <View className="gap-3">
               <View className="flex-row items-center gap-2">
-                <Text className="text-lg font-bold text-black dark:text-white">Strategy</Text>
+                <Text className="text-lg font-bold text-black dark:text-white">Strategi</Text>
                 <CardHelpTrigger topic="strategy" />
               </View>
 
@@ -153,8 +153,8 @@ export function LiveGoalDetailScreen() {
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada Strategy"
-                  description="Pecah Goal ini menjadi Strategy terukur, lalu turunkan jadi Initiative dan Action Plan."
+                  title="Belum ada Strategi"
+                  description="Pecah Goal ini menjadi Strategi terukur, lalu turunkan jadi Inisiatif dan Rencana Aksi."
                 />
               )}
             </View>

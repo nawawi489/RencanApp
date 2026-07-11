@@ -1,4 +1,4 @@
-// Data layer Fase 2 — Task Repeat.
+// Data layer Fase 2 — Tugas Repeat.
 // Semua otorisasi & generasi instance ditegakkan di server (RLS + RPC SECURITY DEFINER);
 // fungsi di sini hanya pemanggil tipis. Label/tone instance TERPISAH dari label parent tasks
 // karena enum instance punya status 'missed' (Terlewat) yang tidak ada di tasks.
@@ -92,7 +92,7 @@ export async function getInstance(id: string): Promise<InstanceWithSubmissions> 
 }
 
 // Inventory layar Settings > Repeat Setting (PRD §31). Read-only daftar seluruh repeat-rule
-// yang user boleh lihat (RLS). Dipakai untuk navigasi cepat ke Task induk.
+// yang user boleh lihat (RLS). Dipakai untuk navigasi cepat ke Tugas induk.
 export type RepeatRuleWithContext = RepeatRule & {
   task: { id: string; name: string; status: string } | null;
 };
