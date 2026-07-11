@@ -25,7 +25,7 @@ Feed, Company News, Announcement, CEO Broadcast, SOP Center penuh, Knowledge Cen
 
 > [!info] Kontribusi/Target Breakdown ≠ Bobot planning card
 > V1.8.2 memasukkan **Strategy Target Breakdown** (§12.2: total kontribusi periode wajib 100%) **dan tetap menolak** "Bobot planning card". Keduanya beda konsep dan sengaja dipisah:
-> - **Diizinkan** — *target-phasing satu kartu atas dirinya sendiri*: target tahunan Strategy dipecah lintas Quarter/Bulan (baris breakdown ber-key `kpi_area_id + periode`). Bukan layer/hierarki baru.
+> - **Diizinkan** — *target-phasing satu kartu atas dirinya sendiri*: target tahunan Strategy dipecah lintas Quarter/Bulan (baris breakdown ber-key `strategy_id + periode`). Bukan layer/hierarki baru.
 > - **Ditolak** — *bobot antar-kartu untuk skor*: kartu turunan membawa bobot yang mengakumulasi ke skor parent. Itu hanya ada di [[score-formula]].
 > Implementasi Target Breakdown **wajib** sebagai baris pada Strategy, **bukan** tabel kartu anak (kalau jadi tabel kartu anak = melanggar "KPI child table di bawah Area Goal").
 

@@ -29,8 +29,8 @@ Rekomendasi tumpukan teknologi untuk membangun [[overview|Rencanapp]] (EMS V1.8.
 | Otorisasi | **Postgres Row Level Security (RLS)** | Inti PRD: "user tidak melihat semua card" & "search ikut permission" ditegakkan di DB, tidak bisa di-bypass client. |
 | Auth | **Supabase Auth** | Terhubung langsung ke `auth.users` & `profiles`, mendukung role/permission template. |
 | State & data fetching | **TanStack Query (React Query)** | Cache, retry, offline-friendly, sinkron dengan Supabase Realtime. |
-| Realtime chat & notif | **Supabase Realtime** | Chat room per Initiative & notifikasi live tanpa server socket terpisah. |
-| Penyimpanan bukti | **Supabase Storage** | File/foto/PDF; *evidence locking* via RLS + versioning di `action_plan_submissions`. |
+| Realtime chat & notif | **Supabase Realtime** | Chat room ("Diskusi Rencana Aksi") per Action Plan & notifikasi live tanpa server socket terpisah. |
+| Penyimpanan bukti | **Supabase Storage** | File/foto/PDF; *evidence locking* via RLS + versioning di `task_submissions`. |
 | Job terjadwal | **Supabase Edge Functions + `pg_cron`** | Generate instance Repeat & tandai Terlewat otomatis sesuai jam deadline. |
 | Push notification | **Expo Notifications** | Deadline reminder, review request, repeat due. |
 | Styling / UI | **NativeWind (Tailwind)** | UI card konsisten dan cepat dibangun. |

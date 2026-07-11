@@ -97,9 +97,18 @@ ALTER TABLE public.minimum_breakdown_rules
     ])
   );
 
--- Rename cosmetic constraint (initiatives_single_parent lives on action_plans post-F1)
-ALTER TABLE public.action_plans
-  RENAME CONSTRAINT initiatives_single_parent TO action_plans_single_parent;
+-- Rename cosmetic constraint (initiatives_single_parent lives on action_plans post-F1).
+-- Wrapped in a DO block for idempotency (rollback-drill replay support).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.action_plans'::regclass
+      AND conname = 'initiatives_single_parent'
+  ) THEN
+    ALTER TABLE public.action_plans RENAME CONSTRAINT initiatives_single_parent TO action_plans_single_parent;
+  END IF;
+END $$;
 
 -- =====================================================================
 -- S1. Drop triggers pointing to renamed functions (must precede DROP FUNCTION)
