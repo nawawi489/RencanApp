@@ -1448,3 +1448,13 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - PRD.md updated (13 section: §2, §3, §5, §6, §7, §9, §10, §11, §12, §13–15, §18–19, §20–22, §24, §29–30, §31, §33, §34.4, §35, §36, §38, §41, §42, §43, §44). Positioning §2 diperkuat: "Task tunduk Reviewer, evidence, Score Formula — bukan checklist bebas". Catatan V1.8.3 di §5 (identifier snake_case) + §35 (audit historis freeze via `map_legacy_entity_type`).
 - Owner default DECIDED (2026-07-11) untuk 11 RWT (A untuk 10, B untuk RWT-03). RWT-12 (Content Lead DRI + tanggal rewrite copy edukasi) tetap PENDING — tidak block F1, harus diisi sebelum F4.
 - Berikutnya: F1 = migrasi 0045–0048 bottom-up + hygiene 0050 (ALTER TABLE + ALTER RENAME CONSTRAINT), lalu F2 enum backfill (0049) + `map_legacy_entity_type` helper.
+
+## [2026-07-11] update | Rename Workspace Terminology F1 DDL — tables/columns/indexes/view
+
+- Migration `supabase/migrations/0045_rename_workspace_terminology.sql` — 197 baris SQL dalam satu BEGIN/COMMIT (deviasi dari struktur 4-file spec §10; alasan: atomicity dalam satu transaksi = urutan statement kontrol bottom-up ordering, multi-file tidak menambah safety).
+- Applied lokal via `docker exec supabase_db_supabase psql`. Verifikasi: 10 tabel + 1 view (11/11) dengan nama baru, FK columns bergeser (`task_id`, `action_plan_id`, `initiative_id`, `strategy_id`), SELECT smoke test kembalikan 4/4/4/4 seed rows di tiap level.
+- **Scope F1 disempurnakan**: hanya DDL (tabel + kolom + index + view). Function bodies, RLS policy bodies, trigger bodies di-defer ke F3. Konsekuensi: RPC mobile pecah antara F1 apply dan F3 apply (spec §10 F1 acceptance "pg_class bersih" tercapai; "typecheck hijau" ditunggu F4 mobile client rewrite).
+- Fungsi yang di-freeze nama (per RWT-05 A + spec §7.7 pg_cron continuity): `compute_action_plan_completion`, `generate_action_plan_instances`, `mark_overdue_instances`, `calculate_period_scores`, `close_period_snapshot`, `override_user_score`, `write_activity`, `emit_notification`, `resolve_notifications`, `create_submission_draft`, `search_cards`, `cancel_card`.
+- Fungsi lain (~45) yang menyebut nama tabel lama akan mengalami rename+body rewrite di F3 (rencana `0046_rewrite_function_bodies.sql`). Bash sed pipeline placeholder-safe untuk generate CREATE OR REPLACE + DROP list sudah tersedia di scratchpad.
+- Commit: `f90ba06` di branch `feat/rename-workspace-terminology`.
+- Berikutnya: F3 body rewrites (0046) + F2 enum backfill (0047) — atomic per merge gate spec §10.
