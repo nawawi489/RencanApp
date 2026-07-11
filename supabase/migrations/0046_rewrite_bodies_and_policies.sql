@@ -2754,114 +2754,138 @@ $function$;
 
 -- public.action_plans :: initiatives_insert -> action_plans_insert
 DROP POLICY IF EXISTS initiatives_insert ON public.action_plans;
+DROP POLICY IF EXISTS action_plans_insert ON public.action_plans;
 CREATE POLICY action_plans_insert ON public.action_plans FOR INSERT TO authenticated
   WITH CHECK (((organization_id = current_user_org()) AND (created_by = ( SELECT auth.uid() AS uid)) AND has_permission('create_initiative'::text) AND initiative_in_my_org(initiative_id) AND problem_statement_in_my_org(problem_statement_id)));
 
 -- public.action_plans :: initiatives_select -> action_plans_select
 DROP POLICY IF EXISTS initiatives_select ON public.action_plans;
+DROP POLICY IF EXISTS action_plans_select ON public.action_plans;
 CREATE POLICY action_plans_select ON public.action_plans FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND (can_view_workspace() OR (pic_id = ( SELECT auth.uid() AS uid)) OR (created_by = ( SELECT auth.uid() AS uid)) OR action_plan_has_my_task(id) OR is_problem_statement_pic(problem_statement_id))));
 
 -- public.action_plans :: initiatives_update -> action_plans_update
 DROP POLICY IF EXISTS initiatives_update ON public.action_plans;
+DROP POLICY IF EXISTS action_plans_update ON public.action_plans;
 CREATE POLICY action_plans_update ON public.action_plans FOR UPDATE TO authenticated
   USING (((organization_id = current_user_org()) AND ((created_by = ( SELECT auth.uid() AS uid)) OR (pic_id = ( SELECT auth.uid() AS uid)) OR has_permission('manage_others_cards'::text))))
   WITH CHECK (((organization_id = current_user_org()) AND initiative_in_my_org(initiative_id) AND problem_statement_in_my_org(problem_statement_id)));
 
 -- public.comments :: comments_select -> comments_select
 DROP POLICY IF EXISTS comments_select ON public.comments;
+DROP POLICY IF EXISTS comments_select ON public.comments;
 CREATE POLICY comments_select ON public.comments FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND (((entity_type = 'action_plan'::text) AND can_access_task(entity_id)) OR ((entity_type = 'initiative'::text) AND can_access_initiative(entity_id)) OR ((entity_type = 'action_plan_instance'::text) AND (EXISTS ( SELECT 1    FROM task_instances i   WHERE ((i.id = comments.entity_id) AND can_access_task(i.task_id))))))));
 
 -- public.evaluations :: evaluations_select -> evaluations_select
+DROP POLICY IF EXISTS evaluations_select ON public.evaluations;
 DROP POLICY IF EXISTS evaluations_select ON public.evaluations;
 CREATE POLICY evaluations_select ON public.evaluations FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND can_access_initiative(action_plan_id)));
 
 -- public.evidence_files :: evidence_select -> evidence_select
 DROP POLICY IF EXISTS evidence_select ON public.evidence_files;
+DROP POLICY IF EXISTS evidence_select ON public.evidence_files;
 CREATE POLICY evidence_select ON public.evidence_files FOR SELECT TO authenticated
   USING ((EXISTS ( SELECT 1    FROM task_submissions s   WHERE ((s.id = evidence_files.submission_id) AND can_access_task(s.task_id)))));
 
 -- public.initiatives :: strategies_insert -> initiatives_insert
 DROP POLICY IF EXISTS strategies_insert ON public.initiatives;
+DROP POLICY IF EXISTS initiatives_insert ON public.initiatives;
 CREATE POLICY initiatives_insert ON public.initiatives FOR INSERT TO authenticated
   WITH CHECK (((organization_id = current_user_org()) AND (created_by = ( SELECT auth.uid() AS uid)) AND strategy_in_my_org(strategy_id) AND (has_permission('create_strategy'::text) OR is_strategy_pic(strategy_id))));
 
 -- public.initiatives :: strategies_select -> initiatives_select
 DROP POLICY IF EXISTS strategies_select ON public.initiatives;
+DROP POLICY IF EXISTS initiatives_select ON public.initiatives;
 CREATE POLICY initiatives_select ON public.initiatives FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND (can_view_workspace() OR (pic_id = ( SELECT auth.uid() AS uid)) OR (created_by = ( SELECT auth.uid() AS uid)) OR is_strategy_pic(strategy_id) OR initiative_has_my_descendant(id))));
 
 -- public.mentions :: mentions_select -> mentions_select
+DROP POLICY IF EXISTS mentions_select ON public.mentions;
 DROP POLICY IF EXISTS mentions_select ON public.mentions;
 CREATE POLICY mentions_select ON public.mentions FOR SELECT TO authenticated
   USING (((mentioned_user_id = ( SELECT auth.uid() AS uid)) OR ((chat_message_id IS NOT NULL) AND (EXISTS ( SELECT 1    FROM chat_messages cm   WHERE ((cm.id = mentions.chat_message_id) AND is_chat_member(cm.chat_room_id))))) OR ((comment_id IS NOT NULL) AND (EXISTS ( SELECT 1    FROM comments c   WHERE ((c.id = mentions.comment_id) AND (((c.entity_type = 'action_plan'::text) AND can_access_task(c.entity_id)) OR ((c.entity_type = 'initiative'::text) AND can_access_initiative(c.entity_id)))))))));
 
 -- public.reviews :: reviews_select -> reviews_select
 DROP POLICY IF EXISTS reviews_select ON public.reviews;
+DROP POLICY IF EXISTS reviews_select ON public.reviews;
 CREATE POLICY reviews_select ON public.reviews FOR SELECT TO authenticated
   USING (can_access_task(task_id));
 
 -- public.strategies :: kpi_areas_select -> strategies_select
 DROP POLICY IF EXISTS kpi_areas_select ON public.strategies;
+DROP POLICY IF EXISTS strategies_select ON public.strategies;
 CREATE POLICY strategies_select ON public.strategies FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND (can_view_workspace() OR (pic_id = ( SELECT auth.uid() AS uid)) OR (created_by = ( SELECT auth.uid() AS uid)) OR is_goal_pic(goal_id) OR strategy_has_my_descendant(id))));
 
 -- public.strategy_target_breakdowns :: kpi_area_breakdown_select -> strategy_target_breakdowns_select
 DROP POLICY IF EXISTS kpi_area_breakdown_select ON public.strategy_target_breakdowns;
+DROP POLICY IF EXISTS strategy_target_breakdowns_select ON public.strategy_target_breakdowns;
 CREATE POLICY strategy_target_breakdowns_select ON public.strategy_target_breakdowns FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND (EXISTS ( SELECT 1    FROM strategies k   WHERE ((k.id = strategy_target_breakdowns.strategy_id) AND (can_view_workspace() OR (k.pic_id = ( SELECT auth.uid() AS uid)) OR (k.created_by = ( SELECT auth.uid() AS uid)) OR is_goal_pic(k.goal_id) OR strategy_has_my_descendant(k.id)))))));
 
 -- public.task_instances :: instances_select -> instances_select
+DROP POLICY IF EXISTS instances_select ON public.task_instances;
 DROP POLICY IF EXISTS instances_select ON public.task_instances;
 CREATE POLICY instances_select ON public.task_instances FOR SELECT TO authenticated
   USING (can_access_task(task_id));
 
 -- public.task_repeat_rules :: repeat_rules_select -> repeat_rules_select
 DROP POLICY IF EXISTS repeat_rules_select ON public.task_repeat_rules;
+DROP POLICY IF EXISTS repeat_rules_select ON public.task_repeat_rules;
 CREATE POLICY repeat_rules_select ON public.task_repeat_rules FOR SELECT TO authenticated
   USING (can_access_task(task_id));
 
 -- public.task_result_values :: result_values_select -> result_values_select
+DROP POLICY IF EXISTS result_values_select ON public.task_result_values;
 DROP POLICY IF EXISTS result_values_select ON public.task_result_values;
 CREATE POLICY result_values_select ON public.task_result_values FOR SELECT TO authenticated
   USING ((EXISTS ( SELECT 1    FROM task_submissions s   WHERE ((s.id = task_result_values.submission_id) AND can_access_task(s.task_id)))));
 
 -- public.task_submissions :: submissions_select -> submissions_select
 DROP POLICY IF EXISTS submissions_select ON public.task_submissions;
+DROP POLICY IF EXISTS submissions_select ON public.task_submissions;
 CREATE POLICY submissions_select ON public.task_submissions FOR SELECT TO authenticated
   USING (can_access_task(task_id));
 
 -- public.tasks :: action_plans_select -> tasks_select
 DROP POLICY IF EXISTS action_plans_select ON public.tasks;
+DROP POLICY IF EXISTS tasks_select ON public.tasks;
 CREATE POLICY tasks_select ON public.tasks FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND (can_view_workspace() OR (pic_id = ( SELECT auth.uid() AS uid)) OR (reviewer_id = ( SELECT auth.uid() AS uid)) OR (created_by = ( SELECT auth.uid() AS uid)) OR i_am_action_plan_pic(action_plan_id) OR i_am_problem_statement_pic_via_action_plan(action_plan_id))));
 
 -- public.video_briefs :: video_briefs_select -> video_briefs_select
+DROP POLICY IF EXISTS video_briefs_select ON public.video_briefs;
 DROP POLICY IF EXISTS video_briefs_select ON public.video_briefs;
 CREATE POLICY video_briefs_select ON public.video_briefs FOR SELECT TO authenticated
   USING (((organization_id = current_user_org()) AND can_access_initiative(action_plan_id)));
 
 -- storage.objects :: evidence_select_authorized -> evidence_select_authorized
 DROP POLICY IF EXISTS evidence_select_authorized ON storage.objects;
+DROP POLICY IF EXISTS evidence_select_authorized ON storage.objects;
 CREATE POLICY evidence_select_authorized ON storage.objects FOR SELECT TO authenticated
   USING (((bucket_id = 'evidence'::text) AND (((array_length(storage.foldername(name), 1) >= 2) AND (EXISTS ( SELECT 1    FROM tasks ap   WHERE ((ap.id = ((storage.foldername(objects.name))[2])::uuid) AND can_access_task(ap.id))))) OR ((array_length(storage.foldername(name), 1) < 2) AND can_view_workspace()))));
 
 -- =====================================================================
--- S5. Recreate 3 triggers with new function references + names
+-- S5. Recreate 3 triggers with new function references + names.
+-- DROP IF EXISTS before each CREATE for replay-safety (new-name triggers
+-- survive the table-rename roundtrip via OID during a rollback drill).
 -- =====================================================================
 
+DROP TRIGGER IF EXISTS task_sync_chat ON public.tasks;
 CREATE TRIGGER task_sync_chat
   AFTER INSERT OR UPDATE OF pic_id, reviewer_id, action_plan_id
   ON public.tasks
   FOR EACH ROW EXECUTE FUNCTION public.tg_task_sync_chat();
 
+DROP TRIGGER IF EXISTS action_plan_chat_room ON public.action_plans;
 CREATE TRIGGER action_plan_chat_room
   AFTER INSERT OR UPDATE OF status
   ON public.action_plans
   FOR EACH ROW EXECUTE FUNCTION public.tg_action_plan_chat_room();
 
+DROP TRIGGER IF EXISTS strategy_target_breakdown_touch ON public.strategy_target_breakdowns;
 CREATE TRIGGER strategy_target_breakdown_touch
   BEFORE UPDATE
   ON public.strategy_target_breakdowns

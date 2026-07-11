@@ -1574,3 +1574,11 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 - Follow-up (non-blocking):
   - `card_guidance_contents` seed migration — SME review body edukasi per topik lalu apply
   - Cosmetic: type identifier Indonesian → English kalau tim TS convention menuntut (require careful revert)
+
+## [2026-07-11] update | Post-RWT-12 hardening — 0047 guidance reseed + F6a replay-safety
+
+- **0047_reseed_card_guidance_v183.sql** (RWT-12 follow-up, sekarang DIKERJAKAN bukan defer): `card_guidance_contents.card_type` masih pakai nama lama dgn makna ter-shift → client `CARD_TYPES` (`goal/strategy/initiative/action_plan/task`) minta `strategy` (L1 baru) dapat konten L2 lama. **Gap korektif, bukan kosmetik.** Migrasi shift card_type bottom-up + rewrite title/body 7 topik ke Indonesian (voice PRD §7.8, mirror glossary.ts). **Idempotent**: default rows (org-NULL) via DELETE+INSERT; org-specific shift via DO-block guarded (hanya fire kalau org masih punya row legacy `kpi_area`). Terbukti apply 2× = tetap 7 row tanpa duplikat.
+- **F6a replay-safety (0046)**: forward re-apply `0046` setelah rollback drill dulu gagal (policy + trigger collision). Fix: S2 tambah `DROP POLICY IF EXISTS <new-name>` sebelum 19 CREATE POLICY; S5 tambah `DROP TRIGGER IF EXISTS <new-name>` sebelum 3 CREATE TRIGGER. Kombinasi CREATE OR REPLACE (function) + DO-block (constraint) + DROP-IF-EXISTS (policy/trigger) = `0046` fully replay-safe.
+- **Full drill lolos**: `forward(0045+0046+0047) → 0045R → forward(0045+0046+0047)` semua COMMIT tanpa error. Post-drill: 4 tabel new-name, 7 guidance row, helper `map_legacy_entity_type('kpi_area')` = `'strategy'`.
+- Verifikasi: tsc 0, grep-guard clean, guidance test (fase8-settings) tetap hijau (pakai mocked body, tidak assert DB seed).
+- Yang tidak dikerjakan (sesuai penilaian): type-identifier Indonesian→English revert (owner tandai optional/berisiko); pg_dump snapshot (langkah operasional owner sebelum merge); RN-Web e2e verify (butuh dev-server + env, ditawarkan sbg langkah berikut).
