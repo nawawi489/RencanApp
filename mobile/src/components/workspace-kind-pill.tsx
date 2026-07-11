@@ -49,10 +49,10 @@ type KindStyle = {
 /** Mapping terkunci spec §9 (warna, huruf, label). */
 export const WORKSPACE_KIND: Record<WorkspaceKind, KindStyle> = {
   goal: { letter: 'G', label: 'Goal', text: '#145ebc', bg: '#e8f2ff', border: '#cce2ff', circleBg: '#1877f2', circleFontSize: 10 },
-  strategy: { letter: 'K', label: 'Strategy', text: '#b76b00', bg: '#fff3d7', border: '#ffe1a1', circleBg: '#b76b00', circleFontSize: 10 },
-  initiative: { letter: 'S', label: 'Initiative', text: '#6941c6', bg: '#f1ebff', border: '#dfd1ff', circleBg: '#6941c6', circleFontSize: 10 },
-  action_plan: { letter: 'I', label: 'Action Plan', text: '#14845c', bg: '#e7f7ef', border: '#c9ebda', circleBg: '#14845c', circleFontSize: 10 },
-  task: { letter: 'AP', label: 'Task', text: '#145ebc', bg: '#eef6ff', border: '#cce2ff', circleBg: '#145ebc', circleFontSize: 8 },
+  strategy: { letter: 'S', label: 'Strategy', text: '#b76b00', bg: '#fff3d7', border: '#ffe1a1', circleBg: '#b76b00', circleFontSize: 10 },
+  initiative: { letter: 'I', label: 'Initiative', text: '#6941c6', bg: '#f1ebff', border: '#dfd1ff', circleBg: '#6941c6', circleFontSize: 10 },
+  action_plan: { letter: 'AP', label: 'Action Plan', text: '#14845c', bg: '#e7f7ef', border: '#c9ebda', circleBg: '#14845c', circleFontSize: 8 },
+  task: { letter: 'T', label: 'Task', text: '#145ebc', bg: '#eef6ff', border: '#cce2ff', circleBg: '#145ebc', circleFontSize: 10 },
   development_area: { letter: 'D', label: 'Development Area', text: '#0f766e', bg: '#e6fffb', border: '#99f6e4', circleBg: '#0f766e', circleFontSize: 10 },
   problem_statement: { letter: 'P', label: 'Problem Statement', text: '#c2410c', bg: '#fff7ed', border: '#fed7aa', circleBg: '#c2410c', circleFontSize: 10 },
 };

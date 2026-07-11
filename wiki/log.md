@@ -1515,3 +1515,17 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - Commit: `d53a41a` (85 file, 451+/451−) di branch `feat/rename-workspace-terminology`.
 - **RWT-12 (Content Lead DRI, PENDING) tetap deferred**: Indonesian localization (Strategi/Inisiatif/Rencana Aksi/Tugas per PRD V1.8.3 §5) + rewrite body help-popup edukatif. English labels sekarang = interim; glossary body = placeholder coherent.
 - **Status branch**: F0–F4 SELESAI & hijau (DB migrasi 0045+0046 applied lokal; mobile tsc 0 + jest 1163/1163). Sisa: F5 (grep-guard + DB smoke SQL + rename file test kosmetik), F6 (rollback drill 0045R/0046R), F7 (DESIGN.md + wiki entities/concepts + specs sync), RWT-12 (copy Indonesian, blocked owner DRI), RN-Web e2e verify.
+
+## [2026-07-11] update | F7 docs sync — DESIGN.md pill V1.8.3 + wiki entities/concepts
+
+- **DESIGN.md**: workspace pill table di-update per RWT-03 default B (palet warna terikat POSISI hierarki, bukan nama). Level 1..4 sekarang: Strategy `S` (orange), Initiative `I` (purple), Action Plan `AP` (green), Task `T` (blue). Test `workspace-kind-pill.test.tsx` diselaraskan (huruf G/S/I/AP/T). Row `KpiLinkageCard` / `ImpactApprovalCard` di-rename + route submit path di-update.
+- **workspace-kind-pill.tsx** (implementasi): huruf `letter` di-shift ke `S/I/AP/T` sesuai posisi + label baru; `circleFontSize: 8` pindah dari `task` ke `action_plan` (huruf 2-karakter "AP").
+- **wiki/overview.md**: hierarki V1.8.3 (Goal→Strategy→Initiative→Action Plan→Task), Development chain ikut geser, catatan Diskusi Rencana Aksi (dulu Initiative Chat) di §7.1 nav, "Task One Time & Repeat", `updated: 2026-07-11`.
+- **wiki/entities/workspace.md**: full rewrite bagian hierarki + section "Rename V1.8.3 (kontext historis)" untuk map_legacy_entity_type + RWT-07 A audit freeze.
+- **wiki/entities/action-plan.md**: rewrite penuh sbg "Action Plan & Task" (rename mengubah semantik file: sekarang menjelaskan LEVEL 3 program-unit + LEVEL 4 task terkecil). Tabel mapping identifier post-rename (tabel DB, FK kolom, TS type, route folder, chat surface).
+- **wiki/entities/card-model.md**: tabel makna & field wajib di-rewrite (Strategy sebagai area hasil, Task sebagai unit eksekusi terkecil), catatan chat "Diskusi Rencana Aksi" ke Action Plan (RWT-04 A).
+- **wiki/entities/database-blueprint.md**: Kelompok tabel V1.8.3, Relationship Rules bergeser, section "V1.8.3 rename kolom FK" (bottom-up mapping).
+- **wiki/concepts/minimum-breakdown-rule.md**: default table 3/3/3/3 (RWT-09 A), Task ditambahkan sbg child level; contoh copy "Initiative: 2/3, Belum Lengkap".
+- **wiki/concepts/**{execution-loop,permission-model,scope-guardrails,audit-governance}**.md**: shift 2-kata "Action Plan"→"Task", "KPI Area"→"Strategy" via placeholder-safe sed batch.
+- **Historicals TIDAK disentuh** (refleksi keputusan waktu itu): `fase5-tdd-plan.md`, `fase6-spec.md`, `fase6-tdd-plan.md`, `fase7-spec.md`, `fase7-tdd-plan.md`, `fase8-*`, `bugfix-*`, source pages di `wiki/sources/`.
+- Sisa nanti (F7-continue): specs/ (10 file) mendokumentasikan bagian yang stale — sebagian dari mereka adalah historical (fase-N-spec.md), sebagian aktif (mis. status-priority-descope). Yang aktif akan disentuh; historicals skip.
