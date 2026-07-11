@@ -7,7 +7,8 @@ Dokumen ini adalah SUMBER KEBENARAN eksekusi rename. Kalau bertabrakan dengan PR
 **Owner decision log:**
 - 2026-07-11: RWT-01..RWT-11 DECIDED = default rekomendasi (A untuk 10, B untuk RWT-03).
 - 2026-07-11: PRD.md V1.8.3 di-apply (13 section) — commit F0.
-- 2026-07-11: F1 DDL (tables/columns/indexes/view) applied lokal via satu file `0045_rename_workspace_terminology.sql` — commit `f90ba06`. **Deviasi struktur file** dari spec §10 (4 file 0045–0048 + 0050 hygiene) → satu file atomik dengan section internal. Alasan: dalam satu BEGIN/COMMIT, urutan statement mengontrol bottom-up ordering; multi-file tidak menambah safety. F3 body rewrites akan lanjut di file `0046_rewrite_function_bodies.sql`. F2 enum backfill di `0047_enum_backfill.sql`.
+- 2026-07-11: F1 DDL (tables/columns/indexes/view) applied lokal via satu file `0045_rename_workspace_terminology.sql` — commit `f90ba06`. **Deviasi struktur file** dari spec §10 (4 file 0045–0048 + 0050 hygiene) → satu file atomik dengan section internal. Alasan: dalam satu BEGIN/COMMIT, urutan statement mengontrol bottom-up ordering; multi-file tidak menambah safety.
+- 2026-07-11: F2 + F3 bundled applied lokal via `0046_rewrite_bodies_and_policies.sql` — commit `c850a4c`. Menggabungkan CHECK constraint enum backfill (S0) + 62 function body rewrite + 19 RLS policy rewrite + 3 trigger recreate + `map_legacy_entity_type` helper. Approach: DROP FUNCTION CASCADE untuk semua 62 lalu CREATE OR REPLACE fresh — sidesteps parameter/return signature mismatch di CREATE OR REPLACE. Verifikasi lokal: smoke RPC hijau, 0 lingering kpi_area function, helper `map_legacy_entity_type('action_plan')` = `'task'`.
 - RWT-12 (Content Lead DRI + tanggal deliverable copy edukasi) DIMINTA owner sebelum F4 mulai.
 
 ---

@@ -1458,3 +1458,24 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - Fungsi lain (~45) yang menyebut nama tabel lama akan mengalami rename+body rewrite di F3 (rencana `0046_rewrite_function_bodies.sql`). Bash sed pipeline placeholder-safe untuk generate CREATE OR REPLACE + DROP list sudah tersedia di scratchpad.
 - Commit: `f90ba06` di branch `feat/rename-workspace-terminology`.
 - Berikutnya: F3 body rewrites (0046) + F2 enum backfill (0047) — atomic per merge gate spec §10.
+
+## [2026-07-11] update | Rename Workspace Terminology F2+F3 bundled — 62 function bodies + 19 RLS policies + enum backfill
+
+- Migration `supabase/migrations/0046_rewrite_bodies_and_policies.sql` (2894 baris) — sekarang tunggal file yang menggabungkan F2 dan F3 sesuai atomic-rename spec §10 merge gate.
+- Sections (dalam satu BEGIN/COMMIT):
+  - **S0**: expand CHECK constraint `entity_type` di 5 tabel (`comments`, `cancellations`, `confidential_access_rules`, `deadline_change_requests`, `minimum_breakdown_rules`) → union OLD ∪ NEW literals untuk transition compat (row historis freeze per RWT-07 A, row baru pakai new literals).
+  - **S1**: DROP 3 trigger yang refer renamed trigger function.
+  - **S2**: DROP CASCADE 62 workspace-hierarchy function — sidesteps signature mismatch di parameter/return-type rename yang CREATE OR REPLACE tidak izinkan; RLS policy dependen ikut ke-drop.
+  - **S3**: CREATE OR REPLACE 62 function dengan nama baru + body referensi tabel/kolom baru. Freeze names per RWT-05 A + pg_cron: `compute_action_plan_completion`, `generate_action_plan_instances` (nama tetap, body update).
+  - **S4**: recreate 19 RLS policy dengan reference function baru + optional policy name refresh (mis. `kpi_areas_select` → `strategies_select`).
+  - **S5**: create 3 trigger baru (`task_sync_chat`, `action_plan_chat_room`, `strategy_target_breakdown_touch`) pointing ke tg_task_sync_chat/tg_action_plan_chat_room/tg_strategy_breakdown_touch_updated_at.
+  - **S6**: `map_legacy_entity_type(text)` helper (SECURITY INVOKER, IMMUTABLE) untuk read-side rendering row historis dengan literal lama.
+- Generation approach: bash sed pipeline placeholder-safe multi-pass di scratchpad (`gen_body_rewrites.sh` + `gen_policy_rewrites.js`) — extract 62 function DDL via `pg_get_functiondef`, apply pass1 old→placeholder, pass2 placeholder→new, revert FROZEN function names via 2nd sed pass, revert param names `p_task_id`→`p_action_plan_id` globally (agar CREATE OR REPLACE tidak konflik dgn existing signatures), fix stray `initiative_target_breakdowns` → `strategy_target_breakdowns` (F1 sudah rename table sehingga pg_get_functiondef output signature-nya sudah pakai new-name via OID lookup, sed lalu over-rename lewat bare `strategy` pattern).
+- Verifikasi lokal:
+  - COMMIT hijau (2894 baris SQL, satu transaksi).
+  - Function counts: 9 renamed core function (activate_task, activate_strategy, can_access_task, strategy_has_my_descendant, strategy_in_my_org, initiative_has_my_descendant, initiative_in_my_org, submit_task, tg_task_sync_chat).
+  - Smoke RPC `public.strategy_has_my_descendant('...uuid...')` returns `f` — executes without body error.
+  - Helper: `map_legacy_entity_type('action_plan')` = `'task'`, `('kpi_area')` = `'strategy'`, `('goal')` = `'goal'` (passthrough).
+  - 3 trigger baru aktif; 0 lingering kpi_area_* function.
+- Commit: `c850a4c` di branch `feat/rename-workspace-terminology`.
+- Berikutnya: F4 Mobile client rewrite (route folder mv bottom-up + lib/hooks/components + glossary/workspace-copy + PostgREST embed + realtime filter). Estimasi 3–5 jam kerja fokus karena menyentuh ~50 file source + 45 file test.
