@@ -26,15 +26,15 @@ beforeEach(() => {
 
 it('[F8-H25] useConfidentialAccessRules mengambil rules', async () => {
   const { wrapper } = makeWrapper();
-  const { result } = await renderHook(() => useConfidentialAccessRules('initiative', 'i1'), { wrapper });
+  const { result } = await renderHook(() => useConfidentialAccessRules('action_plan', 'i1'), { wrapper });
   await waitFor(() => expect(result.current.rules).toHaveLength(1));
-  expect(mockList).toHaveBeenCalledWith('initiative', 'i1');
+  expect(mockList).toHaveBeenCalledWith('action_plan', 'i1');
 });
 
 it('[F8-H27] fail-deny: data undefined → isAccessGranted false', async () => {
   mockList.mockImplementation(() => new Promise(() => undefined));
   const { wrapper } = makeWrapper();
-  const { result } = await renderHook(() => useConfidentialAccessRules('initiative', 'i1'), { wrapper });
+  const { result } = await renderHook(() => useConfidentialAccessRules('action_plan', 'i1'), { wrapper });
   expect(result.current.isAccessGranted).toBe(false);
   expect(result.current.rules).toEqual([]);
 });

@@ -1,4 +1,4 @@
-// UI Fase 2/instance lifecycle — Action Plan Instance Detail (mockup 23) + Review Flow (mockup 24).
+// UI Fase 2/instance lifecycle — Tugas Instance Detail (mockup 23) + Review Flow (mockup 24).
 // Menutup celah: submission instance repeat sebelumnya tak punya jalur review di UI
 // (reviewInstanceSubmission ada di data layer, tak pernah dipanggil). Layar ini menyurfacekan
 // detail instance + approve/reject untuk reviewer. Anti-self-approval ditegakkan server + UI.
@@ -14,7 +14,7 @@ import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonL
 import { SubmissionCard, formatDateTime } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
-import { getActionPlan, personLabel } from '@/lib/cards';
+import { getTask, personLabel } from '@/lib/cards';
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,
@@ -22,7 +22,7 @@ import {
   reviewInstanceSubmission,
 } from '@/lib/repeat';
 
-export default function ActionPlanInstanceDetailScreen() {
+export default function TaskInstanceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
@@ -31,9 +31,9 @@ export default function ActionPlanInstanceDetailScreen() {
   const instQ = useQuery({ queryKey: ['instance', id], queryFn: () => getInstance(id) });
   const inst = instQ.data;
   const apQ = useQuery({
-    queryKey: ['action-plan', inst?.action_plan_id],
-    queryFn: () => getActionPlan(inst!.action_plan_id),
-    enabled: !!inst?.action_plan_id,
+    queryKey: ['action-plan', inst?.task_id],
+    queryFn: () => getTask(inst!.task_id),
+    enabled: !!inst?.task_id,
   });
 
   // Depend pada `refetch` (identitas stabil react-query), BUKAN objek `instQ` yang
@@ -49,9 +49,9 @@ export default function ActionPlanInstanceDetailScreen() {
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ['instance', id] });
-    if (inst?.action_plan_id) {
-      qc.invalidateQueries({ queryKey: ['repeat-instances', inst.action_plan_id] });
-      qc.invalidateQueries({ queryKey: ['repeat-compliance', inst.action_plan_id] });
+    if (inst?.task_id) {
+      qc.invalidateQueries({ queryKey: ['repeat-instances', inst.task_id] });
+      qc.invalidateQueries({ queryKey: ['repeat-compliance', inst.task_id] });
     }
   }
 
@@ -70,11 +70,11 @@ export default function ActionPlanInstanceDetailScreen() {
     { pic_id: inst?.pic_id ?? null, reviewer_id: inst?.reviewer_id ?? null, status: inst?.status ?? '' },
     profile?.id ?? null,
   );
-  const submissions = inst?.action_plan_submissions ?? [];
+  const submissions = inst?.task_submissions ?? [];
 
   // UI-S-AP7 — "Hari Ini N/M" + ringkasan Target/Selesai/Terlewat/Grace.
   // Sumber: instances of THIS action plan, filtered by current local date == instance.instance_date.
-  const repeatQ = useRepeatInstances(inst?.action_plan_id ?? '', { enabled: !!inst?.action_plan_id });
+  const repeatQ = useRepeatInstances(inst?.task_id ?? '', { enabled: !!inst?.task_id });
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayInstances = repeatQ.instances.filter((i) => i.instance_date === todayStr);
   const todayDone = todayInstances.filter((i) => i.status === 'done').length;
@@ -198,7 +198,7 @@ export default function ActionPlanInstanceDetailScreen() {
             {actions.canSubmit ? (
               <Button
                 label={inst.status === 'revision' ? 'Submit Ulang (Revisi)' : 'Submit Bukti & Nilai Hasil'}
-                onPress={() => router.push(`/action-plan/submit?instanceId=${inst.id}` as Href)}
+                onPress={() => router.push(`/task/submit?instanceId=${inst.id}` as Href)}
               />
             ) : null}
 

@@ -24,19 +24,19 @@ import {
   activateDevelopmentArea,
   getDevelopmentArea,
 } from '@/lib/development-areas';
-import { listInitiativesByProblemStatementIds } from '@/lib/cards';
+import { listActionPlansByProblemStatementIds } from '@/lib/cards';
 import type { ProblemStatement } from '@/lib/problem-statements';
 import { ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
 
-/** UI-S-DA2 — Progress (Problem Statement selesai), jumlah Problem Statement, jumlah Initiative turunan. */
+/** UI-S-DA2 — Progress (Problem Statement selesai), jumlah Problem Statement, jumlah Rencana Aksi turunan. */
 function DevAreaSummaryStrip({
   problemStatements,
-  initiativeCount,
+  actionPlanCount,
 }: {
   problemStatements: ProblemStatement[];
-  initiativeCount: number;
+  actionPlanCount: number;
 }) {
   const progress = ratioDoneOfChildren(problemStatements);
   return (
@@ -57,8 +57,8 @@ function DevAreaSummaryStrip({
       />
       <StatTile
         size="md"
-        label="Initiative"
-        value={String(initiativeCount)}
+        label="Rencana Aksi"
+        value={String(actionPlanCount)}
         containerCls="bg-emerald-100 dark:bg-emerald-950"
         textCls="text-emerald-700 dark:text-emerald-300"
       />
@@ -84,9 +84,9 @@ export function LiveDevelopmentAreaDetailScreen() {
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('development_area', id);
 
   const psIds = useMemo(() => problemStatements.map((p) => p.id), [problemStatements]);
-  const initiativesQ = useQuery({
-    queryKey: ['initiatives-by-problem-statements', psIds],
-    queryFn: () => listInitiativesByProblemStatementIds(psIds),
+  const action_plansQ = useQuery({
+    queryKey: ['action_plans-by-problem-statements', psIds],
+    queryFn: () => listActionPlansByProblemStatementIds(psIds),
     enabled: psIds.length > 0,
   });
 
@@ -152,7 +152,7 @@ export function LiveDevelopmentAreaDetailScreen() {
               />
               <DevAreaSummaryStrip
                 problemStatements={problemStatements}
-                initiativeCount={initiativesQ.data?.length ?? 0}
+                actionPlanCount={action_plansQ.data?.length ?? 0}
               />
             </View>
 

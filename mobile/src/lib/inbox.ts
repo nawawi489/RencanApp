@@ -1,4 +1,4 @@
-// Data layer Fase 3 — Inbox (Initiative Chat). Pemanggil tipis. RLS membatasi visibilitas ke
+// Data layer Fase 3 — Inbox (ActionPlan Chat). Pemanggil tipis. RLS membatasi visibilitas ke
 // anggota room (is_chat_member); semua tulis lewat RPC SECURITY DEFINER.
 //
 // FR-DATA.1 (migrasi 0018): get_chat_rooms() menambah last_message_body + last_message_author_name
@@ -9,7 +9,7 @@ import { supabase } from './supabase';
 
 export type ChatRoom = {
   id: string;
-  initiative_id: string;
+  action_plan_id: string;
   name: string;
   unread_count: number;
   last_message_at: string | null;

@@ -1,4 +1,4 @@
-// Instance lifecycle — Action Plan Instance Detail + Review Flow (mockup 23/24).
+// Instance lifecycle — Tugas Instance Detail + Review Flow (mockup 23/24).
 // Pola: mock supabase + @/lib/repeat (getInstance/reviewInstanceSubmission) + @/lib/cards + expo-router.
 // useInstanceActions dibiarkan asli (logika peran murni).
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,10 +21,10 @@ jest.mock('@/lib/repeat', () => {
   };
 });
 
-const mockGetActionPlan = jest.fn();
+const mockGetTask = jest.fn();
 jest.mock('@/lib/cards', () => {
   const actual = jest.requireActual('@/lib/cards');
-  return { __esModule: true, ...actual, getActionPlan: (...a: unknown[]) => mockGetActionPlan(...a) };
+  return { __esModule: true, ...actual, getTask: (...a: unknown[]) => mockGetTask(...a) };
 });
 
 jest.mock('@/hooks/use-profile', () => ({
@@ -42,7 +42,7 @@ jest.mock('expo-router', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import ActionPlanInstanceDetailScreen from '../instance/[id]';
+import TaskInstanceDetailScreen from '../instance/[id]';
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -54,7 +54,7 @@ function wrapper() {
 
 const baseInstance = {
   id: 'inst-1',
-  action_plan_id: 'ap-1',
+  task_id: 'ap-1',
   instance_date: '2026-06-01',
   instance_time: '09:00:00',
   deadline_at: '2026-06-01T09:00:00',
@@ -64,7 +64,7 @@ const baseInstance = {
   current_submission_id: 'sub-1',
   pic: { id: 'u-pic', full_name: 'Pak PIC', email: 'pic@n.id' },
   reviewer: { id: 'me', full_name: 'Aku', email: 'me@n.id' },
-  action_plan_submissions: [
+  task_submissions: [
     {
       id: 'sub-1',
       version_number: 1,
@@ -74,7 +74,7 @@ const baseInstance = {
       reviewer: null,
       note: 'selesai',
       evidence_files: [],
-      action_plan_result_values: [],
+      task_result_values: [],
     },
   ],
 };
@@ -82,22 +82,22 @@ const baseInstance = {
 beforeEach(() => {
   mockGetInstance.mockReset();
   mockReviewInstance.mockReset();
-  mockGetActionPlan.mockReset();
+  mockGetTask.mockReset();
   mockPush.mockReset();
-  mockGetActionPlan.mockResolvedValue({ name: 'Laporan Harian' });
+  mockGetTask.mockResolvedValue({ name: 'Laporan Harian' });
   mockReviewInstance.mockResolvedValue(undefined);
 });
 
-describe('ActionPlanInstanceDetailScreen', () => {
+describe('TaskInstanceDetailScreen', () => {
   it('[1] loading → skeleton "Memuat…"', async () => {
     mockGetInstance.mockReturnValue(new Promise(() => {}));
-    await render(<ActionPlanInstanceDetailScreen />, { wrapper: wrapper() });
+    await render(<TaskInstanceDetailScreen />, { wrapper: wrapper() });
     expect(screen.getByLabelText('Memuat…')).toBeTruthy();
   });
 
   it('[2] reviewer + submitted → blok review + approve → reviewInstanceSubmission(approve)', async () => {
     mockGetInstance.mockResolvedValue(baseInstance);
-    await render(<ActionPlanInstanceDetailScreen />, { wrapper: wrapper() });
+    await render(<TaskInstanceDetailScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Review submission terbaru')).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Setujui (Selesai)'));
@@ -119,16 +119,16 @@ describe('ActionPlanInstanceDetailScreen', () => {
       reviewer: { id: 'u-rev', full_name: 'Reviewer', email: 'r@n.id' },
       status: 'assigned',
       current_submission_id: null,
-      action_plan_submissions: [],
+      task_submissions: [],
     });
-    await render(<ActionPlanInstanceDetailScreen />, { wrapper: wrapper() });
+    await render(<TaskInstanceDetailScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Submit Bukti & Nilai Hasil')).toBeTruthy();
     expect(screen.queryByText('Review submission terbaru')).toBeNull();
   });
 
   it('[4] error → ErrorState (role alert)', async () => {
     mockGetInstance.mockRejectedValue(new Error('boom'));
-    await render(<ActionPlanInstanceDetailScreen />, { wrapper: wrapper() });
+    await render(<TaskInstanceDetailScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Gagal memuat instance')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
   });

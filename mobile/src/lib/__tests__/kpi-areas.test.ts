@@ -1,6 +1,6 @@
-// Data layer Fase 4 — kpi-areas.ts. Mock ../supabase. Menguji createKpiArea (INSERT ber-RLS:
-// payload berisi goal_id + organization_id + created_by, rpc TIDAK dipanggil), activateKpiArea
-// (rpc nama+param benar), listKpiAreas (guard kosong + query eq/order benar), getKpiArea (single),
+// Data layer Fase 4 — kpi-areas.ts. Mock ../supabase. Menguji createStrategy (INSERT ber-RLS:
+// payload berisi goal_id + organization_id + created_by, rpc TIDAK dipanggil), activateStrategy
+// (rpc nama+param benar), listStrategies (guard kosong + query eq/order benar), getStrategy (single),
 // propagasi error.
 const mockRpc = jest.fn();
 const mockFrom = jest.fn();
@@ -15,7 +15,7 @@ jest.mock('../supabase', () => ({
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
-import { activateKpiArea, createKpiArea, getKpiArea, listKpiAreas } from '../kpi-areas';
+import { activateStrategy, createStrategy, getStrategy, listStrategies } from '../strategies';
 
 /** Builder thenable: metode chainable kembalikan builder; await resolve di titik mana pun. */
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
@@ -59,7 +59,7 @@ beforeEach(() => {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
 });
 
-describe('createKpiArea', () => {
+describe('createStrategy', () => {
   it('[1] INSERT berisi goal_id + organization_id + created_by + field input; rpc TIDAK dipanggil', async () => {
     const profiles = makeTerminatedBuilder({ data: { organization_id: 'org1' }, error: null });
     const target = makeTerminatedBuilder({ data: { id: 'k1' }, error: null });
@@ -67,7 +67,7 @@ describe('createKpiArea', () => {
       table === 'profiles' ? profiles.builder : target.builder,
     );
 
-    const result = await createKpiArea({
+    const result = await createStrategy({
       goal_id: 'g1',
       name: 'Pendapatan',
       target: 'Rp1M',
@@ -77,7 +77,7 @@ describe('createKpiArea', () => {
     });
 
     expect(mockFrom).toHaveBeenCalledWith('profiles');
-    expect(mockFrom).toHaveBeenCalledWith('kpi_areas');
+    expect(mockFrom).toHaveBeenCalledWith('strategies');
     expect(target.calls.insert[0]).toEqual({
       goal_id: 'g1',
       name: 'Pendapatan',
@@ -99,7 +99,7 @@ describe('createKpiArea', () => {
       table === 'profiles' ? profiles.builder : target.builder,
     );
     await expect(
-      createKpiArea({
+      createStrategy({
         goal_id: 'g1',
         name: 'x',
         target: null,
@@ -111,30 +111,30 @@ describe('createKpiArea', () => {
   });
 });
 
-describe('activateKpiArea', () => {
-  it('[3] memanggil rpc activate_kpi_area dengan p_kpi_area_id', async () => {
+describe('activateStrategy', () => {
+  it('[3] memanggil rpc activate_strategy dengan p_strategy_id', async () => {
     mockRpc.mockResolvedValue({ data: null, error: null });
-    await activateKpiArea('k1');
-    expect(mockRpc).toHaveBeenCalledWith('activate_kpi_area', { p_kpi_area_id: 'k1' });
+    await activateStrategy('k1');
+    expect(mockRpc).toHaveBeenCalledWith('activate_strategy', { p_strategy_id: 'k1' });
   });
 
   it('[4] propagasi error', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
-    await expect(activateKpiArea('k1')).rejects.toEqual({ message: 'denied' });
+    await expect(activateStrategy('k1')).rejects.toEqual({ message: 'denied' });
   });
 });
 
-describe('listKpiAreas', () => {
+describe('listStrategies', () => {
   it('[5] goalId kosong → [] tanpa query', async () => {
-    expect(await listKpiAreas('')).toEqual([]);
+    expect(await listStrategies('')).toEqual([]);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('[6] query eq(goal_id) + order created_at asc', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'k1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const rows = await listKpiAreas('g1');
-    expect(mockFrom).toHaveBeenCalledWith('kpi_areas');
+    const rows = await listStrategies('g1');
+    expect(mockFrom).toHaveBeenCalledWith('strategies');
     expect(calls.eq).toEqual(['goal_id', 'g1']);
     expect(calls.order).toEqual(['created_at', { ascending: true }]);
     expect(rows).toEqual([{ id: 'k1' }]);
@@ -143,16 +143,16 @@ describe('listKpiAreas', () => {
   it('[7] propagasi error', async () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(listKpiAreas('g1')).rejects.toEqual({ message: 'boom' });
+    await expect(listStrategies('g1')).rejects.toEqual({ message: 'boom' });
   });
 });
 
-describe('getKpiArea', () => {
+describe('getStrategy', () => {
   it('[8] eq(id) + single → row', async () => {
     const { builder, calls } = makeTerminatedBuilder({ data: { id: 'k1' }, error: null });
     mockFrom.mockReturnValue(builder);
-    const row = await getKpiArea('k1');
-    expect(mockFrom).toHaveBeenCalledWith('kpi_areas');
+    const row = await getStrategy('k1');
+    expect(mockFrom).toHaveBeenCalledWith('strategies');
     expect(calls.eq).toEqual(['id', 'k1']);
     expect(row).toEqual({ id: 'k1' });
   });
@@ -160,6 +160,6 @@ describe('getKpiArea', () => {
   it('[9] propagasi error', async () => {
     const { builder } = makeTerminatedBuilder({ data: null, error: { message: 'nf' } });
     mockFrom.mockReturnValue(builder);
-    await expect(getKpiArea('k1')).rejects.toEqual({ message: 'nf' });
+    await expect(getStrategy('k1')).rejects.toEqual({ message: 'nf' });
   });
 });

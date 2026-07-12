@@ -1,4 +1,4 @@
-// Hooks Fase 3 — Inbox (Initiative Chat). Pemanggil tipis di atas @/lib/inbox.
+// Hooks Fase 3 — Inbox (ActionPlan Chat). Pemanggil tipis di atas @/lib/inbox.
 // Query keys: ['chat-rooms'] dan ['chat-messages', roomId].
 // useChatMessages → useInfiniteQuery (FR-IN2.x): expose messages flat (urut desc, terbaru dulu),
 // `loadOlder()`, dan `hasMore` (batch penuh = mungkin masih ada lagi). Screen yang membalik untuk

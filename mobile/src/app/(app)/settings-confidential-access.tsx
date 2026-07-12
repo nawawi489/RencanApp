@@ -12,7 +12,7 @@ import { useProfile } from '@/hooks/use-profile';
 export default function SettingsConfidentialAccessScreen() {
   const { can } = useProfile();
   const params = useLocalSearchParams<{ entityType?: string; entityId?: string }>();
-  const entityType = (params.entityType ?? 'initiative') as ConfidentialEntityType;
+  const entityType = (params.entityType ?? 'action_plan') as ConfidentialEntityType;
   const entityId = params.entityId ?? '';
   const { rules, isLoading } = useConfidentialAccessRules(entityType, entityId);
   const allowed = can('manage_confidential_access');

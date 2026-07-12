@@ -116,7 +116,7 @@ export default function LoginScreen() {
           </Text>
           <Text className="text-sm font-semibold text-[#667085] dark:text-neutral-300">{BRAND_TAGLINE}</Text>
           <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">
-            Masuk ke pusat eksekusi target, Action Plan, dan review kerja tim.
+            Masuk ke pusat eksekusi target, Tugas, dan review kerja tim.
           </Text>
         </View>
 

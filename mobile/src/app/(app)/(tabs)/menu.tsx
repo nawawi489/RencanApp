@@ -99,7 +99,7 @@ const AKSES_CEPAT: MenuItem[] = [
 
 const TEMPLATE_ITEMS: MenuItem[] = [
   { label: 'Goal Template', description: 'Library Goal', icon: 'document-text-outline', tone: 'success', href: '/settings-goal-templates' as Href },
-  { label: 'KPI Area Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-kpi-area-templates' as Href, permission: 'manage_kpi_area_templates' },
+  { label: 'Strategi Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-kpi-area-templates' as Href, permission: 'manage_strategy_templates' },
 ];
 
 // Bantuan — spec §13. Belum ada layar (help-center/support); tap → toast (owner decision).
@@ -113,7 +113,7 @@ const BANTUAN_ITEMS: MenuItem[] = [
 // Status & Prioritas / Notifications Rule tetap punya entry point (kalau tidak, jadi orphan).
 const PENGATURAN_ITEMS: MenuItem[] = [
   { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permissionAny: ORG_SETTINGS_PERMISSIONS },
-  { label: 'Repeat Setting', description: 'Jadwal Action Plan', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
+  { label: 'Repeat Setting', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
   { label: 'Score Formula', description: 'Rumus score', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
   { label: 'Permission Settings', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
   { label: 'Minimum Breakdown Rule', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },

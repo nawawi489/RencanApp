@@ -4,7 +4,7 @@ import { SectionCard } from '@/components/ui';
 
 /**
  * Field teks label + value dibungkus SectionCard, pola dipakai di detail-screen
- * (Strategy, Problem Statement, Development Area) untuk Deskripsi/Alasan/Risiko/dll.
+ * (Inisiatif, Problem Statement, Development Area) untuk Deskripsi/Alasan/Risiko/dll.
  */
 export function DetailField({ label, value }: { label: string; value: string }) {
   return (

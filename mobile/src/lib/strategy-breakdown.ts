@@ -1,9 +1,9 @@
-// Data layer — KPI Area Target Breakdown (PRD V1.8.2 §12). Migrasi 0021.
+// Data layer — Strategi Target Breakdown (PRD V1.8.2 §12). Migrasi 0021.
 //
 // Aturan kunci:
 //   - Σ kontribusi Quarter wajib 100% (4 entri Q1..Q4).
 //   - Σ kontribusi Month wajib 100% PER Quarter (3 entri/quarter).
-//   - Mutasi WAJIB lewat RPC `kpi_area_breakdown_replace` (RLS direct DML ditutup).
+//   - Mutasi WAJIB lewat RPC `strategy_breakdown_replace` (RLS direct DML ditutup).
 //   - Edit periode berjalan WAJIB sertakan `reason` ≥ 8 char (audit ke activity_log).
 import { supabase } from './supabase';
 
@@ -18,7 +18,7 @@ export type MonthKey = (typeof MONTH_KEYS)[number];
 export type BreakdownRow = {
   id: string;
   organization_id: string;
-  kpi_area_id: string;
+  strategy_id: string;
   period_type: 'quarter' | 'month';
   period_key: QuarterKey | MonthKey;
   parent_quarter_key: QuarterKey | null;
@@ -68,12 +68,12 @@ export function indexMonthRowsPerQuarter(
 
 // ---------------------------------------------------------------- queries
 
-export async function listKpiAreaBreakdown(kpiAreaId: string): Promise<BreakdownRow[]> {
-  if (!kpiAreaId) return [];
+export async function listStrategyBreakdown(strategyId: string): Promise<BreakdownRow[]> {
+  if (!strategyId) return [];
   const { data, error } = await supabase
-    .from('kpi_area_target_breakdowns')
+    .from('strategy_target_breakdowns')
     .select('*')
-    .eq('kpi_area_id', kpiAreaId)
+    .eq('strategy_id', strategyId)
     .order('period_type', { ascending: true })
     .order('period_key', { ascending: true });
   if (error) throw error;
@@ -86,23 +86,23 @@ export type QuarterInput = { period_key: QuarterKey; pct: number };
 export type MonthInput = { period_key: MonthKey; parent_quarter_key: QuarterKey; pct: number };
 
 export type ReplaceArgs = {
-  kpiAreaId: string;
+  strategyId: string;
   quarter: QuarterInput[] | null;
   month: MonthInput[] | null;
   reason: string;
 };
 
 /**
- * Atomic replace seluruh breakdown KPI Area (per period_type).
+ * Atomic replace seluruh breakdown Strategi (per period_type).
  * - `quarter` null → tidak menyentuh baris Quarter eksisting.
  * - `quarter` array (4 entri Σ=100) → upsert 4 baris Q1..Q4.
  * - `month` null/empty → tidak menyentuh.
  * - `month` array (3 entri × N quarter Σ=100/quarter) → upsert per Q.
  * Server validasi & emit activity_log.
  */
-export async function replaceKpiAreaBreakdown(args: ReplaceArgs): Promise<BreakdownRow[]> {
-  const { data, error } = await supabase.rpc('kpi_area_breakdown_replace', {
-    p_kpi_area_id: args.kpiAreaId,
+export async function replaceStrategyBreakdown(args: ReplaceArgs): Promise<BreakdownRow[]> {
+  const { data, error } = await supabase.rpc('strategy_breakdown_replace', {
+    p_strategy_id: args.strategyId,
     p_quarter: args.quarter,
     p_month: args.month,
     p_reason: args.reason,

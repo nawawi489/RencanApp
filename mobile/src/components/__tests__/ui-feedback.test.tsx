@@ -68,12 +68,12 @@ describe('ScoreBreakdown (Fase 7)', () => {
     await render(
       <ScoreBreakdown
         metrics={[
-          { label: 'Action Plan Completion', value: 80 },
+          { label: 'Tugas Completion', value: 80 },
           { label: 'Repeat Compliance', value: 65 },
         ]}
       />,
     );
-    expect(screen.getByText('Action Plan Completion')).toBeTruthy();
+    expect(screen.getByText('Tugas Completion')).toBeTruthy();
     expect(screen.getByText('80%')).toBeTruthy();
     expect(screen.getByText('Repeat Compliance')).toBeTruthy();
     expect(screen.getByText('65%')).toBeTruthy();

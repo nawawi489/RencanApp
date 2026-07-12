@@ -1,4 +1,4 @@
-// Regression: ISSUE-004 — getActionPlan memakai .single() sehingga id di luar akses
+// Regression: ISSUE-004 — getTask memakai .single() sehingga id di luar akses
 // (RLS menyaring jadi 0 baris) membalas 406 dan layar AP menampilkan skeleton selamanya.
 // Harus: .maybeSingle() → resolve null tanpa throw agar layar bisa render empty state.
 // Found by /qa on 2026-07-07
@@ -14,7 +14,7 @@ jest.mock('../supabase', () => ({
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must be declared before the import it mocks
-import { getActionPlan } from '../cards';
+import { getTask } from '../cards';
 
 /** Builder chainable dengan single/maybeSingle terpisah agar bisa assert mana yang dipanggil. */
 function makeDetailBuilder(result: { data: unknown; error: unknown }) {
@@ -33,12 +33,12 @@ beforeEach(() => {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
 });
 
-describe('ISSUE-004 — getActionPlan di luar akses', () => {
+describe('ISSUE-004 — getTask di luar akses', () => {
   it('memakai maybeSingle (bukan single) dan mengembalikan null tanpa throw', async () => {
     const builder = makeDetailBuilder({ data: null, error: null });
     mockFrom.mockReturnValue(builder);
 
-    const result = await getActionPlan('id-di-luar-akses');
+    const result = await getTask('id-di-luar-akses');
 
     expect(result).toBeNull();
     expect(builder.maybeSingle).toHaveBeenCalled();
@@ -48,6 +48,6 @@ describe('ISSUE-004 — getActionPlan di luar akses', () => {
   it('tetap melempar bila server balas error sungguhan', async () => {
     const builder = makeDetailBuilder({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(getActionPlan('x')).rejects.toEqual({ message: 'boom' });
+    await expect(getTask('x')).rejects.toEqual({ message: 'boom' });
   });
 });

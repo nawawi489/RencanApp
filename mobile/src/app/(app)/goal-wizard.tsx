@@ -1,6 +1,6 @@
 // Goal Wizard (Fase 4, PRD §49) — satu layar berurutan: (1) pilih Goal Template (atau Goal kosong),
-// (2) periode + PIC + Target tiap KPI Area, (3) Generate via applyGoalTemplate (atomik di server).
-// Meniru pola initiative/new.tsx: onError → Alert, validasi tanggal DATE_RE.
+// (2) periode + PIC + Target tiap Strategi, (3) Generate via applyGoalTemplate (atomik di server).
+// Meniru pola action_plan/new.tsx: onError → Alert, validasi tanggal DATE_RE.
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
@@ -8,7 +8,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
-import { useGoalActions, useGoalTemplates, useKpiAreaTemplates } from '@/hooks/use-workspace';
+import { useGoalActions, useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { DATE_HINT, periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
 import type { PersonRef } from '@/lib/goals';
@@ -27,7 +27,7 @@ export default function GoalWizardScreen() {
   const [pic, setPic] = useState<Person | null>(null);
   const [targets, setTargets] = useState<Record<string, string>>({});
 
-  const { items: kpiTemplates } = useKpiAreaTemplates(templateId ?? '');
+  const { items: kpiTemplates } = useStrategyTemplates(templateId ?? '');
 
   function next() {
     if (step === 0 && !templateId) {
@@ -47,7 +47,7 @@ export default function GoalWizardScreen() {
       return;
     }
     if (!pic) {
-      // PIC wajib (PRD §49 langkah 6): KPI Area template mewarisi PIC ini; tanpa PIC tak bisa diaktifkan.
+      // PIC wajib (PRD §49 langkah 6): Strategi template mewarisi PIC ini; tanpa PIC tak bisa diaktifkan.
       Alert.alert('Belum lengkap', 'Tentukan PIC / Owner Goal terlebih dulu.');
       return;
     }
@@ -76,7 +76,7 @@ export default function GoalWizardScreen() {
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal Wizard — Instansiasi dari template"
-          body="Pilih template Goal, tentukan periode, PIC, dan Target tiap KPI Area, lalu Generate. KPI Area terbentuk sebagai Draft; aktifkan setelah ditinjau."
+          body="Pilih template Goal, tentukan periode, PIC, dan Target tiap Strategi, lalu Generate. Strategi terbentuk sebagai Draft; aktifkan setelah ditinjau."
         />
 
         {step === 0 ? (
@@ -128,7 +128,7 @@ export default function GoalWizardScreen() {
             {kpiTemplates.length > 0 ? (
               <View className="gap-2">
                 <Text className="text-sm font-bold text-black dark:text-white">
-                  Target KPI Area (opsional — bisa dilengkapi nanti)
+                  Target Strategi (opsional — bisa dilengkapi nanti)
                 </Text>
                 {kpiTemplates.map((kt) => (
                   <LabeledInput

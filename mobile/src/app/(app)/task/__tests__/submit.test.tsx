@@ -15,12 +15,12 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack }),
 }));
 
-const mockGetActionPlan = jest.fn();
+const mockGetTask = jest.fn();
 jest.mock('@/lib/cards', () => {
   const actual = jest.requireActual('@/lib/cards');
   return {
     ...actual,
-    getActionPlan: (...a: unknown[]) => mockGetActionPlan(...a),
+    getTask: (...a: unknown[]) => mockGetTask(...a),
   };
 });
 
@@ -64,7 +64,7 @@ function wrapper() {
 const baseAp = {
   id: 'ap-1',
   organization_id: 'org-1',
-  initiative_id: 'i-1',
+  action_plan_id: 'i-1',
   name: 'AP Test',
   pic_id: 'me',
   reviewer_id: 'rev-1',
@@ -79,7 +79,7 @@ const baseAp = {
 
 beforeEach(() => {
   mockBack.mockReset();
-  mockGetActionPlan.mockReset();
+  mockGetTask.mockReset();
   mockGetInstance.mockReset();
   mockSubmitInstance.mockReset();
   mockPickFiles.mockReset();
@@ -88,7 +88,7 @@ beforeEach(() => {
   mockRunSubmission.mockReset();
   mockIsSubmitting = false;
   mockParams = { id: 'ap-1' };
-  mockGetActionPlan.mockResolvedValue(baseAp);
+  mockGetTask.mockResolvedValue(baseAp);
   mockUseKpiCandidates.mockReturnValue({ candidates: [], isLoading: false, isError: false, refetch: jest.fn() });
   mockUseKpiCurrentValue.mockReturnValue({ value: null, isLoading: false, isError: false });
   mockRunSubmission.mockResolvedValue('sub-1');
@@ -133,7 +133,7 @@ describe('SubmitScreen — UI-S-AP5 file upload', () => {
   });
 });
 
-describe('SubmitScreen — UI-S-AP6 KPI Area linkage', () => {
+describe('SubmitScreen — UI-S-AP6 Strategi linkage', () => {
   it('[U5] OD-1 fallback: 0 kandidat → section "Nilai Hasil" TIDAK dirender', async () => {
     mockUseKpiCandidates.mockReturnValue({ candidates: [], isLoading: false, isError: false, refetch: jest.fn() });
     await render(<SubmitScreen />, { wrapper: wrapper() });
@@ -209,14 +209,14 @@ describe('SubmitScreen — submit flow', () => {
     expect(call.pendingFiles[0].name).toBe('a.pdf');
     expect(call.resultValues).toHaveLength(1);
     expect(call.resultValues[0]).toEqual(expect.objectContaining({
-      kpi_area_id: 'k1', value_text: '145', value_numeric: 145, value_type: 'number',
+      strategy_id: 'k1', value_text: '145', value_numeric: 145, value_type: 'number',
     }));
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
   });
 
   it('[U10] evidence_required=true tapi tidak ada bukti → Alert + tidak panggil runSubmission', async () => {
     const apReq = { ...baseAp, evidence_required: true };
-    mockGetActionPlan.mockResolvedValueOnce(apReq);
+    mockGetTask.mockResolvedValueOnce(apReq);
     // Spy Alert.alert
     const Alert = jest.requireActual('react-native').Alert;
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});

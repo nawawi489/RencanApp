@@ -8,12 +8,12 @@ jest.setTimeout(30000);
 // Mocks — pasang SEBELUM import komponen.
 const mockListBreakdown = jest.fn();
 const mockReplace = jest.fn();
-jest.mock('@/lib/kpi-area-breakdown', () => {
-  const actual = jest.requireActual('@/lib/kpi-area-breakdown');
+jest.mock('@/lib/strategy-breakdown', () => {
+  const actual = jest.requireActual('@/lib/strategy-breakdown');
   return {
     ...actual,
-    listKpiAreaBreakdown: (...a: unknown[]) => mockListBreakdown(...a),
-    replaceKpiAreaBreakdown: (...a: unknown[]) => mockReplace(...a),
+    listStrategyBreakdown: (...a: unknown[]) => mockListBreakdown(...a),
+    replaceStrategyBreakdown: (...a: unknown[]) => mockReplace(...a),
   };
 });
 
@@ -26,7 +26,7 @@ jest.mock('@/hooks/use-profile', () => ({
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 // eslint-disable-next-line import/first
-import { KpiAreaBreakdownPanel } from '../kpi-area-breakdown-panel';
+import { StrategyBreakdownPanel } from '../strategy-breakdown-panel';
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -45,18 +45,18 @@ beforeEach(() => {
 
 const ROWS_VALID = [
   // Quarter Σ=100
-  { id: 'q1', organization_id: 'o', kpi_area_id: 'k', period_type: 'quarter', period_key: 'Q1', parent_quarter_key: null, contribution_pct: 20, reason: null, created_by: null, created_at: '', updated_at: '' },
-  { id: 'q2', organization_id: 'o', kpi_area_id: 'k', period_type: 'quarter', period_key: 'Q2', parent_quarter_key: null, contribution_pct: 30, reason: null, created_by: null, created_at: '', updated_at: '' },
-  { id: 'q3', organization_id: 'o', kpi_area_id: 'k', period_type: 'quarter', period_key: 'Q3', parent_quarter_key: null, contribution_pct: 25, reason: null, created_by: null, created_at: '', updated_at: '' },
-  { id: 'q4', organization_id: 'o', kpi_area_id: 'k', period_type: 'quarter', period_key: 'Q4', parent_quarter_key: null, contribution_pct: 25, reason: null, created_by: null, created_at: '', updated_at: '' },
+  { id: 'q1', organization_id: 'o', strategy_id: 'k', period_type: 'quarter', period_key: 'Q1', parent_quarter_key: null, contribution_pct: 20, reason: null, created_by: null, created_at: '', updated_at: '' },
+  { id: 'q2', organization_id: 'o', strategy_id: 'k', period_type: 'quarter', period_key: 'Q2', parent_quarter_key: null, contribution_pct: 30, reason: null, created_by: null, created_at: '', updated_at: '' },
+  { id: 'q3', organization_id: 'o', strategy_id: 'k', period_type: 'quarter', period_key: 'Q3', parent_quarter_key: null, contribution_pct: 25, reason: null, created_by: null, created_at: '', updated_at: '' },
+  { id: 'q4', organization_id: 'o', strategy_id: 'k', period_type: 'quarter', period_key: 'Q4', parent_quarter_key: null, contribution_pct: 25, reason: null, created_by: null, created_at: '', updated_at: '' },
 ];
 
-describe('KpiAreaBreakdownPanel — gating Ubah', () => {
+describe('StrategyBreakdownPanel — gating Ubah', () => {
   it('[1] non-PIC, non-manage_others → tombol Ubah tidak muncul', async () => {
     mockListBreakdown.mockResolvedValue([]);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId="other-user" createdBy="another-user" />,
+        <StrategyBreakdownPanel strategyId="k" picId="other-user" createdBy="another-user" />,
         { wrapper: wrapper() },
       );
     });
@@ -68,7 +68,7 @@ describe('KpiAreaBreakdownPanel — gating Ubah', () => {
     mockListBreakdown.mockResolvedValue([]);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId="user-pic" createdBy="another-user" />,
+        <StrategyBreakdownPanel strategyId="k" picId="user-pic" createdBy="another-user" />,
         { wrapper: wrapper() },
       );
     });
@@ -80,7 +80,7 @@ describe('KpiAreaBreakdownPanel — gating Ubah', () => {
     mockListBreakdown.mockResolvedValue([]);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId="other" createdBy="other" />,
+        <StrategyBreakdownPanel strategyId="k" picId="other" createdBy="other" />,
         { wrapper: wrapper() },
       );
     });
@@ -88,12 +88,12 @@ describe('KpiAreaBreakdownPanel — gating Ubah', () => {
   });
 });
 
-describe('KpiAreaBreakdownPanel — read state', () => {
+describe('StrategyBreakdownPanel — read state', () => {
   it('[4] empty → copy "Belum ada pecahan target"', async () => {
     mockListBreakdown.mockResolvedValue([]);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId={null} createdBy={null} />,
+        <StrategyBreakdownPanel strategyId="k" picId={null} createdBy={null} />,
         { wrapper: wrapper() },
       );
     });
@@ -104,7 +104,7 @@ describe('KpiAreaBreakdownPanel — read state', () => {
     mockListBreakdown.mockResolvedValue(ROWS_VALID);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId={null} createdBy={null} />,
+        <StrategyBreakdownPanel strategyId="k" picId={null} createdBy={null} />,
         { wrapper: wrapper() },
       );
     });
@@ -116,12 +116,12 @@ describe('KpiAreaBreakdownPanel — read state', () => {
   });
 });
 
-describe('KpiAreaBreakdownPanel — editor modal', () => {
+describe('StrategyBreakdownPanel — editor modal', () => {
   it('[6] buka modal → tab Quarter terisi prefill; Σ awal 100; Save disabled tanpa reason', async () => {
     mockListBreakdown.mockResolvedValue(ROWS_VALID);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId="user-pic" createdBy={null} />,
+        <StrategyBreakdownPanel strategyId="k" picId="user-pic" createdBy={null} />,
         { wrapper: wrapper() },
       );
     });
@@ -141,7 +141,7 @@ describe('KpiAreaBreakdownPanel — editor modal', () => {
     mockListBreakdown.mockResolvedValue(ROWS_VALID);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId="user-pic" createdBy={null} />,
+        <StrategyBreakdownPanel strategyId="k" picId="user-pic" createdBy={null} />,
         { wrapper: wrapper() },
       );
     });
@@ -159,7 +159,7 @@ describe('KpiAreaBreakdownPanel — editor modal', () => {
     mockReplace.mockResolvedValue(ROWS_VALID);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId="user-pic" createdBy={null} />,
+        <StrategyBreakdownPanel strategyId="k" picId="user-pic" createdBy={null} />,
         { wrapper: wrapper() },
       );
     });
@@ -174,7 +174,7 @@ describe('KpiAreaBreakdownPanel — editor modal', () => {
     });
     expect(mockReplace).toHaveBeenCalledTimes(1);
     const arg = mockReplace.mock.calls[0][0];
-    expect(arg.kpiAreaId).toBe('k');
+    expect(arg.strategyId).toBe('k');
     expect(arg.reason).toBe('Review Q3 eksekutif');
     // 4 entri quarter Σ=100 (sesuai ROWS_VALID).
     expect(arg.quarter).toHaveLength(4);
@@ -187,7 +187,7 @@ describe('KpiAreaBreakdownPanel — editor modal', () => {
     mockListBreakdown.mockResolvedValue(ROWS_VALID);
     await act(async () => {
       render(
-        <KpiAreaBreakdownPanel kpiAreaId="k" picId="user-pic" createdBy={null} />,
+        <StrategyBreakdownPanel strategyId="k" picId="user-pic" createdBy={null} />,
         { wrapper: wrapper() },
       );
     });
