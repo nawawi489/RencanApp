@@ -3574,6 +3574,26 @@ export type Database = {
         }
         Returns: Json[]
       }
+      search_chat_messages: {
+        Args: {
+          p_query: string
+          p_room_id?: string | null
+          p_limit?: number | null
+          p_before?: string | null
+          p_before_id?: string | null
+        }
+        Returns: {
+          message_id: string
+          chat_room_id: string
+          room_name: string
+          initiative_id: string | null
+          author_id: string | null
+          author_name: string | null
+          snippet: string
+          created_at: string
+          body_similarity: number
+        }[]
+      }
       send_chat_message: {
         Args: { p_body: string; p_mentions?: string[]; p_room: string }
         Returns: string

@@ -37,3 +37,7 @@ wiki/.obsidian/graph.json
 .superpowers/
 .uploads/
 performance-layout-variants/
+
+# Supabase CLI local scratch (branch/temp state, machine-specific)
+supabase/.branches/
+supabase/.temp/

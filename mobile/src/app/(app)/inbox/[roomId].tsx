@@ -63,12 +63,23 @@ function DateDivider({ label }: { label: string }) {
   );
 }
 
-function MessageBubble({ m, isMe }: { m: ChatMessage; isMe: boolean }) {
+function MessageBubble({
+  m,
+  isMe,
+  isHighlighted,
+}: {
+  m: ChatMessage;
+  isMe: boolean;
+  isHighlighted?: boolean;
+}) {
   const authorName = m.author?.full_name ?? null;
   // Guard: them tanpa nama → '?' (audit-friendly placeholder).
   const displayName = authorName ?? '?';
   return (
-    <View className={`mb-2 max-w-[80%] ${isMe ? 'self-end' : 'self-start'}`}>
+    <View
+      className={`mb-2 max-w-[80%] ${isMe ? 'self-end' : 'self-start'}`}
+      accessible={isHighlighted}
+      accessibilityLabel={isHighlighted ? `Pesan yang dicari: ${m.body}` : undefined}>
       {!isMe ? (
         <View className="mb-1 flex-row items-center gap-2">
           <Avatar name={displayName} seed={m.author_id ?? displayName} size={24} />
@@ -82,7 +93,7 @@ function MessageBubble({ m, isMe }: { m: ChatMessage; isMe: boolean }) {
           isMe
             ? 'rounded-br-md bg-brand-dark'
             : 'rounded-bl-md bg-neutral-100 dark:bg-neutral-800'
-        }`}>
+        } ${isHighlighted ? 'border-2 border-amber-400 dark:border-amber-500' : ''}`}>
         <Text className={`text-base ${isMe ? 'text-white' : 'text-black dark:text-white'}`}>
           {m.body}
         </Text>
@@ -111,7 +122,7 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
 }
 
 export default function ChatRoomScreen() {
-  const { roomId } = useLocalSearchParams<{ roomId?: string }>();
+  const { roomId, highlight } = useLocalSearchParams<{ roomId?: string; highlight?: string }>();
   const { session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
@@ -212,6 +223,7 @@ export default function ChatRoomScreen() {
                 key={r.key}
                 m={r.m}
                 isMe={currentUserId != null && r.m.author_id === currentUserId}
+                isHighlighted={highlight != null && r.m.id === highlight}
               />
             ),
           )}

@@ -26,6 +26,8 @@ Masalahnya murni di **lapisan presentasi** (regresi visual, bukan bug logika), t
 **Masuk V1.8.1:** UI-S-IN1 (minus chip PIC/Review/Deadline, minus search isi pesan), UI-S-IN2 penuh, composer circular-send, banner governance.
 **DEFER (butuh migrasi baru dan/atau keputusan owner):** seluruh UI-S-IN3 (reactions, read-receipt avatars, reply-quote, system events, banner konteks per-pesan) dan UI-S-IN4 attach-evidence, dan filter chip `Saya PIC`/`Review`/`Deadline`.
 
+> **Update 2026-07-12 — Un-DEFER search isi pesan.** Migrasi 0044 + RPC `public.search_chat_messages` mengangkat DEFER "search isi pesan" menjadi in-scope. Spec penuh: [specs/search-pesan-inbox.md](search-pesan-inbox.md) (Chat FTS V1). Perilaku Inbox berubah: placeholder `Cari Initiative atau pesan`, dua section (Initiative + Pesan sub-group per room), snippet server-side, gate `is_chat_member OR (can_view_workspace AND can_access_initiative)`, empty state IDENTIK utk no-match & silent-filter (AC-15).
+
 ---
 
 ## 2. Non-Goals
