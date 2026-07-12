@@ -13,27 +13,15 @@ export default function AppLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
-      <Stack.Screen
-        name="action_plan/new"
-        options={{ headerShown: true, title: 'Rencana Aksi Baru', presentation: 'modal' }}
-      />
-      <Stack.Screen name="action_plan/[id]" options={{ headerShown: true, title: 'Rencana Aksi' }} />
-      <Stack.Screen
-        name="action-plan/new"
-        options={{ headerShown: true, title: 'Tugas Baru', presentation: 'modal' }}
-      />
-      <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Tugas' }} />
-      <Stack.Screen
-        name="action-plan/instance/[id]"
-        options={{ headerShown: true, title: 'Instance' }}
-      />
-      <Stack.Screen
-        name="action-plan/submit"
-        options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
-      />
       <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Rencana Aksi' }} />
 
-      {/* Fase 4 — Performance Workspace (Hierarki Strategis) */}
+      {/* Fase 4 — Performance Workspace V1.8.3:
+          Goal → Strategy → Initiative → Action Plan → Task
+          Route folder ↔ label UI:
+            strategy/    → Strategi (level 1, dulu KPI Area)
+            initiative/  → Inisiatif (level 2, dulu Strategy)
+            action-plan/ → Rencana Aksi (level 3, dulu Initiative) — otomatis dapat Diskusi Rencana Aksi
+            task/        → Tugas (level 4, dulu Action Plan) */}
       <Stack.Screen
         name="goal-wizard"
         options={{ headerShown: true, title: 'Goal Wizard', presentation: 'modal' }}
@@ -41,15 +29,33 @@ export default function AppLayout() {
       <Stack.Screen name="goal/new" options={{ headerShown: true, title: 'Goal Baru', presentation: 'modal' }} />
       <Stack.Screen name="goal/[id]" options={{ headerShown: true, title: 'Goal' }} />
       <Stack.Screen
-        name="kpi-area/new"
+        name="strategy/new"
         options={{ headerShown: true, title: 'Strategi Baru', presentation: 'modal' }}
       />
-      <Stack.Screen name="kpi-area/[id]" options={{ headerShown: true, title: 'Strategi' }} />
+      <Stack.Screen name="strategy/[id]" options={{ headerShown: true, title: 'Strategi' }} />
       <Stack.Screen
         name="initiative/new"
         options={{ headerShown: true, title: 'Inisiatif Baru', presentation: 'modal' }}
       />
       <Stack.Screen name="initiative/[id]" options={{ headerShown: true, title: 'Inisiatif' }} />
+      <Stack.Screen
+        name="action-plan/new"
+        options={{ headerShown: true, title: 'Rencana Aksi Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Rencana Aksi' }} />
+      <Stack.Screen
+        name="task/new"
+        options={{ headerShown: true, title: 'Tugas Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen name="task/[id]" options={{ headerShown: true, title: 'Tugas' }} />
+      <Stack.Screen
+        name="task/instance/[id]"
+        options={{ headerShown: true, title: 'Instance' }}
+      />
+      <Stack.Screen
+        name="task/submit"
+        options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
+      />
 
       {/* Fase 6 — Development Workspace */}
       <Stack.Screen

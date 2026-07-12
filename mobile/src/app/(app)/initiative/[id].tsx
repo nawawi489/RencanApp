@@ -55,7 +55,7 @@ export function LiveInitiativeDetailScreen() {
     if (initiative && guardActivationFields('initiative', initiative)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Rencana Aksi',
-      onAddChild: () => router.push(`/action_plan/new?initiativeId=${id}` as Href),
+      onAddChild: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),
     });
     if (blocked) return;
     activateM.mutate();

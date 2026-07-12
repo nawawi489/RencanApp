@@ -535,7 +535,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
       showPastPeriodAlert();
       return;
     }
-    router.push(`/action_plan/new?initiativeId=${initiative.id}` as Href);
+    router.push(`/action-plan/new?initiativeId=${initiative.id}` as Href);
   }, [mbrGuarded, parentCompliance, past, router, initiative.id, initiative.name]);
   // Tombol redup bila past ATAU ter-guard MBR (spec §11: tetap terlihat, tapi redup).
   const addDimmed = past || mbrGuarded;
@@ -1078,7 +1078,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
     [router, ps.id],
   );
   const addActionPlan = useCallback(
-    () => router.push(`/action_plan/new?problemStatementId=${ps.id}` as Href),
+    () => router.push(`/action-plan/new?problemStatementId=${ps.id}` as Href),
     [router, ps.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);

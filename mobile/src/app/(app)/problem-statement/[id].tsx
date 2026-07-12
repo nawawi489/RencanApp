@@ -70,7 +70,7 @@ export function LiveProblemStatementDetailScreen() {
     if (ps && guardActivationFields('problem_statement', ps)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Rencana Aksi',
-      onAddChild: () => router.push(`/action_plan/new?problemStatementId=${id}` as Href),
+      onAddChild: () => router.push(`/action-plan/new?problemStatementId=${id}` as Href),
     });
     if (blocked) return;
     activateM.mutate();

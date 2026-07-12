@@ -918,10 +918,10 @@ describe('WorkspaceScreen', () => {
       expect(await screen.findByText('Gagal memuat')).toBeTruthy();
     });
 
-    it('[UI-N-003·5] Inisiatif "+ Rencana Aksi" current period → push /action_plan/new?initiativeId=...', async () => {
+    it('[UI-N-003·5] Inisiatif "+ Rencana Aksi" current period → push /action-plan/new?initiativeId=...', async () => {
       await expandToInitiative();
       fireEvent.press(screen.getByLabelText('Tambah Rencana Aksi ke Akuisisi Lewat Meta Ads'));
-      expect(mockPush).toHaveBeenCalledWith('/action_plan/new?initiativeId=s1');
+      expect(mockPush).toHaveBeenCalledWith('/action-plan/new?initiativeId=s1');
     });
 
     it('[UI-N-003·6] Inisiatif past period → tombol "+" Alert past period, tidak push', async () => {
@@ -937,7 +937,7 @@ describe('WorkspaceScreen', () => {
       await screen.findByText('Akuisisi Lewat Meta Ads');
       fireEvent.press(screen.getByLabelText('Tambah Rencana Aksi ke Akuisisi Lewat Meta Ads'));
       expect(alertSpy).toHaveBeenCalled();
-      expect(mockPush).not.toHaveBeenCalledWith('/action_plan/new?initiativeId=s-past');
+      expect(mockPush).not.toHaveBeenCalledWith('/action-plan/new?initiativeId=s-past');
       alertSpy.mockRestore();
     });
 
@@ -1094,7 +1094,7 @@ describe('WorkspaceScreen', () => {
         'Kelengkapan Perencanaan',
         expect.stringContaining('baru tombol + Rencana Aksi aktif'),
       );
-      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/action_plan/new'));
+      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/action-plan/new'));
       alertSpy.mockRestore();
     });
 
@@ -1112,7 +1112,7 @@ describe('WorkspaceScreen', () => {
       fireEvent.press(await screen.findByLabelText('Toggle Inisiatif KPI Penjualan'));
       await screen.findByText('Akuisisi Lewat Meta Ads');
       fireEvent.press(screen.getByLabelText('Tambah Rencana Aksi ke Akuisisi Lewat Meta Ads'));
-      expect(mockPush).toHaveBeenCalledWith('/action_plan/new?initiativeId=s1');
+      expect(mockPush).toHaveBeenCalledWith('/action-plan/new?initiativeId=s1');
     });
   });
 
