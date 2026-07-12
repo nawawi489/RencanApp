@@ -6,14 +6,16 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateField } from '@/components/date-field';
+import { DateMultiField } from '@/components/date-multi-field';
+import { DateRangeField } from '@/components/date-range-field';
+import { TimeField } from '@/components/time-field';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createTask, getActionPlan, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
-import { DATE_HINT, DATE_RE } from '@/lib/date';
+import { DATE_HINT, DATE_RE, TIME_RE } from '@/lib/date';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
 type Person = NonNullable<PersonRef>;
 
-const TIME_RE = /^\d{2}:\d{2}$/;
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 const FREQUENCIES = ['daily', 'weekly', 'monthly', 'custom'] as const;
 const MISSED_RULES = ['strict', 'grace_period', 'overdue_allowed'] as const;
@@ -139,7 +141,7 @@ export function LiveNewTaskScreen() {
   const [frequency, setFrequency] = useState<string>('daily');
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [monthDays, setMonthDays] = useState('');
-  const [customDates, setCustomDates] = useState('');
+  const [customDates, setCustomDates] = useState<string[]>([]);
   const [repeatStart, setRepeatStart] = useState('');
   const [repeatEnd, setRepeatEnd] = useState('');
   // Jam deadline tunggal di top-level (PRD §22.9); state repeat-specific "timeOfDay" dihapus —
@@ -179,13 +181,7 @@ export function LiveNewTaskScreen() {
                   .map((s) => parseInt(s.trim(), 10))
                   .filter((n) => Number.isFinite(n))
               : null,
-          customDates:
-            frequency === 'custom'
-              ? customDates
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              : null,
+          customDates: frequency === 'custom' ? customDates : null,
           repeatStartDate: repeatStart,
           repeatEndDate: repeatEnd,
           timeOfDay: deadlineTime,
@@ -265,15 +261,8 @@ export function LiveNewTaskScreen() {
           <UserPicker label="PIC (eksekutor)" required value={pic} onChange={setPic} excludeId={reviewer?.id} />
           <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />
           <DateField label="Tanggal Mulai" value={startDate} onChange={setStartDate} />
-          <DateField label="Deadline" value={deadline} onChange={setDeadline} />
-          <LabeledInput
-            label="Jam Deadline"
-            value={deadlineTime}
-            onChangeText={setDeadlineTime}
-            required
-            placeholder="HH:MM (mis. 23:00)"
-            keyboardType="numeric"
-          />
+          <DateField label="Deadline" value={deadline} onChange={setDeadline} quickChips />
+          <TimeField label="Jam Deadline" value={deadlineTime} onChange={setDeadlineTime} required />
           <LabeledInput label="Output yang Diharapkan" value={output} onChangeText={setOutput} multiline placeholder="Hasil konkret yang diharapkan" />
           <LabeledInput label="Definition of Done" value={dod} onChangeText={setDod} multiline placeholder="Kriteria pekerjaan dianggap selesai" />
           <LabeledInput
@@ -359,16 +348,22 @@ export function LiveNewTaskScreen() {
               ) : null}
 
               {frequency === 'custom' ? (
-                <LabeledInput
-                  label="Tanggal kustom (YYYY-MM-DD, pisah koma)"
-                  value={customDates}
-                  onChangeText={setCustomDates}
-                  placeholder="2026-06-03,2026-06-10"
+                <DateMultiField
+                  label="Tanggal kustom"
+                  values={customDates}
+                  onChange={setCustomDates}
                 />
               ) : null}
 
-              <DateField label="Mulai Repeat" value={repeatStart} onChange={setRepeatStart} required />
-              <DateField label="Selesai Repeat" value={repeatEnd} onChange={setRepeatEnd} required />
+              <DateRangeField
+                startLabel="Mulai Repeat"
+                endLabel="Selesai Repeat"
+                startValue={repeatStart}
+                endValue={repeatEnd}
+                onStartChange={setRepeatStart}
+                onEndChange={setRepeatEnd}
+                required
+              />
               {/* Jam Deadline diambil dari field top-level (PRD §22.9 — tunggal). */}
 
               <ChipSelector

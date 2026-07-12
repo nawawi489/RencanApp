@@ -1,29 +1,12 @@
-// UI-S-I02 — Native date picker reusable.
-// iOS: bottom-sheet Modal yang berisi inline calendar @expo/ui.
-// Android: dialog DateTimePicker (auto-buka saat mount, unmount setelah pilih/cancel).
-// Jest/web: fallback TextInput agar test environment tidak crash karena native module.
+// TimeField — analog DateField untuk memilih jam (HH:MM, 24h).
+// iOS/Android: native picker mode='time'. Jest/web: fallback TextInput HH:MM.
 import { useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { usePlaceholderColor } from '@/components/ui';
-import {
-  DATE_HINT,
-  DATE_RE,
-  addDaysISO,
-  endOfMonthISO,
-  todayISO,
-} from '@/lib/date';
+import { TIME_HINT, TIME_RE } from '@/lib/date';
 
-export function parseISODate(s: string): Date | null {
-  if (!DATE_RE.test(s)) return null;
-  const [y, m, d] = s.split('-').map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-}
-
-// Lazy require supaya jest yang tidak punya native bridge tetap aman.
-// Dievaluasi sekali saat module load (bukan saat render) — memenuhi react-hooks/static-components.
 type NativePicker = React.ComponentType<{
   value: Date;
   mode?: 'date' | 'time' | 'datetime';
@@ -47,72 +30,45 @@ function loadDateTimePicker(): NativePicker | null {
 
 const Picker: NativePicker | null = loadDateTimePicker();
 
+function formatHM(d: Date): string {
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function parseHM(value: string): Date {
+  const now = new Date();
+  if (!TIME_RE.test(value)) return now;
+  const [h, m] = value.split(':').map(Number);
+  const d = new Date(now);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
 type Props = {
   label: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   placeholder?: string;
-  // Override a11y label — dipakai layar dgn banyak field sama (mis. per-baris DCR resubmit).
   accessibilityLabel?: string;
-  // Tampilkan quick chips ("Hari ini", "Besok", "+7 hari", "Akhir bulan") di atas picker button.
-  // Menghemat 2–3 tap untuk kasus deadline tersering.
-  quickChips?: boolean;
 };
 
-const QUICK_CHIPS: { label: string; value: () => string }[] = [
-  { label: 'Hari ini', value: todayISO },
-  { label: 'Besok', value: () => addDaysISO(todayISO(), 1) },
-  { label: '+7 hari', value: () => addDaysISO(todayISO(), 7) },
-  { label: 'Akhir bulan', value: () => endOfMonthISO() },
-];
-
-export function DateField({
+export function TimeField({
   label,
   value,
   onChange,
   required,
   placeholder,
   accessibilityLabel,
-  quickChips,
 }: Props) {
   const [show, setShow] = useState(false);
   const placeholderColor = usePlaceholderColor();
   const a11yLabel = accessibilityLabel ?? label;
-  const buttonPlaceholder = placeholder ?? 'Pilih tanggal';
-  const inputPlaceholder = placeholder ?? DATE_HINT;
-  const current = parseISODate(value) ?? new Date();
+  const buttonPlaceholder = placeholder ?? 'Pilih jam';
+  const inputPlaceholder = placeholder ?? TIME_HINT;
+  const current = parseHM(value);
 
-  const chips = quickChips ? (
-    <View className="flex-row flex-wrap gap-2">
-      {QUICK_CHIPS.map((c) => {
-        const chipValue = c.value();
-        const active = value === chipValue;
-        return (
-          <Pressable
-            key={c.label}
-            accessibilityRole="button"
-            accessibilityLabel={`${label}: ${c.label}`}
-            accessibilityState={{ selected: active }}
-            onPress={() => onChange(chipValue)}
-            className={`min-h-[36px] justify-center rounded-full border px-3 py-1.5 active:opacity-70 ${
-              active
-                ? 'border-brand-dark bg-brand-dark'
-                : 'border-neutral-300 dark:border-neutral-700'
-            }`}>
-            <Text
-              className={`text-xs font-semibold ${
-                active ? 'text-white' : 'text-black dark:text-white'
-              }`}>
-              {c.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  ) : null;
-
-  // Fallback (web/test/native module hilang): TextInput pola lama.
   if (!Picker) {
     return (
       <View className="gap-1.5">
@@ -120,7 +76,6 @@ export function DateField({
           {label}
           {required ? <Text className="text-red-500"> *</Text> : null}
         </Text>
-        {chips}
         <TextInput
           accessibilityLabel={a11yLabel}
           className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
@@ -140,7 +95,6 @@ export function DateField({
         {label}
         {required ? <Text className="text-red-500"> *</Text> : null}
       </Text>
-      {chips}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${a11yLabel}: ${value || buttonPlaceholder}`}
@@ -155,21 +109,23 @@ export function DateField({
         <Modal transparent animationType="slide" onRequestClose={() => setShow(false)}>
           <Pressable
             className="flex-1 bg-black/50"
-            accessibilityLabel="Tutup pemilih tanggal"
+            accessibilityLabel="Tutup pemilih jam"
             onPress={() => setShow(false)}
           />
-          <View className="bg-white p-4 dark:bg-neutral-900" style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+          <View
+            className="bg-white p-4 dark:bg-neutral-900"
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
             <Picker
               value={current}
-              mode="date"
-              display="inline"
-              onValueChange={(_e: unknown, d: Date) => onChange(d.toLocaleDateString('en-CA'))}
+              mode="time"
+              display="spinner"
+              onValueChange={(_e: unknown, d: Date) => onChange(formatHM(d))}
             />
             <Pressable
               onPress={() => setShow(false)}
               className="mt-2 min-h-[44px] items-center justify-center rounded-xl bg-brand-dark px-4 py-3"
               accessibilityRole="button"
-              accessibilityLabel="Selesai pilih tanggal">
+              accessibilityLabel="Selesai pilih jam">
               <Text className="text-base font-semibold text-white">Selesai</Text>
             </Pressable>
           </View>
@@ -179,10 +135,10 @@ export function DateField({
       {show && Platform.OS === 'android' ? (
         <Picker
           value={current}
-          mode="date"
+          mode="time"
           presentation="dialog"
           onValueChange={(_e: unknown, d: Date) => {
-            onChange(d.toLocaleDateString('en-CA'));
+            onChange(formatHM(d));
             setShow(false);
           }}
           onDismiss={() => setShow(false)}

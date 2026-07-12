@@ -6,10 +6,11 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
+import { DateRangeField } from '@/components/date-range-field';
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useGoalActions, useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
-import { DATE_HINT, periodError } from '@/lib/date';
+import { periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
 import type { PersonRef } from '@/lib/goals';
 
@@ -107,20 +108,11 @@ export default function GoalWizardScreen() {
             <Text className="text-base font-semibold text-black dark:text-white">
               Langkah 2 — Periode, PIC & Target
             </Text>
-            <LabeledInput
-              label="Tanggal Mulai"
-              value={periodStart}
-              onChangeText={setPeriodStart}
-              placeholder={DATE_HINT}
-              keyboardType="numeric"
-              required
-            />
-            <LabeledInput
-              label="Tanggal Selesai"
-              value={periodEnd}
-              onChangeText={setPeriodEnd}
-              placeholder={DATE_HINT}
-              keyboardType="numeric"
+            <DateRangeField
+              startValue={periodStart}
+              endValue={periodEnd}
+              onStartChange={setPeriodStart}
+              onEndChange={setPeriodEnd}
               required
             />
             <UserPicker label="PIC / Owner" value={pic} onChange={setPic} required />
