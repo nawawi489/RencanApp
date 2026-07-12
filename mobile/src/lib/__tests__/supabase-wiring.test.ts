@@ -19,6 +19,12 @@ jest.mock('react-native', () => ({
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
 
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(),
+  setItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
+}));
+
 describe('supabase wiring (AC-CFG01-1..2 integrasi)', () => {
   const OLD_ENV = process.env;
 
