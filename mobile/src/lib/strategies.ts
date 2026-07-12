@@ -1,4 +1,4 @@
-// Data layer Fase 4 — kpi-areas.ts (Planning).
+// Data layer Fase 4 — strategies.ts (Planning).
 // Otorisasi ditegakkan di server (RLS + RPC); fungsi di sini hanya pemanggil tipis.
 // Card dibuat via INSERT ber-RLS (pola createActionPlan); hanya activate_* yang lewat RPC.
 import type { Tables } from './database.types';

@@ -111,7 +111,7 @@ export async function activateGoal(id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** Instansiasi goal + KPI area dari template; mengembalikan goal_id baru. */
+/** Instansiasi goal + strategi dari template; mengembalikan goal_id baru. */
 export async function applyGoalTemplate(args: {
   goalTemplateId: string;
   picId: string;
@@ -131,7 +131,7 @@ export async function applyGoalTemplate(args: {
   return data as string;
 }
 
-/** Pulihkan item template (KPI area) yang dihapus pada goal; mengembalikan jumlah item dipulihkan. */
+/** Pulihkan item template (strategi) yang dihapus pada goal; mengembalikan jumlah item dipulihkan. */
 export async function restoreGoalTemplateItems(goalId: string): Promise<number> {
   const { data, error } = await supabase.rpc('restore_goal_template_items', {
     p_goal_id: goalId,
