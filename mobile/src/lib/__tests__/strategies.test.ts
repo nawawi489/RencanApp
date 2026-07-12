@@ -1,7 +1,7 @@
-// Data layer Fase 4 — initiatives.ts. Mock ../supabase. Menguji createInitiative (INSERT ber-RLS:
-// payload memuat strategy_id + field kedalaman + organization_id + created_by; rpc TIDAK dipanggil),
-// activateInitiative (rpc activate_initiative), listInitiatives (guard kosong + eq/order), getInitiative
-// (single), propagasi error.
+// Data layer Fase 4 — strategies.ts. Mock ../supabase. Menguji createStrategy (INSERT ber-RLS:
+// payload berisi goal_id + organization_id + created_by, rpc TIDAK dipanggil), activateStrategy
+// (rpc nama+param benar), listStrategies (guard kosong + query eq/order benar), getStrategy (single),
+// propagasi error.
 const mockRpc = jest.fn();
 const mockFrom = jest.fn();
 const mockGetUser = jest.fn();
@@ -10,18 +10,18 @@ jest.mock('../supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
     from: (...args: unknown[]) => mockFrom(...args),
-    auth: { getUser: () => mockGetUser() },
+    auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
   },
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
-import { activateInitiative, createInitiative, getInitiative, listInitiatives } from '../initiatives';
+import { activateStrategy, createStrategy, getStrategy, listStrategies } from '../strategies';
 
 /** Builder thenable: metode chainable kembalikan builder; await resolve di titik mana pun. */
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'order', 'insert', 'single']) {
+  for (const m of ['select', 'eq', 'order', 'limit']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -32,15 +32,24 @@ function makeQueryThenable(result: { data: unknown; error: unknown }) {
   return { builder, calls };
 }
 
-/** Builder untuk profiles: .select().eq().single() → Promise (single resolve). */
-function makeProfilesBuilder(organizationId: string) {
+/** Builder yang menyelesaikan (await) pada terminator tertentu (single/maybeSingle). */
+function makeTerminatedBuilder(
+  result: { data: unknown; error: unknown },
+  terminator: 'single' | 'maybeSingle' = 'single',
+) {
+  const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  builder.select = jest.fn(() => builder);
-  builder.eq = jest.fn(() => builder);
-  builder.single = jest.fn(() =>
-    Promise.resolve({ data: { organization_id: organizationId }, error: null }),
-  );
-  return builder;
+  for (const m of ['select', 'eq', 'order', 'insert']) {
+    builder[m] = jest.fn((...args: unknown[]) => {
+      calls[m] = args;
+      return builder;
+    });
+  }
+  builder[terminator] = jest.fn((...args: unknown[]) => {
+    calls[terminator] = args;
+    return Promise.resolve(result);
+  });
+  return { builder, calls };
 }
 
 beforeEach(() => {
@@ -50,107 +59,107 @@ beforeEach(() => {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
 });
 
-const NEW: Parameters<typeof createInitiative>[0] = {
-  strategy_id: 'k1',
-  name: 'Strategi A',
-  description: 'desc',
-  reason: 'alasan',
-  main_risk: 'risiko',
-  alternative: 'alt',
-  pic_id: 'p1',
-  period_start: '2026-01-01',
-  period_end: '2026-12-31',
-};
+describe('createStrategy', () => {
+  it('[1] INSERT berisi goal_id + organization_id + created_by + field input; rpc TIDAK dipanggil', async () => {
+    const profiles = makeTerminatedBuilder({ data: { organization_id: 'org1' }, error: null });
+    const target = makeTerminatedBuilder({ data: { id: 'k1' }, error: null });
+    mockFrom.mockImplementation((table: string) =>
+      table === 'profiles' ? profiles.builder : target.builder,
+    );
 
-describe('createInitiative', () => {
-  it('[1] INSERT memuat strategy_id + field kedalaman + organization_id + created_by; rpc tidak dipanggil', async () => {
-    const profiles = makeProfilesBuilder('org1');
-    const { builder, calls } = makeQueryThenable({ data: { id: 's1' }, error: null });
-    mockFrom.mockImplementation((table: string) => (table === 'profiles' ? profiles : builder));
-
-    const result = await createInitiative(NEW);
+    const result = await createStrategy({
+      goal_id: 'g1',
+      name: 'Pendapatan',
+      target: 'Rp1M',
+      pic_id: 'u2',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+    });
 
     expect(mockFrom).toHaveBeenCalledWith('profiles');
-    expect(mockFrom).toHaveBeenCalledWith('initiatives');
-    expect(calls.insert).toEqual([
-      {
-        strategy_id: 'k1',
-        name: 'Strategi A',
-        description: 'desc',
-        reason: 'alasan',
-        main_risk: 'risiko',
-        alternative: 'alt',
-        pic_id: 'p1',
-        period_start: '2026-01-01',
-        period_end: '2026-12-31',
-        organization_id: 'org1',
-        created_by: 'u1',
-      },
-    ]);
-    expect(calls.select).toEqual(['*']);
+    expect(mockFrom).toHaveBeenCalledWith('strategies');
+    expect(target.calls.insert[0]).toEqual({
+      goal_id: 'g1',
+      name: 'Pendapatan',
+      target: 'Rp1M',
+      pic_id: 'u2',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+      organization_id: 'org1',
+      created_by: 'u1',
+    });
     expect(mockRpc).not.toHaveBeenCalled();
-    expect(result).toEqual({ id: 's1' });
+    expect(result).toEqual({ id: 'k1' });
   });
 
-  it('[2] propagasi error dari INSERT', async () => {
-    const profiles = makeProfilesBuilder('org1');
-    const { builder } = makeQueryThenable({ data: null, error: { message: 'insert gagal' } });
-    mockFrom.mockImplementation((table: string) => (table === 'profiles' ? profiles : builder));
-    await expect(createInitiative(NEW)).rejects.toEqual({ message: 'insert gagal' });
+  it('[2] propagasi error INSERT', async () => {
+    const profiles = makeTerminatedBuilder({ data: { organization_id: 'org1' }, error: null });
+    const target = makeTerminatedBuilder({ data: null, error: { message: 'rls' } });
+    mockFrom.mockImplementation((table: string) =>
+      table === 'profiles' ? profiles.builder : target.builder,
+    );
+    await expect(
+      createStrategy({
+        goal_id: 'g1',
+        name: 'x',
+        target: null,
+        pic_id: null,
+        period_start: null,
+        period_end: null,
+      }),
+    ).rejects.toEqual({ message: 'rls' });
   });
 });
 
-describe('activateInitiative', () => {
-  it('[3] memanggil rpc activate_initiative dengan p_initiative_id', async () => {
-    mockRpc.mockResolvedValue({ error: null });
-    await activateInitiative('s1');
-    expect(mockRpc).toHaveBeenCalledWith('activate_initiative', { p_initiative_id: 's1' });
+describe('activateStrategy', () => {
+  it('[3] memanggil rpc activate_strategy dengan p_strategy_id', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    await activateStrategy('k1');
+    expect(mockRpc).toHaveBeenCalledWith('activate_strategy', { p_strategy_id: 'k1' });
   });
 
   it('[4] propagasi error', async () => {
-    mockRpc.mockResolvedValue({ error: { message: 'tolak' } });
-    await expect(activateInitiative('s1')).rejects.toEqual({ message: 'tolak' });
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
+    await expect(activateStrategy('k1')).rejects.toEqual({ message: 'denied' });
   });
 });
 
-describe('listInitiatives', () => {
-  it('[5] strategyId kosong → [] tanpa query', async () => {
-    expect(await listInitiatives('')).toEqual([]);
+describe('listStrategies', () => {
+  it('[5] goalId kosong → [] tanpa query', async () => {
+    expect(await listStrategies('')).toEqual([]);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
-  it('[6] query eq(strategy_id) + order created_at asc', async () => {
-    const { builder, calls } = makeQueryThenable({ data: [{ id: 's1' }], error: null });
+  it('[6] query eq(goal_id) + order created_at asc', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [{ id: 'k1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const rows = await listInitiatives('k1');
-    expect(mockFrom).toHaveBeenCalledWith('initiatives');
-    expect(calls.select).toEqual(['*']);
-    expect(calls.eq).toEqual(['strategy_id', 'k1']);
+    const rows = await listStrategies('g1');
+    expect(mockFrom).toHaveBeenCalledWith('strategies');
+    expect(calls.eq).toEqual(['goal_id', 'g1']);
     expect(calls.order).toEqual(['created_at', { ascending: true }]);
-    expect(rows).toEqual([{ id: 's1' }]);
+    expect(rows).toEqual([{ id: 'k1' }]);
   });
 
   it('[7] propagasi error', async () => {
-    const { builder } = makeQueryThenable({ data: null, error: { message: 'list gagal' } });
+    const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(listInitiatives('k1')).rejects.toEqual({ message: 'list gagal' });
+    await expect(listStrategies('g1')).rejects.toEqual({ message: 'boom' });
   });
 });
 
-describe('getInitiative', () => {
-  it('[8] eq(id) + single() mengembalikan baris', async () => {
-    const { builder, calls } = makeQueryThenable({ data: { id: 's1' }, error: null });
+describe('getStrategy', () => {
+  it('[8] eq(id) + single → row', async () => {
+    const { builder, calls } = makeTerminatedBuilder({ data: { id: 'k1' }, error: null });
     mockFrom.mockReturnValue(builder);
-    const row = await getInitiative('s1');
-    expect(mockFrom).toHaveBeenCalledWith('initiatives');
-    expect(calls.eq).toEqual(['id', 's1']);
-    expect(builder.single).toHaveBeenCalled();
-    expect(row).toEqual({ id: 's1' });
+    const row = await getStrategy('k1');
+    expect(mockFrom).toHaveBeenCalledWith('strategies');
+    expect(calls.eq).toEqual(['id', 'k1']);
+    expect(row).toEqual({ id: 'k1' });
   });
 
   it('[9] propagasi error', async () => {
-    const { builder } = makeQueryThenable({ data: null, error: { message: 'tidak ada' } });
+    const { builder } = makeTerminatedBuilder({ data: null, error: { message: 'nf' } });
     mockFrom.mockReturnValue(builder);
-    await expect(getInitiative('s1')).rejects.toEqual({ message: 'tidak ada' });
+    await expect(getStrategy('k1')).rejects.toEqual({ message: 'nf' });
   });
 });

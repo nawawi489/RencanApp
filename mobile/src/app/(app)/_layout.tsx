@@ -142,7 +142,7 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'Tambah User' }}
       />
       <Stack.Screen
-        name="settings-kpi-area-templates"
+        name="settings-strategy-templates"
         options={{ headerShown: true, title: 'Strategi Template' }}
       />
       <Stack.Screen name="search" options={{ headerShown: true, title: 'Cari' }} />

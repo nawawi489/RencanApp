@@ -119,7 +119,7 @@ function collectRoster(plans: TaskWithPeople[], actionPlanPicId: string | null):
     else map.set(actionPlanPicId, { id: actionPlanPicId, full_name: null, email: null, roles: new Set(['Rencana Aksi PIC']) });
   }
   for (const p of plans) {
-    add(p.pic, 'PIC AP');
+    add(p.pic, 'PIC Tugas');
     add(p.reviewer, 'Reviewer');
   }
   return Array.from(map.values());

@@ -2614,7 +2614,6 @@ export type Database = {
       }
       task_submissions: {
         Row: {
-          action_plan_instance_id: string | null
           created_at: string
           id: string
           note: string | null
@@ -2626,10 +2625,10 @@ export type Database = {
           submitted_at: string
           submitted_by: string | null
           task_id: string
+          task_instance_id: string | null
           version_number: number
         }
         Insert: {
-          action_plan_instance_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -2641,10 +2640,10 @@ export type Database = {
           submitted_at?: string
           submitted_by?: string | null
           task_id: string
+          task_instance_id?: string | null
           version_number: number
         }
         Update: {
-          action_plan_instance_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -2656,6 +2655,7 @@ export type Database = {
           submitted_at?: string
           submitted_by?: string | null
           task_id?: string
+          task_instance_id?: string | null
           version_number?: number
         }
         Relationships: [
@@ -2664,13 +2664,6 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_submissions_action_plan_instance_id_fkey"
-            columns: ["action_plan_instance_id"]
-            isOneToOne: false
-            referencedRelation: "task_instances"
             referencedColumns: ["id"]
           },
           {
@@ -2685,6 +2678,13 @@ export type Database = {
             columns: ["submitted_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_submissions_task_instance_id_fkey"
+            columns: ["task_instance_id"]
+            isOneToOne: false
+            referencedRelation: "task_instances"
             referencedColumns: ["id"]
           },
         ]
