@@ -10,6 +10,7 @@ import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { SubmissionCard } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
+import { getRoomIdForActionPlan } from '@/lib/inbox';
 import { computeTaskProgress } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -372,6 +373,14 @@ export function LiveTaskDetailScreen() {
     onSuccess: refresh,
     onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.'),
   });
+  // UI-S-AP3 — "Buka Chat": resolve room Rencana Aksi tugas ini (RLS member-gated). Bukan anggota
+  // / gagal → fallback ke tab Inbox generik (perilaku lama), jadi tombol tetap berguna.
+  const openChatM = useMutation({
+    mutationFn: () => getRoomIdForActionPlan(ap?.action_plan_id ?? ''),
+    onSuccess: (roomId) =>
+      router.push((roomId ? `/inbox/${roomId}` : '/(tabs)/inbox') as Href),
+    onError: () => router.push('/(tabs)/inbox' as Href),
+  });
 
   const ap = apQ.data;
   const isPic = !!profile && profile.id === ap?.pic_id;
@@ -440,11 +449,12 @@ export function LiveTaskDetailScreen() {
             <SectionCard>
               <View className="flex-row items-center justify-between gap-2">
                 <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
-                {/* UI-S-AP3 — akses cepat ke Inbox dari konteks Tugas. */}
+                {/* UI-S-AP3 — akses cepat ke Diskusi Rencana Aksi tugas ini (room spesifik). */}
                 <Button
-                  label="Buka Chat"
+                  label={openChatM.isPending ? 'Membuka…' : 'Buka Chat'}
                   variant="secondary"
-                  onPress={() => router.push('/(tabs)/inbox' as Href)}
+                  disabled={openChatM.isPending}
+                  onPress={() => openChatM.mutate()}
                 />
               </View>
               <Field label="Periode" value={`${ap.start_date ?? '—'} → ${ap.deadline ?? '—'}`} />
