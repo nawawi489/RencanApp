@@ -5,10 +5,10 @@ import { Alert } from 'react-native';
 import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
-import { DateField } from '@/components/date-field';
+import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
 import { useInitiativeActions, usePerson } from '@/hooks/use-workspace';
-import { DATE_HINT, periodError } from '@/lib/date';
+import { periodError } from '@/lib/date';
 import type { PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 import { getStrategy } from '@/lib/strategies';
@@ -117,8 +117,12 @@ export function LiveNewInitiativeScreen() {
             keyboardType="numeric"
             placeholder="mis. 25 (Σ siblings = 100%, divalidasi saat aktivasi)"
           />
-          <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
-          <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
+          <DateRangeField
+            startValue={periodStart}
+            endValue={periodEnd}
+            onStartChange={setPeriodStart}
+            onEndChange={setPeriodEnd}
+          />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
         </SectionCard>
 
