@@ -361,6 +361,9 @@ export default function ChatRoomScreen() {
   const { readsByMessage } = useChatReads(safeRoomId);
   useChatReadsRealtime(safeRoomId);
   const [text, setText] = useState('');
+  // Selection dikontrol HANYA sesaat setelah sisip mention (pindah kursor ke akhir teks tersisip);
+  // di luar itu `undefined` agar TextInput bebas mengelola kursor sendiri saat user mengetik biasa.
+  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
   const [mentions, setMentions] = useState<MentionPick[]>([]);
   const [membersOpen, setMembersOpen] = useState(false);
   const [readsOpenFor, setReadsOpenFor] = useState<string | null>(null);
@@ -407,7 +410,10 @@ export default function ChatRoomScreen() {
 
   function handlePickMention(m: ChatMember) {
     const name = personLabel(m, '?');
-    setText((t) => applyMention(t, name));
+    const next = applyMention(text, name);
+    setText(next);
+    // applyMention selalu menyisip di UJUNG teks (lihat matchMentionQuery) → kursor ke next.length.
+    setSelection({ start: next.length, end: next.length });
     setMentions((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, name }]));
   }
 
@@ -484,6 +490,7 @@ export default function ChatRoomScreen() {
     try {
       await send(body, mentionIds, optimistic);
       setText('');
+      setSelection(undefined);
       setMentions([]);
     } catch (e) {
       setSendError(reportError('Kirim pesan', e, 'Gagal mengirim pesan.'));
@@ -614,7 +621,12 @@ export default function ChatRoomScreen() {
               placeholder="Tulis pesan…"
               placeholderTextColor={placeholderColor}
               value={text}
-              onChangeText={setText}
+              onChangeText={(t) => {
+                setText(t);
+                setSelection(undefined);
+              }}
+              selection={selection}
+              onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
               multiline
             />
             <SendButton disabled={composerDisabled} onPress={handleSend} />
