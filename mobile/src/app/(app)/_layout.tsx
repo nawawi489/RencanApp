@@ -1,6 +1,31 @@
-import { Redirect, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Redirect, Stack, router } from 'expo-router';
+import { Pressable } from 'react-native';
 
 import { useAuth } from '@/providers/auth-provider';
+
+// RN Web quirk: default Stack header omits back button when navigated via direct URL.
+// Force render sebuah custom back Pressable yang panggil router.back() jika bisa,
+// atau router.replace('/') sebagai fallback. Ukuran 44×44 patuh DESIGN.md §4 touch target.
+function HeaderBack() {
+  return (
+    <Pressable
+      onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+      accessibilityRole="button"
+      accessibilityLabel="Kembali"
+      style={({ pressed }) => ({
+        minHeight: 44,
+        minWidth: 44,
+        marginLeft: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <Ionicons name="chevron-back" size={26} color="#1564b3" />
+    </Pressable>
+  );
+}
 
 export default function AppLayout() {
   const { session } = useAuth();
@@ -10,7 +35,14 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        // Force back button visible di semua Stack.Screen dgn headerShown: true.
+        headerBackVisible: true,
+        headerLeft: () => <HeaderBack />,
+      }}
+    >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
       <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Rencana Aksi' }} />
