@@ -1,11 +1,11 @@
 import 'react-native-url-polyfill/auto';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 
 import type { Database } from './database.types';
 import { env } from './env';
+import { secureStorage } from './secure-storage';
 import { resolveSupabaseUrl } from './supabase-url';
 
 // CFG-01: web preview di localhost:8081 tidak boleh nge-abort request ke
@@ -15,7 +15,7 @@ const supabaseUrl = resolveSupabaseUrl(Platform.OS, env.supabaseUrl);
 
 export const supabase = createClient<Database>(supabaseUrl, env.supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: secureStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
