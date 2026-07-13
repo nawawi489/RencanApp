@@ -3,12 +3,12 @@ type: source
 tags: [tdd, plan, inbox, chat, reaction, v2, deferred]
 updated: 2026-07-13
 sources: 4
-status: draft-critic-perlu-perbaikan
+status: siap-eksekusi-v2-post-critic
 milestone: V2
 spec: specs/inbox-chat-reactions.md
 ---
 
-> **Ringkasan.** Rencana test-first untuk fitur "Reaction pill" (PRD §30.6). Spec kanon: [specs/inbox-chat-reactions.md](inbox-chat-reactions.md) (commit `bfa65a6`). Milestone build = **V2**. Verdict Critic: **perlu-perbaikan** — 17 concerns + 18 missing cases HARUS dialamatkan sebelum eksekusi TDD di V2 (lihat §10). Total delta test estimasi: +9 data, +11 hook, +13 UI + 11 blok SQL contract.
+> **Ringkasan.** Rencana test-first untuk fitur "Reaction pill" (PRD §30.6). Spec kanon: [specs/inbox-chat-reactions.md](inbox-chat-reactions.md) (commit `bfa65a6`). Milestone build = **V2**. Verdict Critic awal: perlu-perbaikan (17 concerns + 18 missing cases, arsip di §10) — **SEMUA 35 item telah diadjudikasi di §12 (revisi 2026-07-13)**; verdict pasca-revisi: **siap**. Total delta test final: +11 data, +12 hook, +17 UI (= 40 Jest) + 15 blok SQL contract. §8 telah dikoreksi in-place utk case #6/#10/#11; §12.3–12.6 memuat case tambahan; §12.2 memuat guard skor terenumerasi.
 
 Spec kanon: `specs/inbox-chat-reactions.md`. PRD ref: §30 komponen 6 "Reaction pill". Milestone: V2 (build dijadwalkan terpisah — rencana TDD ini menjadi input eksekusi).
 
@@ -30,18 +30,18 @@ Tambah reaksi emoji ringan (whitelist tertutup: 👍 ✅ 👀 🙏) di `MessageB
 
 | Layer | File | Fungsi |
 |---|---|---|
-| SQL contract | `supabase/tests/00XX_chat_message_reactions_contract.sql` | 11 blok DO $$ ... PASS/FAIL untuk DDL/RLS/RPC/anti-tamper/cascade/netralitas skor |
-| Data | `mobile/src/lib/__tests__/inbox.test.ts` | 9 case: RX-1 s/d RX-9 (RPC mapping, boolean pass-through, error identity, embed select, invarian keyset, pass-through reactions, short-circuit) |
-| Hooks | `mobile/src/hooks/__tests__/use-inbox.test.tsx` | 11 case: mapping `toggleReaction`, invalidation POSITIF `['chat-messages', roomId]`, NEG `['chat-rooms']` + `['notifications']`, error propagate, boolean pass-through, idempoten, isolasi roomId, `isTogglingReaction`, `useChatMessages` pass-through `reactions[]` |
-| UI | `mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx` | 13 case: zero-pill, count aggregation, reactedByMe, session=null guard, 44px inline style, non-color signal, tap → mutation, tap guard, error inline alert, ordering deterministik, skeleton path, highlight compat, self-react |
+| SQL contract | `supabase/tests/00XX_chat_message_reactions_contract.sql` | **15 blok** DO $$ ... PASS/FAIL (a-k direvisi §12.3 + l/m/n/o baru): DDL/RLS/RPC/anti-tamper residu/cascade sub-hop/netralitas skor k1+k2/seed exact-4/viewer read-vs-write/FK-only/revoke-execute |
+| Data | `mobile/src/lib/__tests__/inbox.test.ts` | **11 case**: RX-1 s/d RX-9 (§8.1) + RX-10 embed di halaman cursor>0 + RX-11 normalisasi null→[] (§12.4) |
+| Hooks | `mobile/src/hooks/__tests__/use-inbox.test.tsx` | **12 case**: 11 case §8.2 + HK-12 regresi invalidasi send() (§12.5) |
+| UI | `mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx` | **17 case**: 13 case §8.3 (case #6/#10/#11 dikoreksi in-place) + UI-14 pending-guard + UI-15 alert-clears + UI-16 label exact + UI-17 wiring per-item (§12.6) |
 
 ## 4. Urutan Langkah Red → Green → Refactor
 
 ### Fase A — SQL contract (server-first, di luar Jest; PSQL)
 Server-side invariant TIDAK BISA diuji di Jest — WAJIB kontrak SQL. Jalur eksekusi: `docker exec supabase_db_supabase psql -U postgres -f supabase/tests/00XX_chat_message_reactions_contract.sql` (pola `raise notice 'PASS n' / raise exception 'FAIL: ...'`).
 
-1. **Red-SQL** — tulis `supabase/tests/00XX_chat_message_reactions_contract.sql` (11 blok PASS/FAIL): (a) DDL tabel + PK/FK CASCADE, (b) RLS enable + policy SELECT, (c) revoke I/U/D, (d) RPC idempoten (dua toggle-on → 1 row), (e) validasi emoji-aktif hanya di INSERT, (f) delisted removable via DELETE, (g) cross-org 0 baris, (h) cascade hapus pesan/room/org/profil, (i) anti-tamper (user Y tak cabut reaksi user X), (j) tulis-langsung `.from().insert()/.delete()` gagal, (k) netralitas skor byte-identik + `pg_get_functiondef` guard statik tidak menyentuh `chat_message_reactions`.
-2. **Green-SQL** — tulis `supabase/migrations/00XX_chat_message_reactions.sql` sesuai §7.1–7.3 spec (verbatim). Jalankan contract → 11/11 PASS.
+1. **Red-SQL** — tulis `supabase/tests/00XX_chat_message_reactions_contract.sql` (**15 blok PASS/FAIL — daftar final di §12.3**): (a) DDL tabel + PK/FK CASCADE, (b) RLS enable + policy SELECT, (c) revoke I/U/D, (d) RPC idempoten [+komentar C8/C14], (e)+(f) validasi emoji-aktif hanya INSERT + delisted removable [+flip run-time M9], (g) cross-org 0 baris [blok eksplisit M7], (h) cascade 5 sub-hop [C13/M5], (i) anti-tamper + residu positif [C9/M4], (j) tulis-langsung gagal, (k) netralitas skor k1 statik-terenumerasi + k2 operasional [C2/M6 — SQL di §12.2], (l) seed exact-4 + policy + revoke `reaction_emojis` [C7/M1], (m) workspace-viewer read-vs-write [C6/M2], (n) FK-only 23503 [C10/M3], (o) revoke execute anon RPC [M8].
+2. **Green-SQL** — tulis `supabase/migrations/00XX_chat_message_reactions.sql` sesuai §7.1–7.3 spec (verbatim). Jalankan contract → **15/15 PASS**.
 
 ### Fase B — Data layer (Jest)
 
@@ -50,9 +50,10 @@ Server-side invariant TIDAK BISA diuji di Jest — WAJIB kontrak SQL. Jalur ekse
 5. **Green-Data** — Di `mobile/src/lib/inbox.ts`:
    - Tambah `export type ChatReaction = { emoji: string; reactor_id: string }`.
    - Perluas `ChatMessage` dengan `reactions?: ChatReaction[]`.
-   - Ubah `select()` di `listChatMessages` menjadi `'id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id)'` — **tanpa** mengubah top-level `.eq('chat_room_id', roomId)` dan **tanpa** menyentuh string di `.or()` cursor.
+   - Ubah `select()` di `listChatMessages` menjadi `'id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id)'` — **tanpa** mengubah top-level `.eq('chat_room_id', roomId)` dan **tanpa** menyentuh string di `.or()` cursor. Embed berlaku di SEMUA halaman termasuk cursor>0 (RX-10).
+   - Normalisasi di mapping baris: `reactions: row.reactions ?? []` (D14/RX-11 — PostgREST bisa mengembalikan `null` utk embed kosong).
    - Tambah `export async function toggleChatReaction(messageId, emoji): Promise<boolean>` = thin caller `supabase.rpc('toggle_chat_reaction', { p_message: messageId, p_emoji: emoji })` dengan `if (error) throw error; return data as boolean;`.
-   - Update `mobile/src/lib/database.types.ts`: sisipkan Row/Insert/Update/Relationships `reaction_emojis` + `chat_message_reactions`, dan entri `Functions.toggle_chat_reaction: { Args: { p_message: string; p_emoji: string }; Returns: boolean }`.
+   - Update `mobile/src/lib/database.types.ts`: sisipkan Row/Insert/Update/Relationships `reaction_emojis` + `chat_message_reactions`, dan entri `Functions.toggle_chat_reaction: { Args: { p_message: string; p_emoji: string }; Returns: boolean }`. **Struktur `Relationships` WAJIB mirror pola `chat_message_reads` (L695+: `foreignKeyName`/`columns`/`isOneToOne`/`referencedRelation`/`referencedColumns`)** — jalankan `supabase gen types typescript` bila memungkinkan; verifikasi resolusi relasi runtime via HTTP contract mini (§12.5) karena `tsc` hijau ≠ embed ter-resolve (C16/M18).
 6. **Refactor-Data** — Jalankan `npm test -- inbox.test.ts` + `npm run type-check` → hijau. Verifikasi string `.select()` tidak diduplikasi (extract konstanta bila muncul di banyak tempat — saat ini hanya sekali di `listChatMessages`, jadi ekstraksi belum diperlukan).
 
 ### Fase C — Hook layer (Jest)
@@ -61,6 +62,7 @@ Server-side invariant TIDAK BISA diuji di Jest — WAJIB kontrak SQL. Jalur ekse
    - Mock `@/lib/inbox` dengan `toggleChatReaction: (...a) => mockToggleChatReaction(...a)`.
    - 8 tes `useChatActions.toggleReaction`: (i) mapping args, (ii) POS invalidate `['chat-messages', roomId]`, (iii) NEG `['chat-rooms']`, (iv) NEG `['notifications']`, (v) boolean pass-through, (vi) error propagate + no-invalidate, (vii) dua panggilan → 2× invalidate, (viii) isolasi `roomId` param, (ix) `isTogglingReaction` pending true→false.
    - 2 tes `useChatMessages` pass-through `reactions[]` (dengan & tanpa embed).
+   - +1 tes HK-12 (M11, §12.5): regresi `send()` tetap invalidate `['chat-messages',roomId]` + `['chat-rooms']` — safety net agar penambahan `toggleReactionM` tidak mencabut invalidasi existing (`use-inbox.ts` L85-86).
 8. **Green-Hook** — Di `mobile/src/hooks/use-inbox.ts` perluas `useChatActions(roomId)`:
    ```ts
    const toggleReactionM = useMutation({
@@ -83,17 +85,19 @@ Server-side invariant TIDAK BISA diuji di Jest — WAJIB kontrak SQL. Jalur ekse
 10. **Prasyarat token** — Update `DESIGN.md §7` menambah entri "Reaction pill" (unselected vs selected, sinyal non-warna via border+checkmark ✓, ≥44px, solid+putih = `brand-dark #1564b3`). Update `mobile/src/global.css` bila token warna baru diperlukan. Tanpa langkah ini, layer UI **tidak boleh dimulai** (FR-RX-0.3, FR-RX-4.4).
 11. **Red-UI** — Extend `mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx`:
     - Perluas `makeChatMessagesState` supaya messages boleh membawa `reactions: [{emoji, reactor_id}]`.
-    - Perluas mock `useChatActions` dengan `toggleReaction: mockToggleReaction, isTogglingReaction: false`.
-    - Suite `ChatRoomScreen — Reaction pill (FR-RX-4.x)` berisi 13 case (lihat tabel di §3). Semua merah — pill sub-komponen belum ada.
+    - Perluas mock `useChatActions` bentuk **LAZY** (revisi C3, §12.6): `let mockIsTogglingReaction = false;` module-scope, dibaca di body factory — BUKAN literal `isTogglingReaction: false` (yang membuat pending-guard UI-14 tak teruji). Reset di `beforeEach`.
+    - Suite `ChatRoomScreen — Reaction pill (FR-RX-4.x)` berisi **17 case**: 13 case §8.3 (case #6/#10/#11 sudah dikoreksi in-place) + UI-14..17 (§12.6). Semua merah — pill sub-komponen belum ada.
 12. **Green-UI** — Di `mobile/src/app/(app)/inbox/[roomId].tsx`:
     - Tambah sub-komponen inline `ReactionPill` (Pressable dengan `style={{ minWidth: 44, minHeight: 44 }}` inline numeric — pola `SendButton` L110-124; `accessibilityRole="button"`, `accessibilityState={{ selected: reactedByMe }}`, `accessibilityLabel="Reaksi {emoji}, {count}, {saya sudah bereaksi|belum bereaksi}"`; selected menampilkan child `<Text>✓</Text>` + class `border-2` sebagai sinyal non-warna).
-    - Tambah `ReactionPillRow` yang meng-aggregate `reactions` menjadi Map<emoji, {count, reactedByMe}> dengan urutan first-seen, kemudian render deret `<ReactionPill />`. Return `null` bila `reactions?.length` falsy.
+    - Tambah `ReactionPillRow` yang meng-aggregate `reactions` menjadi Map<emoji, {count, reactedByMe}> lalu **sort by konstanta `REACTION_EMOJI_ORDER = ['👍','✅','👀','🙏']`** (D13 §12.7 — BUKAN first-seen; emoji tak dikenal di-append by codepoint), kemudian render deret `<ReactionPill />`. Return `null` bila `reactions?.length` falsy.
     - Sisipkan `<ReactionPillRow />` di dalam `MessageBubble` di bawah body bubble, di dalam sel bubble (agar highlight border amber tetap membungkus).
     - Ambil `currentUserId = useAuth().session?.user?.id ?? null`. Handler press pill:
       ```ts
       const onPress = async () => {
         if (!currentUserId || isTogglingReaction) return;
-        try { await toggleReaction(m.id, emoji); }
+        try { await toggleReaction(m.id, emoji);
+              setReactionError(null);              // M14: sukses membersihkan alert lama
+        }
         catch (e) { reportError('Reaksi', e, 'Gagal memperbarui reaksi.');
                     setReactionError('Gagal memperbarui reaksi.'); }
       };
@@ -108,7 +112,7 @@ Server-side invariant TIDAK BISA diuji di Jest — WAJIB kontrak SQL. Jalur ekse
     - `roomId.timeline.test.ts` (buildTimelineItems netral terhadap reactions field).
     - `roomId.search-highlight.test.tsx` (pesan highlight tetap render pill bila punya reactions).
     - Data-layer keyset tests (`inbox.test.ts` RX-6/RX-7 memastikan `.eq('chat_room_id')` top-level).
-15. **Netralitas skor** — Verifikasi (SQL contract §k) bahwa `pg_get_functiondef` semua fungsi skor tidak memuat substring `chat_message_reactions`.
+15. **Netralitas skor** — Verifikasi SQL contract blok k1 (guard statik terenumerasi — daftar nama fungsi NYATA di §12.2, BUKAN pattern `calculate_score_*`/`ilike '%score%'` yang meleset) + blok k2 (uji operasional `calculate_period_scores` pre/post reaksi byte-identik).
 
 ## 5. Strategi Mocking per Layer
 
@@ -139,7 +143,7 @@ Server-side invariant TIDAK BISA diuji di Jest — WAJIB kontrak SQL. Jalur ekse
 - Mock top-level yang sudah ada di file (jangan ubah struktur, hanya extend):
   - `jest.mock('@/lib/supabase', () => ({ supabase: {} }))` — mem-block native supabase-js import.
   - `jest.mock('expo-router', ...)` untuk `useLocalSearchParams`, `useRouter`, `router.setParams`.
-  - `jest.mock('@/hooks/use-inbox', () => ({ useChatMessages: mockUseChatMessages, useChatActions: mockUseChatActions, ... }))` — perluas return `useChatActions` dengan `toggleReaction: mockToggleReaction, isTogglingReaction: false`.
+  - `jest.mock('@/hooks/use-inbox', ...)` — perluas return `useChatActions` dengan `toggleReaction: (...a) => mockToggleReaction(...a)` dan `isTogglingReaction: mockIsTogglingReaction` di mana `let mockIsTogglingReaction = false;` module-scope dibaca **lazy** di body factory (revisi C3 — snippet lengkap di §12.6; pola sama `mockIsSending` existing L28-32). Literal `false` membuat UI-14 pending-guard tak bisa diuji.
   - `jest.mock('@/providers/auth-provider', () => ({ useAuth: () => ({ session: mockSession }) }))` — `mockSession` mutable di top-level, dibaca lazy dalam factory. Set ke `null` untuk case guard session.
   - `jest.mock('@/lib/errors', () => ({ reportError: mockReportError, surfaceServerError: (...a) => ... }))` untuk verifikasi tanpa efek samping global.
 - Extend `makeChatMessagesState({ messages, ... })` — cukup terima override `messages` yang membawa `reactions?: [{emoji, reactor_id}]`. Backward-compatible; tes lama tidak berubah.
@@ -165,15 +169,19 @@ Server-side invariant TIDAK BISA diuji di Jest — WAJIB kontrak SQL. Jalur ekse
 - **Keyset regression**: menambah embed di `.select()` string TIDAK boleh menyentuh `.or()` cursor atau memindahkan `.eq('chat_room_id')`. Tes RX-7 mengunci ini.
 - **UI menyentuh pill sebelum token turun**: jangan mulai Fase D tanpa `DESIGN.md §7` + `global.css`; SQL contract + data layer + hook boleh dulu jalan.
 - **Cross-org p_message_id gap**: RPC harus derive `organization_id` dari `chat_messages`, bukan dari klien. RLS `organization_id = current_user_org()` menambal lapis kedua. Contract test §g uji cross-org 0 baris.
-- **Realtime channel**: fitur ini invalidation-only. Bila kelak realtime channel dipasang, JANGAN broadcast reaksi ke tabel `chat_messages`; pakai channel terpisah agar tidak meletup di listener chat existing.
-- **Session=null race**: guard `!currentUserId || isTogglingReaction` di handler press wajib — tes UI case #4 dan #8 menutup ini.
-- **Netralitas skor tersembunyi**: kalau ada view/materialized view baru yang lupa diaudit, guard statik `pg_get_functiondef` bisa lolos. Tambahkan check untuk `pg_get_viewdef` pada view skor bila proyek memilikinya.
+- **Realtime channel** *(C17 — risk kondisional)*: fitur ini invalidation-only. Bila fitur reaksi mendarat SESUDAH branch chat-polish (migrasi 0052, realtime) merge: JANGAN broadcast reaksi lewat channel `chat_messages`; pakai channel terpisah, dan tambahkan contract test "publikasi realtime `chat_message_reactions` netral/terpisah". Bukan gate DoD branch ini.
+- **Session=null race**: guard `!currentUserId || isTogglingReaction` di handler press wajib — tes UI case #4, #8, dan UI-14 (§12.6) menutup ini.
+- **Netralitas skor tersembunyi**: kalau ada view/materialized view baru yang lupa diaudit, guard statik `pg_get_functiondef` bisa lolos. Tambahkan check untuk `pg_get_viewdef` pada view skor bila proyek memilikinya. Guard k1 memakai enumerasi eksplisit (§12.2) — fungsi skor BARU wajib ditambahkan ke daftar oleh reviewer.
+- **Ordering pill flaky di kontrak nyata** *(C5/D13 — accepted via keputusan)*: urutan baris embed PostgREST tanpa `order` TIDAK dijamin. Aggregator sort by konstanta `REACTION_EMOJI_ORDER`; jangan pernah assert first-seen/urutan server.
+- **Uji concurrency ≠ concurrency riil** *(C8 — accepted limitation)*: blok (d) menguji idempotensi sekuensial; race INSERT-INSERT ditutup `ON CONFLICT DO NOTHING` by construction. Uji dua-sesi paralel = opsional, bukan gate.
+- **Semantik return saat race** *(C14 — accepted, dicatat)*: toggle-on kedua yang conflict tetap return `true` (konsisten state akhir, bukan bukti baris tercipta). Perilaku spec §7.3; JANGAN "diperbaiki" tanpa amandemen spec.
 
-## 7. Definition of Done
+## 7. Definition of Done (final pasca-revisi §12)
 
-- SQL contract 11/11 PASS via `psql` sebagai owner.
-- `npm test` hijau (delta: +9 case data, +11 case hook, +13 case UI, total ~1201/1201).
-- `npm run type-check` hijau (setelah `database.types.ts` diperbarui).
+- SQL contract **15/15 PASS** via `psql` sebagai owner (blok a-o, daftar final §12.3; guard skor k1 terenumerasi + k2 operasional §12.2).
+- `npm test` hijau (delta: **+11 data, +12 hook, +17 UI = +40 case**).
+- `npm run type-check` hijau (setelah `database.types.ts` diperbarui, struktur Relationships mirror `chat_message_reads`).
+- HTTP contract mini resolusi embed (§12.5): GET `chat_messages?select=id,reactions:chat_message_reactions(...)` → 200, bukan "Could not find relationship".
 - Semua 25 AC di spec §9 tervalidasi (SQL menutup AC 2-6, 10-17, 20-21, 24; data layer menutup 10, 12, 22; hook menutup 22-23; UI menutup 7-9, 18-19, 22-24).
 - Token "Reaction pill" tercatat di `DESIGN.md §7` + `mobile/src/global.css`.
 - Tidak ada file di `mobile/src/lib` (di luar `inbox.ts` + `database.types.ts`) yang merefer `chat_message_reactions` (grep guard) — invarian netralitas skor.
@@ -394,9 +402,9 @@ Tabel di §3 hanya mendaftarkan jumlah. Berikut kontrak arrange/act/assert masin
 
 - **Target:** ReactionPill selected menambahkan sinyal non-warna (a11y §4)
 - **Arrange:** `makeChatMessagesState({ messages: [{ id: 'm1', ..., reactions: [{ emoji: '👍', reactor_id: 'me' }] }] }). mockSession user 'me'.`
-- **Act:** `const pill = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/); const cn = String(pill.props.className ?? ''); const hasCheck = within(pill).queryByText('✓') !== null;`
-- **Assert:** `expect(pill.props.accessibilityState.selected).toBe(true); expect(hasCheck || /border(-2|-)/.test(cn)).toBe(true);`
-- **Why red:** Belum ada styling selected; assertion selected/border/checkmark semua akan gagal karena pill tidak dirender.
+- **Act:** `const pill = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/); const flat = Array.isArray(pill.props.style) ? Object.assign({}, ...pill.props.style.filter(Boolean)) : (pill.props.style ?? {}); const hasCheck = within(pill).queryByText('✓') !== null;`
+- **Assert:** `expect(pill.props.accessibilityState.selected).toBe(true); expect(hasCheck || (flat.borderWidth ?? 0) >= 2).toBe(true);`
+- **Why red:** Belum ada styling selected; assertion selected/border/checkmark semua akan gagal karena pill tidak dirender. *(Revisi C4: JANGAN assert `props.className` — komponen diimpor dari `react-native-css/components` yang men-transform className ke style; assert child `✓` atau `flat.borderWidth >= 2`.)*
 
 #### ChatRoomScreen — Reaction pill (FR-RX-4.x) > tap pill memanggil toggleReaction(messageId, emoji)
 
@@ -424,19 +432,19 @@ Tabel di §3 hanya mendaftarkan jumlah. Berikut kontrak arrange/act/assert masin
 
 #### ChatRoomScreen — Reaction pill (FR-RX-4.x) > multi-emoji ordering stabil (deterministik)
 
-- **Target:** Sortir pill deterministik (mis. by first-seen order dari reactions[])
-- **Arrange:** `messages: [{ id: 'm1', ..., reactions: [{ emoji: '✅', reactor_id: 'a' }, { emoji: '👍', reactor_id: 'a' }, { emoji: '👀', reactor_id: 'b' }] }].`
+- **Target:** Sortir pill deterministik via konstanta tetap `REACTION_EMOJI_ORDER = ['👍','✅','👀','🙏']` (keputusan D13 — lihat §12), BUKAN first-seen order dari reactions[]
+- **Arrange:** `messages: [{ id: 'm1', ..., reactions: [{ emoji: '✅', reactor_id: 'a' }, { emoji: '👍', reactor_id: 'a' }, { emoji: '👀', reactor_id: 'b' }] }] — sengaja input TIDAK berurut konstanta.`
 - **Act:** `const pills = await screen.findAllByLabelText(/^Reaksi /); const labels = pills.map(p => String(p.props.accessibilityLabel));`
-- **Assert:** `expect(labels.length).toBe(3); expect(labels[0]).toMatch(/✅/); expect(labels[1]).toMatch(/👍/); expect(labels[2]).toMatch(/👀/);`
-- **Why red:** Belum ada implementasi urutan pill; render awal tidak menampilkan pill sama sekali.
+- **Assert:** `expect(labels.length).toBe(3); expect(labels[0]).toMatch(/👍/); expect(labels[1]).toMatch(/✅/); expect(labels[2]).toMatch(/👀/); // urut konstanta, bukan urut input`
+- **Why red:** Belum ada implementasi urutan pill; render awal tidak menampilkan pill sama sekali. *(Revisi C5: first-seen order bergantung urutan baris embed PostgREST yang TIDAK dijamin server → flaky di kontrak nyata. Aggregator WAJIB sort by konstanta tetap; emoji tak dikenal (penambahan seed masa depan) di-append by codepoint.)*
 
 #### ChatRoomScreen — Reaction pill (FR-RX-4.x) > isLoading tidak merender pill (skeleton path)
 
 - **Target:** Path SkeletonList vs list utama
 - **Arrange:** `mockUseChatMessages return state via makeChatMessagesState({ isLoading: true, messages: [] }).`
-- **Act:** `await screen.findByTestId('chat-list'); const pill = screen.queryByLabelText(/^Reaksi /);`
-- **Assert:** `expect(pill).toBeNull();`
-- **Why red:** Setelah pill diperkenalkan, ada risiko bocor ke path skeleton bila komponen render pill di luar branch messages; test ini mengunci scope.
+- **Act:** `await screen.findByLabelText('Memuat…'); const pill = screen.queryByLabelText(/^Reaksi /); const list = screen.queryByTestId('chat-list');`
+- **Assert:** `expect(pill).toBeNull(); expect(list).toBeNull();`
+- **Why red:** Setelah pill diperkenalkan, ada risiko bocor ke path skeleton bila komponen render pill di luar branch messages; test ini mengunci scope. *(Revisi C1/M16: saat `isLoading=true`, `[roomId].tsx` L205-206 merender `<SkeletonList count={4}/>` (accessibilityLabel `'Memuat…'`, ui.tsx L403) dan FlatList `testID='chat-list'` TIDAK dirender — `findByTestId('chat-list')` versi lama akan timeout dengan pesan salah arah.)*
 
 #### ChatRoomScreen — Reaction pill (FR-RX-4.x) > compat highlight — bubble ter-highlight tetap render pill
 
@@ -458,6 +466,8 @@ Tabel di §3 hanya mendaftarkan jumlah. Berikut kontrak arrange/act/assert masin
 
 ## 9. Urutan Langkah Terinci (Red → Green → Refactor)
 
+> **[ARSIP — output workflow asli.]** Tabel ini menyebut "11 blok"/"13 case" versi pra-revisi. Angka dan konten final = §4 (sudah dikoreksi) + §12. Gunakan tabel ini hanya untuk urutan/tipe langkah, bukan untuk daftar blok/case.
+
 | # | Type | Deskripsi | Files | Tes referensi |
 |---|------|-----------|-------|---------------|
 | 1 | red | Fase A/Red-SQL — tulis 11 blok PASS/FAIL kontrak SQL: DDL+PK/FK CASCADE, RLS+policy SELECT, revoke I/U/D, RPC idempoten (dua toggle-on → 1 row), validasi emoji-aktif hanya INSERT, delisted removable via DELETE, cross-org 0 baris, cascade hapus pesan/room/org/profil, anti-tamper (Y tak cabut reaksi X), tulis-langsung ditolak, netralitas skor byte-identik + guard statik pg_get_functiondef. Nomor file reconcile HEAD (00XX). | `supabase/tests/00XX_chat_message_reactions_contract.sql` | SQL contract 11 blok (behaviors §13 spec) |
@@ -478,9 +488,9 @@ Tabel di §3 hanya mendaftarkan jumlah. Berikut kontrak arrange/act/assert masin
 
 ---
 
-## 10. Audit Critic (verdict: **perlu-perbaikan**)
+## 10. Audit Critic (verdict awal: perlu-perbaikan — **SEMUA ITEM DIADJUDIKASI, lihat §12**)
 
-> Sub-agent audit menemukan **17 concerns** + **18 missing cases**. Rencana ini **tidak boleh dieksekusi langsung** — perbaiki dulu poin-poin di bawah, atau catat penerimaan risiko per item. Semua concerns bersifat pointer ke bug potensial di RENCANA (bukan kode produksi), sehingga fix-nya = edit rencana ini + sub-file test yang bersangkutan sebelum menyentuh kode.
+> **[ARSIP — sudah ditindaklanjuti 2026-07-13.]** Sub-agent audit menemukan **17 concerns** + **18 missing cases**. Setiap item kini punya disposisi final di §12.1 (FIX / ACCEPT-LIMITATION / DECISION); case §8 yang salah telah dikoreksi in-place; case baru ada di §12.3–12.6. Daftar di bawah dipertahankan verbatim sebagai jejak audit — JANGAN kerjakan ulang dari sini; kerjakan dari §12.
 
 ### 10.1 Concerns (17)
 
@@ -560,6 +570,155 @@ Tabel di §3 hanya mendaftarkan jumlah. Berikut kontrak arrange/act/assert masin
 
 ## 11. Handoff
 
-- **Data structured:** [inbox-chat-reactions-tdd-handoff.json](inbox-chat-reactions-tdd-handoff.json) — full JSON hasil workflow (map / tests / plan / critic).
+- **Data structured:** [inbox-chat-reactions-tdd-handoff.json](inbox-chat-reactions-tdd-handoff.json) — full JSON hasil workflow (map / tests / plan / critic). *Catatan: JSON adalah snapshot PRA-revisi; §12 di bawah adalah otoritas final untuk semua item yang direvisi.*
 - **Spec kanon:** [inbox-chat-reactions.md](inbox-chat-reactions.md).
-- **Ketika V2 dijadwalkan:** buka rencana ini dulu, address 17 concerns + 18 missing cases, sinkronkan nomor migrasi ke `HEAD_max+1`, konfirmasi token DESIGN sebelum Fase D.
+- **Ketika V2 dijadwalkan:** semua 35 item critic SUDAH diadjudikasi (§12) — eksekusi mengikuti §4 + §8 (yang telah dikoreksi in-place) + §12.3–12.6 (case tambahan). Sisa prasyarat: nomor migrasi reconcile ke `HEAD_max+1`, token DESIGN sebelum Fase D.
+
+---
+
+## 12. Revisi Post-Critic (2026-07-13) — semua 35 item diadjudikasi
+
+Verifikasi codebase dilakukan sebelum adjudikasi: klaim C1 (skeleton path, `[roomId].tsx` L205-221 + `ui.tsx` L403), C2 (nama fungsi skor via grep migrasi 0013/0020/0039), C3 (mock statis `[roomId].test.tsx` L32), C4 (import `react-native-css/components`), M11 (invalidasi `send()` di `use-inbox.ts` L85-86), C16/M18 (struktur Relationships `chat_message_reads` L695+) — **semua terbukti akurat**. Tidak ada item yang ditolak karena salah faktual.
+
+### 12.1 Tabel disposisi
+
+| Item | Disposisi | Tindakan |
+|------|-----------|----------|
+| C1 + M16 | **FIX** | UI case #11 dikoreksi in-place di §8.3 (assert `findByLabelText('Memuat…')` + `queryByTestId('chat-list')` null) |
+| C2 | **FIX** | Guard skor pakai enumerasi eksplisit nama fungsi nyata — lihat §12.2 |
+| C3 | **FIX** | Mock `isTogglingReaction` WAJIB lazy: `let mockIsTogglingReaction = false;` module-scope, dibaca di body factory (`useChatActions: () => ({ ..., isTogglingReaction: mockIsTogglingReaction })`) — pola sama dgn `mockIsSending` existing L28-32 |
+| C4 | **FIX** | UI case #6 dikoreksi in-place di §8.3 (assert `flat.borderWidth >= 2` atau child `✓`, JANGAN `props.className`) |
+| C5 | **DECISION D13** | Ordering pill = konstanta client-side tetap — lihat §12.7; UI case #10 dikoreksi in-place |
+| C6 + M2 | **FIX** | Blok SQL baru (m): workspace-viewer read-vs-write — lihat §12.3 |
+| C7 + M1 | **FIX** | Blok SQL baru (l): seed exact-4 + policy + revoke `reaction_emojis` — lihat §12.3 |
+| C8 | **ACCEPT-LIMITATION** | Uji "dua panggilan berurutan" = uji idempotensi, BUKAN concurrency riil. Race INSERT-INSERT ditutup `ON CONFLICT DO NOTHING` by construction. Uji dua-sesi paralel (dua koneksi psql + BEGIN/COMMIT interleaved) dicatat sebagai OPSIONAL — tidak menjadi gate DoD |
+| C9 + M4 | **FIX** | Blok (i) anti-tamper diperluas dgn residu positif (a)-(d) — lihat §12.3 |
+| C10 + M3 | **FIX** | Blok SQL baru (n): FK-only 23503 — lihat §12.3 |
+| C11 + M13 | **FIX** | UI case baru #14: pending-guard — lihat §12.6 |
+| C12 | **FIX** | `why_red` RX-8 ditambah: fixture literal dgn `reactions` juga MERAH-TIPE di `tsc` sebelum `ChatMessage.reactions?` ditambahkan — type-red adalah bagian sah fase Red |
+| C13 + M5 | **FIX** | Blok (h) cascade diperluas sub-hop (i)-(v) — lihat §12.3 |
+| C14 | **ACCEPT + CATAT** | Race dua device toggle-on: device kedua `INSERT ON CONFLICT DO NOTHING` (0 baris) tetap return `true` — konsisten dgn state akhir tapi bukan bukti baris tercipta. Sesuai spec §7.3 verbatim; BUKAN bug. Blok (d) diberi komentar test agar perilaku ini tak dianggap regresi kelak. Perubahan semantik return = perubahan spec, di luar mandat revisi ini |
+| C15 | **CATAT** | UI case #5 sudah menerima kedua bentuk style (object/array). Green-UI WAJIB tetap inline numeric `{ minWidth: 44, minHeight: 44 }` — jangan diganti class Tailwind (`min-w-11`) karena flatten NativeWind tak deterministik di jest (risk §6 tetap berlaku) |
+| C16 + M18 | **FIX** | Step Green-Data ditambah sub-step: struktur `Relationships` `chat_message_reactions` WAJIB mirror pola `chat_message_reads` (`database.types.ts` L695+: `foreignKeyName`/`columns`/`isOneToOne`/`referencedRelation`/`referencedColumns`); jalankan `supabase gen types typescript` bila memungkinkan; verifikasi runtime embed via HTTP contract kecil (lihat §12.5 catatan) |
+| C17 | **RISK-NOTE KONDISIONAL** | Branch ini belum punya realtime chat. JIKA fitur reaksi mendarat SESUDAH branch chat-polish (migrasi 0052, realtime) merge: tambahkan contract test "publikasi realtime `chat_message_reactions` tidak lewat channel `chat_messages`". Dicatat di §6 risiko; bukan gate DoD branch ini |
+| M6 | **FIX** | Blok (k) netralitas skor diperluas: uji OPERASIONAL `calculate_period_scores` pre/post reaksi byte-identik, bukan hanya guard statik — lihat §12.2 |
+| M7 | **FIX** | Blok (g) cross-org dieksplisitkan sebagai blok DO $$ sendiri — lihat §12.3 |
+| M8 | **FIX** | Blok SQL baru (o): revoke execute anon/public pada RPC — lihat §12.3 |
+| M9 | **FIX** | Blok (e)/(f) delisted diperluas: flip `active=false` run-time → INSERT ditolak, DELETE lama tetap jalan — lihat §12.3 |
+| M10 | **FIX** | Data case baru RX-10: embed bertahan di halaman cursor>0 — lihat §12.4 |
+| M11 | **FIX** | Hook case baru: regresi `send()` tetap invalidate `['chat-messages',roomId]` + `['chat-rooms']` (terverifikasi `use-inbox.ts` L85-86) — lihat §12.5 |
+| M12 | **DECISION D14** | Normalisasi `null → []` di data layer — lihat §12.7; data case baru RX-11 |
+| M14 | **FIX** | UI case baru #15: alert clears setelah sukses berikutnya — lihat §12.6 |
+| M15 | **FIX** | UI case baru #16: `accessibilityLabel` exact copy dgn digit — lihat §12.6 |
+| M17 | **FIX** | UI case baru #17: wiring per-item dua bubble — lihat §12.6 |
+
+### 12.2 Koreksi guard netralitas skor (menggantikan blok (k) lama)
+
+Nama fungsi skor NYATA di repo (grep `create or replace function` di `0013_fase7_people_score.sql`, `0020_fase_sf1_score_formula_editor.sql`, `0039_fase7_cross_org_isolation.sql`):
+`calculate_period_scores`, `open_period_snapshot`, `close_period_snapshot`, `override_user_score`, `compute_governance_discipline`, `compute_review_pass_rate`, `aggregate_repeat_metrics_per_user`, `compute_action_plan_completion`, `compute_development_contribution`, `upsert_score_formula_version`, `activate_score_formula_version`, `assign_score_formula`, `create_score_formula_draft`, `update_score_formula_version_weights`, `tg_score_formula_immutable_columns`.
+
+Blok (k) final — dua bagian:
+
+```sql
+-- (k1) Guard statik: tak satu pun fungsi skor menyentuh chat_message_reactions
+do $$
+declare v_bad text;
+begin
+  select string_agg(proname, ', ') into v_bad
+  from pg_proc
+  where pronamespace = 'public'::regnamespace
+    and proname in (
+      'calculate_period_scores','open_period_snapshot','close_period_snapshot',
+      'override_user_score','compute_governance_discipline','compute_review_pass_rate',
+      'aggregate_repeat_metrics_per_user','compute_action_plan_completion',
+      'compute_development_contribution','upsert_score_formula_version',
+      'activate_score_formula_version','assign_score_formula',
+      'create_score_formula_draft','update_score_formula_version_weights')
+    and position('chat_message_reactions' in pg_get_functiondef(oid)) > 0;
+  if v_bad is not null then
+    raise exception 'FAIL k1: fungsi skor menyentuh chat_message_reactions: %', v_bad;
+  end if;
+  raise notice 'PASS k1: guard statik netralitas skor';
+end $$;
+```
+
+```sql
+-- (k2) Uji operasional (M6): recompute byte-identik pre/post reaksi
+-- (a) jalankan calculate_period_scores(p_period) → snapshot period_user_scores ke temp table
+-- (b) tambah N reaksi lintas user pada pesan dalam periode aktif via toggle_chat_reaction
+-- (c) jalankan ulang calculate_period_scores(p_period)
+-- (d) assert: SELECT count(*) FROM (snapshot EXCEPT SELECT ... FROM period_user_scores) = 0
+--     dan sebaliknya (symmetric difference kosong) → skor identik pre/post.
+```
+
+Enumerasi eksplisit dipilih atas pattern `ilike` supaya penambahan fungsi skor baru yang tak ter-enumerasi memicu diskusi sadar (reviewer wajib menambah nama ke daftar), bukan lolos diam-diam.
+
+### 12.3 Blok kontrak SQL — final 15 blok
+
+Blok (a)-(k) tetap seperti §4 step 1 dengan ekspansi berikut; blok (l)-(o) baru:
+
+- **(d) diperluas [C8/C14]:** dua toggle-on berurutan user sama → `count(*)=1`, tanpa 23505. KOMENTAR WAJIB di test: "uji idempotensi sekuensial, bukan concurrency dua-sesi; race INSERT-INSERT ditutup ON CONFLICT by construction; return `true` pada INSERT-yang-conflict adalah perilaku spec §7.3, bukan regresi."
+- **(e/f) diperluas [M9]:** skenario run-time flip — `update reaction_emojis set active=false where emoji='👀'` → (i) member yang BELUM bereaksi 👀 memanggil toggle → raise 'Emoji tidak didukung.'; (ii) member dengan reaksi 👀 lama memanggil toggle → DELETE sukses return false (delisted tetap removable).
+- **(g) dieksplisitkan [M7]:** blok DO $$ sendiri — user org A, `p_message` = pesan org B → RPC raise via `is_chat_member` (A bukan member room B); assert `count(*)=0` di `chat_message_reactions` untuk (msg_B, user_A, *).
+- **(h) diperluas [C13/M5] — 5 sub-assert:** (i) DELETE pesan M → reaksi (M,\*,\*) hilang; (ii) DELETE room R → reaksi hilang double-hop via chat_messages; (iii) DELETE profiles X → reaksi (\*,X,\*) hilang; (iv) DELETE organizations O → reaksi org O hilang; (v) row_count `chat_messages` pre/post penambahan reaksi identik (immutability — reaksi tidak meng-UPDATE pesan).
+- **(i) diperluas [C9/M4] — residu positif:** X toggle-on 👍 di M; Y toggle-on 👍 di M → assert (a) baris (M,X,👍) MASIH ADA, (b) baris (M,Y,👍) tercipta, (c) `count(*)=2` (bukti PK multi-reactor per emoji, D11), (d) Y toggle lagi → hanya (M,Y,👍) hilang, (M,X,👍) utuh.
+- **(k) diganti [C2/M6]:** dua bagian k1+k2 — lihat §12.2.
+- **(l) BARU [C7/M1]:** `reaction_emojis` — (i) seed aktif TEPAT `{'👍','✅','👀','🙏'}`: `select count(*)=4 from reaction_emojis where active` DAN `count(*)=0 where active and emoji not in (4 itu)`; (ii) SELECT sebagai authenticated berhasil; (iii) INSERT/UPDATE/DELETE sebagai authenticated gagal (revoke).
+- **(m) BARU [C6/M2]:** workspace-viewer non-member (`can_view_workspace()=true AND is_chat_member(room)=false`) — (i) SELECT baris `chat_message_reactions` room itu → berhasil (baris terlihat); (ii) `toggle_chat_reaction` → raise 'Hanya anggota room yang dapat memberi reaksi.', 0 baris tertulis. Dua blok DO $$ terpisah.
+- **(n) BARU [C10/M3]:** FK-only whitelist — INSERT langsung (context superuser/definer test) dgn `emoji='🚀'` yang tak ada di `reaction_emojis` → gagal `23503` foreign_key_violation. Independen dari validasi `active` di body RPC.
+- **(o) BARU [M8]:** `set local role anon; select toggle_chat_reaction(...)` → permission denied; `set local role authenticated` + member → berhasil. Membuktikan grant/revoke execute RPC hidup, bukan hanya terdeklarasi.
+
+### 12.4 Data layer — 2 case baru (total 11)
+
+**[RX-10] embed reactions bertahan pada halaman cursor>0 (M10)** — Arrange: `makeQueryThenable` capture argumen `.select()`; panggil `listChatMessages(roomId, { cursor: { createdAt: '...', id: '...' } })`. Assert: string select TETAP mengandung `reactions:chat_message_reactions(emoji, reactor_id)` DAN `.eq('chat_room_id', roomId)` tetap dipanggil top-level. Why red: implementasi awal bisa menaruh embed hanya di jalur halaman-pertama karena branching cursor.
+
+**[RX-11] normalisasi `reactions: null → []` (M12/D14)** — Arrange: mock respons row dengan `reactions: null` (perilaku PostgREST versi tertentu utk embed 1-N kosong). Act: `await listChatMessages(...)`. Assert: `messages[0].reactions` adalah `[]` (array kosong), BUKAN `null`/`undefined`. Why red: mapping saat ini tidak menyentuh field reactions; tanpa normalisasi, tipe `ChatReaction[]` bohong saat runtime `null`.
+
+Selain itu **[RX-8] why_red diperluas (C12):** fixture literal dgn field `reactions` juga MERAH-TIPE di `npm run type-check` sebelum `ChatMessage.reactions?: ChatReaction[]` ditambahkan — kegagalan tsc adalah bagian sah fase Red, catat sebagai bukti merah kedua.
+
+### 12.5 Hook layer — 1 case baru (total 12)
+
+**[HK-12] regresi invalidasi send() (M11)** — Arrange: spy `qc.invalidateQueries`; jalankan `send('halo', [])` sukses. Assert: keys hasil spy MENGANDUNG `['chat-messages', roomId]` DAN `['chat-rooms']` (kontrak existing `use-inbox.ts` L85-86 — TIDAK boleh tercabut saat menambah `toggleReactionM`). Why red: baseline hijau hari ini; case ini gagal HANYA jika refactor Green-Hook merusak invalidasi existing — safety net anti copy-paste.
+
+**Catatan C16/M18 (runtime embed):** setelah `database.types.ts` diisi, verifikasi resolusi relasi PostgREST nyata via satu HTTP contract kecil (pola `0045_*_http.mjs` keyset): GET `chat_messages?select=id,reactions:chat_message_reactions(emoji,reactor_id)&limit=1` terhadap Kong lokal → 200, bukan error "Could not find a relationship". `tsc` hijau TIDAK membuktikan relasi runtime.
+
+### 12.6 UI layer — 4 case baru (total 17)
+
+**[UI-14] pending-guard: isTogglingReaction=true → tap no-op (C11/M13)** — Arrange: `mockIsTogglingReaction = true` (module-scope lazy, pola C3); messages 1 item dgn reaksi 👍. Act: `fireEvent.press(pill)`. Assert: `expect(mockToggleReaction).not.toHaveBeenCalled()`. Why red: guard `if (!currentUserId || isTogglingReaction) return` belum ada; tanpa case ini guard bisa dihapus tanpa suite memerah.
+
+**[UI-15] alert clears setelah sukses berikutnya (M14)** — Arrange: `mockToggleReaction.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(true)`; messages dgn 2 emoji berbeda. Act: tap pill-1 → `await screen.findByRole('alert')`; tap pill-2 → `await waitFor(...)`. Assert: `expect(screen.queryByRole('alert')).toBeNull()` setelah sukses. Why red: path sukses belum memanggil `setReactionError(null)` — alert akan "macet" tanpa case ini.
+
+**[UI-16] accessibilityLabel exact copy dgn digit (M15)** — Arrange: messages 1 item, reaksi 👍 oleh 2 reaktor (bukan current user). Assert: `expect(pill.props.accessibilityLabel).toBe('Reaksi 👍, 2, belum bereaksi')` — digit `2` bukan kata, copy exact Bahasa Indonesia (FR-RX-4.3 + FR-RX-4.5). Why red: label belum ada; mengunci format sebelum copy menyimpang.
+
+**[UI-17] wiring per-item: dua bubble reaksi berbeda (M17)** — Arrange: messages 2 item — m1 reaksi 👍×1, m2 reaksi ✅×2. Assert: `findByLabelText('Reaksi 👍, 1, belum bereaksi')` DAN `findByLabelText('Reaksi ✅, 2, belum bereaksi')` keduanya ada (pill dirender di `renderItem` per bubble, bukan sekali di layer luar). Why red: tak ada pill; sekaligus menutup bug agregasi lintas-pesan.
+
+**Revisi mocking (C3):** perluasan mock `useChatActions` WAJIB bentuk lazy:
+```ts
+let mockIsTogglingReaction = false;
+jest.mock('@/hooks/use-inbox', () => ({
+  useChatMessages: (...a: unknown[]) => mockUseChatMessages(...a),
+  useChatActions: () => ({
+    send: mockSend, markRead: mockMarkRead, isSending: mockIsSending,
+    toggleReaction: (...a: unknown[]) => mockToggleReaction(...a),
+    isTogglingReaction: mockIsTogglingReaction,   // ← dibaca lazy per render, BUKAN literal false
+  }),
+}));
+```
+Reset `mockIsTogglingReaction = false` di `beforeEach` (sejajar `mockIsSending`/`mockSession` existing).
+
+### 12.7 Keputusan desain revisi
+
+- **D13 — Ordering pill (C5):** aggregator sort by konstanta client-side `REACTION_EMOJI_ORDER = ['👍','✅','👀','🙏'] as const` (cermin `sort_order` seed §7.1 spec); emoji di luar konstanta (penambahan seed masa depan) di-append terurut codepoint. Rasional: urutan embed PostgREST tanpa `order` eksplisit TIDAK dijamin → "first-seen" flaky di kontrak nyata; order server-side by `sort_order` butuh embed 2-level (berat); konstanta client = deterministik, teruji pure-fn, tanpa perubahan query. Konsekuensi: saat seed `reaction_emojis` berubah, konstanta ini ikut diperbarui (tercatat sebagai pasangan sinkron di komentar kode).
+- **D14 — Normalisasi null (M12):** `listChatMessages` menormalkan `reactions: null → []` per baris saat mapping (satu nullish-coalescing). Rasional: PostgREST dapat mengembalikan `null` utk embed kosong tergantung versi; tipe `ChatMessage.reactions?: ChatReaction[]` tidak boleh bohong saat runtime; normalisasi di satu titik data-layer lebih murah daripada guard `?? []` tersebar di UI/hook.
+
+### 12.8 Tally final pasca-revisi
+
+| Layer | Sebelum | Sesudah |
+|---|---|---|
+| SQL contract | 11 blok | **15 blok** (a-k direvisi/diperluas + l, m, n, o baru; k → k1+k2) |
+| Data (Jest) | 9 | **11** (+RX-10, RX-11) |
+| Hook (Jest) | 11 | **12** (+HK-12) |
+| UI (Jest RNTL) | 13 | **17** (+UI-14..17; #6/#10/#11 dikoreksi in-place) |
+| **Total Jest** | 33 | **40** |
+
+DoD §7 diperbarui menjadi: SQL contract **15/15 PASS**; delta Jest **+40**; guard skor = enumerasi eksplisit §12.2; HTTP contract mini utk resolusi embed (§12.5). Verdict pasca-revisi: **siap** — tidak ada item critic yang tersisa tanpa disposisi.

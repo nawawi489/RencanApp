@@ -706,5 +706,17 @@
       "[Type] `database.types.ts` struktur `Relationships` untuk `chat_message_reactions` valid: setidaknya satu FK menyebut `referencedRelation: 'chat_messages'`, `referencedColumns: ['id']`, sehingga PostgREST embed `reactions:chat_message_reactions(...)` di-resolve tanpa 'Could not find relationship'. Tanpa type test ini, plan bisa memancarkan runtime error walau `tsc` hijau."
     ],
     "verdict": "perlu-perbaikan"
+  },
+  "post_critic_revision": {
+    "date": "2026-07-13",
+    "verdict_after": "siap",
+    "note": "Snapshot JSON ini PRA-revisi. Semua 35 item critic diadjudikasi di specs/inbox-chat-reactions-tdd-plan.md §12 (disposisi per item, blok SQL final 15, case Jest final 40, keputusan D13 ordering-konstanta + D14 normalisasi null). Kerjakan dari dokumen markdown, bukan dari field tests/plan mentah di sini.",
+    "tally_final": {
+      "sql_blocks": 15,
+      "data_cases": 11,
+      "hook_cases": 12,
+      "ui_cases": 17,
+      "jest_total": 40
+    }
   }
 }
