@@ -15,6 +15,7 @@ import {
   listChatRooms,
   markChatMessagesRead,
   sendChatMessage,
+  type ChatCursor,
   type ChatMessage,
   type ChatRoom,
 } from '@/lib/inbox';
@@ -37,20 +38,30 @@ export function useInboxRooms() {
 /**
  * Pesan dalam satu room (terbaru dulu). Hanya fetch saat roomId terisi.
  * `messages` = flatten dari `pages` (urutan desc dipertahankan: page0=terbaru, page1=lebih lama).
- * `loadOlder()` memuat halaman berikutnya; `hasMore` true selama halaman terakhir penuh
- * (== CHAT_PAGE_SIZE) — mungkin masih ada pesan lebih lama.
+ * `loadOlder()` memuat halaman berikutnya via cursor keyset {createdAt,id} dari baris LAST
+ * (paling lama) halaman sebelumnya; `hasMore` true selama halaman terakhir penuh
+ * (== CHAT_PAGE_SIZE). `isFetchingNextPage` = passthrough dari useInfiniteQuery — dipakai
+ * render layer sebagai indikator + guard onEndReached (FR-KP16).
+ *
+ * Korektnes seam refetch-all bergantung pada React Query v5 me-re-derive pageParam via
+ * getNextPageParam mulai dari initialPageParam=undefined saat invalidateQueries — cursor
+ * halaman >0 dihitung ULANG dari page 0 hasil-refetch, bukan reuse dari cache lama
+ * (FR-KP-REDERIVE). Diuji hook-level (AC-4/AC-5).
  */
 export function useChatMessages(roomId: string) {
   const q = useInfiniteQuery({
     queryKey: ['chat-messages', roomId],
     enabled: !!roomId,
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => listChatMessages(roomId, pageParam as number),
-    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
-      lastPage.length === CHAT_PAGE_SIZE ? (lastPageParam as number) + 1 : undefined,
+    initialPageParam: undefined as ChatCursor | undefined,
+    queryFn: ({ pageParam }) => listChatMessages(roomId, pageParam),
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < CHAT_PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return { createdAt: last.created_at, id: last.id };
+    },
   });
 
-  const messages = ((q.data?.pages ?? []).flat()) as ChatMessage[];
+  const messages = (q.data?.pages ?? []).flat() as ChatMessage[];
 
   return {
     messages,
@@ -59,6 +70,7 @@ export function useChatMessages(roomId: string) {
     refetch: q.refetch,
     loadOlder: () => q.fetchNextPage(),
     hasMore: !!q.hasNextPage,
+    isFetchingNextPage: q.isFetchingNextPage,
   };
 }
 

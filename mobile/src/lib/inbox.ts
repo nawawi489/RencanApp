@@ -29,6 +29,11 @@ export type ChatMessage = {
 /** Ukuran halaman listChatMessages. Diekspor agar hook (`useChatMessages`) menghitung `hasMore` dari `batch === CHAT_PAGE_SIZE` tanpa konstanta duplikat. */
 export const CHAT_PAGE_SIZE = 30;
 
+/** Cursor keyset untuk paginasi pesan chat. Nilai `createdAt` = string `created_at` dari baris
+ * TERAKHIR (paling lama) halaman sebelumnya, apa adanya (round-trip lossless — presisi mikrodetik
+ * + offset TZ apa adanya). `id` = UUID baris tsb sebagai tie-break. */
+export type ChatCursor = { createdAt: string; id: string };
+
 // ---------------------------------------------------------------- queries
 
 /** Room yang user ikuti + unread per room (via RPC get_chat_rooms; unread = pesan bukan dari diri). */
@@ -38,18 +43,38 @@ export async function listChatRooms(): Promise<ChatRoom[]> {
   return (data ?? []) as unknown as ChatRoom[];
 }
 
-/** Pesan dalam room, terbaru dulu, paginasi via offset. RLS menolak non-anggota. */
-export async function listChatMessages(roomId: string, page = 0): Promise<ChatMessage[]> {
+/** Pesan dalam room, terbaru dulu, paginasi via keyset (spec `keyset-pagination-list-chat-messages`).
+ *
+ * Ordering kanonik `created_at DESC, id DESC` (mirror semantik `search_chat_messages` 0044). Saat
+ * `cursor` tersedia, dekomposisi tuple `(created_at, id) < (T, X)` ke ekspresi PostgREST `.or()`
+ * — PostgREST tak mendukung row-value native. `.eq('chat_room_id')` WAJIB tetap top-level AND
+ * (FR-KP10): melipatnya ke dalam grup `.or()` membocorkan pesan room lain untuk pembaca
+ * `can_view_workspace`. RLS `chat_messages_select` satu-satunya penegak; tetap client `.from()`.
+ */
+export async function listChatMessages(
+  roomId: string,
+  cursor?: ChatCursor,
+): Promise<ChatMessage[]> {
   if (!roomId) return [];
-  const from = page * CHAT_PAGE_SIZE;
-  const { data, error } = await supabase
+  let qb = supabase
     .from('chat_messages')
     .select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email)')
-    .eq('chat_room_id', roomId)
+    .eq('chat_room_id', roomId);
+  if (cursor) qb = qb.or(buildKeysetOr(cursor));
+  const { data, error } = await qb
     .order('created_at', { ascending: false })
-    .range(from, from + CHAT_PAGE_SIZE - 1);
+    .order('id', { ascending: false })
+    .limit(CHAT_PAGE_SIZE);
   if (error) throw error;
   return (data ?? []) as unknown as ChatMessage[];
+}
+
+/** Ekspresi keyset PostgREST setara SQL `(created_at, id) < (T, X)`:
+ *   `created_at.lt.<T> OR and(created_at.eq.<T>, id.lt.<X>)`
+ * Nilai timestamp diteruskan apa adanya (round-trip lossless — mikrodetik + offset TZ);
+ * parseability end-to-end diverifikasi AC-17b (contract HTTP). */
+function buildKeysetOr(cursor: ChatCursor): string {
+  return `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`;
 }
 
 // ---------------------------------------------------------------- mutations (RPC)

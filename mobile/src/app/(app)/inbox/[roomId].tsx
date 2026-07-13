@@ -6,8 +6,8 @@
 // Per Critic §8.4: SendButton pakai inline style {width:44,height:44} (NativeWind class tak selalu flatten di jest)
 // dan accessibilityState={{disabled}} eksplisit.
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
@@ -16,6 +16,8 @@ import { useChatActions, useChatMessages } from '@/hooks/use-inbox';
 import { reportError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/inbox';
 import { useAuth } from '@/providers/auth-provider';
+
+import { buildTimelineItems, type TimelineItem } from '@/lib/inbox-timeline';
 
 const GOVERNANCE_BANNER = 'Chat bukan jalur formal: keputusan & bukti tetap lewat Action Plan / Review.';
 
@@ -126,7 +128,8 @@ export default function ChatRoomScreen() {
   const { session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
-  const { messages, isLoading, isError, refetch, loadOlder, hasMore } = useChatMessages(safeRoomId);
+  const { messages, isLoading, isError, refetch, loadOlder, hasMore, isFetchingNextPage } =
+    useChatMessages(safeRoomId);
   const { send, markRead, isSending } = useChatActions(safeRoomId);
   const [text, setText] = useState('');
   const placeholderColor = usePlaceholderColor();
@@ -139,24 +142,32 @@ export default function ChatRoomScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- jalankan sekali saat room dibuka
   }, [roomId]);
 
-  // Kronologis-menaik: hook desc (terbaru→lama) → balik agar oldest di atas, newest di bawah.
-  const ordered = useMemo(() => [...messages].reverse(), [messages]);
+  // Owner §10: inverted FlatList membalik VISUAL — data tetap desc (newest-first) apa adanya
+  // dari hook. Algoritma pemetaan pesan+divider dipisah jadi `buildTimelineItems` (pure fn,
+  // diuji di [roomId].timeline.test.ts) — refactor critic §MC5.
+  const timelineData = useMemo<TimelineItem[]>(
+    () => buildTimelineItems(messages, dayLabel),
+    [messages],
+  );
 
-  // Per Critic §8.5: bangun divider sekali per "blok hari" pada array yang sudah merged+ordered.
-  type Row = { kind: 'divider'; key: string; label: string } | { kind: 'msg'; key: string; m: ChatMessage };
-  const rows = useMemo<Row[]>(() => {
-    const out: Row[] = [];
-    let prevDay: string | null = null;
-    for (const m of ordered) {
-      const label = dayLabel(m.created_at);
-      if (label && label !== prevDay) {
-        out.push({ kind: 'divider', key: `d-${label}-${m.id}`, label });
-        prevDay = label;
-      }
-      out.push({ kind: 'msg', key: m.id, m });
-    }
-    return out;
-  }, [ordered]);
+  const canLoadOlder = hasMore && !isFetchingNextPage;
+  const onEndReached = useCallback(() => {
+    if (canLoadOlder) loadOlder();
+  }, [canLoadOlder, loadOlder]);
+  const keyExtractor = useCallback((item: TimelineItem) => item.key, []);
+  const renderItem = useCallback(
+    ({ item }: { item: TimelineItem }) =>
+      item.type === 'divider' ? (
+        <DateDivider label={item.label} />
+      ) : (
+        <MessageBubble
+          m={item.msg}
+          isMe={currentUserId != null && item.msg.author_id === currentUserId}
+          isHighlighted={highlight != null && item.msg.id === highlight}
+        />
+      ),
+    [currentUserId, highlight],
+  );
 
   async function handleSend() {
     if (isSending) return; // anti double-submit (Critic §8.5)
@@ -187,66 +198,64 @@ export default function ChatRoomScreen() {
   const composerDisabled = isInputBlank || isSending;
 
   return (
-    <Screen title="Diskusi Initiative">
-      {!bannerDismissed ? <GovernanceBanner onClose={() => setBannerDismissed(true)} /> : null}
+    <Screen title="Diskusi Initiative" scrollable={false}>
+      <View className="flex-1 px-5">
+        {!bannerDismissed ? <GovernanceBanner onClose={() => setBannerDismissed(true)} /> : null}
 
-      {isLoading ? (
-        <SkeletonList count={4} />
-      ) : isError ? (
-        <ErrorState
-          title="Gagal memuat pesan"
-          description="Tidak bisa mengambil percakapan."
-          onRetry={() => refetch()}
-        />
-      ) : messages.length === 0 ? (
-        <EmptyState
-          icon={<Text className="text-2xl">💬</Text>}
-          title="Belum ada pesan"
-          description="Mulai percakapan dengan mengirim pesan pertama."
-        />
-      ) : (
-        <ScrollView contentContainerStyle={{ gap: 0 }}>
-          {hasMore ? (
-            <Pressable
-              onPress={() => loadOlder()}
-              className="mb-2 self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
-              accessibilityRole="button"
-              accessibilityLabel="Muat pesan lama">
-              <Text className="text-sm font-semibold text-black dark:text-white">Muat pesan lama</Text>
-            </Pressable>
-          ) : null}
-          {rows.map((r) =>
-            r.kind === 'divider' ? (
-              <DateDivider key={r.key} label={r.label} />
-            ) : (
-              <MessageBubble
-                key={r.key}
-                m={r.m}
-                isMe={currentUserId != null && r.m.author_id === currentUserId}
-                isHighlighted={highlight != null && r.m.id === highlight}
-              />
-            ),
-          )}
-        </ScrollView>
-      )}
-
-      <View className="gap-2 pt-2">
-        <View className="flex-row items-end gap-2">
-          <TextInput
-            className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-            placeholder="Tulis pesan…"
-            placeholderTextColor={placeholderColor}
-            value={text}
-            onChangeText={setText}
-            multiline
+        {isLoading ? (
+          <SkeletonList count={4} />
+        ) : isError ? (
+          <ErrorState
+            title="Gagal memuat pesan"
+            description="Tidak bisa mengambil percakapan."
+            onRetry={() => refetch()}
           />
-          <SendButton disabled={composerDisabled} onPress={handleSend} />
+        ) : messages.length === 0 ? (
+          <EmptyState
+            icon={<Text className="text-2xl">💬</Text>}
+            title="Belum ada pesan"
+            description="Mulai percakapan dengan mengirim pesan pertama."
+          />
+        ) : (
+          <FlatList
+            testID="chat-list"
+            inverted
+            data={timelineData}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View
+                  className="my-3 items-center"
+                  accessibilityRole="progressbar"
+                  accessibilityLabel="Memuat pesan lama">
+                  <ActivityIndicator />
+                </View>
+              ) : null
+            }
+          />
+        )}
+
+        <View className="gap-2 py-3">
+          <View className="flex-row items-end gap-2">
+            <TextInput
+              className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+              placeholder="Tulis pesan…"
+              placeholderTextColor={placeholderColor}
+              value={text}
+              onChangeText={setText}
+              multiline
+            />
+            <SendButton disabled={composerDisabled} onPress={handleSend} />
+          </View>
+          {sendError ? (
+            <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
+              {sendError}
+            </Text>
+          ) : null}
         </View>
-        {sendError ? (
-          <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
-            {sendError}
-          </Text>
-        ) : null}
       </View>
     </Screen>
   );

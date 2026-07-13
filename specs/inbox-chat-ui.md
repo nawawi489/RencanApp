@@ -31,7 +31,7 @@ Masalahnya murni di **lapisan presentasi** (regresi visual, bukan bug logika), t
 ---
 
 ## 2. Non-Goals
-Lihat daftar lengkap di field `non_goals`. Ringkas: tidak ada edit/delete pesan; tidak ada threaded reply; membership tetap derived server-side; chat bukan jalur formal/evidence; reactions/read-receipt-avatars/reply-quote/system-events/attach DEFER; filter chip PIC/Review/Deadline DEFER; search isi pesan DEFER; tidak ada realtime/presence/typing/feed; histori hanya page 0 + tombol "Muat pesan lama"; keanggotaan "PIC induk" tidak didukung backend; avatar = inisial+warna (bukan foto).
+Lihat daftar lengkap di field `non_goals`. Ringkas: tidak ada edit/delete pesan; tidak ada threaded reply; membership tetap derived server-side; chat bukan jalur formal/evidence; reactions/read-receipt-avatars/reply-quote/system-events/attach DEFER; filter chip PIC/Review/Deadline DEFER; search isi pesan DEFER; tidak ada realtime/presence/typing/feed; histori paginasi via infinite-scroll-up (revisi owner 2026-07-13 — sebelumnya tombol "Muat pesan lama"; lihat [spec keyset §10.2](keyset-pagination-list-chat-messages.md)); keanggotaan "PIC induk" tidak didukung backend; avatar = inisial+warna (bukan foto).
 
 ---
 
@@ -87,7 +87,9 @@ Semua story tunduk RLS `is_chat_member()`; otorisasi di Postgres, bukan app laye
 - **FR-IN2.3** Date divider client-side dari `created_at`, **device timezone** (org tz tidak diekspos — known limitation V1.8.1). `created_at` invalid → skip divider.
 - **FR-IN2.4** Mark-read on open (existing, idempoten, no-regress).
 - **FR-IN2.5** Guard `roomId` undefined → ErrorState "Room tidak ditemukan".
-- **FR-IN2.6** Paginasi: page 0 (30 terbaru) + kontrol "Muat pesan lama" untuk page berikut.
+- **FR-IN2.6** Paginasi: page 0 (30 terbaru) + memuat halaman lama otomatis via **infinite-scroll-up** (scroll mendekati ujung atas → `loadOlder()`).
+  > [!warning] Revisi owner 2026-07-13 — infinite-scroll-up menggantikan tombol
+  > Keputusan mengikat di [specs/keyset-pagination-list-chat-messages.md](keyset-pagination-list-chat-messages.md) §10.2: model interaksi berubah dari **tombol manual "Muat pesan lama"** menjadi **auto-load saat scroll ke atas** pada inverted `FlatList`. Tombol dihapus total (tanpa fallback). Guard: `hasMore && !isFetchingNextPage`. Data layer berpindah ke keyset cursor `(created_at, id)` — mekanik detail di spec keyset. Kontrak output hook diperluas: `isFetchingNextPage: boolean` sebagai indikator (menggantikan surface tombol).
 
 ### C. Banner governance — WAJIB P0
 - **FR-GOV-BANNER** Satu banner level-room non-blocking dapat-ditutup: nama Initiative (dari `room.name`) + link "Buka Initiative" + microcopy kanonik **"Keputusan formal (Review, Bukti, Nilai Hasil) lewat Action Plan — chat untuk diskusi cepat."** (Menggantikan tiga varian bercabang di draft.)
@@ -161,7 +163,7 @@ Lihat field `acceptance_criteria` (Given/When/Then lengkap, ditandai `FE-only` /
 - Date divider device-tz (org tz tidak diekspos); `created_at` invalid → skip.
 - handleSend: anti double-submit, trim, error spesifik dari `e.message` ("Pesan tidak boleh kosong." / "Hanya anggota room…"), input tidak ter-reset saat gagal, no optimistic insert (V1.8.1).
 - Membership dicabut mid-sesi → kirim gagal di server; tampil error inline; banner read-only membantu (idealnya).
-- Paginasi >30 → "Muat pesan lama" (AC-IN2.9).
+- Paginasi >30 → auto-load saat scroll ke atas + indikator `Memuat pesan lama` (AC-IN2.9 revisi 2026-07-13; sebelumnya tombol manual, lihat [spec keyset §10.2](keyset-pagination-list-chat-messages.md#101-scope--read-path-fix-only)).
 
 ---
 

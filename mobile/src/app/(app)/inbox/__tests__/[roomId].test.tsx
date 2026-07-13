@@ -43,6 +43,32 @@ function wrapper() {
   return Wrapper;
 }
 
+/** Factory kontrak return `useChatMessages` — kunci tunggal utk baseline default (mis.
+ * `isFetchingNextPage:false` kontrak baru Fase B) sehingga tiap test cukup override field
+ * yg relevan. Mencegah test lama patah senyap saat screen mulai membaca field baru. */
+function makeChatMessagesState(
+  overrides: Partial<{
+    messages: unknown[];
+    isLoading: boolean;
+    isError: boolean;
+    refetch: unknown;
+    loadOlder: unknown;
+    hasMore: boolean;
+    isFetchingNextPage: boolean;
+  }> = {},
+) {
+  return {
+    messages: [],
+    isLoading: false,
+    isError: false,
+    refetch: jest.fn(),
+    loadOlder: mockLoadOlder,
+    hasMore: false,
+    isFetchingNextPage: false,
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   mockUseChatMessages.mockReset();
   mockSend.mockReset();
@@ -53,29 +79,18 @@ beforeEach(() => {
   mockSession = { user: { id: 'me' } };
   mockRoomParams = { roomId: 'r1' };
   mockIsSending = false;
-  mockUseChatMessages.mockReturnValue({
-    messages: [],
-    isLoading: false,
-    isError: false,
-    refetch: jest.fn(),
-    loadOlder: mockLoadOlder,
-    hasMore: false,
-  });
+  mockUseChatMessages.mockReturnValue(makeChatMessagesState());
 });
 
 describe('ChatRoomScreen — state dasar (existing)', () => {
   it('loading → skeleton aksesibel "Memuat…"', async () => {
-    mockUseChatMessages.mockReturnValue({
-      messages: [], isLoading: true, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({ isLoading: true }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     expect(screen.getByLabelText('Memuat…')).toBeTruthy();
   });
 
   it('error → ErrorState (role alert) + retry', async () => {
-    mockUseChatMessages.mockReturnValue({
-      messages: [], isLoading: false, isError: true, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({ isError: true }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Gagal memuat pesan')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
@@ -95,12 +110,11 @@ describe('ChatRoomScreen — state dasar (existing)', () => {
   // - label tombol kini 'Kirim pesan' (bukan 'Kirim')
   // - useAuth ter-mock (default mockSession.user.id='me')
   it('[E0] data → render pesan; ketik lalu kirim via "Kirim pesan" → send dipanggil, input clear', async () => {
-    mockUseChatMessages.mockReturnValue({
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
       messages: [
         { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'Halo tim', created_at: '2026-06-24T01:00:00Z' },
       ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Halo tim')).toBeTruthy();
 
@@ -116,15 +130,17 @@ describe('ChatRoomScreen — state dasar (existing)', () => {
 
 // =========================================================== UI-S-IN2: bubble me/them, urutan, identitas, divider ==========================================================
 describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
-  it('[E1] urutan KRONOLOGIS-MENAIK (terlama di atas, terbaru di bawah) — meskipun data desc dari hook', async () => {
-    // hook return desc: ['m-newer','m-older']. Screen harus tampilkan 'lama' (older) sebelum 'baru' (newer).
-    mockUseChatMessages.mockReturnValue({
+  it('[E1] data render newest-first (desc) — VISUAL kronologis dijamin `inverted` FlatList (owner §10)', async () => {
+    // hook memberi desc: ['m-newer','m-older']. Sesudah owner §10, data layer tidak lagi
+    // membalik urutan — FlatList `inverted` yang membalik VISUAL. Di TREE toJSON(), 'baru'
+    // (newest, data[0]) muncul LEBIH DULU dari 'lama'. Visual kronologis diverifikasi
+    // terpisah oleh [E-KP-U1/U2] (inverted prop + data[0]=newest).
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
       messages: [
         { id: 'm-newer', chat_room_id: 'r1', author_id: 'me', body: 'baru',  created_at: '2026-06-24T05:00:00Z' },
         { id: 'm-older', chat_room_id: 'r1', author_id: 'me', body: 'lama', created_at: '2026-06-24T01:00:00Z' },
       ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    }));
     const { toJSON } = await render(<ChatRoomScreen />, { wrapper: wrapper() });
     await screen.findByText('baru');
     const dump = JSON.stringify(toJSON());
@@ -132,20 +148,20 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
     const idxBaru = dump.indexOf('"baru"');
     expect(idxLama).toBeGreaterThan(-1);
     expect(idxBaru).toBeGreaterThan(-1);
-    expect(idxLama).toBeLessThan(idxBaru); // 'lama' muncul lebih dulu di tree
+    // Tree order = data desc order → 'baru' (index 0) sebelum 'lama' (index 1).
+    expect(idxBaru).toBeLessThan(idxLama);
   });
 
   it('[E2] bubble me vs them — me (author_id == session.user.id) tidak punya nama pengirim di atas bubble', async () => {
     mockSession = { user: { id: 'me' } };
-    mockUseChatMessages.mockReturnValue({
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
       messages: [
         { id: 'mm', chat_room_id: 'r1', author_id: 'me',   body: 'milik saya', created_at: '2026-06-24T01:00:00Z',
           author: { id: 'me', full_name: 'Saya' } },
         { id: 'mt', chat_room_id: 'r1', author_id: 'them', body: 'milik them', created_at: '2026-06-24T02:00:00Z',
           author: { id: 'them', full_name: 'Budi' } },
       ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     // Nama 'Budi' (them) muncul; 'Saya' (me) TIDAK muncul sebagai header bubble.
     expect(await screen.findByText('Budi')).toBeTruthy();
@@ -153,12 +169,11 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
   });
 
   it('[E3] identitas them: Avatar + nama tampil di atas bubble (author null → "?")', async () => {
-    mockUseChatMessages.mockReturnValue({
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
       messages: [
         { id: 'mnull', chat_room_id: 'r1', author_id: null, body: 'sistem update', created_at: '2026-06-24T01:00:00Z' },
       ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     // Avatar inisial '?' + nama header '?' — keduanya hadir → findAllByText length ≥ 1.
     const qmarks = await screen.findAllByText('?');
@@ -169,20 +184,19 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
 
   it('[E4] currentUserId kosong (session=null) → default semua "them"', async () => {
     mockSession = null;
-    mockUseChatMessages.mockReturnValue({
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
       messages: [
         { id: 'mx', chat_room_id: 'r1', author_id: 'me', body: 'meskipun id me', created_at: '2026-06-24T01:00:00Z',
           author: { id: 'me', full_name: 'Saya' } },
       ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     // Karena defaulting ke them, nama pengirim MUNCUL (untuk them ditampilkan).
     expect(await screen.findByText('Saya')).toBeTruthy();
   });
 
   it('[E5] date divider antar-hari — 2 hari beda muncul ≥1 chip "23 Jun" & ≥1 chip "24 Jun" (Critic §8.5 satu hari = tepat satu)', async () => {
-    mockUseChatMessages.mockReturnValue({
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
       messages: [
         { id: 'm24a', chat_room_id: 'r1', author_id: 'them', body: 'p2',  created_at: '2026-06-24T10:00:00Z',
           author: { id: 'them', full_name: 'Budi' } },
@@ -191,8 +205,7 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
         { id: 'm23',  chat_room_id: 'r1', author_id: 'them', body: 'p1',  created_at: '2026-06-23T10:00:00Z',
           author: { id: 'them', full_name: 'Budi' } },
       ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     // dua hari beda → minimum dua divider chip yang berbeda. Format date 'd MMM' (id-ID).
     expect(await screen.findAllByText(/\b23 Jun\b/)).toHaveLength(1);
@@ -200,15 +213,14 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
   });
 
   it('[E6] created_at INVALID → skip divider (tidak crash, pesan tetap render)', async () => {
-    mockUseChatMessages.mockReturnValue({
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
       messages: [
         { id: 'mok', chat_room_id: 'r1', author_id: 'them', body: 'oke', created_at: '2026-06-24T10:00:00Z',
           author: { id: 'them', full_name: 'Budi' } },
         { id: 'mbad', chat_room_id: 'r1', author_id: 'them', body: 'bad', created_at: 'not-a-date',
           author: { id: 'them', full_name: 'Budi' } },
       ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
-    });
+    }));
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('oke')).toBeTruthy();
     expect(screen.getByText('bad')).toBeTruthy();
@@ -279,17 +291,187 @@ describe('ChatRoomScreen — composer & guards', () => {
     );
   });
 
-  it('[E13] tombol "Muat pesan lama" hanya muncul saat hasMore=true & memanggil loadOlder', async () => {
-    mockUseChatMessages.mockReturnValue({
-      messages: [
-        { id: 'mhead', chat_room_id: 'r1', author_id: 'me', body: 'baru saja', created_at: '2026-06-24T10:00:00Z',
-          author: { id: 'me', full_name: 'Saya' } },
-      ],
-      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: true,
-    });
+  // [E13] "tombol Muat pesan lama" — DIHAPUS Fase D (owner §10: infinite-scroll-up
+  // menggantikan tombol manual). Kontrak baru diverifikasi [E-KP-U3/U11].
+  // eslint-disable-next-line no-restricted-syntax -- placeholder anchor untuk history diff
+  it.skip('[E13-removed] tombol Muat pesan lama (moved to E-KP-U3/U11)', async () => {
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
-    const more = await screen.findByText(/Muat pesan lama/i);
-    fireEvent.press(more);
     await waitFor(() => expect(mockLoadOlder).toHaveBeenCalled());
+  });
+});
+
+// =========================================================== E-KP: infinite-scroll-up (owner §10) — inverted FlatList ==========================================================
+// Kontrak render pengganti tombol "Muat pesan lama": data desc (newest-first) di-render oleh
+// inverted FlatList (RN menampilkan data[0] di BAWAH, data[N] di ATAS → visual kronologis:
+// oldest atas, newest bawah). onEndReached (= scroll ke atas mendekati item paling lama)
+// memanggil loadOlder dgn guard hasMore && !isFetchingNextPage. Indicator "Memuat pesan lama"
+// menggantikan tombol lama.
+describe('ChatRoomScreen — E-KP infinite-scroll-up (owner §10)', () => {
+  const sampleMsg = (id: string, ts: string, body = id) => ({
+    id, chat_room_id: 'r1', author_id: 'me', body, created_at: ts,
+    author: { id: 'me', full_name: 'Saya' },
+  });
+
+  it('[E-KP-U1] chat-list terekspos via testID + inverted=true (owner §10 render migration)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-list');
+    expect(list.props.inverted).toBe(true);
+  });
+
+  it('[E-KP-U2] data[0] = pesan TERBARU (data desc apa-adanya, TIDAK ada [...].reverse())', async () => {
+    // Hook memberikan desc: [newer, older]. FlatList inverted membalik VISUAL — data tetap desc.
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [
+        sampleMsg('m-newer', '2026-06-24T10:00:00Z', 'baru'),
+        sampleMsg('m-older', '2026-06-24T05:00:00Z', 'lama'),
+      ],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-list');
+    const data = list.props.data as Array<{ type?: string; key?: string; msg?: { id: string } }>;
+    // Item pertama data WAJIB pesan terbaru (id 'm-newer'). Divider chip boleh mendahului
+    // seluruh data (visual TOP), tapi item pesan pertama = newer.
+    const firstMsg = data.find((r) => r.type === 'message');
+    expect(firstMsg?.msg?.id).toBe('m-newer');
+  });
+
+  it('[E-KP-U3] tombol "Muat pesan lama" DIHAPUS — tidak dirender meski hasMore=true', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+      hasMore: true,
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(screen.queryByText(/Muat pesan lama/i)).toBeNull();
+  });
+
+  it('[E-KP-U11] tidak ada accessibilityRole=button dgn label "Muat pesan lama" (regresi anti-tombol)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+      hasMore: true,
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(screen.queryByLabelText('Muat pesan lama')).toBeNull();
+  });
+
+  it('[E-KP-U4] onEndReached → loadOlder dipanggil (AC-21 pemicu scroll ke atas)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+      hasMore: true,
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-list');
+    // FlatList `onEndReached` di inverted view = mendekati ujung atas = pesan terlama.
+    list.props.onEndReached?.();
+    expect(mockLoadOlder).toHaveBeenCalled();
+  });
+
+  it('[E-KP-U5] hasMore=false → onEndReached NO-OP (guard, tak menyulut loadOlder berulang)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+      hasMore: false,
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-list');
+    list.props.onEndReached?.();
+    expect(mockLoadOlder).not.toHaveBeenCalled();
+  });
+
+  it('[E-KP-U6] isFetchingNextPage=true → onEndReached NO-OP (guard, mencegah race saat batch berjalan)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+      hasMore: true,
+      isFetchingNextPage: true,
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-list');
+    list.props.onEndReached?.();
+    expect(mockLoadOlder).not.toHaveBeenCalled();
+  });
+
+  it('[E-KP-U7] indicator "Memuat pesan lama" muncul saat isFetchingNextPage=true (pengganti tombol)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+      hasMore: true,
+      isFetchingNextPage: true,
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText(/Memuat pesan lama/i)).toBeTruthy();
+  });
+
+  it('[E-KP-U8] indicator TIDAK muncul saat isFetchingNextPage=false', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+      hasMore: true,
+      isFetchingNextPage: false,
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(screen.queryByLabelText(/Memuat pesan lama/i)).toBeNull();
+  });
+
+  it('[E-KP-U9] day divider posisi TEPAT saat iterasi desc + inverted (critic §MC5/§MC6: order, bukan cuma count)', async () => {
+    // Data desc yg diberi ke FlatList inverted: chip disisipkan SETELAH grup harian
+    // saat iterasi desc, agar inverted menampilkan chip DI ATAS grup visual (kronologis).
+    // Expected data (desc iteration order):
+    //   [msg-24b, msg-24a, chip(24), msg-23, chip(23)]
+    // FlatList inverted merender data[0] di BAWAH → visual top-to-bottom:
+    //   chip(23), msg-23, chip(24), msg-24a, msg-24b ✓
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [
+        sampleMsg('m24b', '2026-06-24T11:00:00Z', 'p2b'),
+        sampleMsg('m24a', '2026-06-24T10:00:00Z', 'p2'),
+        sampleMsg('m23',  '2026-06-23T10:00:00Z', 'p1'),
+      ],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-list');
+    const data = list.props.data as Array<{
+      type: 'divider' | 'message';
+      key: string;
+      label?: string;
+      msg?: { id: string };
+    }>;
+
+    // Cari indeks tiap item. Data harus mengandung: 3 msg + 2 divider.
+    const msgIdxs = data.map((r, i) => (r.type === 'message' ? { i, id: r.msg!.id } : null)).filter(Boolean) as {i:number; id:string}[];
+    const divIdxs = data.map((r, i) => (r.type === 'divider' ? { i, label: r.label! } : null)).filter(Boolean) as {i:number; label:string}[];
+
+    expect(msgIdxs.map((x) => x.id)).toEqual(['m24b', 'm24a', 'm23']); // urutan pesan desc
+    expect(divIdxs).toHaveLength(2);
+
+    // Chip 24 Jun ada SETELAH pesan 24 Jun terakhir (m24a) DAN SEBELUM pesan 23 Jun.
+    const iM24a = msgIdxs.find((x) => x.id === 'm24a')!.i;
+    const iM23  = msgIdxs.find((x) => x.id === 'm23')!.i;
+    const iChip24 = divIdxs.find((x) => /24/.test(x.label))!.i;
+    const iChip23 = divIdxs.find((x) => /23/.test(x.label))!.i;
+
+    expect(iChip24).toBeGreaterThan(iM24a);
+    expect(iChip24).toBeLessThan(iM23);
+    // Chip 23 Jun ada SETELAH pesan 23 Jun (indeks akhir array = visual TOP).
+    expect(iChip23).toBeGreaterThan(iM23);
+  });
+
+  it('[E-KP-U10] keyExtractor mengembalikan id item (message.msg.id atau divider.key)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [sampleMsg('m1', '2026-06-24T10:00:00Z')],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-list');
+    const data = list.props.data as Array<{ type: string; key: string; msg?: { id: string } }>;
+    // keyExtractor(item, index) — kontrak: kembalikan string unik.
+    const kx = list.props.keyExtractor as (item: unknown, index: number) => string;
+    expect(typeof kx).toBe('function');
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      const k = kx(item, i);
+      expect(typeof k).toBe('string');
+      expect(k.length).toBeGreaterThan(0);
+      // Untuk item pesan, key WAJIB memuat id pesan (stabil lintas re-render, bukan index).
+      if (item.type === 'message' && item.msg) {
+        expect(k).toContain(item.msg.id);
+      }
+    }
   });
 });

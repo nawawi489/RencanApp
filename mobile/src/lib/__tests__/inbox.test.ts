@@ -25,13 +25,18 @@ import {
   sendChatMessage,
 } from '../inbox';
 
-/** Builder thenable (B5.1): metode chainable kembalikan builder; await resolve di titik mana pun. */
+/** Builder thenable (B5.1): metode chainable kembalikan builder; await resolve di titik mana pun.
+ *
+ * `calls[m]` = ARRAY of arg-arrays (satu entri per panggilan) — memungkinkan assert method
+ * yang di-chain lebih dari sekali (mis. `.order` 2× untuk keyset pagination). Test lama
+ * yang mengasumsikan satu panggilan mengakses `calls[m][0]`. `.or` ditambah ke daftar untuk
+ * mendukung dekomposisi keyset cursor. */
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
-  const calls: Record<string, unknown[]> = {};
+  const calls: Record<string, unknown[][]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'in', 'gte', 'lt', 'order', 'range', 'limit']) {
+  for (const m of ['select', 'eq', 'in', 'gte', 'lt', 'or', 'order', 'range', 'limit']) {
     builder[m] = jest.fn((...args: unknown[]) => {
-      calls[m] = args;
+      calls[m] = [...(calls[m] ?? []), args];
       return builder;
     });
   }
@@ -59,28 +64,100 @@ describe('listChatRooms', () => {
   });
 });
 
-describe('listChatMessages', () => {
+describe('listChatMessages (keyset)', () => {
+  // Cursor keyset: pesan strictly-older dari (createdAt, id). Ordering `created_at DESC, id DESC`;
+  // .eq('chat_room_id') WAJIB top-level AND, .or() cursor hanya di atasnya (FR-KP10 anti-kebocoran
+  // room untuk pembaca `can_view_workspace`). Encoding cursor timestamp = round-trip apa-adanya
+  // dari kolom `created_at` (presisi mikrodetik + offset '+') — FR-KP-ENC.
   it('[3] room kosong → [] tanpa query', async () => {
     expect(await listChatMessages('')).toEqual([]);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
-  it('[4] query eq(room) + order desc + range halaman 0 = [0,29]', async () => {
+  it('[4-rev] page 0 (cursor undefined) → eq top-level + .order x2 + .limit(30), TANPA .or (AC-1)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'm1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const msgs = await listChatMessages('r1', 0);
+    const msgs = await listChatMessages('r1');
     expect(mockFrom).toHaveBeenCalledWith('chat_messages');
-    expect(calls.eq).toEqual(['chat_room_id', 'r1']);
-    expect(calls.order).toEqual(['created_at', { ascending: false }]);
-    expect(calls.range).toEqual([0, 29]);
+    // .eq('chat_room_id', 'r1') dipanggil tepat sekali di root query (bukan dalam .or).
+    expect(calls.eq).toEqual([['chat_room_id', 'r1']]);
+    // .order dipanggil DUA kali: created_at desc lalu id desc (tie-break stabil).
+    expect(calls.order).toEqual([
+      ['created_at', { ascending: false }],
+      ['id', { ascending: false }],
+    ]);
+    // .limit(CHAT_PAGE_SIZE) menggantikan .range().
+    expect(calls.limit).toEqual([[30]]);
+    // Tidak boleh ada .range di jalur keyset.
+    expect(calls.range).toBeUndefined();
+    // Page pertama = tidak ada predikat cursor.
+    expect(calls.or).toBeUndefined();
     expect(msgs).toEqual([{ id: 'm1' }]);
   });
 
-  it('[5] halaman 1 → range [30,59]', async () => {
+  it('[5-rev] page N (cursor terisi) → tambah .or() strict `<` (AC-2/AC-16)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listChatMessages('r1', 1);
-    expect(calls.range).toEqual([30, 59]);
+    const cursor = { createdAt: '2026-07-10T09:00:00.000Z', id: 'm-last' };
+    await listChatMessages('r1', cursor);
+    // .eq tetap top-level (belum lipat ke .or) — anti-kebocoran room.
+    expect(calls.eq).toEqual([['chat_room_id', 'r1']]);
+    // .or exactly once dengan bentuk dekomposisi tuple (created_at,id) < (T,X):
+    //   created_at.lt.<T>  OR  and(created_at.eq.<T>, id.lt.<X>)
+    expect(calls.or).toEqual([
+      [
+        'created_at.lt.2026-07-10T09:00:00.000Z,and(created_at.eq.2026-07-10T09:00:00.000Z,id.lt.m-last)',
+      ],
+    ]);
+    // Ordering + limit tetap identik page 0.
+    expect(calls.order).toEqual([
+      ['created_at', { ascending: false }],
+      ['id', { ascending: false }],
+    ]);
+    expect(calls.limit).toEqual([[30]]);
+  });
+
+  it('[5b] round-trip encoding timestamp presisi mikrodetik + offset "+00:00" apa adanya (FR-KP-ENC, unit-level dari AC-17)', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    // Nilai `created_at` mentah dari DB: mikrodetik + offset positif.
+    const cursor = { createdAt: '2026-06-24T01:00:00.123456+00:00', id: 'm-42' };
+    await listChatMessages('r1', cursor);
+    // String cursor diteruskan apa adanya ke ekspresi .or (tanpa normalisasi ke Z, tanpa mem-drop
+    // digit mikrodetik). Parseability end-to-end diuji AC-17b (HTTP).
+    expect(calls.or).toEqual([
+      [
+        'created_at.lt.2026-06-24T01:00:00.123456+00:00,and(created_at.eq.2026-06-24T01:00:00.123456+00:00,id.lt.m-42)',
+      ],
+    ]);
+  });
+
+  it('[5d] roomId kosong tetap short-circuit walau cursor terisi (AC-9)', async () => {
+    const cursor = { createdAt: '2026-07-10T09:00:00.000Z', id: 'm' };
+    expect(await listChatMessages('', cursor)).toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('[5e] batch penuh diteruskan apa-adanya (30 item, tanpa wrap/transform)', async () => {
+    const batch = Array.from({ length: 30 }, (_, i) => ({
+      id: `m${i}`,
+      chat_room_id: 'r1',
+      author_id: 'u1',
+      body: `b${i}`,
+      created_at: `2026-07-10T09:00:${String(i).padStart(2, '0')}.000Z`,
+    }));
+    const { builder } = makeQueryThenable({ data: batch, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs).toEqual(batch);
+  });
+
+  it('[5f] propagasi error identity (rethrow object apa adanya)', async () => {
+    const err = { message: 'boom', code: '42501' };
+    const { builder } = makeQueryThenable({ data: null, error: err });
+    mockFrom.mockReturnValue(builder);
+    // Identity assert: object yang di-throw HARUS refererensi yang sama (bukan clone).
+    await expect(listChatMessages('r1')).rejects.toBe(err);
   });
 });
 
