@@ -1,0 +1,710 @@
+{
+  "feature": "Fitur: Reaksi (emoji reaction / \"Reaction pill\") pada pesan Initiative Chat — PRD §30.6. Spec final ada di specs/inbox-chat-reactions.md (committed bfa65a6). Ringkas: tabel referensi reaction_emojis (whitelist single-source, seed 4 ack: 👍 ✅ 👀 🙏) + tabel samping chat_message_reactions (PK komposit (chat_message_id, reactor_id, emoji), semua FK ON DELETE CASCADE, RLS on, revoke I/U/D dari authenticated+anon). Satu-satunya jalur tulis = RPC SECURITY DEFINER toggle_chat_reaction(p_message, p_emoji)→boolean: gate is_chat_member, DELETE-then-(INSERT ON CONFLICT DO NOTHING) untuk toggle idempoten & concurrency-safe, validasi emoji-aktif hanya pada INSERT (delisted tetap removable), reactor_id=auth.uid() (anti-tamper). RLS baca: chat_message_reactions_select = organization_id=current_user_org() AND (is_chat_member OR can_view_workspace). Baca via embed PostgREST reactions:chat_message_reactions(emoji, reactor_id) di listChatMessages (count + reactedByMe dihitung client, TANPA nama reaktor di V1), tanpa merusak keyset chat (.eq top-level, tak masuk .or()). Netral-governance total (uji recompute skor byte-identik + guard statik query skor tak menyentuh chat_message_reactions). V1: invalidation-only (tanpa optimistic), TANPA notifikasi, self-react diizinkan, multi-emoji per user per pesan. Mobile: MessageBubble render pill (a11y non-warna, ≥44px, accessibilityState.selected), useMutation invalidate ['chat-messages', roomId]. Prasyarat build (BUKAN spec): (1) token \"Reaction pill\" di DESIGN.md §7 + mobile/src/global.css (blocker UI layer saja — contract test SQL + data layer boleh jalan tanpa); (2) V2 dijadwalkan sebagai rilis (mencabut larangan tulis kode/test di specs/inbox-chat-ui.md L190). Paths tersentuh: supabase/migrations/00XX_chat_message_reactions.sql (nomor reconcile HEAD saat build — memory mencatat 0052 di branch chat-polish), supabase/tests/00XX_chat_message_reactions_contract.sql, mobile/src/lib/inbox.ts, mobile/src/hooks/use-inbox.ts, mobile/src/lib/database.types.ts, mobile/src/app/(app)/inbox/[roomId].tsx, DESIGN.md, mobile/src/global.css. Full detail termasuk 25 AC + 18 testable behaviors ada di specs/inbox-chat-reactions.md — sub-agent WAJIB baca file itu sebagai sumber kebenaran; jangan menebak dari ringkasan ini.",
+  "map": [
+    {
+      "area": "Data layer — Reaksi (Emoji Reaction) Initiative Chat",
+      "summary": "Fitur menambah dua tabel baru (public.reaction_emojis whitelist + public.chat_message_reactions dgn PK komposit (chat_message_id, reactor_id, emoji) & FK CASCADE) plus RPC public.toggle_chat_reaction(p_message uuid, p_emoji text)→boolean (SECURITY DEFINER, gate is_chat_member, DELETE-then-INSERT ON CONFLICT DO NOTHING; validasi emoji-aktif hanya di INSERT; reactor_id di-hardcode ke auth.uid()). Klien di mobile/src/lib/inbox.ts hanya perlu: (a) menambah string embed 'reactions:chat_message_reactions(emoji, reactor_id)' di select listChatMessages tanpa memindahkan .eq('chat_room_id') keluar dari top-level dan tanpa melipat embed ke .or() cursor; (b) menambah fungsi toggleChatReaction sebagai thin caller supabase.rpc('toggle_chat_reaction', { p_message, p_emoji }); dan (c) memperluas type ChatMessage dengan reactions?: ChatReaction[]. Semua invarian otorisasi (is_chat_member, current_user_org, can_view_workspace) sudah hidup di supabase/migrations/0008_fase3_collab.sql — RPC toggle & policy SELECT reaksi cukup memakai ulang helper itu. Skema tipe di mobile/src/lib/database.types.ts belum punya entri reactions apa pun (grep 0 hits) — perlu penambahan manual Row/Insert/Update/Relationships untuk kedua tabel plus entri Functions.toggle_chat_reaction. Client Supabase (mobile/src/lib/supabase.ts) tidak berubah — hanya generic Database yg diperkaya lewat database.types.ts. Migrasi terakhir di HEAD saat lens ini dibuat = 0044_search_chat_messages.sql (folder tests sudah punya 0045_keyset_list_chat_messages_contract.sql — file test, bukan migration), jadi nomor migrasi baru wajib reconcile HEAD saat build (spec mencatat memori 0052 di branch chat-polish; contoh path spec pakai 0045). Netralitas skor: tak ada file di mobile/src/lib yg merefer chat_message_reactions saat ini (grep 0 hits) — invarian ini murni server-side (guard statik SQL).",
+      "files": [
+        {
+          "path": "D:\\Projects\\RencanApp\\mobile\\src\\lib\\inbox.ts",
+          "role": "Data-layer utama yg diperluas: tambah type ChatReaction = { emoji: string; reactor_id: string }; ubah select listChatMessages jadi 'id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id)'; tambah export async function toggleChatReaction(messageId, emoji): Promise<boolean> yg memanggil supabase.rpc('toggle_chat_reaction', { p_message, p_emoji }). Lokasi persis: L54-70 (listChatMessages) & tempat baru di antara markChatMessagesRead (L98) & bagian search (L104)."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\mobile\\src\\lib\\database.types.ts",
+          "role": "Wajib ditambahi entri Row/Insert/Update/Relationships untuk public.reaction_emojis & public.chat_message_reactions (sisipkan di sekitar L712-760 tempat chat_messages didefinisikan), plus RPC toggle_chat_reaction: { Args: { p_message: string; p_emoji: string }; Returns: boolean } di blok Functions (di sekitar L3577-3600 tempat search_chat_messages & send_chat_message ditype-kan). Grep menegaskan belum ada entri 'chat_message_reactions'/'reaction_emojis'/'toggle_chat_reaction' sama sekali."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\mobile\\src\\lib\\supabase.ts",
+          "role": "Tidak berubah; hanya createClient<Database>. Pengayaan tipe otomatis via database.types.ts. Referensi utk memastikan pattern jest.mock('../supabase', ...) di test-set masih valid."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\mobile\\src\\lib\\__tests__\\inbox.test.ts",
+          "role": "Test set utama fitur — file inilah yg akan diperluas TDD (red-green). Pola makeQueryThenable sudah support .select/.eq/.or/.order/.limit — cukup dipakai ulang untuk assert bentuk select baru (embed reactions). Pola mockRpc utk toggleChatReaction identik dgn sendChatMessage/markChatMessagesRead (L164-198). Uji propagasi error identity (L155-161) memberi contoh yang persis dibutuhkan utk RPC baru."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\mobile\\src\\lib\\cards.ts",
+          "role": "Bukan file target implementasi; menyediakan type PersonRef yg diimpor inbox.ts. Referensi arsitektur 'pemanggil tipis, otorisasi di server' — mengonfirmasi tak ada logika otorisasi klien yg perlu diubah."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\mobile\\src\\lib\\__tests__\\cards.test.ts",
+          "role": "Contoh pola mock ../supabase (L1-11). Pola relevan untuk memastikan tes reaksi cukup Jest — tidak butuh env atau modul native."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\mobile\\src\\hooks\\use-inbox.ts",
+          "role": "Tempat menambah useMutation(toggleChatReaction) → onSuccess invalidate ['chat-messages', roomId] (D8). Pola sendM/markReadM di useChatActions (L78-102) adalah cetak biru langsung — tinggal ditiru untuk toggleReactionM."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\supabase\\migrations\\0008_fase3_collab.sql",
+          "role": "Sumber helper existing yg dipakai spec: is_chat_member (L229-237, SECURITY DEFINER), chat_messages_select policy (L336-340 — bentuk identik dgn chat_message_reactions_select yg diminta), send_chat_message (L402-438 — template RPC SECURITY DEFINER dgn gate+raise+revoke/grant). Skema chat_messages (organization_id, chat_room_id, author_id, body) — sumber v_room + v_org di RPC toggle."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\supabase\\migrations\\0044_search_chat_messages.sql",
+          "role": "Migrasi terakhir di HEAD. Menandai bahwa nomor migrasi baru harus reconcile — path spec 0045 hanya suggestion; memory mencatat 0052 di branch chat-polish. Juga contoh gaya komentar governance panjang yang diikuti proyek."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\supabase\\tests\\0044_search_chat_messages_contract.sql",
+          "role": "Template kontrak SQL (pola do $$ ... raise notice 'PASS n' / raise exception 'FAIL: ...' end $$) untuk file 00XX_chat_message_reactions_contract.sql. Menegaskan bahwa kontrak DDL/RLS/FK/RPC deterministik dijalankan lewat psql sebagai owner (bukan Jest)."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\supabase\\tests\\0045_keyset_list_chat_messages_contract.sql",
+          "role": "File uji nomor 0045 SUDAH terpakai — konfirmasi bahwa nomor kontrak baru (dan migrasinya) harus diambil dari HEAD saat build, bukan direset ke 0045."
+        },
+        {
+          "path": "D:\\Projects\\RencanApp\\specs\\inbox-chat-reactions.md",
+          "role": "Sumber kebenaran spec: §7.1-7.4 SQL kontrak DDL/RLS/RPC lengkap (baris 141-241), §13 daftar 18 testable behaviors, §9 25 AC. Sub-agent WAJIB baca file ini utuh sebagai kanon — ringkasan brief tidak menutupinya."
+        }
+      ],
+      "patterns": [
+        "Thin caller Supabase: fungsi di mobile/src/lib/*.ts membungkus supabase.rpc(...) atau supabase.from(...).select(...) tanpa logika otorisasi klien; RLS + RPC SECURITY DEFINER menegakkan di server. toggleChatReaction mengikuti pola sendChatMessage: satu await, if(error) throw error, kembalikan (data as T). Wajib meneruskan boolean apa adanya utk return true/false toggle-on/off.",
+        "Keyset pagination invariant di listChatMessages: .eq('chat_room_id', roomId) SELALU top-level AND; cursor didekomposisi ke .or('created_at.lt.T,and(created_at.eq.T,id.lt.X)'); embed reaksi masuk di dalam string .select() bukan di .or() (menutup AC-12 & test [4-rev]/[5-rev]).",
+        "PostgREST embed sebagai jalur baca reaksi (D1): 'reactions:chat_message_reactions(emoji, reactor_id)' — bukan RPC baca. Keamanan bertumpu murni pada policy SELECT tabel reaksi (bukan inheritance dari chat_messages_select). ChatMessage.reactions dihitung count + reactedByMe di UI, bukan di data layer.",
+        "Whitelist emoji = tabel referensi (single-source-of-truth, D4) dgn FK — validasi active hanya di INSERT RPC (D5) supaya baris emoji delisted tetap bisa DELETE (toggle-off).",
+        "Toggle idempoten & concurrency-safe (D2): pola DELETE-then-(INSERT ON CONFLICT DO NOTHING) dgn get diagnostics row_count — bukan try/catch 23505. Menghindari kebocoran unique_violation ke UI.",
+        "Anti-tamper server-side: reactor_id di RPC = auth.uid() (hardcoded), organization_id di-derive dari chat_messages.organization_id (bukan input klien) — mengikuti pola send_chat_message di 0008 L417.",
+        "Netralitas skor total: tidak ada query score-formula/ranking yang boleh menyentuh chat_message_reactions (guard statik SQL + test recompute byte-identik). Grep saat lens ini: 0 referensi ke chat_message_reactions di mobile/src/lib — kebijakannya adalah tetap 0.",
+        "Nomor migrasi bersifat reconcile-HEAD, bukan literal 0045: pilih HEAD_max_migration+1 saat build (branch ini terakhir 0044; branch chat-polish sudah 0052 per catatan spec). Contract test SQL punya penomoran paralel.",
+        "Regen manual tipe database.types.ts: pola proyek adalah menambah Row/Insert/Update/Relationships & entri RPC secara tangan (identik dgn kondisi search_chat_messages di L3577), lalu regen otomatis akan idempoten-kan lewat supabase gen types typescript."
+      ],
+      "testability_notes": [
+        "Layer Jest (`mobile/src/lib/__tests__/inbox.test.ts`) sepenuhnya bisa menutup data-layer: toggleChatReaction butuh 4 test — (a) rpc name + args mapping (p_message, p_emoji), (b) mengembalikan boolean data apa adanya (true & false), (c) propagasi error identity (rethrow reference asli, pola [5f] L155-161), (d) opsional: memastikan return value adalah data as boolean (bukan void). Semua deterministik tanpa mock jaringan.",
+        "listChatMessages perlu 2 test tambahan pada file yang sama: (a) select string sekarang berisi 'reactions:chat_message_reactions(emoji, reactor_id)' (assert via calls.select[0][0].includes(...)) — memakai makeQueryThenable existing (L34-46); (b) embed tidak memindahkan .eq('chat_room_id') keluar dari top-level dan tidak muncul di ekspresi calls.or (regressi guard AC-12). Tidak butuh perubahan builder — .select sudah di daftar method chainable.",
+        "Data layer test TIDAK butuh Supabase runtime: pola jest.mock('../supabase', () => ({ supabase: { rpc, from } })) di inbox.test.ts L12-17 sudah cukup. Tidak ada env/native module yang perlu dipoles.",
+        "database.types.ts perubahan diverifikasi lewat `npm run type-check` (bukan Jest): kompilasi TS wajib hijau setelah menambah tipe Row/Insert/Update/Relationships + Functions.toggle_chat_reaction. Test runtime TS type-only tidak diperlukan; toggleChatReaction sudah cukup meng-exercise generic argument RPC.",
+        "Invarian server-first berikut TIDAK BISA diuji di Jest — wajib supabase/tests/00XX_chat_message_reactions_contract.sql (pola PASS/FAIL do $$): (1) DDL tabel & PK/FK CASCADE; (2) RLS enable + policy chat_message_reactions_select (organization_id=current_user_org() AND (is_chat_member OR can_view_workspace)); (3) revoke I/U/D dari authenticated+anon; (4) RPC toggle idempoten (dua add berturut → 1 row, tanpa 23505); (5) validasi emoji-aktif hanya di INSERT; (6) delisted removable via DELETE; (7) cross-org 0 baris; (8) cascade hapus pesan/room/org/profil; (9) anti-tamper (user Y tak bisa cabut reaksi user X — DELETE dihardcode reactor_id=auth.uid()); (10) tulis-langsung .from().insert()/.delete() gagal grant; (11) netralitas skor byte-identik + guard statik query skor tidak menyentuh chat_message_reactions.",
+        "Guard netralitas skor bisa diuji setengah statik dari SQL: SELECT pg_get_functiondef(...) tidak mengandung 'chat_message_reactions'; sisanya adalah smoke test recompute score-formula (bergantung fungsi yang sudah ada — cek supabase/migrations/0020_fase_sf1_*).",
+        "use-inbox.ts (di luar lens, tapi terkait): mutation toggleReaction bisa diuji hook-level dengan renderHook + QueryClient + mock inbox.ts toggleChatReaction — hanya perlu memverifikasi onSuccess invalidate ['chat-messages', roomId]; tidak menyentuh supabase runtime.",
+        "Prasyarat 0044 migrasi + adanya is_chat_member/current_user_org/can_view_workspace sudah confirmed di HEAD — RPC toggle & policy reaksi cukup memanggil helper existing tanpa migrasi bantu tambahan.",
+        "Nomor file kontrak SQL 00XX bakal bentrok bila diambil 0045 (0045_keyset_list_chat_messages_contract.sql sudah ada) — reconcile dengan HEAD saat build tetap wajib walau folder migrations sendiri berhenti di 0044."
+      ]
+    },
+    {
+      "area": "Hooks & Providers — React Query wiring untuk fitur Reaksi (emoji reaction) di Initiative Chat",
+      "summary": "Fitur reaksi bertumpu pada satu hook file — mobile/src/hooks/use-inbox.ts — yang perlu diperluas dengan mutation `toggleReaction` (satu-satunya jalur tulis via RPC `toggle_chat_reaction`, return boolean). `useChatMessages` sudah `useInfiniteQuery` dengan queryKey `['chat-messages', roomId]`; keys ini adalah target invalidation baru (spec: invalidation-only, tanpa optimistic, tanpa menyentuh `['chat-rooms']` karena preview last_message tidak berubah dan tanpa `['notifications']` karena V1 no-notify). Tipe `ChatMessage` di mobile/src/lib/inbox.ts akan menerima payload embed baru `reactions: { emoji: string; reactor_id: string }[]` — melewati hook apa adanya; agregasi `count` + `reactedByMe` dilakukan di render layer (MessageBubble) memakai `useAuth().session?.user.id` dari auth-provider. Provider theme/period-focus tidak tersentuh. Pola pengujian hook di repo sudah mapan: `renderHook` + `QueryClientProvider` wrapper via `createElement`, mock `@/lib/inbox` di top-level `jest.mock`, spy `qc.invalidateQueries` untuk assertion positif+negatif. Pola provider test (auth-provider.test.tsx) memberi template kalau perlu integrasi useAuth (mock `@/lib/supabase.auth`).",
+      "files": [
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/hooks/use-inbox.ts",
+          "role": "PRIMARY target — tambah `useReactionActions(roomId)` / perluas `useChatActions` dengan `toggleReaction(messageId, emoji)` mutation. `useChatMessages` (useInfiniteQuery, queryKey ['chat-messages', roomId]) tetap: pass-through `reactions` embed dari `listChatMessages`. `useInboxRooms` (queryKey ['chat-rooms']) NEG tidak boleh di-invalidate oleh toggleReaction (last_message_body/at tidak berubah)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/hooks/__tests__/use-inbox.test.tsx",
+          "role": "PRIMARY test file — extend dengan describe('useReactionActions' / toggleReaction) mengikuti pola tes [4]/[6]/[7]: spy `qc.invalidateQueries`, assert invalidasi POSITIF `['chat-messages', roomId]` DAN NEGATIF `['chat-rooms']` + `['notifications']`. Assert error propagate (reject → tidak invalidate) seperti tes [6]. Assert mock `toggleChatReaction` dipanggil dengan (messageId, emoji). Assert idempoten (dua panggilan berturut → tetap invalidate 2x, tidak crash)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/lib/inbox.ts",
+          "role": "SIBLING data layer — akan menambah `toggleChatReaction(messageId, emoji): Promise<boolean>` (RPC) + memperluas `ChatMessage` type dengan optional `reactions?: { emoji: string; reactor_id: string }[]` yang di-select via embed di `listChatMessages`. Hook tinggal pass-through."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/hooks/use-notifications.ts",
+          "role": "PATTERN reference (bukan sentuhan) — pola `useMutation` + `useQueryClient` + `invalidateQueries(['notifications'])` yang identik konvensinya. useReactionActions akan meniru bentuknya."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/providers/auth-provider.tsx",
+          "role": "CONTEXT konsumsi di layer render — MessageBubble (bukan hook ini) memakai `useAuth().session?.user.id` untuk menghitung `reactedByMe` dari `reactions[]` embed. Hook tetap netral-identitas."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/providers/__tests__/auth-provider.test.tsx",
+          "role": "PATTERN reference — template `QueryClientProvider` bersarang `AuthProvider`, mock `@/lib/supabase.auth`; berguna kalau tes MessageBubble butuh session (bukan tes hook)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/hooks/use-workspace.ts",
+          "role": "PATTERN reference — konvensi query-key TERKUNCI + banyak invalidateQueries prefix; useReactionActions harus tidak menabrak family di sini (tidak menyentuh workspace_card_progress)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/hooks/use-search-messages.ts",
+          "role": "SEKITAR fitur — hook FTS chat. Perlu diverifikasi apakah `SearchChatMessages` juga membutuhkan reactions embed (kemungkinan TIDAK — hit list tidak render pill). Cek relevansi saat implementasi; jangan meng-invalidasi tanpa alasan."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/providers/theme-provider.tsx",
+          "role": "NOT TOUCHED — hanya untuk konteks pemetaan; token 'Reaction pill' hidup di DESIGN.md + global.css (blocker UI layer)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/providers/period-focus-provider.tsx",
+          "role": "NOT TOUCHED — tidak relevan."
+        }
+      ],
+      "patterns": [
+        "Hook wrapper test: `function makeWrapper()` → `new QueryClient({ defaultOptions: { queries: { retry: false } } })`, `createElement(QueryClientProvider, { client: qc }, children)`. Return `{ qc, wrapper }` sehingga spy `qc.invalidateQueries` bisa diperiksa.",
+        "Mock data layer: `jest.mock('@/lib/inbox', () => ({ CHAT_PAGE_SIZE: 30, listChatMessages: (...a) => mockListChatMessages(...a), toggleChatReaction: (...a) => mockToggleChatReaction(...a), ... }))` — mock harus MENDAHULUI import hook.",
+        "Assertion invalidation: `const spy = jest.spyOn(qc, 'invalidateQueries'); ... const keys = spy.mock.calls.map(c => JSON.stringify((c[0] as { queryKey: unknown }).queryKey)); expect(keys.some(k => k.includes('chat-messages'))).toBe(true);`. Untuk NEG: `.toBe(false)` — pola persis identik tes [6]/[7].",
+        "Mutation error propagation: `mockToggleChatReaction.mockRejectedValueOnce(new Error('...'))` lalu `await expect(result.current.toggleReaction(...)).rejects.toThrow(...)` — hook memakai `mutateAsync` bukan `mutate` (return promise, reject di-propagate; onSuccess tak dipanggil → tak invalidate).",
+        "Query key convention: string-tuple, prefix taxonomy — ['chat-messages', roomId] untuk pesan, ['chat-rooms'] untuk daftar room. Reaksi HARUS ikut prefix ['chat-messages', roomId]; JANGAN membuat family baru ['reactions', ...] (spec: invalidation-only via pesan).",
+        "useInfiniteQuery pass-through: hook meng-flatten `q.data.pages` tanpa transformasi field-level. Ini artinya field `reactions[]` baru pada tiap message otomatis lewat — TIDAK perlu perubahan pada useChatMessages selain menjaga signature. Tes [8b] (AC-5 refetch-all) tetap kunci untuk seam invalidation reactions.",
+        "Provider mock (kalau perlu useAuth di render test): `jest.mock('@/lib/supabase', () => ({ supabase: { auth: { getSession: ..., onAuthStateChange: ..., ... } } }))` + `jest.mock('expo-linking', ...)`. Wrapper bersarang `QueryClientProvider > AuthProvider > children`.",
+        "Konvensi return hook: `{ toggleReaction: (messageId, emoji) => mM.mutateAsync({ messageId, emoji }), isPending: mM.isPending }` — mirror `useChatActions.send`. Return value boolean dari RPC tidak perlu di-surface (invalidation menangani UI refresh)."
+      ],
+      "testability_notes": [
+        "Repo memakai preset jest-expo; test hook file berekstensi .tsx dan berdampingan di __tests__/. Path alias `@/` (=mobile/src/) berfungsi di test (lihat import di use-inbox.test.tsx).",
+        "NEGATIVE invalidation adalah pola guard yang sudah dipakai (lihat tes [7] markRead); WAJIB dipakai untuk toggleReaction: assert TIDAK invalidate ['chat-rooms'] (last_message unchanged) DAN TIDAK invalidate ['notifications'] (V1 no-notify). Ini menegakkan invariant spec 'netral-governance' di layer hook.",
+        "Pola tes [6] (reject → no-invalidate) HARUS ditiru: `mockToggleChatReaction.mockRejectedValueOnce(...)` — memastikan mutation error tidak memicu re-fetch yang menyembunyikan error UI.",
+        "Tes concurrency/idempoten: hook layer tidak perlu menguji DELETE-then-INSERT server (itu ranah contract SQL); cukup verifikasi 2 panggilan berurutan dengan emoji sama → keduanya mutasi mutateAsync yang independen → 2x invalidate. Racing state test bukan tanggung jawab hook (V1 invalidation-only, no optimistic — tidak ada state lokal untuk race).",
+        "useChatMessages sudah returns via `q.data?.pages.flat()`; jika tes ingin memverifikasi field `reactions` pass-through, cukup `mockListChatMessages.mockResolvedValue([{ ..., reactions: [{ emoji: '👍', reactor_id: 'u1' }] }])` lalu `expect(result.current.messages[0].reactions).toEqual([...])`. Tes ini boleh di data-layer (mobile/src/lib/__tests__/) atau hook — repo konvensi menaruh embed shape tests di data layer.",
+        "Tidak boleh mem-mock `@/lib/supabase` di hook test (biarkan @/lib/inbox yang di-mock). Ini menjaga tes hook tetap tipis dan sesuai pola existing.",
+        "Untuk MessageBubble/[roomId].tsx test (di luar scope hook, tapi patut dicatat): `reactedByMe` = `reactions.some(r => r.reactor_id === session.user.id)`; wrap dengan AuthProvider mocked seperti auth-provider.test.tsx atau — jika komponen menerima `currentUserId` prop — hindari provider seluruhnya (lebih testable).",
+        "CHAT_PAGE_SIZE mock harus tetap dinyatakan di jest.mock factory (dilihat di test existing baris 13) karena hook baca konstanta ini untuk `getNextPageParam` — kegagalan menyertakan constant akan mem-break pagination test."
+      ]
+    },
+    {
+      "area": "UI & Screens — Reaction pill di layar Initiative Chat (`inbox/[roomId].tsx` + `MessageBubble`)",
+      "summary": "Fitur reaksi menyentuh persis satu layar (`ChatRoomScreen` di `mobile/src/app/(app)/inbox/[roomId].tsx`) dan komponen bubble in-file `MessageBubble`. Tak ada komponen ui.tsx baru; pola arsitektur eksisting (state lokal + inline sub-komponen di file layar, mirip `SendButton`) diikuti untuk sub-komponen `ReactionPillRow`/`ReactionPill`. Tulis via hook baru di `use-inbox.ts` (mutation `toggleChatReaction`) yang di-invalidate cache `['chat-messages', roomId]`. Baca via embed `reactions` yang sudah masuk `ChatMessage` (dari lens data). RNTL testable-surface: (1) tidak ada pill saat `reactions` kosong/undefined, (2) satu pill per emoji dgn label a11y \"{emoji} {count} — {status}\", (3) `accessibilityState.selected` mencerminkan reactedByMe dihitung dari `currentUserId`, (4) tap pill memanggil mutation dengan `(messageId, emoji)`, (5) error toggle memunculkan inline `accessibilityRole=\"alert\"` tanpa merusak list pesan, (6) touch target ≥44px lewat inline style (bukan Tailwind class, karena flatten NativeWind di jest tak deterministik — pola Critic §8.4 dari `SendButton`), (7) session=null → reactedByMe=false + tap di-guard/no-op. Semua test ditambahkan ke file test yang sudah ada (`[roomId].test.tsx`) memakai pola mock `jest.mock('@/lib/supabase', () => ({ supabase: {} }))`, `mockUseChatMessages`, `mockUseChatActions`, factory `makeChatMessagesState`, dan mutable `mockSession`.",
+      "files": [
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/app/(app)/inbox/[roomId].tsx",
+          "role": "Layar target — berisi `MessageBubble` (baris 68-108). Semua perubahan UI reaksi masuk file ini (tambah `ReactionPillRow`/`ReactionPill` inline mirip pola `SendButton` di baris 110-124, konsumsi `useChatActions().toggleReaction`, panggil di dalam `MessageBubble` di bawah bubble body). Sudah mock-friendly: mem-baca `useChatMessages`/`useChatActions` yang di-mock utuh di test file."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx",
+          "role": "Home baru untuk RNTL test reaksi. Extend `makeChatMessagesState` (baris 49-70) agar `messages` bisa membawa `reactions: [{emoji, reactor_id}]`; extend mock `useChatActions` (baris 30-33) menambah `toggleReaction: jest.fn()` + `isTogglingReaction`. Tambah suite `ChatRoomScreen — Reaction pill (FR-RX-4.x)` mengikuti pola describe/it existing (mis. E7-E12 composer/guards)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/app/(app)/inbox/__tests__/roomId.timeline.test.ts",
+          "role": "Tidak berubah. `buildTimelineItems` murni menyusun message/divider dari `messages` desc; reactions ikut sebagai bagian dari `msg` tanpa mengubah kontrak timeline. Aman dari regresi."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/app/(app)/inbox/__tests__/roomId.search-highlight.test.tsx",
+          "role": "Tidak berubah oleh fitur reaksi (highlight menandai bubble via border amber; `ReactionPillRow` di bawah bubble tidak menyentuh kontrak `isHighlighted`). Jangkau: verifikasi tak ada regresi 'Pesan yang dicari' saat pesan target juga punya reaksi."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/hooks/use-inbox.ts",
+          "role": "Sumber `useChatActions` yang akan diperluas dengan `toggleReaction(messageId, emoji)` + `isTogglingReaction`. Screen memakai keduanya untuk pill (state loading opsional utk debounce pill — spec §10 'Error toggle'). Diverifikasi lens hooks; disini hanya dicatat sebagai contract yang di-mock dari sisi layar."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/lib/inbox.ts",
+          "role": "Sumber tipe `ChatMessage.reactions?: ChatReaction[]` dan fungsi `toggleChatReaction`. Screen mengimpor `ChatMessage` (baris 17); tipe reaksi otomatis tersedia. Diverifikasi lens data."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/components/ui.tsx",
+          "role": "TIDAK menambah komponen `ReactionPill` reusable di V1 (single-use, cukup inline di `[roomId].tsx`). Referensi pola: `Button` (baris 33-67) untuk touch target `min-h-[44px]` + `accessibilityState` + `accessibilityLabel` eksplisit; `Badge` (baris 89-95) untuk chip `rounded-full px-2.5 py-1`."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/global.css",
+          "role": "BLOCKER FR-RX-0.3/FR-RX-4.4 — token 'Reaction pill' (selected vs unselected, non-color signal) wajib terdaftar sebelum layer UI dimulai. Saat ini hanya `--color-brand-dark: #1564b3` (baris 12) yang menjadi anchor solid+putih (a11y §4)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/DESIGN.md",
+          "role": "BLOCKER FR-RX-0.3 — §7 Component tokens (baris 145+) wajib memuat entri 'Reaction pill' dengan aturan a11y non-warna + ≥44px sebelum kode UI ditulis. §4 mengikat: pill 'reactedByMe' TIDAK boleh hanya beda warna."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/lib/errors.ts",
+          "role": "`reportError('Reaksi', e, 'Gagal memperbarui reaksi.')` (baris 76-79) dipakai pada catch mutation `toggleReaction` → dirender inline dengan `accessibilityRole=\"alert\"` di bawah bubble/thread (pola sama dgn `sendError` baris 253-257 di `[roomId].tsx`)."
+        },
+        {
+          "path": "D:/Projects/RencanApp/mobile/src/providers/auth-provider.tsx",
+          "role": "Sumber `session?.user?.id` yang jadi `currentUserId` (baris 128-129 di screen). Menentukan `reactedByMe` per pill dan meng-guard tap saat null. Dimock via `mockSession` yang sudah ada di test file."
+        }
+      ],
+      "patterns": [
+        "Inline sub-component untuk kontrol single-use di file layar (contoh: `SendButton` di `[roomId].tsx` baris 110-124). ReactionPill/ReactionPillRow ikut pola ini alih-alih naik ke `ui.tsx`.",
+        "Touch target 44px via **inline style** `{width:44,height:44}` (bukan Tailwind arbitrary class) — dokumentasi Critic §8.4 baris 6-7 & test [E8] baris 239-247 menyatakan class NativeWind tak selalu flatten di Jest; pill wajib membawa `style` numeric agar `btn.props.style.width/height` terdeteksi.",
+        "`accessibilityState={{ disabled/selected }}` eksplisit + `accessibilityLabel` eksplisit menyebut konteks (contoh `SendButton` baris 117-118). Pill: `accessibilityState={{ selected: reactedByMe }}` + label 'Reaksi {emoji}, {count}, {saya sudah bereaksi|belum bereaksi}'.",
+        "Non-color signal (a11y §4): pill selected menambahkan border/checkmark + `selected` — TIDAK cukup ganti warna. Pola preseden `ProgressPill` (DESIGN §7 baris 164) & `MessageBubble.isHighlighted` (border-2 border-amber-400) baris 98.",
+        "Guard prop opsional: pesan tanpa reaksi (`m.reactions == null || length === 0`) → return null (jangan render row placeholder). Pola sama dgn baris 85 `{!isMe ? (...) : null}`.",
+        "Error inline via `reportError` → `setState` string → render `<Text accessibilityRole=\"alert\">` (pola `sendError` baris 136 + 253-257). Untuk pill error, taruh di bawah `ReactionPillRow` per-message atau global di composer area — spec `edge-cases` §10 mensyaratkan 'non-blocking, tanpa Alert modal'.",
+        "Test-mock pattern layar (dari `[roomId].test.tsx` baris 11-33): `jest.mock('@/lib/supabase', () => ({ supabase: {} }))`; `mockUseChatMessages` return factory `makeChatMessagesState`; `mockUseChatActions` mem-return objek termasuk `toggleReaction`; `mockSession` mutable di top-level, dibaca lazy di factory `useAuth`.",
+        "Extend `makeChatMessagesState` overrides dgn menambah messages dgn `reactions: [{emoji:'👍', reactor_id:'me'}, ...]` — daripada bikin factory baru, sisipkan langsung ke override `messages` (backward-compatible).",
+        "Query cache invalidation via `qc.invalidateQueries({ queryKey: ['chat-messages', roomId] })` (pola `send`/`markRead` di `use-inbox.ts` baris 84-86, 92-94). Test verifies mutation dipanggil; invalidation diverifikasi lens hooks.",
+        "Aggregation client-side (D7 spec): pill row hitung `count` = grouping `emoji`, `reactedByMe` = `reactions.some(r => r.reactor_id === currentUserId && r.emoji === e)`. Deterministik → test dapat assert 'satu pill per emoji' & 'count=N' langsung dari fixture."
+      ],
+      "testability_notes": [
+        "Render pill row hanya bila `m.reactions?.length > 0` — pesan tanpa reaksi harus 'zero-pill'. Assert: `screen.queryByLabelText(/^Reaksi /)` = null.",
+        "Agregasi multi-user: fixture `reactions:[{emoji:'👍',reactor_id:'a'},{emoji:'👍',reactor_id:'b'}]` → assert satu `getByLabelText('Reaksi 👍, 2, belum bereaksi')` (bukan dua).",
+        "reactedByMe: fixture `reactor_id: 'me'` + `mockSession.user.id='me'` → assert `getByLabelText(/Reaksi 👍.*saya sudah bereaksi/).props.accessibilityState.selected === true`. Ubah `mockSession=null` → selected=false (session null tetap merender pill netral).",
+        "Touch target ≥44px: `screen.getByLabelText(/^Reaksi 👍/).props.style` (Array atau object) diflatten (pola [E8] baris 244) → `style.width >=44 && style.height >=44`.",
+        "Non-color signal: assert pill selected memiliki penanda tambahan yg dapat dibaca dari `props.className` (mengandung 'border' atau checkmark node dgn text '✓') — cukup expect `screen.getByText('✓')` di dalam pill selected ATAU `accessibilityState.selected=true` (dua-duanya wajib, warna saja tak lulus §4).",
+        "Tap pill toggle: `fireEvent.press(getByLabelText(/^Reaksi 👍/))` → `expect(mockToggleReaction).toHaveBeenCalledWith('m1','👍')`. Butuh perluas mock `useChatActions` di baris 30-33 dgn `toggleReaction: mockToggleReaction`.",
+        "Toggle error → inline alert: `mockToggleReaction.mockRejectedValueOnce(new Error('boom'))` → `expect(await screen.findByRole('alert')).toBeTruthy()`; verifikasi list pesan tetap render (baca 'Halo tim' tetap ada) — 'baca & kirim pesan tetap jalan' AC-23.",
+        "Guard session=null: tekan pill saat `mockSession=null` → `expect(mockToggleReaction).not.toHaveBeenCalled()` (screen wajib guard di handler, seperti isSending guard baris 173).",
+        "Pesan self-react (AC-24): fixture pesan `author_id='me'` + `reactions:[{emoji:'👍',reactor_id:'me'}]` → assert pill selected true + tetap tampil (tidak disembunyikan meskipun 'me' bubble tanpa nama header).",
+        "Highlight compat: fixture pesan `isHighlighted=true` (via `highlight=params`) yang juga punya reactions → assert border-2 amber (dari baris 98) masih ada DAN pill row masih render (regresi).",
+        "Testable via `testID` opsional: pertimbangkan `testID='reaction-pill-👍'` untuk pill agar test tak bergantung regex label id-ID. Konsisten dgn `testID='chat-list'` (baris 221).",
+        "SkeletonList & isLoading path (baris 205-206): pill TIDAK dirender saat isLoading — pola spec §10 'tanpa placeholder pill'. Test: `mockUseChatMessages(...isLoading:true...)` → `expect(screen.queryByLabelText(/^Reaksi /)).toBeNull()`.",
+        "EmptyState path (baris 213-218): tidak ada pesan → tidak ada pill row. Sudah tercover implicit.",
+        "isFetchingNextPage indicator (baris 228-237) tidak terinterferensi — pill hanya di message row, bukan footer.",
+        "roomId undefined ErrorState (baris 186-195) — pill row tidak dirender karena tak ada messages. Sudah tercover [E7]."
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "layer": "data",
+      "test_file": "mobile/src/lib/__tests__/inbox.test.ts",
+      "cases": [
+        {
+          "name": "[RX-1] toggleChatReaction memanggil rpc 'toggle_chat_reaction' dgn arg mapping camel→snake ({ p_message, p_emoji })",
+          "target": "toggleChatReaction (mobile/src/lib/inbox.ts) — thin RPC caller SECURITY DEFINER (spec §7.3, D2)",
+          "arrange": "mockRpc.mockResolvedValue({ data: true, error: null }); import { toggleChatReaction } from '../inbox';",
+          "act": "await toggleChatReaction('m-1', '👍');",
+          "assert": "expect(mockRpc).toHaveBeenCalledWith('toggle_chat_reaction', { p_message: 'm-1', p_emoji: '👍' }); expect(mockRpc).toHaveBeenCalledTimes(1);",
+          "why_red": "Fungsi toggleChatReaction belum ada di mobile/src/lib/inbox.ts (grep 0 hits). Import akan gagal / undefined at runtime sehingga expect gagal. Menegakkan invariant D-Nama-RPC + tidak mengirim reactor_id (anti-tamper: server hardcoded auth.uid())."
+        },
+        {
+          "name": "[RX-2] toggleChatReaction mengembalikan boolean true apa-adanya (toggle-on)",
+          "target": "toggleChatReaction return type Promise<boolean>",
+          "arrange": "mockRpc.mockResolvedValue({ data: true, error: null });",
+          "act": "const r = await toggleChatReaction('m-1', '✅');",
+          "assert": "expect(r).toBe(true); expect(typeof r).toBe('boolean');",
+          "why_red": "Fungsi belum ada — kompilasi/runtime gagal. Setelah dibuat, memastikan return boolean tidak dibungkus/di-cast salah (mis. `data as any` menghasilkan undefined) — invariant kontrak boolean untuk hook layer men-toggle badge selected."
+        },
+        {
+          "name": "[RX-3] toggleChatReaction mengembalikan boolean false apa-adanya (toggle-off)",
+          "target": "toggleChatReaction — differentiator hasil DELETE-only vs INSERT",
+          "arrange": "mockRpc.mockResolvedValue({ data: false, error: null });",
+          "act": "const r = await toggleChatReaction('m-1', '👍');",
+          "assert": "expect(r).toBe(false);",
+          "why_red": "Fungsi belum ada. Membedakan `false` (toggle-off / row dihapus) dari `undefined`/`null` mencegah implementasi salah `return !!data` yang akan mem-flip semantik saat data=false; false wajib diteruskan verbatim."
+        },
+        {
+          "name": "[RX-4] toggleChatReaction propagasi error identity (rethrow object apa-adanya, bukan clone)",
+          "target": "toggleChatReaction — error path (RLS/gate is_chat_member gagal, emoji delisted saat INSERT)",
+          "arrange": "const err = { message: 'not a chat member', code: '42501' }; mockRpc.mockResolvedValue({ data: null, error: err });",
+          "act": "const p = toggleChatReaction('m-1', '👍');",
+          "assert": "await expect(p).rejects.toBe(err);",
+          "why_red": "Belum ada implementasi. Identity-check (toBe, bukan toEqual) memaksa pola `if (error) throw error` — mencegah wrapping ke Error baru yang menghapus `code`/`hint` dari PostgREST yang dibutuhkan errors.ts helper untuk pesan terkurasi."
+        },
+        {
+          "name": "[RX-5] toggleChatReaction meneruskan messageId & emoji verbatim (tanpa trim/normalize/lowercase)",
+          "target": "toggleChatReaction — anti-normalisasi klien; whitelist enforcement server-side (D4)",
+          "arrange": "mockRpc.mockResolvedValue({ data: true, error: null });",
+          "act": "await toggleChatReaction('  m-1  ', '  🙏  ');",
+          "assert": "expect(mockRpc).toHaveBeenCalledWith('toggle_chat_reaction', { p_message: '  m-1  ', p_emoji: '  🙏  ' });",
+          "why_red": "Belum ada implementasi. Menegakkan bahwa validasi/normalisasi HANYA di server (reaction_emojis whitelist + RLS) — implementasi naif yang memanggil .trim()/.toLowerCase() akan pecah, membocorkan logika otorisasi ke klien."
+        },
+        {
+          "name": "[RX-6] listChatMessages select-string memuat embed 'reactions:chat_message_reactions(emoji, reactor_id)'",
+          "target": "listChatMessages — jalur baca reaksi via PostgREST embed (D1); tanpa RPC baca",
+          "arrange": "const { builder, calls } = makeQueryThenable({ data: [], error: null }); mockFrom.mockReturnValue(builder);",
+          "act": "await listChatMessages('r1');",
+          "assert": "expect(calls.select).toHaveLength(1); expect(calls.select[0][0]).toEqual(expect.stringContaining('reactions:chat_message_reactions(emoji, reactor_id)'));",
+          "why_red": "Baris 61 saat ini: select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email)') — tidak mengandung substring 'reactions:chat_message_reactions'. Assert gagal sampai embed ditambahkan."
+        },
+        {
+          "name": "[RX-7] listChatMessages TIDAK memindahkan chat_room_id ke .or() cursor bahkan setelah embed reactions ditambahkan (guard AC-12, FR-KP10)",
+          "target": "listChatMessages — invariant top-level AND .eq('chat_room_id') anti-kebocoran room untuk pembaca can_view_workspace",
+          "arrange": "const { builder, calls } = makeQueryThenable({ data: [], error: null }); mockFrom.mockReturnValue(builder); const cursor = { createdAt: '2026-07-10T09:00:00.000Z', id: 'm-last' };",
+          "act": "await listChatMessages('r1', cursor);",
+          "assert": "expect(calls.eq).toEqual([['chat_room_id', 'r1']]); expect(calls.or).toEqual([['created_at.lt.2026-07-10T09:00:00.000Z,and(created_at.eq.2026-07-10T09:00:00.000Z,id.lt.m-last)']]); expect(JSON.stringify(calls.or)).not.toEqual(expect.stringContaining('reactions')); expect(JSON.stringify(calls.or)).not.toEqual(expect.stringContaining('chat_room_id'));",
+          "why_red": "Sebelum implementasi embed, guard string 'reactions' di dalam .or() tak bisa dievaluasi karena test [RX-6] belum lulus. Saat implementer menambah embed, ada risiko implementasi salah melipat embed/chat_room_id ke ekspresi .or() cursor — assert ini gagal jika embed atau chat_room_id bocor ke .or(), menegakkan FR-KP10."
+        },
+        {
+          "name": "[RX-8] listChatMessages pass-through: field reactions[] pada baris di-return apa-adanya (tanpa transform di data layer)",
+          "target": "listChatMessages — ChatMessage.reactions?: ChatReaction[] = { emoji, reactor_id }[]; agregasi count/reactedByMe adalah tanggung jawab render layer (D7)",
+          "arrange": "const rows = [{ id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'halo', created_at: '2026-07-10T09:00:00.000Z', reactions: [{ emoji: '👍', reactor_id: 'u1' }, { emoji: '👍', reactor_id: 'u2' }, { emoji: '🙏', reactor_id: 'u3' }] }]; const { builder } = makeQueryThenable({ data: rows, error: null }); mockFrom.mockReturnValue(builder);",
+          "act": "const msgs = await listChatMessages('r1');",
+          "assert": "expect(msgs).toEqual(rows); expect(msgs[0].reactions).toEqual([{ emoji: '👍', reactor_id: 'u1' }, { emoji: '👍', reactor_id: 'u2' }, { emoji: '🙏', reactor_id: 'u3' }]);",
+          "why_red": "Tipe ChatMessage saat ini (mobile/src/lib/inbox.ts L20-27) belum punya optional `reactions` — assert `msgs[0].reactions` gagal type-check (tsc) + saat run cast `as unknown as ChatMessage[]` yang lama akan menghilangkan reactions dari tipe publik. Menegakkan invariant 'data layer thin' — tak boleh agregasi count/reactedByMe di sini."
+        },
+        {
+          "name": "[RX-9] listChatMessages tidak memanggil embed reactions ketika roomId kosong (short-circuit tetap dipatuhi)",
+          "target": "listChatMessages — guard AC-9 (roomId falsy → [] tanpa query) tidak boleh dilongar oleh penambahan embed",
+          "arrange": "// tidak ada mock builder — memastikan short-circuit tak menyentuh supabase",
+          "act": "const msgs = await listChatMessages('');",
+          "assert": "expect(msgs).toEqual([]); expect(mockFrom).not.toHaveBeenCalled();",
+          "why_red": "Test ini akan tetap hijau untuk implementasi saat ini, TAPI mem-freeze regresi: bila implementer memindahkan penambahan embed sebelum guard `if (!roomId) return []`, mockFrom terpanggil dan assert gagal. Menjaga invariant zero-query saat roomId falsy setelah refactor embed."
+        }
+      ]
+    },
+    {
+      "layer": "hooks",
+      "test_file": "mobile/src/hooks/__tests__/use-inbox.test.tsx",
+      "cases": [
+        {
+          "name": "useChatActions.toggleReaction — memanggil toggleChatReaction dengan (messageId, emoji) yang benar",
+          "target": "useChatActions(roomId).toggleReaction dari mobile/src/hooks/use-inbox.ts",
+          "arrange": "jest.mock('@/lib/inbox', () => ({ CHAT_PAGE_SIZE: 30, listChatMessages: (...a)=>mockListChatMessages(...a), listChatRooms: (...a)=>mockListChatRooms(...a), markChatMessagesRead: (...a)=>mockMarkRead(...a), sendChatMessage: (...a)=>mockSend(...a), toggleChatReaction: (...a)=>mockToggleChatReaction(...a) })). mockToggleChatReaction.mockResolvedValue(true). Build wrapper via new QueryClient({defaultOptions:{queries:{retry:false}}}) + QueryClientProvider (createElement). renderHook(() => useChatActions('room-1'), { wrapper }).",
+          "act": "await result.current.toggleReaction('msg-42', '👍')",
+          "assert": "expect(mockToggleChatReaction).toHaveBeenCalledTimes(1); expect(mockToggleChatReaction).toHaveBeenCalledWith('msg-42', '👍').",
+          "why_red": "useChatActions saat ini (use-inbox.ts L78-102) hanya expose {send, markRead, isSending}. toggleReaction belum ada → TypeError: result.current.toggleReaction is not a function. Merah sampai mutation baru + surface API di-add."
+        },
+        {
+          "name": "useChatActions.toggleReaction — menginvalidasi ['chat-messages', roomId] setelah sukses (positif)",
+          "target": "useChatActions(roomId).toggleReaction onSuccess invalidation",
+          "arrange": "Mock @/lib/inbox seperti case #1. mockToggleChatReaction.mockResolvedValue(true). Buat QueryClient qc, spy = jest.spyOn(qc, 'invalidateQueries'). renderHook dengan wrapper yang expose qc yang sama.",
+          "act": "await result.current.toggleReaction('msg-1', '✅')",
+          "assert": "const keys = spy.mock.calls.map(c => JSON.stringify((c[0] as {queryKey: unknown[]}).queryKey)); expect(keys.some(k => k === JSON.stringify(['chat-messages','room-1']))).toBe(true);",
+          "why_red": "Belum ada onSuccess yang memicu invalidasi ['chat-messages', roomId] untuk fitur reaksi. Tanpa mutation baru, invalidateQueries tak terpanggil dengan key tersebut. Refetch chat-messages adalah kanal satu-satunya utk memuat ulang embed reactions (D1)."
+        },
+        {
+          "name": "useChatActions.toggleReaction — TIDAK menginvalidasi ['chat-rooms'] (netralitas preview last_message)",
+          "target": "useChatActions(roomId).toggleReaction (negative invalidation guard)",
+          "arrange": "Mock @/lib/inbox + mockToggleChatReaction.mockResolvedValue(true). QueryClient qc + spy = jest.spyOn(qc, 'invalidateQueries').",
+          "act": "await result.current.toggleReaction('msg-1', '👀')",
+          "assert": "const keys = spy.mock.calls.map(c => JSON.stringify((c[0] as {queryKey: unknown[]}).queryKey)); expect(keys.some(k => k === JSON.stringify(['chat-rooms']))).toBe(false);",
+          "why_red": "Perlu regressi-guard aktif: send(existing) meng-invalidate ['chat-rooms'] (use-inbox L86). Bila developer meng-copy pola send untuk toggleReaction tanpa pikir, guard ini gagal. Sebelum fitur ada, seluruh test file bahkan tak bisa dijalankan (toggleReaction undefined) → merah."
+        },
+        {
+          "name": "useChatActions.toggleReaction — TIDAK menginvalidasi ['notifications'] (V1 no-notify)",
+          "target": "useChatActions(roomId).toggleReaction (negative invalidation guard)",
+          "arrange": "Mock @/lib/inbox + mockToggleChatReaction.mockResolvedValue(false). QueryClient qc + spy = jest.spyOn(qc, 'invalidateQueries').",
+          "act": "await result.current.toggleReaction('msg-1', '🙏')",
+          "assert": "const keys = spy.mock.calls.map(c => JSON.stringify((c[0] as {queryKey: unknown[]}).queryKey)); expect(keys.some(k => k.includes('notifications'))).toBe(false);",
+          "why_red": "Spec V1 melarang notifikasi untuk reaksi. Guard aktif memastikan mutation baru tak mem-fanout ke family notifications. Sebelum implementasi: toggleReaction tak ada → tes gagal karena undefined."
+        },
+        {
+          "name": "useChatActions.toggleReaction — meneruskan boolean apa adanya dari RPC",
+          "target": "useChatActions(roomId).toggleReaction return value pass-through",
+          "arrange": "Case A: mockToggleChatReaction.mockResolvedValueOnce(true). Case B: mockToggleChatReaction.mockResolvedValueOnce(false). renderHook per case.",
+          "act": "const rA = await result.current.toggleReaction('m1','👍'); const rB = await result.current.toggleReaction('m2','👍');",
+          "assert": "expect(rA).toBe(true); expect(rB).toBe(false);",
+          "why_red": "Belum ada function; expect(...).toBe(true) melempar 'result.current.toggleReaction is not a function'. Sesudah implementasi, keputusan API 'return boolean via mutateAsync' harus dilock — menahan regresi 'menelan' return value (mis. void)."
+        },
+        {
+          "name": "useChatActions.toggleReaction — mutation error di-propagate & TIDAK memicu invalidasi",
+          "target": "useChatActions(roomId).toggleReaction onError semantics",
+          "arrange": "Mock @/lib/inbox. const err = new Error('rpc failed'); mockToggleChatReaction.mockRejectedValueOnce(err). QueryClient qc + spy = jest.spyOn(qc, 'invalidateQueries').",
+          "act": "let caught: unknown; try { await result.current.toggleReaction('m1','👍'); } catch (e) { caught = e; }",
+          "assert": "expect(caught).toBe(err); const keys = spy.mock.calls.map(c => JSON.stringify((c[0] as {queryKey: unknown[]}).queryKey)); expect(keys.some(k => k.includes('chat-messages'))).toBe(false);",
+          "why_red": "toggleReaction belum eksis → melempar TypeError, bukan err yang sama (identity check 'toBe(err)' gagal). Juga menjaga invariant: bila server tolak (mis. bukan member, emoji delisted saat INSERT), UI tak boleh mem-blink refetch yang menyembunyikan pesan error."
+        },
+        {
+          "name": "useChatActions.toggleReaction — dua panggilan berturut-turut → dua invalidasi ['chat-messages', roomId]",
+          "target": "useChatActions(roomId).toggleReaction idempoten hook-level",
+          "arrange": "Mock @/lib/inbox. mockToggleChatReaction.mockResolvedValueOnce(true).mockResolvedValueOnce(false). QueryClient qc + spy = jest.spyOn(qc, 'invalidateQueries').",
+          "act": "await result.current.toggleReaction('m1','👍'); await result.current.toggleReaction('m1','👍');",
+          "assert": "const count = spy.mock.calls.filter(c => JSON.stringify((c[0] as {queryKey: unknown[]}).queryKey) === JSON.stringify(['chat-messages','room-1'])).length; expect(count).toBe(2); expect(mockToggleChatReaction).toHaveBeenCalledTimes(2);",
+          "why_red": "Tanpa mutation baru, tes gagal karena undefined. Sesudah implementasi, mencegah regresi debounce/throttle prematur di hook layer (spec: V1 invalidation-only, tanpa optimistic — hook harus 'stupid' dan menyerahkan konkurensi ke server DELETE-then-INSERT)."
+        },
+        {
+          "name": "useChatActions.toggleReaction — TIDAK menyentuh keluarga cache di luar ['chat-messages', roomId] (isolasi roomId)",
+          "target": "useChatActions('room-A').toggleReaction memakai roomId dari argumen hook (bukan hardcode)",
+          "arrange": "Mock @/lib/inbox. mockToggleChatReaction.mockResolvedValue(true). renderHook(() => useChatActions('room-A'), {wrapper}). qc + spy.",
+          "act": "await result.current.toggleReaction('m1','👍')",
+          "assert": "const keys = spy.mock.calls.map(c => JSON.stringify((c[0] as {queryKey: unknown[]}).queryKey)); expect(keys.some(k => k === JSON.stringify(['chat-messages','room-A']))).toBe(true); expect(keys.some(k => k === JSON.stringify(['chat-messages','room-B']))).toBe(false);",
+          "why_red": "Menegakkan bahwa key invalidation dibangun dari param `roomId` hook. Jika implementasi salah hardcode/nyontek dari send tapi lupa closure roomId, tes gagal. Sebelum implementasi: tak ada function → merah default."
+        },
+        {
+          "name": "useChatActions — expose isTogglingReaction sebagai mirror dari mutation.isPending",
+          "target": "useChatActions(roomId).isTogglingReaction",
+          "arrange": "Mock @/lib/inbox. let resolveFn: (v: boolean) => void; mockToggleChatReaction.mockImplementation(() => new Promise<boolean>(res => { resolveFn = res; })).",
+          "act": "act(() => { void result.current.toggleReaction('m1','👍'); }); await waitFor(() => expect(result.current.isTogglingReaction).toBe(true)); act(() => { resolveFn!(true); }); await waitFor(() => expect(result.current.isTogglingReaction).toBe(false));",
+          "assert": "Transisi pending true→false terverifikasi via waitFor di atas.",
+          "why_red": "Field `isTogglingReaction` belum ada di return type useChatActions (L97-101 hanya {send, markRead, isSending}). Screen memerlukan indikator ini utk debounce pill/menampilkan error non-blocking (spec §10). Sebelum implementasi: undefined → toBe(true) gagal."
+        },
+        {
+          "name": "useChatMessages — meneruskan field `reactions` embed dari listChatMessages apa adanya",
+          "target": "useChatMessages(roomId) pass-through embed reactions",
+          "arrange": "Mock @/lib/inbox dgn mockListChatMessages.mockResolvedValueOnce([{ id: 'm1', chat_room_id: 'room-1', author_id: 'u1', body: 'hi', created_at: '2026-07-13T00:00:00Z', author: { id: 'u1', full_name: 'A', email: 'a@x' }, reactions: [{ emoji: '👍', reactor_id: 'u2' }, { emoji: '👍', reactor_id: 'u3' }] }]).",
+          "act": "renderHook(() => useChatMessages('room-1'), {wrapper}); await waitFor(() => expect(result.current.isLoading).toBe(false));",
+          "assert": "expect(result.current.messages[0].reactions).toEqual([{ emoji: '👍', reactor_id: 'u2' }, { emoji: '👍', reactor_id: 'u3' }]);",
+          "why_red": "Tipe `ChatMessage.reactions` belum ada di mobile/src/lib/inbox.ts → TS compile fail di fixture / properti undefined di runtime. Setelah tipe ditambah, invariant 'hook tidak melumat field' terkunci — MessageBubble bergantung field ini utk agregasi count+reactedByMe."
+        },
+        {
+          "name": "useChatMessages — pesan tanpa `reactions` tetap valid (opsional, backward-compat)",
+          "target": "useChatMessages(roomId) pass-through — reactions undefined",
+          "arrange": "mockListChatMessages.mockResolvedValueOnce([{ id: 'm1', chat_room_id: 'room-1', author_id: 'u1', body: 'legacy', created_at: '2026-07-13T00:00:00Z', author: { id: 'u1', full_name: 'A', email: 'a@x' } }]).",
+          "act": "renderHook + waitFor selesai loading.",
+          "assert": "expect(result.current.messages[0]).toHaveProperty('id','m1'); expect(result.current.messages[0].reactions).toBeUndefined();",
+          "why_red": "Sebelum ChatMessage.reactions dijadikan OPTIONAL (`reactions?: ChatReaction[]`), tipe wajib bakal memaksa fixture selalu menyertakan field, dan tes lama (pesan tanpa reactions) berpotensi tak kompile. Menegakkan opsionalitas eksplisit — mencegah regresi migrasi awal saat DB belum mengembalikan array."
+        }
+      ]
+    },
+    {
+      "layer": "ui",
+      "test_file": "mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx",
+      "cases": [
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > tidak merender pill row saat pesan tanpa reaksi",
+          "target": "MessageBubble/ReactionPillRow di mobile/src/app/(app)/inbox/[roomId].tsx",
+          "arrange": "mockUseChatMessages return state via makeChatMessagesState({ messages: [{ id: 'm1', chat_room_id: 'r1', author_id: 'other', body: 'Halo tim', created_at: <ISO>, author: { id: 'other', full_name: 'Andi', email: null } }] }) — TANPA properti reactions. mockUseChatActions default (toggleReaction: jest.fn()). mockSession = { user: { id: 'me' } }. Render <ChatRoomScreen /> (useLocalSearchParams roomId='r1').",
+          "act": "await screen.findByText('Halo tim'); const pill = screen.queryByLabelText(/^Reaksi /);",
+          "assert": "expect(pill).toBeNull(); // tidak ada row placeholder, tidak ada pill saat reactions kosong/undefined",
+          "why_red": "Belum ada sub-komponen ReactionPillRow di [roomId].tsx; sekaligus wiring reactions ke MessageBubble belum ada — test akan mem-force adanya branch conditional (m.reactions?.length > 0)."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > agregasi count: dua reaktor emoji sama → satu pill dengan count 2",
+          "target": "Agregasi client-side count di ReactionPillRow ([roomId].tsx)",
+          "arrange": "makeChatMessagesState({ messages: [{ id: 'm1', ..., body: 'Halo', reactions: [{ emoji: '👍', reactor_id: 'a' }, { emoji: '👍', reactor_id: 'b' }] }] }). mockSession user 'me' (bukan 'a'/'b').",
+          "act": "await screen.findByText('Halo'); const pills = screen.queryAllByLabelText(/^Reaksi 👍/);",
+          "assert": "expect(pills.length).toBe(1); expect(screen.getByLabelText('Reaksi 👍, 2, belum bereaksi')).toBeTruthy();",
+          "why_red": "Belum ada agregasi count + label a11y terformat; render saat ini tidak menampilkan pill sama sekali."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > reactedByMe true saat currentUserId ada di reactor_id",
+          "target": "Perhitungan reactedByMe via useAuth().session.user.id + accessibilityState.selected",
+          "arrange": "makeChatMessagesState({ messages: [{ id: 'm1', ..., reactions: [{ emoji: '👍', reactor_id: 'me' }, { emoji: '✅', reactor_id: 'other' }] }] }). mockSession = { user: { id: 'me' } }.",
+          "act": "const pillLike = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/); const pillCheck = screen.getByLabelText(/Reaksi ✅.*belum bereaksi/);",
+          "assert": "expect(pillLike.props.accessibilityState.selected).toBe(true); expect(pillCheck.props.accessibilityState.selected).toBe(false);",
+          "why_red": "Belum ada pembacaan currentUserId dari useAuth di dalam MessageBubble; belum ada mapping ke accessibilityState.selected."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > reactedByMe false saat session null (guest/logout race)",
+          "target": "Guard session.user.id null di perhitungan reactedByMe",
+          "arrange": "mockSession = null. makeChatMessagesState({ messages: [{ id: 'm1', ..., reactions: [{ emoji: '👍', reactor_id: 'someone' }] }] }).",
+          "act": "const pill = await screen.findByLabelText(/^Reaksi 👍/);",
+          "assert": "expect(pill.props.accessibilityState.selected).toBe(false);",
+          "why_red": "Tidak ada guard null-safe untuk session; tanpa implementasi UI, pill tidak dirender sehingga findByLabelText throw."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > touch target ≥44px via inline style numeric",
+          "target": "ReactionPill minWidth/minHeight ≥44 (a11y §4)",
+          "arrange": "makeChatMessagesState({ messages: [{ id: 'm1', ..., reactions: [{ emoji: '👍', reactor_id: 'a' }] }] }).",
+          "act": "const pill = await screen.findByLabelText(/^Reaksi 👍/); const flat = Array.isArray(pill.props.style) ? Object.assign({}, ...pill.props.style.filter(Boolean)) : (pill.props.style ?? {});",
+          "assert": "expect((flat.minHeight ?? flat.height) >= 44).toBe(true); expect((flat.minWidth ?? flat.width) >= 44).toBe(true);",
+          "why_red": "Pill belum ada; ketika ditambahkan, tanpa inline style numeric (hanya Tailwind class) assertion width/height akan undefined — memaksa penggunaan pola SendButton (Critic §8.4)."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > non-color signal untuk selected (border tebal atau tanda ✓)",
+          "target": "ReactionPill selected menambahkan sinyal non-warna (a11y §4)",
+          "arrange": "makeChatMessagesState({ messages: [{ id: 'm1', ..., reactions: [{ emoji: '👍', reactor_id: 'me' }] }] }). mockSession user 'me'.",
+          "act": "const pill = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/); const cn = String(pill.props.className ?? ''); const hasCheck = within(pill).queryByText('✓') !== null;",
+          "assert": "expect(pill.props.accessibilityState.selected).toBe(true); expect(hasCheck || /border(-2|-)/.test(cn)).toBe(true);",
+          "why_red": "Belum ada styling selected; assertion selected/border/checkmark semua akan gagal karena pill tidak dirender."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > tap pill memanggil toggleReaction(messageId, emoji)",
+          "target": "onPress ReactionPill → useChatActions().toggleReaction",
+          "arrange": "const mockToggleReaction = jest.fn().mockResolvedValue(true); perluas mockUseChatActions agar mengembalikan { send, markRead, isSending, isMarkingRead, toggleReaction: mockToggleReaction, isTogglingReaction: false }. makeChatMessagesState({ messages: [{ id: 'm1', ..., reactions: [{ emoji: '👍', reactor_id: 'a' }] }] }). mockSession user 'me'.",
+          "act": "const pill = await screen.findByLabelText(/^Reaksi 👍/); fireEvent.press(pill);",
+          "assert": "expect(mockToggleReaction).toHaveBeenCalledTimes(1); expect(mockToggleReaction).toHaveBeenCalledWith('m1', '👍');",
+          "why_red": "useChatActions belum expose toggleReaction; MessageBubble belum memiliki handler press pada pill — tak ada pill untuk dipress."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > tap saat session null tidak memanggil mutation",
+          "target": "Guard tap saat currentUserId undefined",
+          "arrange": "mockSession = null. mockToggleReaction = jest.fn(). messages: [{ id: 'm1', ..., reactions: [{ emoji: '👍', reactor_id: 'x' }] }].",
+          "act": "const pill = await screen.findByLabelText(/^Reaksi 👍/); fireEvent.press(pill);",
+          "assert": "expect(mockToggleReaction).not.toHaveBeenCalled();",
+          "why_red": "Tanpa guard, handler akan tetap memanggil mutation; sebelum implementasi handler tidak ada, tapi test menuntut pill tetap ter-render dan tap no-op."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > error toggle merender alert inline tanpa merusak list pesan",
+          "target": "Catch mutation → setState errorReaction → <Text accessibilityRole=\"alert\">",
+          "arrange": "mockToggleReaction = jest.fn().mockRejectedValueOnce(new Error('boom')). messages: [{ id: 'm1', ..., body: 'Halo tim', reactions: [{ emoji: '👍', reactor_id: 'x' }] }, { id: 'm2', ..., body: 'Balasan', reactions: [] }]. mockSession user 'me'.",
+          "act": "const pill = await screen.findByLabelText(/^Reaksi 👍/); fireEvent.press(pill); const alert = await screen.findByRole('alert');",
+          "assert": "expect(alert).toBeTruthy(); expect(screen.getByText('Halo tim')).toBeTruthy(); expect(screen.getByText('Balasan')).toBeTruthy();",
+          "why_red": "Belum ada handling catch + state error inline untuk reaksi; unhandled rejection akan meletup di test tanpa surface alert."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > multi-emoji ordering stabil (deterministik)",
+          "target": "Sortir pill deterministik (mis. by first-seen order dari reactions[])",
+          "arrange": "messages: [{ id: 'm1', ..., reactions: [{ emoji: '✅', reactor_id: 'a' }, { emoji: '👍', reactor_id: 'a' }, { emoji: '👀', reactor_id: 'b' }] }].",
+          "act": "const pills = await screen.findAllByLabelText(/^Reaksi /); const labels = pills.map(p => String(p.props.accessibilityLabel));",
+          "assert": "expect(labels.length).toBe(3); expect(labels[0]).toMatch(/✅/); expect(labels[1]).toMatch(/👍/); expect(labels[2]).toMatch(/👀/);",
+          "why_red": "Belum ada implementasi urutan pill; render awal tidak menampilkan pill sama sekali."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > isLoading tidak merender pill (skeleton path)",
+          "target": "Path SkeletonList vs list utama",
+          "arrange": "mockUseChatMessages return state via makeChatMessagesState({ isLoading: true, messages: [] }).",
+          "act": "await screen.findByTestId('chat-list'); const pill = screen.queryByLabelText(/^Reaksi /);",
+          "assert": "expect(pill).toBeNull();",
+          "why_red": "Setelah pill diperkenalkan, ada risiko bocor ke path skeleton bila komponen render pill di luar branch messages; test ini mengunci scope."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > compat highlight — bubble ter-highlight tetap render pill",
+          "target": "Regresi terhadap MessageBubble.isHighlighted (border-2 amber) saat ada reactions",
+          "arrange": "useLocalSearchParams returns { roomId: 'r1', highlight: 'm1' }. messages: [{ id: 'm1', ..., body: 'Pesan target', reactions: [{ emoji: '👍', reactor_id: 'x' }] }].",
+          "act": "await screen.findByText('Pesan target'); const pill = await screen.findByLabelText(/^Reaksi 👍/);",
+          "assert": "expect(pill).toBeTruthy(); // pill dirender berdampingan dengan bubble highlight",
+          "why_red": "Belum ada wiring pill; sub-komponen highlight tidak menerima anak baru — memaksa penempatan pill row di bawah body tetapi di dalam sel bubble."
+        },
+        {
+          "name": "ChatRoomScreen — Reaction pill (FR-RX-4.x) > pesan self (author=me) tetap menampilkan pill",
+          "target": "Self-react diizinkan (AC-24) — pill terlihat di bubble milik user",
+          "arrange": "messages: [{ id: 'm1', author_id: 'me', ..., body: 'Aku', reactions: [{ emoji: '👍', reactor_id: 'me' }] }]. mockSession user 'me'.",
+          "act": "const pill = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/);",
+          "assert": "expect(pill).toBeTruthy(); expect(pill.props.accessibilityState.selected).toBe(true);",
+          "why_red": "Tanpa implementasi pill sama sekali, findByLabelText throws; sekaligus mengunci invariant bahwa branch isMe tetap render pill row."
+        }
+      ]
+    }
+  ],
+  "plan": {
+    "mocking_strategy": "Empat lapisan mock terpisah tanpa kebocoran.\n\n**Data layer (mobile/src/lib/__tests__/inbox.test.ts).** Mock `../supabase` di top-level dengan `jest.mock('../supabase', () => ({ supabase: { rpc: mockRpc, from: mockFrom } }))` seperti pola existing. Builder PostgREST dipalsukan via helper `makeQueryThenable({ data, error })` yang sudah ada di file — mendukung `.select/.eq/.or/.order/.limit` sehingga embed reactions cukup diverifikasi via string argumen `.select()`; tidak perlu method baru. RPC toggle: `mockRpc.mockResolvedValue({ data: true|false, error: null })` untuk pass-through; error identity via `mockResolvedValue({ data: null, error: err })` lalu `await expect(...).rejects.toBe(err)` (identity, bukan `toEqual`). Zero native module import; test murni Node.\n\n**Hook layer (mobile/src/hooks/__tests__/use-inbox.test.tsx).** Mock `@/lib/inbox` di top-level dengan seluruh fungsi termasuk `toggleChatReaction: (...a) => mockToggleChatReaction(...a)` + `CHAT_PAGE_SIZE: 30` (konstanta wajib disertakan — dipakai `getNextPageParam`). Wrapper: `new QueryClient({ defaultOptions: { queries: { retry: false } } })` + `createElement(QueryClientProvider, { client: qc }, children)`. Return `{ qc, wrapper }` supaya `jest.spyOn(qc, 'invalidateQueries')` bisa diassert. Cek POS/NEG invalidation via `spy.mock.calls.map(c => JSON.stringify((c[0] as { queryKey: unknown[] }).queryKey))`. Pending state (`isTogglingReaction`) diuji dengan Promise manual: `let resolveFn: (v: boolean) => void; mockToggleChatReaction.mockImplementation(() => new Promise(r => { resolveFn = r; }))`, lalu `waitFor` sebelum & sesudah `resolveFn(true)`. TIDAK boleh mem-mock `@/lib/supabase` — hook tak menyentuh supabase langsung.\n\n**UI layer (mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx).** Extend mock existing tanpa mengubah struktur: (i) `jest.mock('@/lib/supabase', () => ({ supabase: {} }))` mem-block import native supabase-js; (ii) `jest.mock('expo-router', () => ({ useLocalSearchParams: mockUseLocalSearchParams, useRouter: () => ({ setParams: mockSetParams, back: jest.fn() }) }))`; (iii) perluas `jest.mock('@/hooks/use-inbox')` — mock `useChatActions` return objek termasuk `toggleReaction: mockToggleReaction` + `isTogglingReaction: false`; (iv) `jest.mock('@/providers/auth-provider', () => ({ useAuth: () => ({ session: mockSession }) }))` dengan `mockSession` mutable top-level (baca lazy) — set `null` untuk guard test; (v) `jest.mock('@/lib/errors', () => ({ reportError: mockReportError }))` untuk uji error surface. Extend `makeChatMessagesState` cukup dengan menambah `reactions` pada override `messages` (backward-compatible). Touch target diuji dengan flatten style: `Array.isArray(pill.props.style) ? Object.assign({}, ...pill.props.style.filter(Boolean)) : (pill.props.style ?? {})`. Tap via `fireEvent.press(pill)`. Error inline diuji `await screen.findByRole('alert')` (RN Alert modal dilarang oleh spec §10).\n\n**SQL contract (supabase/tests/00XX_*.sql).** Di luar Jest; dijalankan via `docker exec supabase_db_supabase psql -U postgres -d postgres -f <file>`. Pola blok `do $$ ... raise notice 'PASS N: <label>'; ... raise exception 'FAIL N: <label>: %', <detail>; end $$;` (persis pola `0044_search_chat_messages_contract.sql`). Impersonasi user via `set local role authenticated; set local request.jwt.claims to '{\"sub\":\"<uuid>\",\"role\":\"authenticated\"}'::text;`. Concurrency diuji dengan dua panggilan `toggle_chat_reaction` berturut → assert `count(*) = 1` (bukan try/catch 23505 — ON CONFLICT DO NOTHING harus tidak melempar). Netralitas skor diuji statik: `select position('chat_message_reactions' in pg_get_functiondef(oid)) from pg_proc where proname in (<fungsi skor>)` — semua harus 0.\n\n**Pola global.** Tidak ada file dipalsukan lintas layer (mis. UI test JANGAN mem-mock `@/lib/inbox` langsung — cukup mock hook layer di atasnya). Semua mutable state test (mockSession, resolveFn) direset di `beforeEach` dan factory pembaca dibaca lazy supaya perubahan per-test terlihat.",
+    "steps": [
+      {
+        "order": 1,
+        "type": "red",
+        "description": "Fase A/Red-SQL — tulis 11 blok PASS/FAIL kontrak SQL: DDL+PK/FK CASCADE, RLS+policy SELECT, revoke I/U/D, RPC idempoten (dua toggle-on → 1 row), validasi emoji-aktif hanya INSERT, delisted removable via DELETE, cross-org 0 baris, cascade hapus pesan/room/org/profil, anti-tamper (Y tak cabut reaksi X), tulis-langsung ditolak, netralitas skor byte-identik + guard statik pg_get_functiondef. Nomor file reconcile HEAD (00XX).",
+        "files_touched": [
+          "supabase/tests/00XX_chat_message_reactions_contract.sql"
+        ],
+        "test_ref": "SQL contract 11 blok (behaviors §13 spec)"
+      },
+      {
+        "order": 2,
+        "type": "green",
+        "description": "Fase A/Green-SQL — tulis migrasi baru berisi §7.1 (tabel reaction_emojis + seed 4 ack + RLS select-all + revoke I/U/D), §7.2 (tabel chat_message_reactions PK komposit + FK CASCADE + RLS + policy select organization_id=current_user_org() AND EXISTS(chat_messages ... is_chat_member OR can_view_workspace) + revoke I/U/D), §7.3 (RPC toggle_chat_reaction SECURITY DEFINER + gate is_chat_member + DELETE-then-INSERT ON CONFLICT DO NOTHING + validasi emoji-aktif hanya INSERT + grant execute authenticated). Jalankan psql -f contract → 11/11 PASS.",
+        "files_touched": [
+          "supabase/migrations/00XX_chat_message_reactions.sql"
+        ],
+        "test_ref": "SQL contract 11 blok PASS"
+      },
+      {
+        "order": 3,
+        "type": "red",
+        "description": "Fase B/Red-Data — extend mobile/src/lib/__tests__/inbox.test.ts dengan 4 case listChatMessages: [RX-6] select-string memuat 'reactions:chat_message_reactions(emoji, reactor_id)'; [RX-7] .eq('chat_room_id') top-level DAN string 'reactions'/'chat_room_id' TIDAK muncul di calls.or; [RX-8] pass-through msgs[0].reactions apa adanya (fixture 3 baris); [RX-9] roomId falsy → [] tanpa mockFrom terpanggil.",
+        "files_touched": [
+          "mobile/src/lib/__tests__/inbox.test.ts"
+        ],
+        "test_ref": "RX-6, RX-7, RX-8, RX-9"
+      },
+      {
+        "order": 4,
+        "type": "red",
+        "description": "Fase B/Red-Data — tambah 5 case toggleChatReaction: [RX-1] mockRpc dipanggil dengan ('toggle_chat_reaction', {p_message, p_emoji}) exact; [RX-2] return true verbatim; [RX-3] return false verbatim (bukan !!data); [RX-4] rejects.toBe(err) identity; [RX-5] messageId+emoji verbatim tanpa trim/normalize.",
+        "files_touched": [
+          "mobile/src/lib/__tests__/inbox.test.ts"
+        ],
+        "test_ref": "RX-1, RX-2, RX-3, RX-4, RX-5"
+      },
+      {
+        "order": 5,
+        "type": "green",
+        "description": "Fase B/Green-Data — di mobile/src/lib/inbox.ts: (a) tambah type ChatReaction={emoji,reactor_id}; (b) perluas ChatMessage dengan reactions?:ChatReaction[]; (c) ubah select() di listChatMessages menjadi 'id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id)' tanpa menyentuh top-level .eq maupun ekspresi .or; (d) tambah export async function toggleChatReaction(messageId, emoji): Promise<boolean> = supabase.rpc('toggle_chat_reaction', {p_message: messageId, p_emoji: emoji}), if(error) throw error; return data as boolean. Update database.types.ts: sisipkan Row/Insert/Update/Relationships reaction_emojis + chat_message_reactions dan Functions.toggle_chat_reaction {Args:{p_message:string,p_emoji:string}, Returns:boolean}.",
+        "files_touched": [
+          "mobile/src/lib/inbox.ts",
+          "mobile/src/lib/database.types.ts"
+        ],
+        "test_ref": "RX-1..RX-9 hijau; npm run type-check hijau"
+      },
+      {
+        "order": 6,
+        "type": "refactor",
+        "description": "Fase B/Refactor — jalankan npm test inbox + type-check. Verifikasi tak ada helper baru terduplikasi; string select() muncul sekali (tak perlu ekstrak konstanta belum). Cek tak ada import supabase baru di file lain (grep chat_message_reactions di mobile/src/lib → hanya inbox.ts + database.types.ts).",
+        "files_touched": [
+          "mobile/src/lib/inbox.ts",
+          "mobile/src/lib/database.types.ts"
+        ],
+        "test_ref": "Regressi jest suite lib"
+      },
+      {
+        "order": 7,
+        "type": "red",
+        "description": "Fase C/Red-Hook — extend mobile/src/hooks/__tests__/use-inbox.test.tsx: perluas mock @/lib/inbox dengan toggleChatReaction. 8 case useChatActions.toggleReaction: (i) mockToggleChatReaction dipanggil dgn ('msg-42','👍'); (ii) POS invalidateQueries key ['chat-messages', roomId]; (iii) NEG key ['chat-rooms'] tidak muncul; (iv) NEG 'notifications' substring tidak muncul; (v) return boolean true/false pass-through via mutateAsync; (vi) mockRejectedValueOnce → mutateAsync rejects.toBe(err) DAN spy invalidateQueries tidak berisi ['chat-messages']; (vii) dua panggilan berturut → 2× invalidate ['chat-messages', roomId]; (viii) hook dgn roomId='room-A' invalidate 'room-A' bukan 'room-B'. Tambah case (ix) isTogglingReaction pending true→false via Promise manual. Plus 2 case useChatMessages: [X] pass-through messages[0].reactions dari mockListChatMessages; [Y] pesan tanpa reactions → messages[0].reactions === undefined (opsionalitas).",
+        "files_touched": [
+          "mobile/src/hooks/__tests__/use-inbox.test.tsx"
+        ],
+        "test_ref": "useChatActions.toggleReaction 9 case + useChatMessages 2 case"
+      },
+      {
+        "order": 8,
+        "type": "green",
+        "description": "Fase C/Green-Hook — di mobile/src/hooks/use-inbox.ts, dalam useChatActions(roomId) tambah toggleReactionM = useMutation({ mutationFn: (v:{messageId:string;emoji:string}) => toggleChatReaction(v.messageId, v.emoji), onSuccess: () => qc.invalidateQueries({queryKey:['chat-messages', roomId]}) }). Perluas return objek: toggleReaction: (messageId, emoji) => toggleReactionM.mutateAsync({messageId, emoji}), isTogglingReaction: toggleReactionM.isPending. JANGAN memanggil invalidateQueries untuk ['chat-rooms'] maupun ['notifications'].",
+        "files_touched": [
+          "mobile/src/hooks/use-inbox.ts"
+        ],
+        "test_ref": "9 case useChatActions.toggleReaction + 2 case useChatMessages hijau"
+      },
+      {
+        "order": 9,
+        "type": "refactor",
+        "description": "Fase C/Refactor — jalankan npm test hooks. Verifikasi bentuk mutasi konsisten dengan sendM/markReadM (satu queryKey, tanpa side-effect notif). Belum perlu ekstrak factory invalidator (baru 3 mutation, threshold ≥5).",
+        "files_touched": [
+          "mobile/src/hooks/use-inbox.ts"
+        ],
+        "test_ref": "Regressi jest hooks suite"
+      },
+      {
+        "order": 10,
+        "type": "refactor",
+        "description": "Fase D/Prasyarat — WAJIB sebelum Fase D dimulai: update DESIGN.md §7 tambah entri 'Reaction pill' (unselected vs selected, sinyal non-warna via border-2 + checkmark ✓, min 44px, solid+putih = brand-dark #1564b3), sinkron ke mobile/src/global.css bila token warna baru. Bukan test — dokumentasi + token yang memblokir UI test menghasilkan hasil deterministik.",
+        "files_touched": [
+          "DESIGN.md",
+          "mobile/src/global.css"
+        ],
+        "test_ref": "FR-RX-0.3, FR-RX-4.4"
+      },
+      {
+        "order": 11,
+        "type": "red",
+        "description": "Fase D/Red-UI — extend mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx: (a) perluas makeChatMessagesState agar messages boleh berisi reactions:[{emoji,reactor_id}]; (b) perluas mock useChatActions dengan toggleReaction:mockToggleReaction, isTogglingReaction:false. Tambah suite 'ChatRoomScreen — Reaction pill (FR-RX-4.x)' 13 case: [1] zero-pill saat reactions kosong/undefined; [2] agregasi count 2 utk emoji sama; [3] reactedByMe=selected.true saat reactor_id=='me'; [4] session=null → selected.false, pill tetap render; [5] touch target flatten style ≥44 min/height/width; [6] non-color signal (border-2 OR text '✓'); [7] fireEvent.press pill → mockToggleReaction('m1','👍'); [8] session=null tap → mockToggleReaction not called; [9] mockRejectedValueOnce → findByRole('alert') + list pesan tetap render; [10] ordering deterministik first-seen (✅ 👍 👀); [11] isLoading true → queryByLabelText null; [12] highlight amber compat — pill tetap render; [13] self-react author='me' → pill selected true.",
+        "files_touched": [
+          "mobile/src/app/(app)/inbox/__tests__/[roomId].test.tsx"
+        ],
+        "test_ref": "Reaction pill FR-RX-4.x — 13 case"
+      },
+      {
+        "order": 12,
+        "type": "green",
+        "description": "Fase D/Green-UI — di mobile/src/app/(app)/inbox/[roomId].tsx: (a) sub-komponen inline ReactionPill (Pressable) dengan style={{minWidth:44, minHeight:44}} inline numeric (bukan Tailwind class), accessibilityRole='button', accessibilityLabel=`Reaksi ${emoji}, ${count}, ${reactedByMe?'saya sudah bereaksi':'belum bereaksi'}`, accessibilityState={{selected:reactedByMe}}, className menambahkan border-2 border-brand-dark saat selected + child <Text>✓</Text>; (b) ReactionPillRow yang mengagregasi reactions ke Map<emoji,{count,reactedByMe}> dengan urutan first-seen (Array.from(new Set(reactions.map(r=>r.emoji)))), return null bila reactions?.length falsy; (c) sisipkan <ReactionPillRow /> di dalam MessageBubble di bawah body namun tetap di dalam sel bubble (agar border amber highlight tetap membungkus); (d) currentUserId = useAuth().session?.user?.id ?? null; handler press: if(!currentUserId||isTogglingReaction) return; try await toggleReaction(m.id, emoji) catch e => reportError('Reaksi', e, 'Gagal memperbarui reaksi.') + setReactionError(msg); render <Text accessibilityRole='alert'>{reactionError}</Text> inline; (e) skeleton path (isLoading) TIDAK merender pill.",
+        "files_touched": [
+          "mobile/src/app/(app)/inbox/[roomId].tsx"
+        ],
+        "test_ref": "13 case Reaction pill FR-RX-4.x hijau"
+      },
+      {
+        "order": 13,
+        "type": "refactor",
+        "description": "Fase D/Refactor — memoize aggregator per pesan (useMemo dependency [m.reactions, currentUserId]). Verifikasi inline style numeric bukan Tailwind (Critic §8.4). Rapikan copy Bahasa Indonesia. Jalankan npm test screens.",
+        "files_touched": [
+          "mobile/src/app/(app)/inbox/[roomId].tsx"
+        ],
+        "test_ref": "Regressi jest screens suite"
+      },
+      {
+        "order": 14,
+        "type": "refactor",
+        "description": "Fase E/Regressi — jalankan `npm test` + `npm run type-check` seluruh proyek. Pastikan roomId.timeline.test.ts, roomId.search-highlight.test.tsx, keyset tests, dan seluruh suite non-reaksi tetap hijau. Grep guard: `grep -r chat_message_reactions mobile/src/lib` harus hanya matched di inbox.ts + database.types.ts (netralitas skor).",
+        "files_touched": [],
+        "test_ref": "Full jest suite + type-check"
+      },
+      {
+        "order": 15,
+        "type": "refactor",
+        "description": "Fase E/Guard operasional — jalankan ulang SQL contract PASS/FAIL setelah semua migrasi tetangga (bila ada perpindahan branch). Verifikasi netralitas skor via `select pg_get_functiondef(oid) from pg_proc where proname ilike '%score%' or proname ilike '%recompute%'` — semua def tidak memuat substring 'chat_message_reactions'.",
+        "files_touched": [
+          "supabase/tests/00XX_chat_message_reactions_contract.sql"
+        ],
+        "test_ref": "AC-18 netralitas skor"
+      }
+    ],
+    "risks": [
+      "Nomor migrasi bentrok: 0045 dipakai kontrak keyset; branch chat-polish sudah di 0052. Wajib reconcile HEAD_max+1 saat build — plan pakai placeholder 00XX.",
+      "NativeWind class Tailwind (min-w-11) tak flatten deterministik di Jest — 44px touch target WAJIB inline numeric style {minWidth:44,minHeight:44}, kalau tidak assertion width/height undefined dan tes hijau palsu.",
+      "RLS embed independence: developer bisa keliru mengandalkan chat_messages_select sebagai 'inheritance' — viewer non-workspace berpotensi bocor. Contract test §b menutup ini eksplisit.",
+      "Optimistic UI creep: spec V1 = invalidation-only. Copy-paste dari send() yang meng-invalidate ['chat-rooms'] akan membocorkan last_message row. Tes NEG hook menahan.",
+      "Anti-tamper miss: JANGAN pernah menerima reactor_id dari klien — RPC hardcode auth.uid(). Contract test §i wajib.",
+      "Whitelist double-source: menambah CHECK IN(...) atau daftar literal di body RPC melanggar D4. Delisted emoji harus tetap DELETE-able (validasi hanya di INSERT — D5).",
+      "Keyset regression: menambah embed di .select() TIDAK boleh menyentuh .or() cursor atau memindahkan .eq('chat_room_id'). Tes RX-7 mengunci; regressi = pesan/reaksi room lain bocor ke keyset.",
+      "UI menyentuh pill sebelum token DESIGN turun: FR-RX-0.3 blocker. Bila dilanggar, ukuran/warna pill tak deterministik dan a11y §4 gagal.",
+      "Cross-org p_message gap: RPC harus derive organization_id dari chat_messages (bukan input klien). RLS organization_id=current_user_org() menambal lapis kedua.",
+      "Realtime channel: kalau kelak realtime dipasang, jangan broadcast reaksi lewat channel chat_messages — pakai channel terpisah agar tidak meletup di listener existing.",
+      "Session=null race: mount → tap sebelum session terisi. Guard handler `if(!currentUserId) return` wajib; tes UI case #4 & #8 menutup.",
+      "Netralitas skor tersembunyi: view/materialized view baru bisa lolos guard fungsi. Tambahkan pg_get_viewdef check bila proyek memilikinya.",
+      "Contract test SQL dijalankan via psql sebagai owner (docker exec), bukan Jest. Bila runner CI tidak menjalankan psql suite, invarian server-side lolos tak teruji — pastikan CI wire supabase test hook.",
+      "Pola AAA test file dipertahankan; menambah field ke makeChatMessagesState tanpa backward-compat bisa mem-break 40+ case existing. Solusi: sisipkan field baru sebagai override, jangan wajibkan.",
+      "Type generation manual di database.types.ts rawan drift jika ke depan pakai `supabase gen types typescript` — regen idempoten hanya kalau tabel & RPC sudah live di remote schema."
+    ]
+  },
+  "critic": {
+    "concerns": [
+      "[Test-Bug UI case #11] `isLoading=true` path — plan meng-assert `screen.findByTestId('chat-list')` lalu `queryByLabelText(/^Reaksi /) === null`. Tapi di `[roomId].tsx` L205-239, saat `isLoading=true` render adalah `<SkeletonList count={4} />` (label 'Memuat…'), FlatList `testID='chat-list'` TIDAK dirender. `findByTestId('chat-list')` akan timeout dan test failing dengan pesan yang salah arah. Ganti asertifnya: `await screen.findByLabelText('Memuat…')` + `expect(screen.queryByLabelText(/^Reaksi /)).toBeNull()`.",
+      "[Score-guard salah nama fungsi] Plan §k / step §15 dan mocking_strategy SQL menggunakan pattern `proname in ('recompute_...', 'calculate_score_...')` / `ilike '%score%'`. Nama fungsi skor sebenarnya di repo (dari `0013_fase7_people_score.sql`, `0020_fase_sf1_score_formula_editor.sql`, `0039_fase7_cross_org_isolation.sql`) adalah: `calculate_period_scores`, `upsert_score_formula_version`, `activate_score_formula_version`, `assign_score_formula`, `override_user_score`, `create_score_formula_draft`, `update_score_formula_version_weights`, `tg_score_formula_immutable_columns`. Pattern generik plan gagal cocok utk sebagian (mis. `upsert_score_formula_version` cocok `%score%`, tapi `calculate_period_scores` tidak cocok `calculate_score_*`). Enumerasi eksplisit atau gunakan `proname ilike '%period_score%' OR proname ilike '%score_formula%' OR proname ilike '%override_user%'`.",
+      "[Mocking pola statis vs lazy] Existing mock di `[roomId].test.tsx` L30-33 memakai factory statis `useChatActions: () => ({ ..., isSending: mockIsSending })` di mana `mockIsSending` adalah `let` module-scope yang dibaca ulang tiap render. Rencana step §11 hanya menuliskan `toggleReaction: mockToggleReaction, isTogglingReaction: false` (literal). Ini menghambat penambahan test 'isTogglingReaction=true blocks tap'. Wajib menambahkan `let mockIsTogglingReaction = false;` module-scope + `isTogglingReaction: mockIsTogglingReaction` (lazy) supaya pending-guard bisa diuji per-test.",
+      "[Non-color signal via className fragile] UI case #6 (non-color signal border-2 OR ✓) mengasersi `String(pill.props.className ?? '')` matches `/border(-2|-)/`. `[roomId].tsx` mengimpor Pressable/Text dari `react-native-css/components` — library ini men-transform `className` menjadi `style` (flatten ke `borderWidth` numeric), sehingga `props.className` bisa jadi kosong/undef di jest tree. Assert harus jatuh ke: (a) child `<Text>✓</Text>` via `within(pill).queryByText('✓')`, atau (b) `flatStyle.borderWidth >= 2`. Jangan mengandalkan `className` sebagai prop yang terpelihara.",
+      "[Ordering pill tidak dijamin server-side] UI case #10 'first-seen' menuntut PostgREST mengembalikan `chat_message_reactions` embed dengan urutan insersi/reactor_id yang deterministik. PostgREST tanpa `order` explicit tidak menjamin urutan baris embed → di produksi bisa arbitrer (index scan order). Test hijau di jest karena mock builder mengembalikan array persis, tapi assert 'first-seen' akan flaky di kontrak HTTP nyata. Solusi: (i) tambah `order=emoji` di string `.select()` embed (mis. `reactions:chat_message_reactions(emoji, reactor_id, order=emoji.asc)`), atau (ii) client-side sort mem-map lewat `reaction_emojis.sort_order` (butuh embed 2-level) atau Unicode codepoint tetap. Plan harus memilih dan menyematkan sebagai contract.",
+      "[Contract test workspace-viewer non-member missing branch] AC-13/AC-11 wajib membuktikan SEPARASI baca-vs-tulis untuk user `can_view_workspace()=true AND is_chat_member=false`: HARUS bisa SELECT baris reaksi (embed) TETAPI RPC `toggle_chat_reaction` HARUS raise 'Hanya anggota room yang dapat memberi reaksi.'. Plan §b dan §i tidak eksplisit menyebut skenario ini (hanya 'cross-org' dan 'anti-tamper'). Contract test butuh dua blok terpisah dengan user ber-`can_view_workspace()` — kelupaan → viewer-write bisa merembes tanpa terdeteksi.",
+      "[Contract test `reaction_emojis` seed & policy kurang eksplisit] Plan §a hanya 'DDL + PK/FK CASCADE' — tidak mengecek: (i) seed set aktif = {'👍','✅','👀','🙏'} tepat 4 baris (spec §7.1 sengaja drop ❤️/🎉); (ii) policy `reaction_emojis_select` mengizinkan SELECT untuk authenticated apa adanya; (iii) `insert/update/delete` di-revoke dari authenticated+anon. Ini blocker guard 'Whitelist single-source' — kalau seed melenceng, klien bisa render emoji ekspresif yang dilarang scope-guardrail.",
+      "[Concurrency test tidak benar-benar concurrent] Plan §d & risk menuliskan uji 'idempoten & concurrency-safe' via dua panggilan berurutan → assert count(*)=1. Ini uji IDEMPOTENSI (D2), bukan concurrency riil. Concurrency asli butuh dua transaksi paralel (dua session/dua koneksi psql). Untuk deteksi race INSERT-INSERT, `ON CONFLICT DO NOTHING` sudah menutup — tapi race DELETE-then-INSERT antar dua device yang sama user tidak diuji. Terima batasan ini eksplisit, atau tulis test yang mem-BEGIN...COMMIT dua session dengan pg_backend_pid berbeda.",
+      "[Anti-tamper test kurang detail residu] Plan §i 'Y tak cabut reaksi X' baik. Perlu ditambah asertifikasi POSITIF: setelah Y memanggil `toggle_chat_reaction(msg,'👍')`, (a) baris X (msg,X,'👍') MASIH ADA, (b) baris Y (msg,Y,'👍') BARU TERCIPTA (bukti PK komposit mengizinkan multi-reactor per emoji, D11), (c) count baris = 2. Tanpa (a)+(b)+(c), test lolos meski PK atau reactor_id di-hijack.",
+      "[FK whitelist test tak ada] Plan menyebut 'validasi emoji-aktif hanya INSERT' (D5) tapi tidak eksplisit menguji FK `chat_message_reactions.emoji → reaction_emojis.emoji`. Kalau seseorang men-DROP validasi RPC `if not exists (... where emoji=p_emoji and active)`, dan FK ternyata hilang/rusak, insert emoji sembarang lolos. Tambahkan uji: langsung INSERT (di context definer/superuser test) dengan emoji tak terdaftar → gagal FK 23503. Independen dari validasi active-flag.",
+      "[UI test pending-guard (isTogglingReaction) missing] Plan Green-UI (§12) memasang `if (!currentUserId || isTogglingReaction) return;` — tapi TIDAK ADA test yang menutup cabang `isTogglingReaction=true → tap no-op`. Sebutkan case: set `mockIsTogglingReaction=true`, tap pill → `expect(mockToggleReaction).not.toHaveBeenCalled()`. Tanpa itu, developer bisa menghapus guard dan seluruh suite tetap hijau.",
+      "[Hook test [X] pass-through reactions vs sanitasi] Test [X] mem-assert `messages[0].reactions` = fixture verbatim, tapi hook memakai `useInfiniteQuery` yang bakal me-flatten `pages` — bila listChatMessages mengembalikan array dengan `reactions: [...]` di baris terluar, flatten by `.flat()` mempertahankan struktur. Aman. Namun perhatikan: TypeScript strict + fixture Row bertipe `ChatMessage` — tanpa update tipe di `inbox.ts` yang menambahkan `reactions?: ChatReaction[]`, fixture literal ditolak `tsc`. Merah tipe di fase Red-Hook belum eksplisit dinyatakan sebagai bagian dari 'why_red' — perlu ditambahkan.",
+      "[SQL test cascade `chat_messages` immutability] AC-16/17 menuntut CASCADE saat hapus pesan/room/org/profil + `chat_messages` tetap immutable. Plan §h menyebut cascade generic. Perlu contract sub-test spesifik: (i) DELETE `chat_messages` → baris `chat_message_reactions` sesuai chat_message_id ikut hilang; (ii) DELETE `chat_rooms` → cascade lewat chat_messages (double-hop); (iii) DELETE `profiles.id`=reactor → baris ilang (reactor_id CASCADE); (iv) SELECT count() rows di chat_messages sebelum-sesudah reaksi = identik (guard 'chat_messages tidak ter-UPDATE'). Plan mesti eksplisit; 'cascade generic' rawan sub-hop yang salah (mis. FK ke chat_room bukan chat_message).",
+      "[Concurrency `DELETE-then-INSERT ON CONFLICT` — semantik return] Skenario race: dua device user-sama toggle-on paralel. Device-1 DELETE 0 rows → return true (INSERT). Device-2 DELETE 0 rows → INSERT ON CONFLICT DO NOTHING → return true (padahal tidak menciptakan baris baru). Semantik return true pada 'ON CONFLICT DO NOTHING' menyalahi kontrak 'true = reacted (baris tercipta)' — tetap konsisten dgn state akhir, tapi observability rusak. Bukan bug spec (spec §7.3 hardcode return true), namun contract test tidak menyorot ini. Terima atau tambahkan `get diagnostics v_ins = row_count; return v_ins > 0 or exists(...)` variant — tapi itu perubahan spec. Minimal beri catatan test agar tak dianggap regressi kelak.",
+      "[NativeWind flatten touch-target] UI case #5 pakai `Object.assign({}, ...pill.props.style.filter(Boolean))` untuk cek `minHeight/minWidth >= 44`. Bagus—konsisten dgn pola `SendButton` L110-124. TAPI plan Green-UI §12 mengatakan `<Pressable style={{ minWidth: 44, minHeight: 44 }}>` — inline object, bukan array. Assert `Array.isArray(pill.props.style)` akan false, cabang else `pill.props.style ?? {}` yang aktif. Test harus menerima kedua bentuk (inline object atau array); saat ini formulasi bagus. Namun bila developer menaruh `className='min-h-11 min-w-11'` (tanpa style), NativeWind mungkin mem-flatten ke `minHeight` NUM tapi jest-expo tak konsisten. Sudah terflag di risk plan; catat sebagai 'harus tetap inline numeric'.",
+      "[Type strictness `database.types.ts`] Plan step §5 menambah entri Row/Insert/Update `chat_message_reactions` dan `reaction_emojis` + RPC `toggle_chat_reaction`. Struktur Relationships di generated types Supabase memakai bentuk spesifik (foreignKeyName, columns, referencedRelation, referencedColumns). Manual entry rawan drift; type-check bisa hijau lokal tapi PostgREST embed di runtime menolak nama relasi. Direkomendasikan menjalankan `supabase gen types typescript` bila memungkinkan, atau menyertakan sub-step verifikasi struktur Relationships mirror milik `chat_message_reads` (pola tetangga terdekat).",
+      "[Realtime channel] Memory-user note: chat-polish branch menambahkan realtime chat (migration 0052 wajib). Rencana ini bercabang dari branch sebelumnya (max 0044). Bila fitur reaksi mendarat SEBELUM realtime chat merge, aman. Bila SESUDAH, pastikan realtime subscription TIDAK mem-broadcast `chat_message_reactions` INSERT/DELETE lewat channel `chat_messages` (nama channel sama). Tak ada test untuk memastikan ini — hanya risk-note. Tambahkan contract test 'publikasi realtime `chat_message_reactions` netral / channel terpisah' bila realtime sudah landed."
+    ],
+    "missing_cases": [
+      "[SQL] Contract test eksplisit untuk `reaction_emojis`: seed set aktif tepat = {'👍','✅','👀','🙏'} (4 baris, tak boleh ada ❤️/🎉/emoji lain aktif), policy `reaction_emojis_select` mengizinkan SELECT-authenticated, dan revoke I/U/D dari authenticated+anon.",
+      "[SQL] Workspace-viewer non-member READ vs WRITE separation: user dengan `can_view_workspace()=true AND is_chat_member(room)=false` (i) berhasil SELECT baris `chat_message_reactions` untuk pesan di room itu (embed), (ii) DIPAKSA raise 'Hanya anggota room yang dapat memberi reaksi.' saat memanggil `toggle_chat_reaction`. Tanpa dua blok ini AC-13 & AC-11 tidak tervalidasi.",
+      "[SQL] FK-only whitelist test: langsung `INSERT INTO chat_message_reactions (..., emoji='🚀')` dengan emoji yang tidak pernah ada di `reaction_emojis` → gagal `23503` (foreign_key_violation). Independen dari cek `active` di RPC — memastikan whitelist single-source hidup di FK, bukan hanya body RPC.",
+      "[SQL] Anti-tamper residu POSITIF: setelah user X toggle-on '👍' pada pesan M dan user Y toggle-on '👍' pada M yang sama, assert (a) baris (M,X,'👍') MASIH ADA, (b) baris (M,Y,'👍') tercipta, (c) count=2, (d) Y memanggil `toggle_chat_reaction(M,'👍')` lagi → hanya baris (M,Y,'👍') yang hilang, baris (M,X,'👍') utuh (menghardcode reactor_id=auth.uid()).",
+      "[SQL] Cascade sub-hop terperinci: (i) DELETE `chat_messages` id=M → baris reaksi (M,*,*) hilang; (ii) DELETE `chat_rooms` id=R (yang berisi M) → reaksi juga hilang (double-hop lewat chat_messages FK); (iii) DELETE `profiles` id=X → baris (*,X,*) hilang; (iv) DELETE `organizations` id=O → reaksi (org_id=O,*) hilang; (v) SELECT sha256(sum) atau row_count `chat_messages` sebelum vs sesudah reaksi ditambah = identik (immutability).",
+      "[SQL] Netralitas skor operasional (BYTE-IDENTIK): (a) snapshot hasil `calculate_period_scores(p_period_id)` sebelum reaksi, (b) tambah N reaksi lintas user pada pesan dalam periode aktif, (c) recompute → assert setiap baris `period_user_scores` (kolom skor) identik pre/post. Selain guard statik `pg_get_functiondef` — plan hanya menyebutkan guard statik.",
+      "[SQL] Cross-org p_message: user org A memanggil `toggle_chat_reaction(p_message)` dengan uuid pesan milik org B → RPC harus raise via gate is_chat_member (karena user A pasti bukan member room B), TIDAK menulis ke tabel reaksi org B. Assert 0 baris di `chat_message_reactions` untuk (msg_B, user_A, *). Plan §g menyebut generic; buat blok DO $$ eksplisit.",
+      "[SQL] Revoke execute anon+public pada RPC: coba `set local role anon; select public.toggle_chat_reaction(...)` → gagal permission denied. Assert authenticated masih bisa (setelah gate is_chat_member). Plan §7.3 mendeklarasikan grant tapi tidak eksplisit menguji.",
+      "[SQL] Delisted-emoji INSERT ditolak: setelah `update reaction_emojis set active=false where emoji='👀'`, user anggota room memanggil `toggle_chat_reaction(msg,'👀')` pada pesan yang BELUM ia reaksi dengan 👀 → RPC raise 'Emoji tidak didukung.' (jalur INSERT). Sekaligus verifikasi bahwa reaksi 👀 lama (jika ada) tetap bisa di-DELETE via toggle-off. Plan §e/§f overlap tapi belum menuliskan skenario 'active flag di-flip run-time'.",
+      "[Data] listChatMessages dengan cursor terisi + embed reactions: string `.select()` argumen tetap berisi `reactions:chat_message_reactions(emoji, reactor_id)` bahkan pada halaman >0. Menutup regresi dev-cabut embed di halaman kedua akibat closure/branching.",
+      "[Hook] Test regressi 'send() tetap invalidate ['chat-rooms']' — plan menambah toggleReaction tapi tidak boleh mencabut invalidasi existing di send(). Setelah refactor, jalankan skenario send lama → keys tetap berisi ['chat-messages',roomId] + ['chat-rooms']. Prevent regressi copy-paste.",
+      "[Hook] useChatMessages ketika reactions berbentuk `null` (bukan `undefined`): PostgREST kadang mengembalikan `null` untuk embed 1-N kosong (bergantung versi). Assert hook meneruskan tanpa crash — atau tetapkan kontrak `null → [] normalisasi` di data layer + test-nya.",
+      "[UI] isTogglingReaction=true → tap pill no-op: set `mockIsTogglingReaction = true`, `fireEvent.press(pill)` → `expect(mockToggleReaction).not.toHaveBeenCalled()`. Menutup guard 'if (!currentUserId || isTogglingReaction) return' cabang kedua.",
+      "[UI] Error alert clears setelah aksi sukses berikutnya: setelah reject pertama menampilkan alert, tap emoji berbeda dan resolve — `screen.queryByRole('alert')` menjadi null. Tanpa test ini, developer bisa lupa `setReactionError(null)` di path sukses dan alert 'macet'.",
+      "[UI] Snapshot props Pressable pill: `accessibilityLabel` mengandung count digit `2`, bukan `two` atau lokal-format lain. `Reaksi 👍, 2, belum bereaksi` — mengunci copy exact Bahasa Indonesia (spec §FR-RX-4.3 & FR-RX-4.5).",
+      "[UI] Skeleton path benar-benar tanpa pill: ketika `isLoading:true`, assert (a) `screen.getByLabelText('Memuat…')` truthy, (b) `screen.queryByLabelText(/^Reaksi /)` null, (c) FlatList `chat-list` tidak dirender (`screen.queryByTestId('chat-list')` null). Menggantikan plan §11 yang keliru mem-`findByTestId('chat-list')` di path loading.",
+      "[UI] Inverted FlatList masih memroses reactions per item: memastikan wiring pill di `renderItem` (bukan di layer luar) — mock messages 2 item dengan reactions berbeda, assert kedua accessibilityLabel muncul dan sesuai per bubble.",
+      "[Type] `database.types.ts` struktur `Relationships` untuk `chat_message_reactions` valid: setidaknya satu FK menyebut `referencedRelation: 'chat_messages'`, `referencedColumns: ['id']`, sehingga PostgREST embed `reactions:chat_message_reactions(...)` di-resolve tanpa 'Could not find relationship'. Tanpa type test ini, plan bisa memancarkan runtime error walau `tsc` hijau."
+    ],
+    "verdict": "perlu-perbaikan"
+  }
+}
