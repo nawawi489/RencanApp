@@ -13,7 +13,7 @@ milestone: V2
 
 # Spec — Reaksi (Emoji Reaction / "Reaction pill") pada Pesan Initiative Chat
 
-> Status: **SIAP-EKSEKUSI, dijadwalkan V2.** Gate scope OWNER-2 sudah dicabut (adjudikasi owner 2026-07-13). Menulis kode/test menunggu V2 dijadwalkan — bukan lagi karena gate owner, tapi karena prioritas rilis. Prasyarat lain yang harus turun sebelum build: token "Reaction pill" didaftarkan di `DESIGN.md §7` + `mobile/src/global.css` (lihat §11).
+> Status: **SIAP-EKSEKUSI, dijadwalkan V2.** Gate scope OWNER-2 sudah dicabut (adjudikasi owner 2026-07-13). Token "Reaction pill" **sudah terdaftar** di `DESIGN.md §7` (2026-07-13 — 3 entri: `ReactionPill`/`ReactionPillRow`/`ReactionErrorAlert`) — semua prasyarat non-jadwal selesai. Menulis kode/test menunggu V2 dijadwalkan sebagai rilis — pembatasnya sekarang **hanya** prioritas rilis.
 
 ## Keputusan owner terkunci (2026-07-13)
 
@@ -92,7 +92,7 @@ Penomoran `FR-RX-*`; `[GOV]` = invarian governance mengikat; `[BLOCKER]` = preco
 ### A. Precondition
 - **FR-RX-0.1 [GOV] — RESOLVED (owner 2026-07-13).** Amandemen guardrail sudah turun di `wiki/concepts/scope-guardrails.md` §"Pengecualian sempit — Reaction pill Initiative Chat" + `prd/01-konsep-dan-fondasi.md` §12: memisahkan "Social reaction feed / Story / Reels" (tetap ditolak) dari "Reaction pill tingkat-pesan Initiative Chat" (diizinkan). Gate scope tidak lagi blocker; build dijadwalkan V2.
 - **FR-RX-0.2 [GOV]** Reaksi = micro-acknowledgment antar-anggota room; tanpa leaderboard/feed/agregasi lintas-room.
-- **FR-RX-0.3 [BLOCKER][DESIGN]** Token "Reaction pill" **wajib didaftarkan** di `DESIGN.md §7` + `mobile/src/global.css` (pill terpilih vs tidak, pembeda non-warna, ukuran ≥44px) **sebelum** implementasi UI dimulai.
+- **FR-RX-0.3 [DESIGN] — RESOLVED (2026-07-13).** Token "Reaction pill" sudah terdaftar di `DESIGN.md §7` sebagai tiga entri: `ReactionPill` (pill terpilih vs tidak, pembeda non-warna via border-2 + ✓, ukuran inline `{minWidth:44,minHeight:44}`, `accessibilityLabel` copy exact BI), `ReactionPillRow` (container flex + return null saat kosong + urutan konstanta `REACTION_EMOJI_ORDER`), `ReactionErrorAlert` (inline non-blocking, wajib clear ke null di path sukses). `mobile/src/global.css` tidak butuh token @theme baru — `brand-dark` (`#1564b3`) yang sudah ada + palette Tailwind bawaan mencukupi.
 
 ### B. Data model
 - **FR-RX-1.1 [GOV]** Tabel samping `public.chat_message_reactions` (bukan kolom pada `chat_messages` yang immutable). Pola `chat_message_reads`.
@@ -119,7 +119,7 @@ Penomoran `FR-RX-*`; `[GOV]` = invarian governance mengikat; `[BLOCKER]` = preco
 - **FR-RX-4.1** Pill `{emoji} {count}` per emoji di bawah `MessageBubble` hanya bila count>0.
 - **FR-RX-4.2** Tap pill existing = toggle. Gestur picker tambah-reaksi = keputusan DESIGN (Open Questions).
 - **FR-RX-4.3 [GOV a11y]** DESIGN §4: ≥44px; "saya bereaksi" pakai pembeda **non-warna** + `accessibilityState.selected`; solid+putih pakai `brand-dark #1564b3`; `accessibilityLabel` menyebut emoji+jumlah+status.
-- **FR-RX-4.4 [GOV]** Token "Reaction pill" **didaftarkan dulu** di `DESIGN.md §7` + `mobile/src/global.css`.
+- **FR-RX-4.4 [GOV] — RESOLVED (2026-07-13).** Token "Reaction pill" sudah didaftarkan di `DESIGN.md §7` (`ReactionPill`/`ReactionPillRow`/`ReactionErrorAlert`); tidak ada perubahan `mobile/src/global.css` yang diperlukan.
 - **FR-RX-4.5** Copy Bahasa Indonesia; hindari istilah medsos.
 
 ### F. Data layer & hooks
@@ -297,7 +297,7 @@ Given / When / Then (semua harus lulus untuk DoD):
 
 1. ~~OWNER-2 (scope)~~ — **RESOLVED: izinkan** dengan pengecualian sempit tertulis di `scope-guardrails.md` + `prd/01 §12`. Framing "guardrail stale" tetap ditolak; yang berubah bukan longgarnya guardrail, tapi tajamnya garis: yang dilarang = *social reaction feed / Story / Reels* (pola broadcast+popularitas), yang diizinkan = *reaction pill tingkat-pesan* yang zero bobot skor dan tanpa feed/leaderboard.
 2. ~~MILESTONE~~ — **RESOLVED: V2**. Adjudikasi scope tidak menyeret jadwal build; V2 tetap.
-3. ~~SET EMOJI FINAL~~ — **RESOLVED: seed V1 = 4 ack `👍 ✅ 👀 🙏` saja.** `❤️`/`🎉` sengaja tidak diseed (konsisten dengan invarian "ack-only" pengecualian scope). Menambah nanti = satu insert row. **Housekeeping design tetap wajib**: token pill terdaftar `DESIGN.md §7` + `global.css` (lihat FR-RX-0.3).
+3. ~~SET EMOJI FINAL~~ — **RESOLVED: seed V1 = 4 ack `👍 ✅ 👀 🙏` saja.** `❤️`/`🎉` sengaja tidak diseed (konsisten dengan invarian "ack-only" pengecualian scope). Menambah nanti = satu insert row + update konstanta `REACTION_EMOJI_ORDER` di UI (pasangan sinkron D13). **Housekeeping design SELESAI (2026-07-13)**: `DESIGN.md §7` sudah memuat 3 entri (`ReactionPill`/`ReactionPillRow`/`ReactionErrorAlert`); `global.css` tidak perubahan (brand-dark existing + Tailwind palette cukup).
 4. ~~MULTIPLISITAS~~ — **RESOLVED: multi-emoji per user per pesan.** PK komposit `(message, reactor, emoji)`. Concurrency-safe murni per baris; ekspektasi pengguna familiar (Slack/Discord). Mudah dipersempit ke eksklusif nanti (tambah constraint) daripada sebaliknya.
 5. ~~PRIVASI REAKTOR (eksposur `reactor_id` ke workspace-viewer read-only)~~ — **RESOLVED: terima.** Paritas dengan visibilitas isi+author pesan yang sudah diberikan `can_view_workspace`. V1 UI tetap tidak menampilkan nama reaktor; `reactor_id` hanya di payload, tidak di layar. Jika kelak butuh disembunyikan, keputusan itu satu paket dengan US-R6 "daftar nama reaktor" (V2).
 6. ~~NOTIFIKASI V1~~ — **RESOLVED: tidak ada.** Konsisten anti-noise. Bila kelak diaktifkan, WAJIB via `emit_notification` (skip-self, dedupe, rate-limit) — jangan buat jalur notif ad-hoc.
@@ -319,7 +319,7 @@ Given / When / Then (semua harus lulus untuk DoD):
 
 **Precondition non-teknis sebelum TDD dijalankan (V2)**:
 - Amandemen `scope-guardrails.md` + `prd/01 §12`: **sudah turun 2026-07-13** (gate scope tidak lagi blocker).
-- Token "Reaction pill" di `DESIGN.md §7` + `mobile/src/global.css` (FR-RX-0.3): **belum** — wajib turun sebelum layer UI dimulai (contract test SQL + data layer boleh berjalan lebih dulu tanpa token).
+- Token "Reaction pill" di `DESIGN.md §7` (FR-RX-0.3): **SELESAI 2026-07-13** — 3 entri (`ReactionPill`/`ReactionPillRow`/`ReactionErrorAlert`); `global.css` tidak butuh perubahan.
 - Larangan menulis kode/test di `specs/inbox-chat-ui.md` L190 masih berlaku sampai V2 dijadwalkan sebagai rilis — pembatasnya sekarang prioritas rilis, bukan lagi gate owner.
 
 **Paths**: lihat `tdd_handoff.paths`.

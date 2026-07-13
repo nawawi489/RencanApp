@@ -717,6 +717,17 @@
       "hook_cases": 12,
       "ui_cases": 17,
       "jest_total": 40
+    },
+    "design_token_landed": {
+      "date": "2026-07-13",
+      "file": "DESIGN.md §7",
+      "entries": [
+        "ReactionPill",
+        "ReactionPillRow",
+        "ReactionErrorAlert"
+      ],
+      "global_css_changed": false,
+      "note": "FR-RX-0.3 + FR-RX-4.4 RESOLVED. Sisa prasyarat sebelum eksekusi TDD hanya penjadwalan V2 + reconcile nomor migrasi ke HEAD_max+1."
     }
   }
 }
