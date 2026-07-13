@@ -1,21 +1,41 @@
 // Layar Chat Rencana Aksi — UI-S-IN2/IN3/IN4.
-// Tata letak: header banner governance (tutup) → daftar pesan kronologis-menaik (date divider antar-hari)
-// dengan bubble me/them (Avatar + nama untuk them) → composer circular Kirim pesan.
+// Tata letak flex chat: header banner governance (tutup) → daftar pesan kronologis-menaik
+// (date divider antar-hari) yang mengisi ruang (flex-1) → composer circular yang PINNED di bawah
+// + KeyboardAvoidingView agar keyboard tak menutup input. Auto-scroll ke pesan terbaru saat room
+// dibuka / ada pesan baru (tapi TIDAK saat memuat pesan lama). Realtime: pesan anggota lain muncul
+// live (useChatRealtime) + markRead ulang saat pesan tiba selagi layar terbuka.
 // Guard: roomId undefined → ErrorState (markRead TIDAK dipanggil).
 // Pola: useAuth().session?.user?.id menentukan me; default 'them' saat session kosong.
 // Per Critic §8.4: SendButton pakai inline style {width:44,height:44} (NativeWind class tak selalu flatten di jest)
 // dan accessibilityState={{disabled}} eksplisit.
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
-import { Screen } from '@/components/screen';
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
-import { useChatActions, useChatMessages } from '@/hooks/use-inbox';
+import {
+  useChatActions,
+  useChatMessages,
+  useChatRealtime,
+  useChatReads,
+  useChatReadsRealtime,
+  useChatRoom,
+  useChatRoomMembers,
+} from '@/hooks/use-inbox';
+import { personLabel } from '@/lib/cards';
 import { reportError } from '@/lib/errors';
-import type { ChatMessage } from '@/lib/inbox';
+import type { ChatMember, ChatMessage, ChatRead } from '@/lib/inbox';
+import { createLogger } from '@/lib/logger';
+import { parseMentions } from '@/lib/mention-parse';
+import { applyMention, collectMentionIds, matchMentionQuery, type MentionPick } from '@/lib/mentions';
 import { useAuth } from '@/providers/auth-provider';
+
+const log = createLogger('chat-room');
+/** Key AsyncStorage untuk dismiss banner governance (global per-user; sekali tutup = tak muncul lagi). */
+const GOVERNANCE_BANNER_KEY = '@rencanapp/chat/governance-banner-dismissed-v1';
 
 const GOVERNANCE_BANNER = 'Chat bukan jalur formal: keputusan & bukti tetap lewat Tugas / Review.';
 
@@ -63,10 +83,23 @@ function DateDivider({ label }: { label: string }) {
   );
 }
 
-function MessageBubble({ m, isMe }: { m: ChatMessage; isMe: boolean }) {
+function MessageBubble({
+  m,
+  isMe,
+  memberNames,
+}: {
+  m: ChatMessage;
+  isMe: boolean;
+  memberNames: string[];
+}) {
   const authorName = m.author?.full_name ?? null;
   // Guard: them tanpa nama → '?' (audit-friendly placeholder).
   const displayName = authorName ?? '?';
+  const segments = useMemo(() => parseMentions(m.body, memberNames), [m.body, memberNames]);
+  const baseCls = `text-base ${isMe ? 'text-white' : 'text-black dark:text-white'}`;
+  const mentionCls = isMe
+    ? 'font-semibold text-white underline'
+    : 'font-semibold text-brand-dark dark:text-blue-300';
   return (
     <View className={`mb-2 max-w-[80%] ${isMe ? 'self-end' : 'self-start'}`}>
       {!isMe ? (
@@ -83,13 +116,218 @@ function MessageBubble({ m, isMe }: { m: ChatMessage; isMe: boolean }) {
             ? 'rounded-br-md bg-brand-dark'
             : 'rounded-bl-md bg-neutral-100 dark:bg-neutral-800'
         }`}>
-        <Text className={`text-base ${isMe ? 'text-white' : 'text-black dark:text-white'}`}>
-          {m.body}
+        <Text className={baseCls}>
+          {segments.length === 0
+            ? m.body
+            : segments.map((seg, i) =>
+                seg.kind === 'mention' ? (
+                  <Text key={i} className={mentionCls}>
+                    {seg.text}
+                  </Text>
+                ) : (
+                  seg.text
+                ),
+              )}
         </Text>
         <Text className={`mt-1 text-[10px] ${isMe ? 'text-white/80' : 'text-neutral-400'}`}>
           {formatTime(m.created_at)}
         </Text>
       </View>
+    </View>
+  );
+}
+
+/** Topbar konteks (PRD §30): avatar group + jumlah anggota (buka daftar) + buka Rencana Aksi. */
+function RoomContextBar({
+  members,
+  onOpenMembers,
+  onOpenActionPlan,
+}: {
+  members: ChatMember[];
+  onOpenMembers: () => void;
+  onOpenActionPlan?: () => void;
+}) {
+  const shown = members.slice(0, 4);
+  const extra = members.length - shown.length;
+  return (
+    <View className="mb-2 flex-row items-center justify-between gap-2">
+      <Pressable
+        onPress={onOpenMembers}
+        accessibilityRole="button"
+        accessibilityLabel={`${members.length} anggota`}
+        className="flex-1 flex-row items-center gap-2 active:opacity-70">
+        <View className="flex-row">
+          {shown.map((m, i) => (
+            <View key={m.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
+              <Avatar name={personLabel(m, '?')} seed={m.id} size={24} />
+            </View>
+          ))}
+          {extra > 0 ? (
+            <View
+              style={{ marginLeft: -8 }}
+              className="h-6 w-6 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700">
+              <Text className="text-[10px] font-semibold text-neutral-600 dark:text-neutral-300">
+                +{extra}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Text className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
+          {members.length} anggota
+        </Text>
+      </Pressable>
+      {onOpenActionPlan ? (
+        <Pressable
+          onPress={onOpenActionPlan}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Rencana Aksi"
+          className="flex-row items-center gap-1 rounded-full border border-neutral-300 px-3 py-1.5 active:opacity-70 dark:border-neutral-700">
+          <Ionicons name="open-outline" size={14} color="#1564b3" />
+          <Text className="text-xs font-semibold text-brand-dark dark:text-blue-300">Rencana Aksi</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+/** Format tanggal + jam untuk read_at ('d MMM HH:mm' id-ID). */
+function formatReadAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** "Dilihat oleh N" di bawah bubble me terakhir yang punya pembaca lain. Tap → ReadsModal. */
+function SeenByPill({ count, onOpen }: { count: number; onOpen: () => void }) {
+  return (
+    <Pressable
+      onPress={onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`Dilihat oleh ${count} orang`}
+      hitSlop={6}
+      className="mt-0.5 self-end active:opacity-70">
+      <View className="flex-row items-center gap-1">
+        <Ionicons name="checkmark-done" size={12} color="#6b7280" />
+        <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">
+          Dilihat oleh {count}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/** Modal daftar pembaca sebuah pesan (nama + waktu baca). */
+function ReadsModal({
+  visible,
+  reads,
+  onClose,
+}: {
+  visible: boolean;
+  reads: ChatRead[];
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
+        className="flex-1 justify-end bg-black/40"
+        accessibilityLabel="Tutup daftar pembaca"
+        onPress={onClose}>
+        <Pressable className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900" onPress={() => {}}>
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-black dark:text-white">
+              Dilihat oleh ({reads.length})
+            </Text>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Tutup" hitSlop={8}>
+              <Ionicons name="close" size={22} color="#6b7280" />
+            </Pressable>
+          </View>
+          <ScrollView>
+            {reads.map((r) => (
+              <View key={r.reader_id} className="flex-row items-center gap-3 py-2">
+                <Avatar name={personLabel(r.reader, '?')} seed={r.reader_id} size={36} />
+                <View className="flex-1">
+                  <Text className="text-base text-black dark:text-white">
+                    {personLabel(r.reader, '?')}
+                  </Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {formatReadAt(r.read_at)}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/** Modal daftar anggota room. */
+function MembersModal({
+  visible,
+  members,
+  onClose,
+}: {
+  visible: boolean;
+  members: ChatMember[];
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
+        className="flex-1 justify-end bg-black/40"
+        accessibilityLabel="Tutup daftar anggota"
+        onPress={onClose}>
+        <Pressable className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900" onPress={() => {}}>
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-black dark:text-white">
+              Anggota ({members.length})
+            </Text>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Tutup" hitSlop={8}>
+              <Ionicons name="close" size={22} color="#6b7280" />
+            </Pressable>
+          </View>
+          <ScrollView>
+            {members.map((m) => (
+              <View key={m.id} className="flex-row items-center gap-3 py-2">
+                <Avatar name={personLabel(m, '?')} seed={m.id} size={36} />
+                <Text className="flex-1 text-base text-black dark:text-white">{personLabel(m, '?')}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/** Overlay saran @mention di atas composer. */
+function MentionSuggestions({
+  members,
+  onPick,
+}: {
+  members: ChatMember[];
+  onPick: (m: ChatMember) => void;
+}) {
+  if (members.length === 0) return null;
+  return (
+    <View className="mb-2 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
+      {members.map((m) => (
+        <Pressable
+          key={m.id}
+          onPress={() => onPick(m)}
+          accessibilityRole="button"
+          accessibilityLabel={`Sebut ${personLabel(m, '?')}`}
+          className="flex-row items-center gap-2 border-b border-neutral-100 bg-white px-3 py-2 last:border-b-0 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-900">
+          <Avatar name={personLabel(m, '?')} seed={m.id} size={24} />
+          <Text className="flex-1 text-sm text-black dark:text-white">{personLabel(m, '?')}</Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -105,22 +343,79 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
       accessibilityState={{ disabled }}
       style={{ width: 44, height: 44 }}
       className={`items-center justify-center rounded-full bg-brand-dark ${disabled ? 'opacity-40' : 'active:opacity-80'}`}>
-      <Text className="text-base font-bold text-white">➤</Text>
+      <Ionicons name="send" size={18} color="#ffffff" />
     </Pressable>
   );
 }
 
 export default function ChatRoomScreen() {
   const { roomId } = useLocalSearchParams<{ roomId?: string }>();
+  const router = useRouter();
   const { session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
   const { messages, isLoading, isError, refetch, loadOlder, hasMore } = useChatMessages(safeRoomId);
   const { send, markRead, isSending } = useChatActions(safeRoomId);
+  const { room } = useChatRoom(safeRoomId);
+  const { members } = useChatRoomMembers(safeRoomId);
+  const { readsByMessage } = useChatReads(safeRoomId);
+  useChatReadsRealtime(safeRoomId);
   const [text, setText] = useState('');
+  // Selection dikontrol HANYA sesaat setelah sisip mention (pindah kursor ke akhir teks tersisip);
+  // di luar itu `undefined` agar TextInput bebas mengelola kursor sendiri saat user mengetik biasa.
+  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
+  const [mentions, setMentions] = useState<MentionPick[]>([]);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [readsOpenFor, setReadsOpenFor] = useState<string | null>(null);
   const placeholderColor = usePlaceholderColor();
   const [sendError, setSendError] = useState<string | null>(null);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Banner governance: mulai `null` = "belum tahu". Setelah AsyncStorage terbaca, jadi bool.
+  // Render banner HANYA saat sudah tahu belum di-dismiss → tak flicker saat kembali ke room.
+  const [bannerDismissed, setBannerDismissed] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(GOVERNANCE_BANNER_KEY)
+      .then((raw) => {
+        if (!cancelled) setBannerDismissed(raw === '1');
+      })
+      .catch((err) => {
+        log.warn('gagal baca dismiss banner', err);
+        if (!cancelled) setBannerDismissed(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  function dismissBanner() {
+    setBannerDismissed(true);
+    AsyncStorage.setItem(GOVERNANCE_BANNER_KEY, '1').catch((err) =>
+      log.warn('gagal simpan dismiss banner', err),
+    );
+  }
+
+  const memberNames = useMemo(
+    () => members.map((m) => personLabel(m, '')).filter((n) => n.length > 0),
+    [members],
+  );
+
+  // Saran @mention: token '@…' di ujung teks → anggota room (kecuali diri) yang cocok.
+  const mentionQuery = useMemo(() => matchMentionQuery(text), [text]);
+  const mentionSuggestions = useMemo(() => {
+    if (mentionQuery == null) return [];
+    const q = mentionQuery.toLowerCase();
+    return members
+      .filter((m) => m.id !== currentUserId && personLabel(m, '').toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [mentionQuery, members, currentUserId]);
+
+  function handlePickMention(m: ChatMember) {
+    const name = personLabel(m, '?');
+    const next = applyMention(text, name);
+    setText(next);
+    // applyMention selalu menyisip di UJUNG teks (lihat matchMentionQuery) → kursor ke next.length.
+    setSelection({ start: next.length, end: next.length });
+    setMentions((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, name }]));
+  }
 
   useEffect(() => {
     // Guard: roomId undefined / kosong → JANGAN panggil markRead.
@@ -128,8 +423,39 @@ export default function ChatRoomScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- jalankan sekali saat room dibuka
   }, [roomId]);
 
+  // Realtime: pesan anggota lain muncul live; tandai terbaca ulang saat pesan tiba (layar terbuka).
+  useChatRealtime(safeRoomId, () => {
+    if (roomId) markRead();
+  });
+
   // Kronologis-menaik: hook desc (terbaru→lama) → balik agar oldest di atas, newest di bawah.
   const ordered = useMemo(() => [...messages].reverse(), [messages]);
+
+  // Seen-by: id pesan 'me' TERAKHIR yang punya minimal satu pembaca ≠ diri. Pola WhatsApp:
+  // satu indikator per timeline; pesan me lain di atasnya implisit sudah dilihat lebih dulu.
+  const lastSeenMeId = useMemo(() => {
+    if (!currentUserId) return null;
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const m = ordered[i];
+      if (m.author_id !== currentUserId) continue;
+      const reads = readsByMessage.get(m.id);
+      if (reads?.some((r) => r.reader_id !== currentUserId)) return m.id;
+    }
+    return null;
+  }, [ordered, readsByMessage, currentUserId]);
+
+  // Auto-scroll ke bawah: hanya saat pesan TERBARU berubah (kirim / realtime / initial), bukan saat
+  // memuat pesan lama (prepend di atas). Gate lewat ref newest-id + flag yang dibaca onContentSizeChange.
+  const scrollRef = useRef<ScrollView>(null);
+  const lastNewestId = useRef<string | null>(null);
+  const stickToEnd = useRef(false);
+  const newestId = ordered.length ? ordered[ordered.length - 1].id : null;
+  useEffect(() => {
+    if (newestId && newestId !== lastNewestId.current) {
+      lastNewestId.current = newestId;
+      stickToEnd.current = true;
+    }
+  }, [newestId]);
 
   // Per Critic §8.5: bangun divider sekali per "blok hari" pada array yang sudah merged+ordered.
   type Row = { kind: 'divider'; key: string; label: string } | { kind: 'msg'; key: string; m: ChatMessage };
@@ -152,9 +478,20 @@ export default function ChatRoomScreen() {
     const body = text.trim();
     if (!body) return;
     setSendError(null);
+    // Optimistic: bubble 'me' tampil instan; hook rollback bila server menolak.
+    const optimistic: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      chat_room_id: safeRoomId,
+      author_id: currentUserId,
+      body,
+      created_at: new Date().toISOString(),
+    };
+    const mentionIds = collectMentionIds(body, mentions);
     try {
-      await send(body);
+      await send(body, mentionIds, optimistic);
       setText('');
+      setSelection(undefined);
+      setMentions([]);
     } catch (e) {
       setSendError(reportError('Kirim pesan', e, 'Gagal mengirim pesan.'));
     }
@@ -163,12 +500,12 @@ export default function ChatRoomScreen() {
   // Guard: roomId undefined → ErrorState (Critic §8.5).
   if (!roomId) {
     return (
-      <Screen title="Diskusi Rencana Aksi">
+      <View className="flex-1 bg-white dark:bg-black px-5 pt-3">
         <ErrorState
           title="Room tidak ditemukan"
           description="Buka room dari Inbox untuk memulai diskusi."
         />
-      </Screen>
+      </View>
     );
   }
 
@@ -176,66 +513,131 @@ export default function ChatRoomScreen() {
   const composerDisabled = isInputBlank || isSending;
 
   return (
-    <Screen title="Diskusi Rencana Aksi">
-      {!bannerDismissed ? <GovernanceBanner onClose={() => setBannerDismissed(true)} /> : null}
-
-      {isLoading ? (
-        <SkeletonList count={4} />
-      ) : isError ? (
-        <ErrorState
-          title="Gagal memuat pesan"
-          description="Tidak bisa mengambil percakapan."
-          onRetry={() => refetch()}
-        />
-      ) : messages.length === 0 ? (
-        <EmptyState
-          icon={<Text className="text-2xl">💬</Text>}
-          title="Belum ada pesan"
-          description="Mulai percakapan dengan mengirim pesan pertama."
-        />
-      ) : (
-        <ScrollView contentContainerStyle={{ gap: 0 }}>
-          {hasMore ? (
-            <Pressable
-              onPress={() => loadOlder()}
-              className="mb-2 self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
-              accessibilityRole="button"
-              accessibilityLabel="Muat pesan lama">
-              <Text className="text-sm font-semibold text-black dark:text-white">Muat pesan lama</Text>
-            </Pressable>
-          ) : null}
-          {rows.map((r) =>
-            r.kind === 'divider' ? (
-              <DateDivider key={r.key} label={r.label} />
-            ) : (
-              <MessageBubble
-                key={r.key}
-                m={r.m}
-                isMe={currentUserId != null && r.m.author_id === currentUserId}
-              />
-            ),
-          )}
-        </ScrollView>
-      )}
-
-      <View className="gap-2 pt-2">
-        <View className="flex-row items-end gap-2">
-          <TextInput
-            className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-            placeholder="Tulis pesan…"
-            placeholderTextColor={placeholderColor}
-            value={text}
-            onChangeText={setText}
-            multiline
-          />
-          <SendButton disabled={composerDisabled} onPress={handleSend} />
-        </View>
-        {sendError ? (
-          <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
-            {sendError}
-          </Text>
+    <View className="flex-1 bg-white dark:bg-black">
+      {/* Native header title = nama room (PRD §30). Fallback statis saat detail belum termuat. */}
+      <Stack.Screen options={{ title: room?.name ?? 'Diskusi Rencana Aksi' }} />
+      <MembersModal visible={membersOpen} members={members} onClose={() => setMembersOpen(false)} />
+      <ReadsModal
+        visible={readsOpenFor != null}
+        reads={
+          readsOpenFor
+            ? (readsByMessage.get(readsOpenFor) ?? []).filter((r) => r.reader_id !== currentUserId)
+            : []
+        }
+        onClose={() => setReadsOpenFor(null)}
+      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // Offset ≈ tinggi native header iOS (44 + safe-area). Aproksimasi; Android pakai adjustResize.
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
+        {members.length > 0 || room ? (
+          <View className="px-5 pt-3">
+            <RoomContextBar
+              members={members}
+              onOpenMembers={() => setMembersOpen(true)}
+              onOpenActionPlan={
+                room?.action_plan_id
+                  ? () => router.push(`/action-plan/${room.action_plan_id}` as Href)
+                  : undefined
+              }
+            />
+          </View>
         ) : null}
-      </View>
-    </Screen>
+
+        {bannerDismissed === false ? (
+          <View className="px-5 pt-3">
+            <GovernanceBanner onClose={dismissBanner} />
+          </View>
+        ) : null}
+
+        {isLoading ? (
+          <View className="flex-1 px-5 pt-3">
+            <SkeletonList count={4} />
+          </View>
+        ) : isError ? (
+          <View className="flex-1 px-5 pt-3">
+            <ErrorState
+              title="Gagal memuat pesan"
+              description="Tidak bisa mengambil percakapan."
+              onRetry={() => refetch()}
+            />
+          </View>
+        ) : messages.length === 0 ? (
+          <View className="flex-1 px-5 pt-3">
+            <EmptyState
+              icon={<Text className="text-2xl">💬</Text>}
+              title="Belum ada pesan"
+              description="Mulai percakapan dengan mengirim pesan pertama."
+            />
+          </View>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 20, gap: 0 }}
+            onContentSizeChange={() => {
+              if (stickToEnd.current) {
+                stickToEnd.current = false;
+                scrollRef.current?.scrollToEnd?.({ animated: false });
+              }
+            }}>
+            {hasMore ? (
+              <Pressable
+                onPress={() => loadOlder()}
+                className="mb-2 self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
+                accessibilityRole="button"
+                accessibilityLabel="Muat pesan lama">
+                <Text className="text-sm font-semibold text-black dark:text-white">Muat pesan lama</Text>
+              </Pressable>
+            ) : null}
+            {rows.map((r) => {
+              if (r.kind === 'divider') return <DateDivider key={r.key} label={r.label} />;
+              const isMe = currentUserId != null && r.m.author_id === currentUserId;
+              const showSeen = isMe && r.m.id === lastSeenMeId;
+              const foreignReads = showSeen
+                ? (readsByMessage.get(r.m.id) ?? []).filter((x) => x.reader_id !== currentUserId)
+                : [];
+              return (
+                <View key={r.key}>
+                  <MessageBubble m={r.m} isMe={isMe} memberNames={memberNames} />
+                  {showSeen ? (
+                    <SeenByPill
+                      count={foreignReads.length}
+                      onOpen={() => setReadsOpenFor(r.m.id)}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View className="gap-2 border-t border-neutral-200 px-5 pb-3 pt-2 dark:border-neutral-800">
+          <MentionSuggestions members={mentionSuggestions} onPick={handlePickMention} />
+          <View className="flex-row items-end gap-2">
+            <TextInput
+              className="max-h-32 flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+              placeholder="Tulis pesan…"
+              placeholderTextColor={placeholderColor}
+              value={text}
+              onChangeText={(t) => {
+                setText(t);
+                setSelection(undefined);
+              }}
+              selection={selection}
+              onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+              multiline
+            />
+            <SendButton disabled={composerDisabled} onPress={handleSend} />
+          </View>
+          {sendError ? (
+            <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
+              {sendError}
+            </Text>
+          ) : null}
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
