@@ -40,8 +40,10 @@ Lihat daftar lengkap di field `non_goals`. Ringkas: tidak ada edit/delete pesan;
 > [!warning] OWNER-1 — Reviewer Initiative sebagai chat member
 > PRD §57/§64 mencantumkan "Reviewer Initiative", tetapi `recompute_chat_room_members` (0008 baris 275-296) hanya memakai `initiatives.pic_id` + `action_plans.pic_id`/`reviewer_id` — tabel `initiatives` **tidak punya** `reviewer_id`. Keputusan owner WAJIB: koreksi PRD ATAU migrasi tambah kolom + recompute. Sampai itu, peran ini dihapus dari spec/persona dan tidak ditegakkan.
 
-> [!warning] OWNER-2 — emoji reaction vs scope-guardrails §88
-> `scope-guardrails §88` melarang "Social reaction/Story/Reels". Implementasi reactions tanpa amandemen tertulis pada `scope-guardrails.md` = pelanggaran guardrail. Default rekomendasi: TOLAK reactions V1.8.1.
+> [!note] OWNER-2 — RESOLVED (owner 2026-07-13): emoji reaction diizinkan (build V2)
+> Amandemen tertulis sudah turun di `wiki/concepts/scope-guardrails.md` §"Pengecualian sempit — Reaction pill Initiative Chat" + `prd/01-konsep-dan-fondasi.md` §12. "Reaction pill tingkat-pesan" (PRD §30 komponen 6) **dikecualikan** dari larangan "Social reaction feed/Story/Reels" sepanjang invarian dipenuhi (zero bobot skor, tanpa feed/leaderboard, bukan approval, whitelist emoji ack tertutup, otorisasi = keanggotaan room). Spec teknis final: [inbox-chat-reactions](inbox-chat-reactions.md). **Milestone build tetap V2** — larangan "jangan tulis kode/test" di L190 tetap berlaku sampai fase V2 dijadwalkan (bukan lagi karena gate owner, tapi karena prioritas rilis).
+>
+> Housekeeping: rujukan lama "scope-guardrails §88" ambigu — file itu tak punya penomoran §; sumber otoritatif = bagian "Ditolak (jangan bangun)" di `scope-guardrails.md` (yang menyandarkan diri ke PRD V1.8.2 §6).
 
 > [!warning] OWNER-3 — PIC card induk sebagai member room turunan
 > US-16 draft mengklaim PIC Goal/KPI/Strategy otomatis jadi member room turunan; komentar `recompute` (0008 baris 263-265) menyatakan "no-op s/d Fase 4". Klaim dihapus dari spec final.

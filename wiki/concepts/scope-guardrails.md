@@ -1,8 +1,8 @@
 ---
 type: concept
 tags: [scope, guardrails, anti-scope-creep, decision]
-updated: 2026-06-27
-sources: 2
+updated: 2026-07-13
+sources: 3
 ---
 
 # Scope Guardrails
@@ -15,7 +15,19 @@ Auth, User profile, Organization/Department/Position/Team, Role template & permi
 
 ## Ditolak (jangan bangun)
 
-Feed, Company News, Announcement, CEO Broadcast, SOP Center penuh, Knowledge Center, HRIS penuh, Payroll, Inventory, CRM, WhatsApp integration, Google Calendar integration, AI Assistant, AI Review, Native Android/iOS, Routine entity, Checklist Routine, Watcher, **Area Goal layer**, **KPI child table di bawah Area Goal**, **Bobot planning card**, Social reaction/Story/Reels.
+Feed, Company News, Announcement, CEO Broadcast, SOP Center penuh, Knowledge Center, HRIS penuh, Payroll, Inventory, CRM, WhatsApp integration, Google Calendar integration, AI Assistant, AI Review, Native Android/iOS, Routine entity, Checklist Routine, Watcher, **Area Goal layer**, **KPI child table di bawah Area Goal**, **Bobot planning card**, **Social reaction feed / Story / Reels** (pola broadcast + popularitas).
+
+> [!info] Pengecualian sempit — Reaction pill Initiative Chat (owner 2026-07-13)
+> "Reaction pill tingkat-pesan" pada [[surfaces|Initiative Chat]] (PRD §30 komponen 6) **dikecualikan** dari larangan "Social reaction" di atas dan **diizinkan** dibangun, dengan syarat semua invarian berikut terpenuhi:
+> - **Zero bobot governance/skor** — tidak masuk [[score-formula]], ranking People, atau Governance Discipline; tidak dicatat sebagai `governance_violation`/`activity_log`.
+> - **Tanpa feed / leaderboard / agregasi lintas-room** — reaksi hanya tampil di bawah pesannya sendiri di dalam room; tidak ada surface "trending"/"popular".
+> - **Bukan approval** — tidak menyentuh Bukti/Nilai Hasil/Review; tidak ada emoji yang diberi makna "approve" oleh sistem.
+> - **Set emoji tertutup & ack-only** — whitelist server-side dibatasi ke emoji acknowledgment kerja (mis. `👍 ✅ 👀 🙏`); tanpa emoji kustom/upload; ekspresi sosial (`❤️`/`🎉`) tidak diseed di V1.
+> - **Otorisasi = keanggotaan room**, sama dengan pesan (`is_chat_member`); bukan peran governance.
+>
+> Rasional: yang dilarang guardrail adalah *pola medsos* (broadcast, konsumsi pasif, sinyal popularitas). Reaction pill tingkat-pesan yang memenuhi invarian di atas adalah *micro-acknowledgment* antar-anggota room yang sudah saling melihat pesannya — beda kategori. Amandemen ini **memperkuat** guardrail dengan menajamkan garisnya, bukan melonggarkannya.
+>
+> Spec teknis: [inbox-chat-reactions](../../specs/inbox-chat-reactions.md). Milestone build tetap V2 (specs/inbox-chat-ui.md L27).
 
 ## Guardrail filosofis
 
