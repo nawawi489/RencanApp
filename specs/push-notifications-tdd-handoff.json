@@ -1,0 +1,62 @@
+{
+  "feature": "Push Notifications (jembatan emit_notification → device) — Fase 1. Spec final: specs/push-notifications.md. TDD plan: specs/push-notifications-tdd-plan.md. Ringkas: 7 tipe push-worthy Fase 1 (review_request, approved, rejected, revision_requested, deadline_reminder, repeat_due, instance_missed) yang deep-link-nya SUDAH berfungsi. Tabel baru push_tokens (RPC-only register/unregister, RLS own-row) + push_deliveries (SERVICE_ROLE-only outbox). Edge Function push-fanout drainer poll-based (decoupled dari emit_notification transaction). Invokasi drainer via pg_net + pg_cron (keputusan owner OQ1). Whitelist push-worthy fail-closed via upsert_settings key notification_rule_push_types. Deep-link reuse kontrak (entity_type, entity_id) + re-check RLS saat dibuka. Anti-hijack: transfer + audit + rate-limit (OQ2). Platform: Expo push service (tech-stack.md). Client: expo-notifications + registrasi saat SIGNED_IN, revoke saat signOut. Mention = Fase 2 (deep-link chat belum ada). Quiet-hours = Fase 3 (timezone per-org belum ada). 40 test cases, 14 steps, 5 file produksi.",
+  "paths": {
+    "spec": "specs/push-notifications.md",
+    "tdd_plan": "specs/push-notifications-tdd-plan.md",
+    "data_layer": {
+      "production": "mobile/src/lib/push-notifications.ts",
+      "test": "mobile/src/lib/__tests__/push-notifications.test.ts"
+    },
+    "route_resolver": {
+      "production": "mobile/src/lib/push-route-resolver.ts",
+      "test": "mobile/src/lib/__tests__/push-route-resolver.test.ts"
+    },
+    "hooks": {
+      "production": "mobile/src/hooks/use-push-notifications.ts",
+      "test": "mobile/src/hooks/__tests__/use-push-notifications.test.tsx"
+    },
+    "ui": {
+      "production": "mobile/src/app/(app)/(tabs)/notifications.tsx",
+      "test": "mobile/src/app/(app)/(tabs)/__tests__/notifications-push.test.tsx"
+    },
+    "auth_integration": {
+      "production": "mobile/src/providers/auth-provider.tsx",
+      "test": "mobile/src/providers/__tests__/auth-push-integration.test.tsx"
+    },
+    "edge_function": "supabase/functions/push-fanout/index.ts",
+    "migrations": "supabase/migrations/00XX_push_notifications.sql",
+    "migration_pg_net": "supabase/migrations/00XX_enable_pg_net.sql",
+    "existing_deps": [
+      "mobile/src/lib/notifications.ts",
+      "mobile/src/lib/entity-routes.ts",
+      "mobile/src/hooks/use-notifications.ts",
+      "mobile/src/lib/errors.ts",
+      "supabase/migrations/0008_fase3_collab.sql",
+      "supabase/migrations/0014_fase8_governance_admin.sql",
+      "supabase/migrations/0040_notification_resolution.sql"
+    ]
+  },
+  "test_summary": {
+    "total": 40,
+    "data_layer": 11,
+    "hooks_registration": 10,
+    "hooks_handler": 10,
+    "ui_banner": 4,
+    "auth_integration": 5
+  },
+  "owner_decisions": {
+    "OQ1": "pg_net + pg_cron (invokasi drainer)",
+    "OQ2": "transfer + audit + rate-limit (anti-hijack)",
+    "OQ3": "key-only audit",
+    "OQ6": "skip resolved/read",
+    "OQ7": "set badge saat push diterima",
+    "OQ8": "pakai draft copy §7"
+  },
+  "critic_adjudication": {
+    "verdict_awal": "perlu-perbaikan",
+    "verdict_akhir": "SIAP",
+    "concerns_resolved": 8,
+    "missing_cases_resolved": 8,
+    "delta_test_cases": "+9 -1 = net +8 (32 → 40)"
+  }
+}
