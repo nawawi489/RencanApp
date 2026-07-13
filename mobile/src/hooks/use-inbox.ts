@@ -19,6 +19,7 @@ import {
   type ChatCursor,
   type ChatMessage,
   type ChatRoom,
+  type SendChatMessageOpts,
 } from '@/lib/inbox';
 
 /** Daftar room yang user ikuti + unread per room. */
@@ -80,8 +81,8 @@ export function useChatActions(roomId: string) {
   const qc = useQueryClient();
 
   const sendM = useMutation({
-    mutationFn: (vars: { body: string; mentions: string[] }) =>
-      sendChatMessage(roomId, vars.body, vars.mentions),
+    mutationFn: (vars: { body: string; mentions: string[]; opts?: SendChatMessageOpts }) =>
+      sendChatMessage(roomId, vars.body, vars.mentions, vars.opts),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chat-messages', roomId] });
       qc.invalidateQueries({ queryKey: ['chat-rooms'] });
@@ -104,7 +105,8 @@ export function useChatActions(roomId: string) {
   });
 
   return {
-    send: (body: string, mentions: string[] = []) => sendM.mutateAsync({ body, mentions }),
+    send: (body: string, mentions: string[] = [], opts?: SendChatMessageOpts) =>
+      sendM.mutateAsync({ body, mentions, opts }),
     markRead: () => markReadM.mutateAsync(),
     isSending: sendM.isPending,
     toggleReaction: (messageId: string, emoji: string) =>

@@ -10,11 +10,13 @@ import { createElement, type PropsWithChildren } from 'react';
 jest.setTimeout(30000);
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+jest.mock('@/lib/cards', () => ({ getActionPlan: jest.fn().mockResolvedValue(null) }));
 
 // expo-router params — mutable per-test.
 let mockRoomParams: { roomId?: string; highlight?: string } = { roomId: 'r1' };
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockRoomParams,
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 let mockSession: { user: { id: string } } | null = { user: { id: 'me' } };

@@ -9,11 +9,13 @@ import { createElement, type PropsWithChildren } from 'react';
 jest.setTimeout(30000);
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+jest.mock('@/lib/cards', () => ({ getActionPlan: jest.fn().mockResolvedValue(null) }));
 
 // expo-router params — mutable per-test (Critic §8.3 pattern).
 let mockRoomParams: { roomId?: string } = { roomId: 'r1' };
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockRoomParams,
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 // useAuth — Critic §8.3: factory baca `mockSession` lazy di body fungsi (TDZ-safe).
@@ -134,7 +136,7 @@ describe('ChatRoomScreen — state dasar (existing)', () => {
     await waitFor(() => expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe('Pesan baru'));
     fireEvent.press(screen.getByLabelText('Kirim pesan'));
 
-    await waitFor(() => expect(mockSend).toHaveBeenCalledWith('Pesan baru'));
+    await waitFor(() => expect(mockSend).toHaveBeenCalledWith('Pesan baru', [], undefined));
     await waitFor(() => expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe(''));
   });
 });

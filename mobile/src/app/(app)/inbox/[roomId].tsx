@@ -5,7 +5,7 @@
 // Pola: useAuth().session?.user?.id menentukan me; default 'them' saat session kosong.
 // Per Critic §8.4: SendButton pakai inline style {width:44,height:44} (NativeWind class tak selalu flatten di jest)
 // dan accessibilityState={{disabled}} eksplisit.
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
@@ -13,6 +13,7 @@ import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 import { Screen } from '@/components/screen';
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatActions, useChatMessages } from '@/hooks/use-inbox';
+import { getActionPlan } from '@/lib/cards';
 import { reportError } from '@/lib/errors';
 import type { ChatMessage, ChatReaction } from '@/lib/inbox';
 import { useAuth } from '@/providers/auth-provider';
@@ -159,6 +160,32 @@ function ReactionPillRow({
   );
 }
 
+function ContextBanner({
+  label,
+  entityId,
+  onNavigate,
+}: {
+  label: string;
+  entityId: string;
+  onNavigate: (id: string) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onNavigate(entityId)}
+      accessibilityRole="link"
+      accessibilityLabel={`Buka Tugas ${label}`}
+      style={{ minHeight: 44 }}
+      className="mb-1 flex-row items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-950/40">
+      <Text className="text-sm text-blue-700 dark:text-blue-300">🔗</Text>
+      <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Konteks Tugas</Text>
+      <Text className="flex-1 text-xs text-blue-800 dark:text-blue-200" numberOfLines={1}>
+        {label}
+      </Text>
+      <Text className="text-sm text-blue-700 dark:text-blue-300">›</Text>
+    </Pressable>
+  );
+}
+
 function MessageBubble({
   m,
   isMe,
@@ -166,6 +193,7 @@ function MessageBubble({
   currentUserId,
   onToggleReaction,
   reactionDisabled,
+  onNavigateContext,
 }: {
   m: ChatMessage;
   isMe: boolean;
@@ -173,10 +201,12 @@ function MessageBubble({
   currentUserId: string | null;
   onToggleReaction: (messageId: string, emoji: string) => void;
   reactionDisabled: boolean;
+  onNavigateContext: (id: string) => void;
 }) {
   const authorName = m.author?.full_name ?? null;
   // Guard: them tanpa nama → '?' (audit-friendly placeholder).
   const displayName = authorName ?? '?';
+  const hasContext = m.context_entity_type === 'action_plan' && m.context_label && m.context_entity_id;
   return (
     <View
       className={`mb-2 max-w-[80%] ${isMe ? 'self-end' : 'self-start'}`}
@@ -189,6 +219,13 @@ function MessageBubble({
             {displayName}
           </Text>
         </View>
+      ) : null}
+      {hasContext ? (
+        <ContextBanner
+          label={m.context_label!}
+          entityId={m.context_entity_id!}
+          onNavigate={onNavigateContext}
+        />
       ) : null}
       <View
         className={`rounded-2xl px-3 py-2 ${
@@ -231,7 +268,12 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
 }
 
 export default function ChatRoomScreen() {
-  const { roomId, highlight } = useLocalSearchParams<{ roomId?: string; highlight?: string }>();
+  const { roomId, highlight, contextAp } = useLocalSearchParams<{
+    roomId?: string;
+    highlight?: string;
+    contextAp?: string;
+  }>();
+  const router = useRouter();
   const { session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
@@ -243,6 +285,22 @@ export default function ChatRoomScreen() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [reactionError, setReactionError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  const [contextApId, setContextApId] = useState<string | null>(contextAp ?? null);
+  const [contextApName, setContextApName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!contextApId) return;
+    let cancelled = false;
+    getActionPlan(contextApId).then((ap) => {
+      if (cancelled) return;
+      if (ap?.name) setContextApName(ap.name);
+      else setContextApId(null);
+    }).catch(() => {
+      if (!cancelled) setContextApId(null);
+    });
+    return () => { cancelled = true; };
+  }, [contextApId]);
 
   useEffect(() => {
     // Guard: roomId undefined / kosong → JANGAN panggil markRead.
@@ -277,6 +335,11 @@ export default function ChatRoomScreen() {
     [currentUserId, isTogglingReaction, toggleReaction],
   );
 
+  const handleNavigateContext = useCallback(
+    (apId: string) => router.push(`/action-plan/${apId}` as never),
+    [router],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: TimelineItem }) =>
       item.type === 'divider' ? (
@@ -289,9 +352,10 @@ export default function ChatRoomScreen() {
           currentUserId={currentUserId}
           onToggleReaction={handleToggleReaction}
           reactionDisabled={!currentUserId || isTogglingReaction}
+          onNavigateContext={handleNavigateContext}
         />
       ),
-    [currentUserId, highlight, handleToggleReaction, isTogglingReaction],
+    [currentUserId, highlight, handleToggleReaction, isTogglingReaction, handleNavigateContext],
   );
 
   async function handleSend() {
@@ -300,8 +364,13 @@ export default function ChatRoomScreen() {
     if (!body) return;
     setSendError(null);
     try {
-      await send(body);
+      const opts = contextApId ? { contextActionPlan: contextApId } : undefined;
+      await send(body, [], opts);
       setText('');
+      if (contextApId) {
+        setContextApId(null);
+        setContextApName(null);
+      }
     } catch (e) {
       setSendError(reportError('Kirim pesan', e, 'Gagal mengirim pesan.'));
     }
@@ -369,6 +438,24 @@ export default function ChatRoomScreen() {
           </Text>
         ) : null}
         <View className="gap-2 py-3">
+          {contextApName ? (
+            <View className="mx-3 mt-2 flex-row items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-950/40">
+              <Text className="flex-1 text-xs text-blue-800 dark:text-blue-200">
+                Membalas Tugas: {contextApName}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setContextApId(null);
+                  setContextApName(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Lepas konteks"
+                style={{ minWidth: 44, minHeight: 44 }}
+                className="items-center justify-center">
+                <Text className="text-sm font-semibold text-blue-700 dark:text-blue-300">✕</Text>
+              </Pressable>
+            </View>
+          ) : null}
           <View className="flex-row items-end gap-2">
             <TextInput
               className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"

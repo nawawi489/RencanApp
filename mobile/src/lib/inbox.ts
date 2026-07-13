@@ -19,6 +19,13 @@ export type ChatRoom = {
 
 export type ChatReaction = { emoji: string; reactor_id: string };
 
+export type ChatMessageReplyTo = {
+  id: string;
+  body: string;
+  author_id: string | null;
+  author?: PersonRef;
+};
+
 export type ChatMessage = {
   id: string;
   chat_room_id: string;
@@ -27,6 +34,11 @@ export type ChatMessage = {
   created_at: string;
   author?: PersonRef;
   reactions?: ChatReaction[];
+  context_entity_type?: string | null;
+  context_entity_id?: string | null;
+  context_label?: string | null;
+  reply_to_message_id?: string | null;
+  reply_to?: ChatMessageReplyTo | null;
 };
 
 /** Ukuran halaman listChatMessages. Diekspor agar hook (`useChatMessages`) menghitung `hasMore` dari `batch === CHAT_PAGE_SIZE` tanpa konstanta duplikat. */
@@ -61,7 +73,7 @@ export async function listChatMessages(
   if (!roomId) return [];
   let qb = supabase
     .from('chat_messages')
-    .select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id)')
+    .select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id), context_entity_type, context_entity_id, context_label, reply_to_message_id, reply_to:reply_to_message_id(id, body, author_id, author:author_id(full_name))')
     .eq('chat_room_id', roomId);
   if (cursor) qb = qb.or(buildKeysetOr(cursor));
   const { data, error } = await qb
@@ -69,8 +81,8 @@ export async function listChatMessages(
     .order('id', { ascending: false })
     .limit(CHAT_PAGE_SIZE);
   if (error) throw error;
-  return ((data ?? []) as unknown as (ChatMessage & { reactions: ChatReaction[] | null })[]).map(
-    (row) => ({ ...row, reactions: row.reactions ?? [] }),
+  return ((data ?? []) as unknown as (ChatMessage & { reactions: ChatReaction[] | null; reply_to: ChatMessageReplyTo | null })[]).map(
+    (row) => ({ ...row, reactions: row.reactions ?? [], reply_to: row.reply_to ?? null }),
   );
 }
 
@@ -84,16 +96,24 @@ function buildKeysetOr(cursor: ChatCursor): string {
 
 // ---------------------------------------------------------------- mutations (RPC)
 
+export type SendChatMessageOpts = {
+  contextActionPlan?: string;
+  replyTo?: string;
+};
+
 /** Kirim pesan. mentions = id user (hanya yang anggota room yang diproses server). */
 export async function sendChatMessage(
   roomId: string,
   body: string,
   mentions: string[] = [],
+  opts?: SendChatMessageOpts,
 ): Promise<string> {
   const { data, error } = await supabase.rpc('send_chat_message', {
     p_room: roomId,
     p_body: body,
     p_mentions: mentions,
+    p_context_action_plan: opts?.contextActionPlan ?? null,
+    p_reply_to: opts?.replyTo ?? null,
   });
   if (error) throw error;
   return data as string;

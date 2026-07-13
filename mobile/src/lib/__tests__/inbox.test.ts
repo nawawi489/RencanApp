@@ -93,7 +93,7 @@ describe('listChatMessages (keyset)', () => {
     expect(calls.range).toBeUndefined();
     // Page pertama = tidak ada predikat cursor.
     expect(calls.or).toBeUndefined();
-    expect(msgs).toEqual([{ id: 'm1', reactions: [] }]);
+    expect(msgs).toEqual([{ id: 'm1', reactions: [], reply_to: null }]);
   });
 
   it('[5-rev] page N (cursor terisi) → tambah .or() strict `<` (AC-2/AC-16)', async () => {
@@ -150,7 +150,7 @@ describe('listChatMessages (keyset)', () => {
     const { builder } = makeQueryThenable({ data: batch, error: null });
     mockFrom.mockReturnValue(builder);
     const msgs = await listChatMessages('r1');
-    expect(msgs).toEqual(batch.map((m) => ({ ...m, reactions: [] })));
+    expect(msgs).toEqual(batch.map((m) => ({ ...m, reactions: [], reply_to: null })));
   });
 
   it('[5f] propagasi error identity (rethrow object apa adanya)', async () => {
@@ -170,6 +170,8 @@ describe('sendChatMessage', () => {
       p_room: 'r1',
       p_body: 'halo',
       p_mentions: ['u2', 'u-nonmember'],
+      p_context_action_plan: null,
+      p_reply_to: null,
     });
     expect(id).toBe('m-new');
   });
@@ -181,12 +183,50 @@ describe('sendChatMessage', () => {
       p_room: 'r1',
       p_body: 'hai',
       p_mentions: [],
+      p_context_action_plan: null,
+      p_reply_to: null,
     });
   });
 
   it('[8] propagasi error', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'no' } });
     await expect(sendChatMessage('r1', 'x')).rejects.toEqual({ message: 'no' });
+  });
+
+  it('[RC-1] opts.contextActionPlan diteruskan ke p_context_action_plan', async () => {
+    mockRpc.mockResolvedValue({ data: 'm-ctx', error: null });
+    await sendChatMessage('r1', 'soal tugas', [], { contextActionPlan: 'ap-1' });
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', {
+      p_room: 'r1',
+      p_body: 'soal tugas',
+      p_mentions: [],
+      p_context_action_plan: 'ap-1',
+      p_reply_to: null,
+    });
+  });
+
+  it('[RC-2] opts.replyTo diteruskan ke p_reply_to', async () => {
+    mockRpc.mockResolvedValue({ data: 'm-rpl', error: null });
+    await sendChatMessage('r1', 'setuju', [], { replyTo: 'm-prev' });
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', {
+      p_room: 'r1',
+      p_body: 'setuju',
+      p_mentions: [],
+      p_context_action_plan: null,
+      p_reply_to: 'm-prev',
+    });
+  });
+
+  it('[RC-3] opts konteks + reply bersama', async () => {
+    mockRpc.mockResolvedValue({ data: 'm-both', error: null });
+    await sendChatMessage('r1', 'balas + konteks', [], { contextActionPlan: 'ap-2', replyTo: 'm-old' });
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', {
+      p_room: 'r1',
+      p_body: 'balas + konteks',
+      p_mentions: [],
+      p_context_action_plan: 'ap-2',
+      p_reply_to: 'm-old',
+    });
   });
 });
 
@@ -292,6 +332,69 @@ describe('listChatMessages — embed reactions', () => {
     mockFrom.mockReturnValue(builder);
     const msgs = await listChatMessages('r1');
     expect(msgs[0].reactions).toEqual([]);
+  });
+});
+
+describe('listChatMessages — context & reply_to fields (0046)', () => {
+  it('[RC-4] select-string memuat context + reply_to embed', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listChatMessages('r1');
+    expect(calls.select).toHaveLength(1);
+    const sel = calls.select[0][0] as string;
+    expect(sel).toEqual(expect.stringContaining('context_entity_type'));
+    expect(sel).toEqual(expect.stringContaining('context_entity_id'));
+    expect(sel).toEqual(expect.stringContaining('context_label'));
+    expect(sel).toEqual(expect.stringContaining('reply_to_message_id'));
+    expect(sel).toEqual(expect.stringContaining('reply_to:reply_to_message_id('));
+  });
+
+  it('[RC-5] pesan dengan context fields di-pass-through apa-adanya', async () => {
+    const rows = [{
+      id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'konteks test',
+      created_at: '2026-07-13T09:00:00Z', reactions: null,
+      context_entity_type: 'action_plan', context_entity_id: 'ap-1',
+      context_label: 'Tugas Alpha', reply_to_message_id: null, reply_to: null,
+    }];
+    const { builder } = makeQueryThenable({ data: rows, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs[0].context_entity_type).toBe('action_plan');
+    expect(msgs[0].context_entity_id).toBe('ap-1');
+    expect(msgs[0].context_label).toBe('Tugas Alpha');
+    expect(msgs[0].reply_to_message_id).toBeNull();
+    expect(msgs[0].reply_to).toBeNull();
+  });
+
+  it('[RC-6] pesan tanpa context (null) → field tetap null (backward compat AC-8)', async () => {
+    const rows = [{
+      id: 'm2', chat_room_id: 'r1', author_id: 'u1', body: 'biasa',
+      created_at: '2026-07-13T09:01:00Z', reactions: null,
+      context_entity_type: null, context_entity_id: null,
+      context_label: null, reply_to_message_id: null, reply_to: null,
+    }];
+    const { builder } = makeQueryThenable({ data: rows, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs[0].context_entity_type).toBeNull();
+    expect(msgs[0].context_label).toBeNull();
+    expect(msgs[0].reply_to).toBeNull();
+  });
+
+  it('[RC-7] reply_to embed di-pass-through (author nested)', async () => {
+    const rows = [{
+      id: 'm3', chat_room_id: 'r1', author_id: 'u1', body: 'balas',
+      created_at: '2026-07-13T09:02:00Z', reactions: [],
+      context_entity_type: null, context_entity_id: null,
+      context_label: null, reply_to_message_id: 'm1',
+      reply_to: { id: 'm1', body: 'pesan asal', author_id: 'u2', author: { full_name: 'Bob' } },
+    }];
+    const { builder } = makeQueryThenable({ data: rows, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs[0].reply_to).toEqual({
+      id: 'm1', body: 'pesan asal', author_id: 'u2', author: { full_name: 'Bob' },
+    });
   });
 });
 

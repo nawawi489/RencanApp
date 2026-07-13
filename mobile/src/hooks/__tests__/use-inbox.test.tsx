@@ -87,7 +87,7 @@ describe('useChatActions', () => {
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
     await result.current.send('Hai', ['u2']);
-    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'Hai', ['u2']));
+    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'Hai', ['u2'], undefined));
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
     expect(keys.some((k) => k.includes('chat-messages'))).toBe(true);
     expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);

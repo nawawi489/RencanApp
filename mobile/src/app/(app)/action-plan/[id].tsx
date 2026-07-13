@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/comp
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { alertFriendlyError } from '@/lib/errors';
+import { supabase } from '@/lib/supabase';
 import { Badge, Button, EmptyState, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { SubmissionCard } from '@/components/submission-card';
@@ -440,11 +441,26 @@ export function LiveActionPlanDetailScreen() {
             <SectionCard>
               <View className="flex-row items-center justify-between gap-2">
                 <Text className="text-sm font-bold text-black dark:text-white">Brief Kerja</Text>
-                {/* UI-S-AP3 — akses cepat ke Inbox dari konteks Action Plan. */}
+                {/* FR-RC-1 — deep-link ke room Initiative + konteks Tugas (PRD §30 rule 2). */}
                 <Button
                   label="Buka Chat"
                   variant="secondary"
-                  onPress={() => router.push('/(tabs)/inbox' as Href)}
+                  onPress={async () => {
+                    if (!ap.initiative_id) {
+                      router.push('/(tabs)/inbox' as Href);
+                      return;
+                    }
+                    const { data: room } = await supabase
+                      .from('chat_rooms')
+                      .select('id')
+                      .eq('initiative_id', ap.initiative_id)
+                      .maybeSingle();
+                    if (room?.id) {
+                      router.push(`/inbox/${room.id}?contextAp=${ap.id}` as Href);
+                    } else {
+                      router.push('/(tabs)/inbox' as Href);
+                    }
+                  }}
                 />
               </View>
               <Field label="Periode" value={`${ap.start_date ?? '—'} → ${ap.deadline ?? '—'}`} />

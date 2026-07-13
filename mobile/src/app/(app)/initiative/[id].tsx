@@ -9,6 +9,7 @@ import { StatTile } from '@/components/stat-tile';
 import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { alertFriendlyError } from '@/lib/errors';
+import { supabase } from '@/lib/supabase';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -289,7 +290,18 @@ export function LiveInitiativeDetailScreen() {
             {/* UI-S-ID2 — Ruang Eksekusi + Tim & Akses Otomatis */}
             <ExecSpaceCard
               counts={execCounts}
-              onOpenChat={() => router.push('/(tabs)/inbox' as Href)}
+              onOpenChat={async () => {
+                const { data: room } = await supabase
+                  .from('chat_rooms')
+                  .select('id')
+                  .eq('initiative_id', id)
+                  .maybeSingle();
+                if (room?.id) {
+                  router.push(`/inbox/${room.id}` as Href);
+                } else {
+                  router.push('/(tabs)/inbox' as Href);
+                }
+              }}
             />
             <RosterCard entries={roster} />
 
