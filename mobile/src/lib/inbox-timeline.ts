@@ -5,7 +5,8 @@ import type { ChatMessage } from '@/lib/inbox';
 
 export type TimelineItem =
   | { type: 'divider'; key: string; label: string }
-  | { type: 'message'; key: string; msg: ChatMessage };
+  | { type: 'message'; key: string; msg: ChatMessage }
+  | { type: 'system'; key: string; msg: ChatMessage };
 
 /** Bangun timeline dari pesan desc (newest-first). Divider disisipkan SETELAH grup harian
  * saat iterasi desc, sehingga di inverted FlatList chip muncul di ATAS grup harinya
@@ -29,7 +30,7 @@ export function buildTimelineItems(
     if (prevDay !== null && label !== null && label !== prevDay) {
       out.push({ type: 'divider', key: `d-${prevDay}-boundary`, label: prevDay });
     }
-    out.push({ type: 'message', key: m.id, msg: m });
+    out.push({ type: m.kind === 'system' ? 'system' : 'message', key: m.id, msg: m });
     if (label !== null) prevDay = label;
   }
   if (prevDay !== null) {

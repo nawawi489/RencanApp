@@ -54,6 +54,16 @@ function GovernanceBanner({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SystemEventRow({ body }: { body: string }) {
+  return (
+    <View className="items-center py-2">
+      <Text className="max-w-[85%] text-center text-xs text-neutral-500 dark:text-neutral-400">
+        {body}
+      </Text>
+    </View>
+  );
+}
+
 function DateDivider({ label }: { label: string }) {
   return (
     <View className="my-3 flex-row items-center gap-2">
@@ -344,6 +354,8 @@ export default function ChatRoomScreen() {
     ({ item }: { item: TimelineItem }) =>
       item.type === 'divider' ? (
         <DateDivider label={item.label} />
+      ) : item.type === 'system' ? (
+        <SystemEventRow body={item.msg.body} />
       ) : (
         <MessageBubble
           m={item.msg}

@@ -26,12 +26,26 @@ export type ChatMessageReplyTo = {
   author?: PersonRef;
 };
 
+export type SystemEventType =
+  | 'status_submitted'
+  | 'status_done'
+  | 'status_revision'
+  | 'status_resubmitted'
+  | 'deadline_change_requested'
+  | 'deadline_change_approved'
+  | 'deadline_change_rejected'
+  | 'deadline_change_revision_requested'
+  | 'deadline_change_resubmitted';
+
 export type ChatMessage = {
   id: string;
   chat_room_id: string;
   author_id: string | null;
   body: string;
   created_at: string;
+  kind?: 'user' | 'system';
+  system_event_type?: SystemEventType | null;
+  actor_id?: string | null;
   author?: PersonRef;
   reactions?: ChatReaction[];
   context_entity_type?: string | null;
@@ -73,7 +87,7 @@ export async function listChatMessages(
   if (!roomId) return [];
   let qb = supabase
     .from('chat_messages')
-    .select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id), context_entity_type, context_entity_id, context_label, reply_to_message_id, reply_to:reply_to_message_id(id, body, author_id, author:author_id(full_name))')
+    .select('id, chat_room_id, author_id, body, created_at, kind, system_event_type, actor_id, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id), context_entity_type, context_entity_id, context_label, reply_to_message_id, reply_to:reply_to_message_id(id, body, author_id, author:author_id(full_name))')
     .eq('chat_room_id', roomId);
   if (cursor) qb = qb.or(buildKeysetOr(cursor));
   const { data, error } = await qb

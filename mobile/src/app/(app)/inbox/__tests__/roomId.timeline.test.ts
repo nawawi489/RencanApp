@@ -7,13 +7,18 @@ import { buildTimelineItems, type TimelineItem } from '@/lib/inbox-timeline';
 
 type Msg = Parameters<typeof buildTimelineItems>[0][number];
 
-function m(id: string, day: string): Msg {
-  // `created_at` cukup marker; test memakai `dayOf` deterministik via mapping id → hari.
-  return { id, chat_room_id: 'r1', author_id: 'u1', body: id, created_at: day };
+function m(id: string, day: string, kind?: 'user' | 'system'): Msg {
+  return { id, chat_room_id: 'r1', author_id: kind === 'system' ? null : 'u1', body: id, created_at: day, kind };
 }
 
 function makeDayOf(map: Record<string, string | null>) {
   return (iso: string) => (iso in map ? map[iso] : null);
+}
+
+function itemLabel(i: TimelineItem): string {
+  if (i.type === 'divider') return `div:${i.label}`;
+  if (i.type === 'system') return `sys:${i.msg.id}`;
+  return i.msg.id;
 }
 
 describe('buildTimelineItems', () => {
@@ -40,7 +45,7 @@ describe('buildTimelineItems', () => {
       makeDayOf({ D24: '24 Jun', D23: '23 Jun', D22: '22 Jun' }),
     );
     // Expect: msg24b, msg24a, div(24), msg23, div(23), msg22, div(22)
-    expect(items.map((i) => (i.type === 'message' ? i.msg.id : `div:${i.label}`))).toEqual([
+    expect(items.map((i) => itemLabel(i))).toEqual([
       'm24b',
       'm24a',
       'div:24 Jun',
@@ -64,7 +69,7 @@ describe('buildTimelineItems', () => {
       }),
     );
     // Pola: a (25 Jun), div(25 Jun) [boundary], b (24 Jun), div(24 Jun) [END]
-    expect(items.map((i) => (i.type === 'message' ? i.msg.id : `div:${i.label}`))).toEqual([
+    expect(items.map((i) => itemLabel(i))).toEqual([
       'a',
       'div:25 Jun',
       'b',
@@ -80,7 +85,7 @@ describe('buildTimelineItems', () => {
       makeDayOf({ D24: '24 Jun', D23: '23 Jun', BAD: null }),
     );
     // Pola: msg24, msg-bad, div(24 Jun), msg23, div(23 Jun)
-    expect(items.map((i) => (i.type === 'message' ? i.msg.id : `div:${i.label}`))).toEqual([
+    expect(items.map((i) => itemLabel(i))).toEqual([
       'm24',
       'mbad',
       'div:24 Jun',
@@ -98,7 +103,36 @@ describe('buildTimelineItems', () => {
     expect(items).toHaveLength(2);
   });
 
-  it('[T7] key stabil untuk deterministik re-render — message.key = msg.id; divider unik per boundary vs end', () => {
+  it('[T7] system event → type "system" (bukan "message")', () => {
+    const items = buildTimelineItems(
+      [m('u1', 'D1'), m('s1', 'D1', 'system'), m('u2', 'D1')],
+      makeDayOf({ D1: '24 Jun' }),
+    );
+    expect(items.map((i) => i.type)).toEqual(['message', 'system', 'message', 'divider']);
+  });
+
+  it('[T8] system events tetap partisipasi di day divider logic', () => {
+    const items = buildTimelineItems(
+      [m('u1', 'D1'), m('s1', 'D2', 'system')],
+      makeDayOf({ D1: '24 Jun', D2: '23 Jun' }),
+    );
+    expect(items.map((i) => (i.type === 'divider' ? `div:${i.label}` : i.type))).toEqual([
+      'message',
+      'div:24 Jun',
+      'system',
+      'div:23 Jun',
+    ]);
+  });
+
+  it('[T9] kind undefined (legacy) → type "message" (backward compat)', () => {
+    const items = buildTimelineItems(
+      [m('a', 'D1')],
+      makeDayOf({ D1: '24 Jun' }),
+    );
+    expect(items[0].type).toBe('message');
+  });
+
+  it('[T10] key stabil — message/system.key = msg.id; divider unik per boundary vs end', () => {
     const items = buildTimelineItems(
       [m('a', 'D1'), m('b', 'D2')],
       makeDayOf({ D1: '24 Jun', D2: '23 Jun' }),
