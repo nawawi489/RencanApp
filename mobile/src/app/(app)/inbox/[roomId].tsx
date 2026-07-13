@@ -14,7 +14,7 @@ import { Screen } from '@/components/screen';
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatActions, useChatMessages } from '@/hooks/use-inbox';
 import { reportError } from '@/lib/errors';
-import type { ChatMessage } from '@/lib/inbox';
+import type { ChatMessage, ChatReaction } from '@/lib/inbox';
 import { useAuth } from '@/providers/auth-provider';
 
 import { buildTimelineItems, type TimelineItem } from '@/lib/inbox-timeline';
@@ -65,14 +65,114 @@ function DateDivider({ label }: { label: string }) {
   );
 }
 
+const REACTION_EMOJI_ORDER = ['👍', '✅', '👀', '🙏'];
+
+type AggregatedReaction = { emoji: string; count: number; reactedByMe: boolean };
+
+function aggregateReactions(
+  reactions: ChatReaction[] | undefined,
+  currentUserId: string | null,
+): AggregatedReaction[] {
+  if (!reactions || reactions.length === 0) return [];
+  const map = new Map<string, { count: number; reactedByMe: boolean }>();
+  for (const r of reactions) {
+    const entry = map.get(r.emoji) ?? { count: 0, reactedByMe: false };
+    entry.count++;
+    if (currentUserId && r.reactor_id === currentUserId) entry.reactedByMe = true;
+    map.set(r.emoji, entry);
+  }
+  const sorted = Array.from(map.entries()).sort((a, b) => {
+    const ia = REACTION_EMOJI_ORDER.indexOf(a[0]);
+    const ib = REACTION_EMOJI_ORDER.indexOf(b[0]);
+    const oa = ia === -1 ? REACTION_EMOJI_ORDER.length + a[0].codePointAt(0)! : ia;
+    const ob = ib === -1 ? REACTION_EMOJI_ORDER.length + b[0].codePointAt(0)! : ib;
+    return oa - ob;
+  });
+  return sorted.map(([emoji, { count, reactedByMe }]) => ({ emoji, count, reactedByMe }));
+}
+
+function ReactionPill({
+  emoji,
+  count,
+  reactedByMe,
+  onPress,
+}: {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+  onPress: () => void;
+}) {
+  const label = `Reaksi ${emoji}, ${count}, ${reactedByMe ? 'saya sudah bereaksi' : 'belum bereaksi'}`;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: reactedByMe }}
+      style={{ minWidth: 44, minHeight: 44 }}
+      className={`flex-row items-center justify-center rounded-full px-3 ${
+        reactedByMe
+          ? 'border-2 border-brand-dark bg-blue-50 dark:bg-blue-950/40'
+          : 'border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800'
+      }`}>
+      <Text className="text-base">{emoji}</Text>
+      <Text className={`ml-1 text-sm font-semibold ${reactedByMe ? 'text-brand-dark' : 'text-neutral-600 dark:text-neutral-300'}`}>
+        {count}
+      </Text>
+      {reactedByMe ? <Text className="ml-0.5 text-xs font-bold text-brand-dark">✓</Text> : null}
+    </Pressable>
+  );
+}
+
+function ReactionPillRow({
+  reactions,
+  currentUserId,
+  messageId,
+  onToggle,
+  disabled,
+}: {
+  reactions: ChatReaction[] | undefined;
+  currentUserId: string | null;
+  messageId: string;
+  onToggle: (messageId: string, emoji: string) => void;
+  disabled: boolean;
+}) {
+  const aggregated = useMemo(
+    () => aggregateReactions(reactions, currentUserId),
+    [reactions, currentUserId],
+  );
+  if (aggregated.length === 0) return null;
+  return (
+    <View className="mt-1 flex-row flex-wrap gap-1">
+      {aggregated.map((r) => (
+        <ReactionPill
+          key={r.emoji}
+          emoji={r.emoji}
+          count={r.count}
+          reactedByMe={r.reactedByMe}
+          onPress={() => {
+            if (!disabled) onToggle(messageId, r.emoji);
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 function MessageBubble({
   m,
   isMe,
   isHighlighted,
+  currentUserId,
+  onToggleReaction,
+  reactionDisabled,
 }: {
   m: ChatMessage;
   isMe: boolean;
   isHighlighted?: boolean;
+  currentUserId: string | null;
+  onToggleReaction: (messageId: string, emoji: string) => void;
+  reactionDisabled: boolean;
 }) {
   const authorName = m.author?.full_name ?? null;
   // Guard: them tanpa nama → '?' (audit-friendly placeholder).
@@ -103,6 +203,13 @@ function MessageBubble({
           {formatTime(m.created_at)}
         </Text>
       </View>
+      <ReactionPillRow
+        reactions={m.reactions}
+        currentUserId={currentUserId}
+        messageId={m.id}
+        onToggle={onToggleReaction}
+        disabled={reactionDisabled}
+      />
     </View>
   );
 }
@@ -130,10 +237,11 @@ export default function ChatRoomScreen() {
   const safeRoomId = roomId ?? '';
   const { messages, isLoading, isError, refetch, loadOlder, hasMore, isFetchingNextPage } =
     useChatMessages(safeRoomId);
-  const { send, markRead, isSending } = useChatActions(safeRoomId);
+  const { send, markRead, isSending, toggleReaction, isTogglingReaction } = useChatActions(safeRoomId);
   const [text, setText] = useState('');
   const placeholderColor = usePlaceholderColor();
   const [sendError, setSendError] = useState<string | null>(null);
+  const [reactionError, setReactionError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
@@ -155,6 +263,20 @@ export default function ChatRoomScreen() {
     if (canLoadOlder) loadOlder();
   }, [canLoadOlder, loadOlder]);
   const keyExtractor = useCallback((item: TimelineItem) => item.key, []);
+  const handleToggleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      if (!currentUserId || isTogglingReaction) return;
+      try {
+        await toggleReaction(messageId, emoji);
+        setReactionError(null);
+      } catch (e) {
+        reportError('Reaksi', e, 'Gagal memperbarui reaksi.');
+        setReactionError('Gagal memperbarui reaksi.');
+      }
+    },
+    [currentUserId, isTogglingReaction, toggleReaction],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: TimelineItem }) =>
       item.type === 'divider' ? (
@@ -164,9 +286,12 @@ export default function ChatRoomScreen() {
           m={item.msg}
           isMe={currentUserId != null && item.msg.author_id === currentUserId}
           isHighlighted={highlight != null && item.msg.id === highlight}
+          currentUserId={currentUserId}
+          onToggleReaction={handleToggleReaction}
+          reactionDisabled={!currentUserId || isTogglingReaction}
         />
       ),
-    [currentUserId, highlight],
+    [currentUserId, highlight, handleToggleReaction, isTogglingReaction],
   );
 
   async function handleSend() {
@@ -238,6 +363,11 @@ export default function ChatRoomScreen() {
           />
         )}
 
+        {reactionError ? (
+          <Text className="px-1 py-1 text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
+            {reactionError}
+          </Text>
+        ) : null}
         <View className="gap-2 py-3">
           <View className="flex-row items-end gap-2">
             <TextInput

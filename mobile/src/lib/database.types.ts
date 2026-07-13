@@ -709,6 +709,59 @@ export type Database = {
           },
         ]
       }
+      chat_message_reactions: {
+        Row: {
+          chat_message_id: string
+          reactor_id: string
+          emoji: string
+          organization_id: string
+          created_at: string
+        }
+        Insert: {
+          chat_message_id: string
+          reactor_id: string
+          emoji: string
+          organization_id: string
+          created_at?: string
+        }
+        Update: {
+          chat_message_id?: string
+          reactor_id?: string
+          emoji?: string
+          organization_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_reactions_chat_message_id_fkey"
+            columns: ["chat_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_reactor_id_fkey"
+            columns: ["reactor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_emoji_fkey"
+            columns: ["emoji"]
+            isOneToOne: false
+            referencedRelation: "reaction_emojis"
+            referencedColumns: ["emoji"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           author_id: string | null
@@ -2338,6 +2391,24 @@ export type Database = {
           },
         ]
       }
+      reaction_emojis: {
+        Row: {
+          emoji: string
+          sort_order: number
+          active: boolean
+        }
+        Insert: {
+          emoji: string
+          sort_order?: number
+          active?: boolean
+        }
+        Update: {
+          emoji?: string
+          sort_order?: number
+          active?: boolean
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           action_plan_id: string
@@ -3665,6 +3736,10 @@ export type Database = {
           p_result_values: Json
         }
         Returns: string
+      }
+      toggle_chat_reaction: {
+        Args: { p_message: string; p_emoji: string }
+        Returns: boolean
       }
       update_score_formula_version_weights: {
         Args: {

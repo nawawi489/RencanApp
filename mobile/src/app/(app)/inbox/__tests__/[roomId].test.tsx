@@ -3,7 +3,7 @@
 // Pola mock per Critic §8.3: useAuth via `let mockSession` yang dibaca LAZY di factory.
 // Pola mock per Critic §8.7: case existing 'data → kirim' di-rewrite ke label baru + mock useAuth.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
 
 jest.setTimeout(30000);
@@ -25,11 +25,19 @@ jest.mock('@/providers/auth-provider', () => ({
 const mockUseChatMessages = jest.fn();
 const mockSend = jest.fn();
 const mockMarkRead = jest.fn();
+const mockToggleReaction = jest.fn();
 let mockIsSending = false;
+let mockIsTogglingReaction = false;
 const mockLoadOlder = jest.fn();
 jest.mock('@/hooks/use-inbox', () => ({
   useChatMessages: (...a: unknown[]) => mockUseChatMessages(...a),
-  useChatActions: () => ({ send: mockSend, markRead: mockMarkRead, isSending: mockIsSending }),
+  useChatActions: () => ({
+    send: mockSend,
+    markRead: mockMarkRead,
+    isSending: mockIsSending,
+    toggleReaction: (...a: unknown[]) => mockToggleReaction(...a),
+    isTogglingReaction: mockIsTogglingReaction,
+  }),
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
@@ -73,12 +81,15 @@ beforeEach(() => {
   mockUseChatMessages.mockReset();
   mockSend.mockReset();
   mockMarkRead.mockReset();
+  mockToggleReaction.mockReset();
   mockLoadOlder.mockReset();
   mockSend.mockResolvedValue('m2');
   mockMarkRead.mockResolvedValue(0);
+  mockToggleReaction.mockResolvedValue(true);
   mockSession = { user: { id: 'me' } };
   mockRoomParams = { roomId: 'r1' };
   mockIsSending = false;
+  mockIsTogglingReaction = false;
   mockUseChatMessages.mockReturnValue(makeChatMessagesState());
 });
 
@@ -473,5 +484,244 @@ describe('ChatRoomScreen — E-KP infinite-scroll-up (owner §10)', () => {
         expect(k).toContain(item.msg.id);
       }
     }
+  });
+});
+
+// =========================================================== Reaction pill (FR-RX-4.x) — Fase D ==========================================================
+describe('ChatRoomScreen — Reaction pill (FR-RX-4.x)', () => {
+  const rxMsg = (id: string, reactions: { emoji: string; reactor_id: string }[], extra: Record<string, unknown> = {}) => ({
+    id,
+    chat_room_id: 'r1',
+    author_id: 'other',
+    body: `body-${id}`,
+    created_at: '2026-07-10T10:00:00Z',
+    author: { id: 'other', full_name: 'Andi', email: null },
+    reactions,
+    ...extra,
+  });
+
+  // [1] tidak merender pill row saat pesan tanpa reaksi
+  it('[RX-UI-1] tidak merender pill saat reactions kosong/undefined', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    await screen.findByText('body-m1');
+    expect(screen.queryByLabelText(/^Reaksi /)).toBeNull();
+  });
+
+  // [2] agregasi count: dua reaktor emoji sama → satu pill count 2
+  it('[RX-UI-2] agregasi count: 2 reaktor emoji sama → 1 pill count 2', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'a' }, { emoji: '👍', reactor_id: 'b' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    await screen.findByText('body-m1');
+    const pills = screen.queryAllByLabelText(/^Reaksi 👍/);
+    expect(pills.length).toBe(1);
+    expect(screen.getByLabelText('Reaksi 👍, 2, belum bereaksi')).toBeTruthy();
+  });
+
+  // [3] reactedByMe true saat currentUserId ada di reactor_id
+  it('[RX-UI-3] reactedByMe=true → accessibilityState.selected=true', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'me' }, { emoji: '✅', reactor_id: 'other' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pillLike = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/);
+    const pillCheck = screen.getByLabelText(/Reaksi ✅.*belum bereaksi/);
+    expect(pillLike.props.accessibilityState.selected).toBe(true);
+    expect(pillCheck.props.accessibilityState.selected).toBe(false);
+  });
+
+  // [4] reactedByMe false saat session null
+  it('[RX-UI-4] session=null → selected false, pill tetap render', async () => {
+    mockSession = null;
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'someone' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    expect(pill.props.accessibilityState.selected).toBe(false);
+  });
+
+  // [5] touch target ≥44px via inline style numeric
+  it('[RX-UI-5] touch target ≥44px via inline style numeric', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'a' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    const flat = Array.isArray(pill.props.style)
+      ? Object.assign({}, ...pill.props.style.filter(Boolean))
+      : (pill.props.style ?? {});
+    expect((flat.minHeight ?? flat.height) >= 44).toBe(true);
+    expect((flat.minWidth ?? flat.width) >= 44).toBe(true);
+  });
+
+  // [6] non-color signal untuk selected (border tebal atau ✓)
+  it('[RX-UI-6] non-color signal: selected pill memiliki border ≥2 atau ✓', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'me' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/);
+    expect(pill.props.accessibilityState.selected).toBe(true);
+    const flat = Array.isArray(pill.props.style)
+      ? Object.assign({}, ...pill.props.style.filter(Boolean))
+      : (pill.props.style ?? {});
+    const hasCheck = within(pill).queryByText('✓') !== null;
+    expect(hasCheck || (flat.borderWidth ?? 0) >= 2).toBe(true);
+  });
+
+  // [7] tap pill → toggleReaction(messageId, emoji)
+  it('[RX-UI-7] tap pill memanggil toggleReaction(messageId, emoji)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'a' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    fireEvent.press(pill);
+    await waitFor(() => expect(mockToggleReaction).toHaveBeenCalledTimes(1));
+    expect(mockToggleReaction).toHaveBeenCalledWith('m1', '👍');
+  });
+
+  // [8] tap saat session null → no-op
+  it('[RX-UI-8] session=null → tap pill no-op', async () => {
+    mockSession = null;
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'x' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    fireEvent.press(pill);
+    expect(mockToggleReaction).not.toHaveBeenCalled();
+  });
+
+  // [9] error toggle → alert inline tanpa merusak list pesan
+  it('[RX-UI-9] error toggle → alert inline, list pesan tetap utuh', async () => {
+    mockToggleReaction.mockRejectedValueOnce(new Error('boom'));
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [
+        rxMsg('m1', [{ emoji: '👍', reactor_id: 'x' }]),
+        rxMsg('m2', [], { body: 'Balasan' }),
+      ],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    fireEvent.press(pill);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toBeTruthy();
+    expect(screen.getByText('body-m1')).toBeTruthy();
+    expect(screen.getByText('Balasan')).toBeTruthy();
+  });
+
+  // [10] multi-emoji ordering stabil via REACTION_EMOJI_ORDER
+  it('[RX-UI-10] multi-emoji ordering stabil: 👍 → ✅ → 👀 (konstanta)', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [
+        { emoji: '✅', reactor_id: 'a' },
+        { emoji: '👍', reactor_id: 'a' },
+        { emoji: '👀', reactor_id: 'b' },
+      ])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pills = await screen.findAllByLabelText(/^Reaksi /);
+    const labels = pills.map((p) => String(p.props.accessibilityLabel));
+    expect(labels.length).toBe(3);
+    expect(labels[0]).toMatch(/👍/);
+    expect(labels[1]).toMatch(/✅/);
+    expect(labels[2]).toMatch(/👀/);
+  });
+
+  // [11] isLoading tidak merender pill (skeleton path)
+  it('[RX-UI-11] isLoading=true → no pill, no chat-list', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({ isLoading: true, messages: [] }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    await screen.findByLabelText('Memuat…');
+    expect(screen.queryByLabelText(/^Reaksi /)).toBeNull();
+    expect(screen.queryByTestId('chat-list')).toBeNull();
+  });
+
+  // [12] compat highlight — bubble ter-highlight tetap render pill
+  it('[RX-UI-12] highlight compat — pill dirender dalam bubble ter-highlight', async () => {
+    mockRoomParams = { roomId: 'r1' };
+    // Inject highlight param
+    jest.requireMock('expo-router').useLocalSearchParams = () => ({ roomId: 'r1', highlight: 'm1' });
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'x' }], { body: 'Pesan target' })],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    await screen.findByText('Pesan target');
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    expect(pill).toBeTruthy();
+    // Restore
+    jest.requireMock('expo-router').useLocalSearchParams = () => mockRoomParams;
+  });
+
+  // [13] pesan self (author=me) tetap menampilkan pill
+  it('[RX-UI-13] self-react: bubble author=me tetap render pill selected', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'me' }], { author_id: 'me' })],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/Reaksi 👍.*saya sudah bereaksi/);
+    expect(pill).toBeTruthy();
+    expect(pill.props.accessibilityState.selected).toBe(true);
+  });
+
+  // [UI-14] pending-guard: isTogglingReaction=true → tap no-op
+  it('[RX-UI-14] isTogglingReaction=true → tap pill no-op', async () => {
+    mockIsTogglingReaction = true;
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'a' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    fireEvent.press(pill);
+    expect(mockToggleReaction).not.toHaveBeenCalled();
+  });
+
+  // [UI-15] alert clears setelah sukses berikutnya
+  it('[RX-UI-15] alert clears setelah toggle sukses berikutnya', async () => {
+    mockToggleReaction.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(true);
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [
+        { emoji: '👍', reactor_id: 'a' },
+        { emoji: '✅', reactor_id: 'b' },
+      ])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // Tap pertama gagal
+    const pill1 = await screen.findByLabelText(/^Reaksi 👍/);
+    fireEvent.press(pill1);
+    await screen.findByRole('alert');
+    // Tap kedua sukses → alert clears
+    const pill2 = screen.getByLabelText(/^Reaksi ✅/);
+    fireEvent.press(pill2);
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  });
+
+  // [UI-16] accessibilityLabel exact copy dgn digit
+  it('[RX-UI-16] accessibilityLabel exact copy: "Reaksi 👍, 2, belum bereaksi"', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [rxMsg('m1', [{ emoji: '👍', reactor_id: 'a' }, { emoji: '👍', reactor_id: 'b' }])],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const pill = await screen.findByLabelText(/^Reaksi 👍/);
+    expect(pill.props.accessibilityLabel).toBe('Reaksi 👍, 2, belum bereaksi');
+  });
+
+  // [UI-17] wiring per-item: dua bubble reaksi berbeda
+  it('[RX-UI-17] wiring per-item: dua bubble dgn reaksi berbeda dirender terpisah', async () => {
+    mockUseChatMessages.mockReturnValue(makeChatMessagesState({
+      messages: [
+        rxMsg('m1', [{ emoji: '👍', reactor_id: 'a' }]),
+        rxMsg('m2', [{ emoji: '✅', reactor_id: 'b' }, { emoji: '✅', reactor_id: 'c' }]),
+      ],
+    }));
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText('Reaksi 👍, 1, belum bereaksi')).toBeTruthy();
+    expect(screen.getByLabelText('Reaksi ✅, 2, belum bereaksi')).toBeTruthy();
   });
 });

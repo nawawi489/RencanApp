@@ -8,6 +8,7 @@ const mockListChatRooms = jest.fn();
 const mockListChatMessages = jest.fn();
 const mockSendChatMessage = jest.fn();
 const mockMarkChatMessagesRead = jest.fn();
+const mockToggleChatReaction = jest.fn();
 
 jest.mock('@/lib/inbox', () => ({
   CHAT_PAGE_SIZE: 30, // FR-IN2.x: hook membaca konstanta ini untuk getNextPageParam.
@@ -15,6 +16,7 @@ jest.mock('@/lib/inbox', () => ({
   listChatMessages: (...a: unknown[]) => mockListChatMessages(...a),
   sendChatMessage: (...a: unknown[]) => mockSendChatMessage(...a),
   markChatMessagesRead: (...a: unknown[]) => mockMarkChatMessagesRead(...a),
+  toggleChatReaction: (...a: unknown[]) => mockToggleChatReaction(...a),
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
@@ -32,6 +34,8 @@ beforeEach(() => {
   mockListChatMessages.mockReset();
   mockSendChatMessage.mockReset();
   mockMarkChatMessagesRead.mockReset();
+  mockToggleChatReaction.mockReset();
+  mockToggleChatReaction.mockResolvedValue(true);
   mockListChatRooms.mockResolvedValue([
     { id: 'r1', initiative_id: 'i1', name: 'Room A', unread_count: 2, last_message_at: '2026-06-24T01:00:00Z' },
   ]);
@@ -234,5 +238,143 @@ describe('useChatMessages — paginasi keyset', () => {
     const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
     await waitFor(() => expect(result.current.messages).toHaveLength(5));
     expect(result.current.hasMore).toBe(false);
+  });
+});
+
+// =========================================================== Reaction hook (Fase C) ==========================================================
+describe('useChatActions — toggleReaction', () => {
+  it('[HK-1] mapping args: memanggil toggleChatReaction(messageId, emoji)', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.toggleReaction('msg-42', '👍');
+    expect(mockToggleChatReaction).toHaveBeenCalledWith('msg-42', '👍');
+  });
+
+  it('[HK-2] POS invalidate: sukses → invalidate chat-messages,roomId', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.toggleReaction('msg-1', '✅');
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+    expect(keys.some((k) => k.includes('chat-messages') && k.includes('r1'))).toBe(true);
+  });
+
+  it('[HK-3] NEG invalidate: sukses TIDAK invalidate chat-rooms', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.toggleReaction('msg-1', '👍');
+    await waitFor(() => expect(mockToggleChatReaction).toHaveBeenCalled());
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+    expect(keys.some((k) => k.includes('chat-rooms'))).toBe(false);
+  });
+
+  it('[HK-4] NEG invalidate: sukses TIDAK invalidate notifications', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.toggleReaction('msg-1', '👀');
+    await waitFor(() => expect(mockToggleChatReaction).toHaveBeenCalled());
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+    expect(keys.some((k) => k.includes('notifications'))).toBe(false);
+  });
+
+  it('[HK-5] boolean pass-through: return true (toggle-on) dari data layer', async () => {
+    mockToggleChatReaction.mockResolvedValueOnce(true);
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    const val = await result.current.toggleReaction('msg-1', '👍');
+    expect(val).toBe(true);
+  });
+
+  it('[HK-5b] boolean pass-through: return false (toggle-off) dari data layer', async () => {
+    mockToggleChatReaction.mockResolvedValueOnce(false);
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    const val = await result.current.toggleReaction('msg-1', '👍');
+    expect(val).toBe(false);
+  });
+
+  it('[HK-6] error propagate + no-invalidate', async () => {
+    const err = new Error('RLS denied');
+    mockToggleChatReaction.mockRejectedValueOnce(err);
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await expect(result.current.toggleReaction('msg-1', '👍')).rejects.toThrow('RLS denied');
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+    expect(keys.some((k) => k.includes('chat-messages'))).toBe(false);
+  });
+
+  it('[HK-7] dua panggilan berturut → 2× invalidate chat-messages', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.toggleReaction('msg-1', '👍');
+    await result.current.toggleReaction('msg-1', '👍');
+    const chatMsgInvalidations = spy.mock.calls.filter(
+      (c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey).includes('chat-messages'),
+    );
+    expect(chatMsgInvalidations.length).toBe(2);
+  });
+
+  it('[HK-8] isolasi roomId: invalidate hanya roomId yang diberikan ke hook', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useChatActions('r99'), { wrapper });
+    await result.current.toggleReaction('msg-1', '👍');
+    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey);
+    const chatMsgKeys = keys.filter((k) => k[0] === 'chat-messages');
+    expect(chatMsgKeys.every((k) => k[1] === 'r99')).toBe(true);
+  });
+
+  it('[HK-9] isTogglingReaction starts false, becomes true during pending', async () => {
+    let resolveToggle: (v: boolean) => void;
+    mockToggleChatReaction.mockImplementationOnce(
+      () => new Promise<boolean>((r) => { resolveToggle = r; }),
+    );
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    expect(result.current.isTogglingReaction).toBe(false);
+    const promise = result.current.toggleReaction('msg-1', '👍');
+    await waitFor(() => expect(result.current.isTogglingReaction).toBe(true));
+    resolveToggle!(true);
+    await promise;
+    await waitFor(() => expect(result.current.isTogglingReaction).toBe(false));
+  });
+});
+
+describe('useChatMessages — reactions pass-through', () => {
+  it('[HK-10] messages expose reactions[] from data layer', async () => {
+    mockListChatMessages.mockResolvedValueOnce([
+      { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'hi', created_at: '2026-07-10T00:00:00Z', reactions: [{ emoji: '👍', reactor_id: 'u2' }] },
+    ]);
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+    expect(result.current.messages[0].reactions).toEqual([{ emoji: '👍', reactor_id: 'u2' }]);
+  });
+
+  it('[HK-11] messages expose empty reactions[] when no reactions', async () => {
+    mockListChatMessages.mockResolvedValueOnce([
+      { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'hi', created_at: '2026-07-10T00:00:00Z', reactions: [] },
+    ]);
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+    expect(result.current.messages[0].reactions).toEqual([]);
+  });
+});
+
+describe('useChatActions — regresi send() invalidation (HK-12)', () => {
+  it('[HK-12] send() tetap invalidate chat-messages + chat-rooms setelah toggleReaction ditambahkan', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.send('halo');
+    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalled());
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+    expect(keys.some((k) => k.includes('chat-messages'))).toBe(true);
+    expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);
   });
 });

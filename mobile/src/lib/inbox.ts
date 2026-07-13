@@ -17,6 +17,8 @@ export type ChatRoom = {
   last_message_author_name: string | null;
 };
 
+export type ChatReaction = { emoji: string; reactor_id: string };
+
 export type ChatMessage = {
   id: string;
   chat_room_id: string;
@@ -24,6 +26,7 @@ export type ChatMessage = {
   body: string;
   created_at: string;
   author?: PersonRef;
+  reactions?: ChatReaction[];
 };
 
 /** Ukuran halaman listChatMessages. Diekspor agar hook (`useChatMessages`) menghitung `hasMore` dari `batch === CHAT_PAGE_SIZE` tanpa konstanta duplikat. */
@@ -58,7 +61,7 @@ export async function listChatMessages(
   if (!roomId) return [];
   let qb = supabase
     .from('chat_messages')
-    .select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email)')
+    .select('id, chat_room_id, author_id, body, created_at, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id)')
     .eq('chat_room_id', roomId);
   if (cursor) qb = qb.or(buildKeysetOr(cursor));
   const { data, error } = await qb
@@ -66,7 +69,9 @@ export async function listChatMessages(
     .order('id', { ascending: false })
     .limit(CHAT_PAGE_SIZE);
   if (error) throw error;
-  return (data ?? []) as unknown as ChatMessage[];
+  return ((data ?? []) as unknown as (ChatMessage & { reactions: ChatReaction[] | null })[]).map(
+    (row) => ({ ...row, reactions: row.reactions ?? [] }),
+  );
 }
 
 /** Ekspresi keyset PostgREST setara SQL `(created_at, id) < (T, X)`:
@@ -99,6 +104,16 @@ export async function markChatMessagesRead(roomId: string): Promise<number> {
   const { data, error } = await supabase.rpc('mark_chat_messages_read', { p_room: roomId });
   if (error) throw error;
   return (data as number) ?? 0;
+}
+
+/** Toggle reaksi emoji pada pesan. Return true = ditambahkan, false = dihapus. */
+export async function toggleChatReaction(messageId: string, emoji: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('toggle_chat_reaction', {
+    p_message: messageId,
+    p_emoji: emoji,
+  });
+  if (error) throw error;
+  return data as boolean;
 }
 
 // ---------------------------------------------------------------- search (Chat FTS V1)

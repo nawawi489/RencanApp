@@ -15,6 +15,7 @@ import {
   listChatRooms,
   markChatMessagesRead,
   sendChatMessage,
+  toggleChatReaction,
   type ChatCursor,
   type ChatMessage,
   type ChatRoom,
@@ -94,9 +95,20 @@ export function useChatActions(roomId: string) {
     },
   });
 
+  const toggleReactionM = useMutation({
+    mutationFn: (v: { messageId: string; emoji: string }) =>
+      toggleChatReaction(v.messageId, v.emoji),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chat-messages', roomId] });
+    },
+  });
+
   return {
     send: (body: string, mentions: string[] = []) => sendM.mutateAsync({ body, mentions }),
     markRead: () => markReadM.mutateAsync(),
     isSending: sendM.isPending,
+    toggleReaction: (messageId: string, emoji: string) =>
+      toggleReactionM.mutateAsync({ messageId, emoji }),
+    isTogglingReaction: toggleReactionM.isPending,
   };
 }

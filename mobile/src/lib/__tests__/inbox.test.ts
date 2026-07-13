@@ -23,6 +23,7 @@ import {
   markChatMessagesRead,
   searchChatMessages,
   sendChatMessage,
+  toggleChatReaction,
 } from '../inbox';
 
 /** Builder thenable (B5.1): metode chainable kembalikan builder; await resolve di titik mana pun.
@@ -92,7 +93,7 @@ describe('listChatMessages (keyset)', () => {
     expect(calls.range).toBeUndefined();
     // Page pertama = tidak ada predikat cursor.
     expect(calls.or).toBeUndefined();
-    expect(msgs).toEqual([{ id: 'm1' }]);
+    expect(msgs).toEqual([{ id: 'm1', reactions: [] }]);
   });
 
   it('[5-rev] page N (cursor terisi) → tambah .or() strict `<` (AC-2/AC-16)', async () => {
@@ -149,7 +150,7 @@ describe('listChatMessages (keyset)', () => {
     const { builder } = makeQueryThenable({ data: batch, error: null });
     mockFrom.mockReturnValue(builder);
     const msgs = await listChatMessages('r1');
-    expect(msgs).toEqual(batch);
+    expect(msgs).toEqual(batch.map((m) => ({ ...m, reactions: [] })));
   });
 
   it('[5f] propagasi error identity (rethrow object apa adanya)', async () => {
@@ -194,6 +195,103 @@ describe('markChatMessagesRead', () => {
     mockRpc.mockResolvedValue({ data: 4, error: null });
     expect(await markChatMessagesRead('r1')).toBe(4);
     expect(mockRpc).toHaveBeenCalledWith('mark_chat_messages_read', { p_room: 'r1' });
+  });
+});
+
+// =========================================================== Reaction pill (PRD §30.6) — toggleChatReaction + embed ==========================================================
+describe('toggleChatReaction', () => {
+  it('[RX-1] memanggil rpc toggle_chat_reaction dgn arg mapping camel→snake', async () => {
+    mockRpc.mockResolvedValue({ data: true, error: null });
+    await toggleChatReaction('m-1', '👍');
+    expect(mockRpc).toHaveBeenCalledWith('toggle_chat_reaction', { p_message: 'm-1', p_emoji: '👍' });
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('[RX-2] mengembalikan boolean true apa-adanya (toggle-on)', async () => {
+    mockRpc.mockResolvedValue({ data: true, error: null });
+    const r = await toggleChatReaction('m-1', '✅');
+    expect(r).toBe(true);
+    expect(typeof r).toBe('boolean');
+  });
+
+  it('[RX-3] mengembalikan boolean false apa-adanya (toggle-off)', async () => {
+    mockRpc.mockResolvedValue({ data: false, error: null });
+    const r = await toggleChatReaction('m-1', '👍');
+    expect(r).toBe(false);
+  });
+
+  it('[RX-4] propagasi error identity (rethrow object apa-adanya, bukan clone)', async () => {
+    const err = { message: 'not a chat member', code: '42501' };
+    mockRpc.mockResolvedValue({ data: null, error: err });
+    await expect(toggleChatReaction('m-1', '👍')).rejects.toBe(err);
+  });
+
+  it('[RX-5] meneruskan messageId & emoji verbatim (tanpa trim/normalize)', async () => {
+    mockRpc.mockResolvedValue({ data: true, error: null });
+    await toggleChatReaction('  m-1  ', '  🙏  ');
+    expect(mockRpc).toHaveBeenCalledWith('toggle_chat_reaction', { p_message: '  m-1  ', p_emoji: '  🙏  ' });
+  });
+});
+
+describe('listChatMessages — embed reactions', () => {
+  it('[RX-6] select-string memuat embed reactions:chat_message_reactions(emoji, reactor_id)', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listChatMessages('r1');
+    expect(calls.select).toHaveLength(1);
+    expect(calls.select[0][0]).toEqual(expect.stringContaining('reactions:chat_message_reactions(emoji, reactor_id)'));
+  });
+
+  it('[RX-7] TIDAK memindahkan chat_room_id ke .or() dan embed tidak bocor ke cursor', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    const cursor = { createdAt: '2026-07-10T09:00:00.000Z', id: 'm-last' };
+    await listChatMessages('r1', cursor);
+    expect(calls.eq).toEqual([['chat_room_id', 'r1']]);
+    expect(calls.or).toEqual([
+      ['created_at.lt.2026-07-10T09:00:00.000Z,and(created_at.eq.2026-07-10T09:00:00.000Z,id.lt.m-last)'],
+    ]);
+    expect(JSON.stringify(calls.or)).not.toEqual(expect.stringContaining('reactions'));
+    expect(JSON.stringify(calls.or)).not.toEqual(expect.stringContaining('chat_room_id'));
+  });
+
+  it('[RX-8] pass-through: field reactions[] di-return apa-adanya (tanpa transform)', async () => {
+    const rows = [
+      { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'halo', created_at: '2026-07-10T09:00:00Z',
+        reactions: [{ emoji: '👍', reactor_id: 'u1' }, { emoji: '👍', reactor_id: 'u2' }, { emoji: '🙏', reactor_id: 'u3' }] },
+    ];
+    const { builder } = makeQueryThenable({ data: rows, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs[0].reactions).toEqual([
+      { emoji: '👍', reactor_id: 'u1' },
+      { emoji: '👍', reactor_id: 'u2' },
+      { emoji: '🙏', reactor_id: 'u3' },
+    ]);
+  });
+
+  it('[RX-9] roomId kosong → [] tanpa query (short-circuit dipatuhi setelah embed)', async () => {
+    expect(await listChatMessages('')).toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('[RX-10] embed reactions bertahan pada halaman cursor>0', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listChatMessages('r1', { createdAt: '2026-07-10T09:00:00Z', id: 'm-x' });
+    expect(calls.select[0][0]).toEqual(expect.stringContaining('reactions:chat_message_reactions(emoji, reactor_id)'));
+    expect(calls.eq).toEqual([['chat_room_id', 'r1']]);
+  });
+
+  it('[RX-11] normalisasi reactions: null → [] (PostgREST embed kosong bisa null)', async () => {
+    const rows = [
+      { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'halo', created_at: '2026-07-10T09:00:00Z',
+        reactions: null },
+    ];
+    const { builder } = makeQueryThenable({ data: rows, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs[0].reactions).toEqual([]);
   });
 });
 
