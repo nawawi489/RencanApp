@@ -347,8 +347,8 @@ export function LiveInboxScreen() {
             {showPesanEmpty ? (
               <EmptyState
                 icon={<Text className="text-2xl">💬</Text>}
-                title={COPY.emptyPesan}
-                description=""
+                title={emptyTitle}
+                description={COPY.emptyPesan}
                 action={{ label: COPY.clearSearch, onPress: () => setQ('') }}
               />
             ) : null}

@@ -18,6 +18,20 @@ jest.mock('@/hooks/use-inbox', () => ({
   useInboxRooms: () => mockUseInboxRooms(),
 }));
 
+// Chat FTS V1: idle stub. Test file ini fokus UI-S-IN1; Search Pesan diuji terpisah di
+// inbox.search-messages.test.tsx. Mock ini menghindari useAuth throw (butuh AuthProvider).
+jest.mock('@/hooks/use-search-messages', () => ({
+  useSearchMessages: () => ({
+    hits: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    isRpcMissing: false,
+    refetch: jest.fn(),
+  }),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import InboxScreen from '../inbox';
 
