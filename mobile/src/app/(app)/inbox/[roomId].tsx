@@ -290,21 +290,47 @@ function MessageBubble({
   );
 }
 
+/** Avatar grup bertumpuk — max 3 inisial kecil, overlap -6px. */
+function GroupAvatar({ members }: { members: ChatMember[] }) {
+  const shown = members.slice(0, 3);
+  if (shown.length === 0) return null;
+  return (
+    <View className="flex-row items-center" accessibilityLabel="Avatar grup">
+      {shown.map((m, i) => (
+        <View key={m.id} style={i > 0 ? { marginLeft: -6 } : undefined}>
+          <Avatar name={personLabel(m, '?')} seed={m.id} size={28} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 /**
- * Judul header (FR-1) — nama room di baris atas, `N anggota` di baris bawah.
+ * Judul header (FR-1) — avatar grup + nama room + `N anggota`.
  * Segmen status Rencana Aksi sengaja DIDROP (spec OQ-2 Opsi B): informasinya
  * sudah tersedia satu-tap via tombol Rencana Aksi, dan menampilkannya di sini
  * akan bertabrakan dengan `chat_rooms.name` yang bersifat snapshot (OQ-5).
  */
-function RoomHeaderTitle({ roomName, memberCount }: { roomName: string; memberCount: number }) {
+function RoomHeaderTitle({
+  roomName,
+  memberCount,
+  members,
+}: {
+  roomName: string;
+  memberCount: number;
+  members: ChatMember[];
+}) {
   return (
-    <View>
-      <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={1}>
-        {roomName}
-      </Text>
-      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        {`${memberCount} anggota`}
-      </Text>
+    <View className="flex-row items-center gap-2.5">
+      <GroupAvatar members={members} />
+      <View className="shrink">
+        <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={1}>
+          {roomName}
+        </Text>
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+          {`${memberCount} anggota`}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -683,6 +709,7 @@ export default function ChatRoomScreen() {
             <RoomHeaderTitle
               roomName={room?.name ?? 'Diskusi Rencana Aksi'}
               memberCount={members.length}
+              members={members}
             />
           ),
           headerRight: () => (
