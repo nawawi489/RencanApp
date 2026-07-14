@@ -26,6 +26,8 @@ import {
   useChatRoomMembers,
 } from '@/hooks/use-inbox';
 import { personLabel } from '@/lib/cards';
+import { dayKey, dividerLabel } from '@/lib/chat-day';
+import { composerPlaceholder } from '@/lib/chat-placeholder';
 import { reportError } from '@/lib/errors';
 import type { ChatMember, ChatMessage, ChatReaction, ChatRead } from '@/lib/inbox';
 import { createLogger } from '@/lib/logger';
@@ -43,13 +45,6 @@ function formatTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' });
-}
-
-/** Label divider per-hari: 'd MMM' id-ID. Mengembalikan null saat invalid (skip render). */
-function dayLabel(iso: string): string | null {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString('id-ID', { day: 'numeric', month: 'short' });
 }
 
 function GovernanceBanner({ onClose }: { onClose: () => void }) {
@@ -295,53 +290,54 @@ function MessageBubble({
   );
 }
 
-/** Topbar konteks (PRD §30): avatar group + jumlah anggota (buka daftar) + buka Rencana Aksi. */
-function RoomContextBar({
-  members,
+/**
+ * Judul header (FR-1) — nama room di baris atas, `N anggota` di baris bawah.
+ * Segmen status Rencana Aksi sengaja DIDROP (spec OQ-2 Opsi B): informasinya
+ * sudah tersedia satu-tap via tombol Rencana Aksi, dan menampilkannya di sini
+ * akan bertabrakan dengan `chat_rooms.name` yang bersifat snapshot (OQ-5).
+ */
+function RoomHeaderTitle({ roomName, memberCount }: { roomName: string; memberCount: number }) {
+  return (
+    <View>
+      <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={1}>
+        {roomName}
+      </Text>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        {`${memberCount} anggota`}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * Aksi header (FR-1) — tombol Anggota (buka MembersModal) & tombol Rencana Aksi
+ * (navigate ke kartu tujuan). Rencana Aksi hanya tampil bila room.action_plan_id ada.
+ * Semua Pressable memakai inline style ≥44dp (DESIGN.md §4; Critic §8.4 NativeWind
+ * class tidak selalu flatten di jest).
+ */
+function RoomHeaderActions({
   onOpenMembers,
   onOpenActionPlan,
 }: {
-  members: ChatMember[];
   onOpenMembers: () => void;
   onOpenActionPlan?: () => void;
 }) {
-  const shown = members.slice(0, 4);
-  const extra = members.length - shown.length;
   return (
-    <View className="mb-2 flex-row items-center justify-between gap-2">
+    <View className="flex-row items-center">
       <Pressable
         onPress={onOpenMembers}
         accessibilityRole="button"
-        accessibilityLabel={`${members.length} anggota`}
-        className="flex-1 flex-row items-center gap-2 active:opacity-70">
-        <View className="flex-row">
-          {shown.map((m, i) => (
-            <View key={m.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
-              <Avatar name={personLabel(m, '?')} seed={m.id} size={24} />
-            </View>
-          ))}
-          {extra > 0 ? (
-            <View
-              style={{ marginLeft: -8 }}
-              className="h-6 w-6 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700">
-              <Text className="text-[10px] font-semibold text-neutral-600 dark:text-neutral-300">
-                +{extra}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-        <Text className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
-          {members.length} anggota
-        </Text>
+        accessibilityLabel="Anggota"
+        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="people-outline" size={22} color="#1f2937" />
       </Pressable>
       {onOpenActionPlan ? (
         <Pressable
           onPress={onOpenActionPlan}
           accessibilityRole="button"
-          accessibilityLabel="Buka Rencana Aksi"
-          className="flex-row items-center gap-1 rounded-full border border-neutral-300 px-3 py-1.5 active:opacity-70 dark:border-neutral-700">
-          <Ionicons name="open-outline" size={14} color="#1564b3" />
-          <Text className="text-xs font-semibold text-brand-dark dark:text-blue-300">Rencana Aksi</Text>
+          accessibilityLabel="Rencana Aksi"
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="open-outline" size={22} color="#1564b3" />
         </Pressable>
       ) : null}
     </View>
@@ -616,21 +612,27 @@ export default function ChatRoomScreen() {
     }
   }, [newestId]);
 
-  // Per Critic §8.5: bangun divider sekali per "blok hari" pada array yang sudah merged+ordered.
+  // Divider dikelompokkan berdasarkan dayKey (device tz, YYYY-MM-DD) supaya:
+  // (a) tanggal beda-tahun tidak merge (23 Jun 2025 vs 23 Jun 2026), dan
+  // (b) key divider stabil sehingga swap optimistic→server tak menduplikasi divider.
+  // todayKey masuk deps agar label "Hari ini"/"Kemarin" refresh saat hari berganti.
   type Row = { kind: 'divider'; key: string; label: string } | { kind: 'msg'; key: string; m: ChatMessage };
+  const todayKey = dayKey(new Date().toISOString());
   const rows = useMemo<Row[]>(() => {
+    const now = new Date().toISOString();
     const out: Row[] = [];
-    let prevDay: string | null = null;
+    let prevKey: string | null = null;
     for (const m of ordered) {
-      const label = dayLabel(m.created_at);
-      if (label && label !== prevDay) {
-        out.push({ kind: 'divider', key: `d-${label}-${m.id}`, label });
-        prevDay = label;
+      const k = dayKey(m.created_at);
+      if (k && k !== prevKey) {
+        const label = dividerLabel(m.created_at, now);
+        if (label) out.push({ kind: 'divider', key: `d-${k}`, label });
+        prevKey = k;
       }
       out.push({ kind: 'msg', key: m.id, m });
     }
     return out;
-  }, [ordered]);
+  }, [ordered, todayKey]);
 
   async function handleSend() {
     if (isSending) return; // anti double-submit (Critic §8.5)
@@ -673,8 +675,28 @@ export default function ChatRoomScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
-      {/* Native header title = nama room (PRD §30). Fallback statis saat detail belum termuat. */}
-      <Stack.Screen options={{ title: room?.name ?? 'Diskusi Rencana Aksi' }} />
+      {/* Header FR-1: judul + subtitle "N anggota" via headerTitle komponen.
+          headerLeft (HeaderBack 44×44) diwariskan dari (app)/_layout.tsx — jangan headerShown:false. */}
+      <Stack.Screen
+        options={{
+          headerTitle: () => (
+            <RoomHeaderTitle
+              roomName={room?.name ?? 'Diskusi Rencana Aksi'}
+              memberCount={members.length}
+            />
+          ),
+          headerRight: () => (
+            <RoomHeaderActions
+              onOpenMembers={() => setMembersOpen(true)}
+              onOpenActionPlan={
+                room?.action_plan_id
+                  ? () => router.push(`/action-plan/${room.action_plan_id}` as Href)
+                  : undefined
+              }
+            />
+          ),
+        }}
+      />
       <MembersModal visible={membersOpen} members={members} onClose={() => setMembersOpen(false)} />
       <ReadsModal
         visible={readsOpenFor != null}
@@ -690,20 +712,6 @@ export default function ChatRoomScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         // Offset ≈ tinggi native header iOS (44 + safe-area). Aproksimasi; Android pakai adjustResize.
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
-        {members.length > 0 || room ? (
-          <View className="px-5 pt-3">
-            <RoomContextBar
-              members={members}
-              onOpenMembers={() => setMembersOpen(true)}
-              onOpenActionPlan={
-                room?.action_plan_id
-                  ? () => router.push(`/action-plan/${room.action_plan_id}` as Href)
-                  : undefined
-              }
-            />
-          </View>
-        ) : null}
-
         {bannerDismissed === false ? (
           <View className="px-5 pt-3">
             <GovernanceBanner onClose={dismissBanner} />
@@ -787,7 +795,7 @@ export default function ChatRoomScreen() {
           <View className="flex-row items-end gap-2">
             <TextInput
               className="max-h-32 flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-              placeholder="Tulis pesan…"
+              placeholder={composerPlaceholder(room?.name)}
               placeholderTextColor={placeholderColor}
               value={text}
               onChangeText={(t) => {
