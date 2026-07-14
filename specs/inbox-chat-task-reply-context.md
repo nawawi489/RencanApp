@@ -148,7 +148,7 @@ Semua OQ terkunci dari sesi ini — rekomendasi diadopsi sebagai keputusan owner
 **Larangan keras untuk TDD**:
 - Tidak ada RPC baca baru untuk gate label (D-1 sudah kunci).
 - Tidak ada tabel `chat_message_attachments` (evidence-locking PRD §35 — konsisten `inbox-chat-ui.md` FR-IN4.5).
-- Tidak ada trigger otomatis dari `action_plan_submissions` yang menulis pesan berkonteks (system events tetap DEFER V2-lanjutan).
+- Tidak ada trigger otomatis dari `task_submissions` yang menulis pesan berkonteks (system events tetap DEFER V2-lanjutan).
 - Tidak ada pembuatan room dari klien; room tetap lahir dari trigger `initiative_chat_room`.
 - Nomor migrasi WAJIB direkonsiliasi saat build (branch drift).
 - `DROP` signature `send_chat_message` lama sebelum `CREATE` signature baru (hindari overload ambigu di PostgREST).
