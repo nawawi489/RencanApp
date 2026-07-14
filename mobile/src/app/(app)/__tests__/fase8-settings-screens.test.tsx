@@ -1,5 +1,5 @@
 // UI Fase 8 — layar Settings: index SECTIONS, org-structure, activity-log, governance-violation,
-// confidential-access, card-completion-rule, card-guidance, status-priority, notifications-rule, archive.
+// confidential-access, card-completion-rule, card-guidance, notifications-rule, archive.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -83,8 +83,6 @@ import SettingsConfidentialAccessScreen from '../settings-confidential-access';
 import SettingsCardCompletionRuleScreen from '../settings-card-completion-rule';
 // eslint-disable-next-line import/first
 import SettingsCardGuidanceScreen from '../settings-card-guidance';
-// eslint-disable-next-line import/first
-import SettingsStatusPriorityScreen from '../settings-status-priority';
 // eslint-disable-next-line import/first
 import SettingsNotificationsRuleScreen from '../settings-notifications-rule';
 // eslint-disable-next-line import/first
@@ -229,14 +227,6 @@ describe('settings-card-guidance', () => {
     await waitFor(() =>
       expect(mockUpsertSettings).toHaveBeenCalledWith('card_guidance_goal', expect.objectContaining({ body: 'panduan goal' })),
     );
-  });
-});
-
-describe('settings-status-priority', () => {
-  it('[F8-UI-25] tanpa permission manage_settings → akses ditolak', async () => {
-    mockCan.mockReturnValue(false);
-    await render(<SettingsStatusPriorityScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
   });
 });
 
