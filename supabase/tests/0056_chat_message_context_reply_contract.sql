@@ -93,6 +93,9 @@ declare
   v_msg_id uuid;
   v_row record;
 begin
+  -- Cleanup stale data from previous runs
+  delete from auth.users where email in ('alice-0046c@test.local', 'bob-0046c@test.local');
+
   -- Scaffold: org, 2 users, initiative aktif + room, AP turunan
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046c')
     returning id into v_org;
@@ -145,6 +148,7 @@ begin
 
   -- Cleanup
   delete from public.organizations where id = v_org;
+  delete from auth.users where email in ('alice-0046c@test.local', 'bob-0046c@test.local');
 
   raise notice 'PASS c: konteks sah → context_label = server snapshot nama AP';
 end $$;
@@ -159,6 +163,9 @@ declare
   v_room1 uuid;
   v_ap2 uuid;
 begin
+  -- Cleanup stale data from previous runs
+  delete from auth.users where email = 'carol-0046d@test.local';
+
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046d')
     returning id into v_org;
   v_user1 := gen_random_uuid();
@@ -202,6 +209,7 @@ begin
   end;
 
   delete from public.organizations where id = v_org;
+  delete from auth.users where email = 'carol-0046d@test.local';
   raise notice 'PASS d: cross-Initiative context → exception';
 end $$;
 
@@ -216,6 +224,9 @@ declare
   v_room2 uuid;
   v_msg_other uuid;
 begin
+  -- Cleanup stale data from previous runs
+  delete from auth.users where email = 'dave-0046e@test.local';
+
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046e')
     returning id into v_org;
   v_user1 := gen_random_uuid();
@@ -267,6 +278,7 @@ begin
   end;
 
   delete from public.organizations where id = v_org;
+  delete from auth.users where email = 'dave-0046e@test.local';
   raise notice 'PASS e: cross-room reply_to → exception';
 end $$;
 
@@ -280,6 +292,9 @@ declare
   v_msg_id uuid;
   v_row record;
 begin
+  -- Cleanup stale data from previous runs
+  delete from auth.users where email = 'eve-0046f@test.local';
+
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046f')
     returning id into v_org;
   v_user1 := gen_random_uuid();
@@ -319,6 +334,7 @@ begin
   end if;
 
   delete from public.organizations where id = v_org;
+  delete from auth.users where email = 'eve-0046f@test.local';
   raise notice 'PASS f: tanpa param baru → kolom context NULL (backward compatible)';
 end $$;
 
@@ -335,6 +351,9 @@ declare
   v_msg2 uuid;
   v_row record;
 begin
+  -- Cleanup stale data from previous runs
+  delete from auth.users where email in ('fay-0046g@test.local', 'gus-0046g@test.local');
+
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046g')
     returning id into v_org;
   v_user1 := gen_random_uuid();
@@ -383,5 +402,6 @@ begin
   end if;
 
   delete from public.organizations where id = v_org;
+  delete from auth.users where email in ('fay-0046g@test.local', 'gus-0046g@test.local');
   raise notice 'PASS g: konteks + reply bersama → keduanya tersimpan benar';
 end $$;

@@ -7,7 +7,7 @@
 -- Depends: 0046 (context_entity_* columns reused), 0040 (latest review/deadline RPCs).
 --
 -- Pendekatan: TRIGGER pada kolom status, BUKAN amend body RPC.
--- Setiap perubahan status pada action_plans, action_plan_instances, atau
+-- Setiap perubahan status pada tasks, task_instances, atau
 -- deadline_change_requests menyisipkan chat_messages row via helper internal.
 -- Atomisitas: trigger berjalan dalam transaksi yang sama dengan RPC pemicu.
 

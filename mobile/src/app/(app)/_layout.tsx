@@ -44,7 +44,6 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
       <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Rencana Aksi' }} />
 
       {/* Fase 4 — Performance Workspace V1.8.3:
