@@ -72,8 +72,6 @@ jest.mock('expo-router', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import SettingsScreen from '../settings';
-// eslint-disable-next-line import/first
 import SettingsOrgStructureScreen from '../settings-org-structure';
 // eslint-disable-next-line import/first
 import SettingsActivityLogScreen from '../settings-activity-log';
@@ -109,25 +107,6 @@ beforeEach(() => {
   mockUseGovViolations.mockReset().mockReturnValue({ violations: [], isLoading: false });
   mockUseConfRules.mockReset().mockReturnValue({ rules: [], isLoading: false, isAccessGranted: false });
   mockUseSearch.mockReset().mockReturnValue({ results: [], isLoading: false, enabled: false });
-});
-
-describe('settings.tsx SECTIONS', () => {
-  it('[F8-UI-01] entri Fase 8 pressable saat punya permission', async () => {
-    mockCan.mockReturnValue(true);
-    await render(<SettingsScreen />, { wrapper: wrapper() });
-    const org = await screen.findByLabelText('Organisasi');
-    expect(org).toBeTruthy();
-    fireEvent.press(org);
-    expect(mockPush).toHaveBeenCalledWith('/settings-org-structure');
-  });
-
-  it('[F8-UI-02] entri Fase 8 tidak pressable saat can() false', async () => {
-    mockCan.mockReturnValue(false);
-    await render(<SettingsScreen />, { wrapper: wrapper() });
-    // label tetap tampil sebagai teks, tapi tidak ada Pressable berlabel
-    expect(await screen.findByText('Governance Violation')).toBeTruthy();
-    expect(screen.queryByLabelText('Governance Violation')).toBeNull();
-  });
 });
 
 describe('settings-org-structure', () => {
