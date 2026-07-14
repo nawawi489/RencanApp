@@ -294,7 +294,7 @@ Layar: `(tabs)/inbox`, `inbox/[roomId]`. Inbox khusus Initiative Chat — bukan 
 |---|---|---|---|---|
 | INBOX-01 | P1 | Struktur Inbox | Buka tab Inbox | Header lokal, search, filter **Semua / Belum dibaca**, list chat dengan preview pesan terakhir, unread badge (clamp "99+"), timestamp. Catatan: PRD §29 menyebut filter tambahan (Saya PIC, Review, Deadline) — jika tidak ada, catat sebagai gap [?] |
 | INBOX-02 | P1 | Filter bekerja | Terapkan tiap filter bergantian | List tersaring benar per filter |
-| INBOX-03 | P2 | Search chat | Cari nama Initiative / isi pesan | Hasil relevan |
+| INBOX-03 | P1 | Search chat (FTS V1) | Ketik nama Initiative → muncul di section Initiative. Ketik potongan isi pesan (min 2 karakter) → muncul di section Pesan (sub-group per room + snippet). Tap hit pesan → buka room dengan pesan tersorot (border amber). | Dua section terpisah; empty seragam "Tidak ada pesan yang cocok dengan pencarianmu"; user non-member room tidak mendapat pesan dari room itu; hint "Ketik minimal 2 karakter…" saat 1 char. |
 | CHAT-01 | P1 | Kirim & terima pesan | Buka room → kirim pesan; login user lain → balas | Pesan muncul dua arah; unread dot di Inbox pihak lain |
 | CHAT-02 | P1 | Chat terikat Initiative | Amati semua room | Setiap chat terikat satu Initiative; tidak ada chat lepas (PRD §44.20) |
 | CHAT-03 | P1 | Reply context Action Plan | Dari Action Plan Detail → buka chat | Chat terbuka dengan **banner konteks reply** Action Plan; AP tidak membuat room terpisah (PRD §44.21) |

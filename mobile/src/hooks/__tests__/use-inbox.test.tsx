@@ -66,7 +66,7 @@ describe('useChatMessages', () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
     await waitFor(() => expect(result.current.messages).toHaveLength(1));
-    expect(mockListChatMessages).toHaveBeenCalledWith('r1', 0);
+    expect(mockListChatMessages).toHaveBeenCalledWith('r1', undefined);
   });
 
   it('[3] hanya enabled saat roomId terisi (roomId kosong → data layer tidak dipanggil)', async () => {
@@ -139,10 +139,19 @@ describe('useChatMessages — paginasi', () => {
   it('[8] loadOlder memanggil halaman berikutnya & merge desc (terbaru → lama)', async () => {
     // Page 0 = 30 items (penuh → hasNextPage=true → loadOlder bukan no-op).
     // Page 1 = 1 item 'p1-old' (akan ditambahkan setelah page 0 → posisi indeks 30).
-    mockListChatMessages.mockImplementation(async (_id: string, page: number) =>
-      page === 0
-        ? fillBatch(30, 'p0')
-        : [{ id: 'p1-old', chat_room_id: 'r1', author_id: 'u1', body: 'lama', created_at: '2026-06-20T05:00:00Z' }],
+    mockListChatMessages.mockImplementation(
+      async (_id: string, cursor?: { createdAt: string; id: string }) =>
+        cursor == null
+          ? fillBatch(30, 'p0')
+          : [
+              {
+                id: 'p1-old',
+                chat_room_id: 'r1',
+                author_id: 'u1',
+                body: 'lama',
+                created_at: '2026-06-20T05:00:00Z',
+              },
+            ],
     );
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });

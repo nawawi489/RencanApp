@@ -1,0 +1,23 @@
+{
+  "feature": "Search Pesan Inbox (Chat FTS V1): RPC `public.search_chat_messages(p_query, p_room_id, p_limit, p_before, p_before_id)` SECURITY DEFINER yang mencari `chat_messages.body` via pg_trgm ILIKE (dengan escape wildcard) — org-scoped push-down, gate `is_chat_member OR (view_all_workspace AND can_access_initiative)` (confidential-aware), snippet server-side ≤240 char, default limit 20 clamp max 30, keyset cursor `(created_at, id) < (p_before, p_before_id)` dengan handling NULL eksplisit, stable, REVOKE public+anon. Migration baru (nomor next-available, cek Glob supabase/migrations/*.sql) menambah extension pg_trgm, index GIN gin_trgm_ops pada body, dan index composite (organization_id, chat_room_id, created_at desc). Client: wrapper `searchChatMessages` di mobile/src/lib/inbox.ts (ChatMessageHit camelCase), hook `useSearchMessages` dengan debounce 250ms + enabled len>=2 + staleTime 15s + realtime invalidation saat membership dicabut. UI: Inbox tab menampilkan dua grup (Initiative client-side + Pesan server RPC dengan sub-group per room, ORDER BY created_at desc), placeholder 'Cari Initiative atau pesan', empty state identik untuk no-match & silent-filtered, hit TIDAK menyediakan aksi tulis. Deep-link `/inbox/{roomId}?highlight={messageId}` divalidasi via RLS-aware fetch di screen detail. Amandemen wajib di PR yang sama: un-DEFER specs/inbox-chat-ui.md, update database-blueprint, log, ui-prototype-gap, komentar inbox.tsx. Read-only, append-only invariant preserved, no Activity Log per query, no raw query logged.",
+  "paths": [
+    "supabase/migrations/0044_search_chat_messages.sql",
+    "supabase/tests/0044_search_chat_messages_contract.sql",
+    "mobile/src/lib/database.types.ts",
+    "mobile/src/lib/inbox.ts",
+    "mobile/src/hooks/use-search-messages.ts",
+    "mobile/src/app/(app)/(tabs)/inbox.tsx",
+    "mobile/src/app/(app)/inbox/[roomId].tsx",
+    "mobile/src/components/inbox/MessageHitRow.tsx",
+    "mobile/src/components/inbox/SearchResultsSections.tsx",
+    "mobile/src/hooks/__tests__/use-search-messages.test.tsx",
+    "mobile/src/lib/__tests__/inbox.test.ts",
+    "mobile/src/app/(app)/(tabs)/__tests__/inbox.search-messages.test.tsx",
+    "mobile/src/app/(app)/inbox/__tests__/roomId.search-highlight.test.tsx",
+    "specs/inbox-chat-ui.md",
+    "wiki/log.md",
+    "wiki/entities/database-blueprint.md",
+    "wiki/concepts/ui-prototype-gap.md",
+    "docs/manual-testing.md"
+  ]
+}

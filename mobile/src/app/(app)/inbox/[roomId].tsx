@@ -27,7 +27,7 @@ import {
 } from '@/hooks/use-inbox';
 import { personLabel } from '@/lib/cards';
 import { reportError } from '@/lib/errors';
-import type { ChatMember, ChatMessage, ChatRead } from '@/lib/inbox';
+import type { ChatMember, ChatMessage, ChatReaction, ChatRead } from '@/lib/inbox';
 import { createLogger } from '@/lib/logger';
 import { parseMentions } from '@/lib/mention-parse';
 import { applyMention, collectMentionIds, matchMentionQuery, type MentionPick } from '@/lib/mentions';
@@ -83,15 +83,159 @@ function DateDivider({ label }: { label: string }) {
   );
 }
 
+/** Baris system event (PRD §30 komponen 8) — teks tengah, informational-only. */
+function SystemEventRow({ body }: { body: string }) {
+  return (
+    <View className="items-center py-2">
+      <Text className="max-w-[85%] text-center text-xs text-neutral-500 dark:text-neutral-400">
+        {body}
+      </Text>
+    </View>
+  );
+}
+
+// Reaction pill (PRD §30.6) — urutan ack seed, sisanya by codepoint (D13).
+const REACTION_EMOJI_ORDER = ['👍', '✅', '👀', '🙏'];
+
+type AggregatedReaction = { emoji: string; count: number; reactedByMe: boolean };
+
+function aggregateReactions(
+  reactions: ChatReaction[] | undefined,
+  currentUserId: string | null,
+): AggregatedReaction[] {
+  if (!reactions || reactions.length === 0) return [];
+  const map = new Map<string, { count: number; reactedByMe: boolean }>();
+  for (const r of reactions) {
+    const entry = map.get(r.emoji) ?? { count: 0, reactedByMe: false };
+    entry.count++;
+    if (currentUserId && r.reactor_id === currentUserId) entry.reactedByMe = true;
+    map.set(r.emoji, entry);
+  }
+  const sorted = Array.from(map.entries()).sort((a, b) => {
+    const ia = REACTION_EMOJI_ORDER.indexOf(a[0]);
+    const ib = REACTION_EMOJI_ORDER.indexOf(b[0]);
+    const oa = ia === -1 ? REACTION_EMOJI_ORDER.length + a[0].codePointAt(0)! : ia;
+    const ob = ib === -1 ? REACTION_EMOJI_ORDER.length + b[0].codePointAt(0)! : ib;
+    return oa - ob;
+  });
+  return sorted.map(([emoji, { count, reactedByMe }]) => ({ emoji, count, reactedByMe }));
+}
+
+function ReactionPill({
+  emoji,
+  count,
+  reactedByMe,
+  onPress,
+}: {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+  onPress: () => void;
+}) {
+  const label = `Reaksi ${emoji}, ${count}, ${reactedByMe ? 'saya sudah bereaksi' : 'belum bereaksi'}`;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: reactedByMe }}
+      style={{ minWidth: 44, minHeight: 44 }}
+      className={`flex-row items-center justify-center rounded-full px-3 ${
+        reactedByMe
+          ? 'border-2 border-brand-dark bg-blue-50 dark:bg-blue-950/40'
+          : 'border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800'
+      }`}>
+      <Text className="text-base">{emoji}</Text>
+      <Text
+        className={`ml-1 text-sm font-semibold ${reactedByMe ? 'text-brand-dark' : 'text-neutral-600 dark:text-neutral-300'}`}>
+        {count}
+      </Text>
+      {reactedByMe ? <Text className="ml-0.5 text-xs font-bold text-brand-dark">✓</Text> : null}
+    </Pressable>
+  );
+}
+
+function ReactionPillRow({
+  reactions,
+  currentUserId,
+  messageId,
+  onToggle,
+  disabled,
+}: {
+  reactions: ChatReaction[] | undefined;
+  currentUserId: string | null;
+  messageId: string;
+  onToggle: (messageId: string, emoji: string) => void;
+  disabled: boolean;
+}) {
+  const aggregated = useMemo(
+    () => aggregateReactions(reactions, currentUserId),
+    [reactions, currentUserId],
+  );
+  if (aggregated.length === 0) return null;
+  return (
+    <View className="mt-1 flex-row flex-wrap gap-1">
+      {aggregated.map((r) => (
+        <ReactionPill
+          key={r.emoji}
+          emoji={r.emoji}
+          count={r.count}
+          reactedByMe={r.reactedByMe}
+          onPress={() => {
+            if (!disabled) onToggle(messageId, r.emoji);
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+/** Banner konteks Tugas (PRD §30 rule 2 + komponen 10) — tap → buka Tugas. */
+function ContextBanner({
+  label,
+  entityId,
+  onNavigate,
+}: {
+  label: string;
+  entityId: string;
+  onNavigate: (id: string) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onNavigate(entityId)}
+      accessibilityRole="link"
+      accessibilityLabel={`Buka Tugas ${label}`}
+      style={{ minHeight: 44 }}
+      className="mb-1 flex-row items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-950/40">
+      <Text className="text-sm text-blue-700 dark:text-blue-300">🔗</Text>
+      <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Konteks Tugas</Text>
+      <Text className="flex-1 text-xs text-blue-800 dark:text-blue-200" numberOfLines={1}>
+        {label}
+      </Text>
+      <Text className="text-sm text-blue-700 dark:text-blue-300">›</Text>
+    </Pressable>
+  );
+}
+
 function MessageBubble({
   m,
   isMe,
   memberNames,
+  currentUserId,
+  onToggleReaction,
+  reactionDisabled,
+  onNavigateContext,
 }: {
   m: ChatMessage;
   isMe: boolean;
   memberNames: string[];
+  currentUserId: string | null;
+  onToggleReaction: (messageId: string, emoji: string) => void;
+  reactionDisabled: boolean;
+  onNavigateContext: (id: string) => void;
 }) {
+  const hasContext =
+    m.context_entity_type === 'task' && !!m.context_label && !!m.context_entity_id;
   const authorName = m.author?.full_name ?? null;
   // Guard: them tanpa nama → '?' (audit-friendly placeholder).
   const displayName = authorName ?? '?';
@@ -109,6 +253,13 @@ function MessageBubble({
             {displayName}
           </Text>
         </View>
+      ) : null}
+      {hasContext ? (
+        <ContextBanner
+          label={m.context_label!}
+          entityId={m.context_entity_id!}
+          onNavigate={onNavigateContext}
+        />
       ) : null}
       <View
         className={`rounded-2xl px-3 py-2 ${
@@ -133,6 +284,13 @@ function MessageBubble({
           {formatTime(m.created_at)}
         </Text>
       </View>
+      <ReactionPillRow
+        reactions={m.reactions}
+        currentUserId={currentUserId}
+        messageId={m.id}
+        onToggle={onToggleReaction}
+        disabled={reactionDisabled}
+      />
     </View>
   );
 }
@@ -355,7 +513,8 @@ export default function ChatRoomScreen() {
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
   const { messages, isLoading, isError, refetch, loadOlder, hasMore } = useChatMessages(safeRoomId);
-  const { send, markRead, isSending } = useChatActions(safeRoomId);
+  const { send, markRead, isSending, toggleReaction, isTogglingReaction } =
+    useChatActions(safeRoomId);
   const { room } = useChatRoom(safeRoomId);
   const { members } = useChatRoomMembers(safeRoomId);
   const { readsByMessage } = useChatReads(safeRoomId);
@@ -593,6 +752,8 @@ export default function ChatRoomScreen() {
             ) : null}
             {rows.map((r) => {
               if (r.kind === 'divider') return <DateDivider key={r.key} label={r.label} />;
+              // System event (PRD §30 komponen 8) — baris tengah informational-only.
+              if (r.m.kind === 'system') return <SystemEventRow key={r.key} body={r.m.body} />;
               const isMe = currentUserId != null && r.m.author_id === currentUserId;
               const showSeen = isMe && r.m.id === lastSeenMeId;
               const foreignReads = showSeen
@@ -600,7 +761,15 @@ export default function ChatRoomScreen() {
                 : [];
               return (
                 <View key={r.key}>
-                  <MessageBubble m={r.m} isMe={isMe} memberNames={memberNames} />
+                  <MessageBubble
+                    m={r.m}
+                    isMe={isMe}
+                    memberNames={memberNames}
+                    currentUserId={currentUserId}
+                    onToggleReaction={toggleReaction}
+                    reactionDisabled={isTogglingReaction}
+                    onNavigateContext={(id) => router.push(`/task/${id}` as Href)}
+                  />
                   {showSeen ? (
                     <SeenByPill
                       count={foreignReads.length}

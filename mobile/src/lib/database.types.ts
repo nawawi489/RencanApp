@@ -362,6 +362,59 @@ export type Database = {
           },
         ]
       }
+      chat_message_reactions: {
+        Row: {
+          chat_message_id: string
+          created_at: string
+          emoji: string
+          organization_id: string
+          reactor_id: string
+        }
+        Insert: {
+          chat_message_id: string
+          created_at?: string
+          emoji: string
+          organization_id: string
+          reactor_id: string
+        }
+        Update: {
+          chat_message_id?: string
+          created_at?: string
+          emoji?: string
+          organization_id?: string
+          reactor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_reactions_chat_message_id_fkey"
+            columns: ["chat_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_emoji_fkey"
+            columns: ["emoji"]
+            isOneToOne: false
+            referencedRelation: "reaction_emojis"
+            referencedColumns: ["emoji"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_reactor_id_fkey"
+            columns: ["reactor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_message_reads: {
         Row: {
           chat_message_id: string
@@ -397,30 +450,58 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          actor_id: string | null
           author_id: string | null
           body: string
           chat_room_id: string
+          context_entity_id: string | null
+          context_entity_type: string | null
+          context_label: string | null
           created_at: string
           id: string
+          kind: string
           organization_id: string
+          reply_to_message_id: string | null
+          system_event_type: string | null
         }
         Insert: {
+          actor_id?: string | null
           author_id?: string | null
           body: string
           chat_room_id: string
+          context_entity_id?: string | null
+          context_entity_type?: string | null
+          context_label?: string | null
           created_at?: string
           id?: string
+          kind?: string
           organization_id: string
+          reply_to_message_id?: string | null
+          system_event_type?: string | null
         }
         Update: {
+          actor_id?: string | null
           author_id?: string | null
           body?: string
           chat_room_id?: string
+          context_entity_id?: string | null
+          context_entity_type?: string | null
+          context_label?: string | null
           created_at?: string
           id?: string
+          kind?: string
           organization_id?: string
+          reply_to_message_id?: string | null
+          system_event_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_messages_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chat_messages_author_id_fkey"
             columns: ["author_id"]
@@ -440,6 +521,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1825,6 +1913,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reaction_emojis: {
+        Row: {
+          active: boolean
+          emoji: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          emoji: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          emoji?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       reviews: {
         Row: {
@@ -3220,6 +3326,10 @@ export type Database = {
         Args: { p_period_id: string }
         Returns: number
       }
+      can_access_action_plan: {
+        Args: { p_action_plan: string }
+        Returns: boolean
+      }
       can_access_development_area: {
         Args: { p_dev_area: string }
         Returns: boolean
@@ -3355,6 +3465,10 @@ export type Database = {
       development_area_in_my_org: {
         Args: { p_dev_area: string }
         Returns: boolean
+      }
+      emit_chat_system_event: {
+        Args: { p_actor: string; p_event_type: string; p_task: string }
+        Returns: undefined
       }
       emit_deadline_notifications: { Args: never; Returns: number }
       emit_notification: {
@@ -3594,8 +3708,34 @@ export type Database = {
         }
         Returns: Json[]
       }
+      search_chat_messages: {
+        Args: {
+          p_before?: string
+          p_before_id?: string
+          p_limit?: number
+          p_query: string
+          p_room_id?: string
+        }
+        Returns: {
+          author_id: string
+          author_name: string
+          body_similarity: number
+          chat_room_id: string
+          created_at: string
+          initiative_id: string
+          message_id: string
+          room_name: string
+          snippet: string
+        }[]
+      }
       send_chat_message: {
-        Args: { p_body: string; p_mentions?: string[]; p_room: string }
+        Args: {
+          p_body: string
+          p_context_action_plan?: string
+          p_mentions?: string[]
+          p_reply_to?: string
+          p_room: string
+        }
         Returns: string
       }
       set_minimum_breakdown_rule: {
@@ -3689,6 +3829,10 @@ export type Database = {
           p_result_values: Json
         }
         Returns: string
+      }
+      toggle_chat_reaction: {
+        Args: { p_emoji: string; p_message: string }
+        Returns: boolean
       }
       update_score_formula_version_weights: {
         Args: {
