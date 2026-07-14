@@ -401,6 +401,24 @@ describe('ChatRoomScreen — FR-1 header rebuild', () => {
     expect(screen.getAllByLabelText('Rencana Aksi')).toHaveLength(1);
   });
 
+  it('[H7] avatar grup tampil di header — max 3 avatar bertumpuk dari members', async () => {
+    mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Room' } });
+    mockUseChatRoomMembers.mockReturnValue({
+      members: [
+        { id: 'u1', full_name: 'Adi' },
+        { id: 'u2', full_name: 'Budi' },
+        { id: 'u3', full_name: 'Citra' },
+        { id: 'u4', full_name: 'Dian' },
+      ],
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const group = await screen.findByLabelText('Avatar grup');
+    expect(group).toBeTruthy();
+    // Max 3 avatar ditampilkan meski members=4.
+    const avatars = group.children.length;
+    expect(avatars).toBe(3);
+  });
+
   it('[H5] tombol Rencana Aksi TIDAK muncul saat action_plan_id null', async () => {
     mockUseChatRoom.mockReturnValue({
       room: { id: 'r1', name: 'Room', action_plan_id: null },
