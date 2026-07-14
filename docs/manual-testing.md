@@ -363,7 +363,6 @@ Uji dengan akun ceo (atau akun dengan permission terkait). Untuk tiap layar, min
 | ADM-04 | P2 | Repeat Setting (`settings-repeat-rules`) | Kelola aturan repeat; efek ke pembuatan AP Repeat |
 | ADM-05 | P2 | Card Completion Rule (`settings-card-completion-rule`) | Ubah aturan → verifikasi helper Card Completion di alur card |
 | ADM-06 | P2 | Keterangan Card (`settings-card-guidance`) | Ubah teks panduan → tampil di form card terkait |
-| ADM-07 | P2 | Status & Prioritas (`settings-status-priority`) | Kelola status/prioritas (permission `manage_settings`) |
 | ADM-08 | P2 | Notifications Rule (`settings-notifications-rule`) | Ubah rule → verifikasi notifikasi yang tergenerate |
 | ADM-09 | P1 | Score Formula (`settings-score-formula`) | Lihat SCORE-01 |
 | ADM-10 | P1 | Governance Violation (`settings-governance-violation`) | Daftar pelanggaran tampil; detail dan penalty benar |
