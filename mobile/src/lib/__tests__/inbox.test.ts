@@ -170,8 +170,8 @@ describe('sendChatMessage', () => {
       p_room: 'r1',
       p_body: 'halo',
       p_mentions: ['u2', 'u-nonmember'],
-      p_context_action_plan: null,
-      p_reply_to: null,
+      p_context_action_plan: undefined,
+      p_reply_to: undefined,
     });
     expect(id).toBe('m-new');
   });
@@ -183,8 +183,8 @@ describe('sendChatMessage', () => {
       p_room: 'r1',
       p_body: 'hai',
       p_mentions: [],
-      p_context_action_plan: null,
-      p_reply_to: null,
+      p_context_action_plan: undefined,
+      p_reply_to: undefined,
     });
   });
 
@@ -201,7 +201,7 @@ describe('sendChatMessage', () => {
       p_body: 'soal tugas',
       p_mentions: [],
       p_context_action_plan: 'ap-1',
-      p_reply_to: null,
+      p_reply_to: undefined,
     });
   });
 
@@ -212,7 +212,7 @@ describe('sendChatMessage', () => {
       p_room: 'r1',
       p_body: 'setuju',
       p_mentions: [],
-      p_context_action_plan: null,
+      p_context_action_plan: undefined,
       p_reply_to: 'm-prev',
     });
   });
@@ -416,10 +416,10 @@ describe('searchChatMessages (Chat FTS V1)', () => {
     await searchChatMessages({ query: 'cpl' });
     expect(mockRpc).toHaveBeenCalledWith('search_chat_messages', {
       p_query: 'cpl',
-      p_room_id: null,
+      p_room_id: undefined,
       p_limit: 20,
-      p_before: null,
-      p_before_id: null,
+      p_before: undefined,
+      p_before_id: undefined,
     });
   });
 

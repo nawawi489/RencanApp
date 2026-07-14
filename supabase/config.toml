@@ -6,3 +6,9 @@ project_id = "supabase"
 # verify_jwt gateway tetap aktif sebagai lapisan pertama.
 [functions.create-user]
 verify_jwt = true
+
+# Analytics (Logflare) butuh Docker daemon TCP di :2375 (Windows-specific).
+# Untuk dev lokal disable — app tidak butuh analytics, dan enabling TCP daemon
+# adalah security risk yang tidak sepadan untuk local-only setup.
+[analytics]
+enabled = false

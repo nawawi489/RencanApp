@@ -18,20 +18,6 @@ jest.mock('@/hooks/use-inbox', () => ({
   useInboxRooms: () => mockUseInboxRooms(),
 }));
 
-// Chat FTS V1: idle stub. Test file ini fokus UI-S-IN1; Search Pesan diuji terpisah di
-// inbox.search-messages.test.tsx. Mock ini menghindari useAuth throw (butuh AuthProvider).
-jest.mock('@/hooks/use-search-messages', () => ({
-  useSearchMessages: () => ({
-    hits: undefined,
-    isLoading: false,
-    isFetching: false,
-    isError: false,
-    error: null,
-    isRpcMissing: false,
-    refetch: jest.fn(),
-  }),
-}));
-
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import InboxScreen from '../inbox';
 
@@ -77,8 +63,8 @@ describe('InboxScreen', () => {
   it('data → daftar room + badge unread, tap → navigasi ke chat', async () => {
     mockUseInboxRooms.mockReturnValue({
       rooms: [
-        { id: 'r1', initiative_id: 'i1', name: 'Room A', unread_count: 3, last_message_at: '2026-06-24T01:00:00Z', last_message_body: 'Halo tim', last_message_author_name: 'Budi' },
-        { id: 'r2', initiative_id: 'i2', name: 'Room B', unread_count: 0, last_message_at: null, last_message_body: null, last_message_author_name: null },
+        { id: 'r1', action_plan_id: 'i1', name: 'Room A', unread_count: 3, last_message_at: '2026-06-24T01:00:00Z', last_message_body: 'Halo tim', last_message_author_name: 'Budi' },
+        { id: 'r2', action_plan_id: 'i2', name: 'Room B', unread_count: 0, last_message_at: null, last_message_body: null, last_message_author_name: null },
       ],
       isLoading: false,
       isError: false,
@@ -103,7 +89,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
     id: string; name: string; unread: number; body: string | null; author: string | null; at: string | null;
   }> = {}) => ({
     id: over.id ?? 'r1',
-    initiative_id: 'i-' + (over.id ?? 'r1'),
+    action_plan_id: 'i-' + (over.id ?? 'r1'),
     name: over.name ?? 'Room A',
     unread_count: over.unread ?? 0,
     last_message_at: over.at === undefined ? '2026-06-24T01:00:00Z' : over.at,
@@ -173,7 +159,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
     await render(<InboxScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.getByText('Marketing Spike')).toBeTruthy();
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'sales');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'sales');
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.queryByText('Marketing Spike')).toBeNull();
   });
@@ -206,10 +192,8 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
       rooms: [room({ id: 'r1', name: 'Sales' })], isLoading: false, isError: false, refetch: jest.fn(),
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'zzzz-tidak-ada');
-    // Chat FTS V1 (AC-15): copy IDENTIK untuk no-match & silent-filter — bukan lagi
-    // "Tidak ditemukan" per state. Empty pesan section = spec canonical copy.
-    expect(await screen.findByText('Tidak ada pesan yang cocok dengan pencarianmu')).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'zzzz-tidak-ada');
+    expect(await screen.findByText(/tidak ditemukan/i)).toBeTruthy();
     // default empty NOT shown
     expect(screen.queryByText('Belum ada percakapan')).toBeNull();
   });

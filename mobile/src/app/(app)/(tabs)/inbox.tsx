@@ -37,7 +37,7 @@ const FILTER_TABS: { key: Filter; label: string }[] = [
 ];
 
 const COPY = {
-  placeholder: 'Cari Initiative atau pesan',
+  placeholder: 'Cari Rencana Aksi atau pesan',
   hint2char: 'Ketik minimal 2 karakter untuk mencari pesan',
   emptyPesan: 'Tidak ada pesan yang cocok dengan pencarianmu',
   clearSearch: 'Hapus pencarian',
@@ -89,7 +89,7 @@ function InboxHeader({
       <View className="gap-1">
         <Text className="text-2xl font-bold text-black dark:text-white">Inbox</Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
-          Khusus chat Initiative.
+          Khusus chat Rencana Aksi.
         </Text>
       </View>
       <TextInput
@@ -241,7 +241,7 @@ export function LiveInboxScreen() {
 
   if (isLoading) {
     return (
-      <Screen title="Inbox" subtitle="Khusus chat Initiative.">
+      <Screen title="Inbox" subtitle="Khusus chat Rencana Aksi.">
         <SkeletonList count={4} />
       </Screen>
     );
@@ -249,7 +249,7 @@ export function LiveInboxScreen() {
 
   if (isError) {
     return (
-      <Screen title="Inbox" subtitle="Khusus chat Initiative.">
+      <Screen title="Inbox" subtitle="Khusus chat Rencana Aksi.">
         <ErrorState
           title="Gagal memuat Inbox"
           description="Tidak bisa mengambil daftar percakapan."
@@ -268,10 +268,10 @@ export function LiveInboxScreen() {
         ? 'Tidak ada yang belum dibaca'
         : 'Belum ada percakapan';
   const emptyDescription = isSearching
-    ? `Tidak ada Initiative cocok dengan "${trimmed}".`
+    ? `Tidak ada Rencana Aksi cocok dengan "${trimmed}".`
     : isUnreadFilter
       ? 'Semua percakapan sudah dibaca.'
-      : 'Setiap Initiative otomatis punya chat room. Akan muncul di sini.';
+      : 'Setiap Rencana Aksi otomatis punya chat room. Akan muncul di sini.';
 
   // Skeleton hanya saat first-fetch (hits === undefined). Refetch di atas cache: hits ada +
   // isFetching=true → tidak flash skeleton (TB-15).
@@ -312,7 +312,7 @@ export function LiveInboxScreen() {
             ) : null}
 
             {isSearching && visibleRooms.length > 0 ? (
-              <SectionHeader title="Initiative" />
+              <SectionHeader title="Rencana Aksi" />
             ) : null}
           </View>
         }

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, staging]
 
 # Batalkan run lama untuk ref yang sama saat ada push baru.
 concurrency:
@@ -17,6 +17,26 @@ defaults:
     working-directory: mobile
 
 jobs:
+  no-old-names:
+    name: Rename guard (V1.8.3)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Run at repo root, not mobile/, since the guard scans multiple trees.
+        working-directory: .
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get install -y ripgrep
+
+      - name: Grep-guard legacy identifiers
+        # Fails if kpi_area_id, kpi_areas, action_plan_instances, KpiArea, etc.
+        # reappear outside historical migrations/tests/specs. See
+        # scripts/ci/no-old-names.sh EXCLUDES for the allowlist policy.
+        run: bash scripts/ci/no-old-names.sh
+
   quality:
     name: Lint, types & tests
     runs-on: ubuntu-latest

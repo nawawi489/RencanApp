@@ -10,10 +10,10 @@ export type Evaluation = Tables<'evaluations'>;
 /** Tipe entity card yang bisa dibatalkan/diarsipkan/dicari. */
 export type CardEntityType =
   | 'goal'
-  | 'kpi_area'
   | 'strategy'
   | 'initiative'
   | 'action_plan'
+  | 'task'
   | 'development_area'
   | 'problem_statement';
 
@@ -104,7 +104,7 @@ export async function resubmitDeadlineChangeRequest(
 // ---------------------------------------------------------------- Evaluation
 
 export type NewEvaluation = {
-  initiativeId: string;
+  actionPlanId: string;
   targetAchieved?: 'ya' | 'sebagian' | 'tidak' | null;
   results?: string;
   successFactors?: string[];
@@ -117,7 +117,7 @@ export type NewEvaluation = {
 
 export async function recordEvaluation(input: NewEvaluation): Promise<string> {
   const { data, error } = await supabase.rpc('record_evaluation', {
-    p_initiative_id: input.initiativeId,
+    p_action_plan_id: input.actionPlanId,
     p_target_achieved: (input.targetAchieved ?? null) as unknown as string,
     p_results: input.results ?? '',
     p_success_factors: input.successFactors ?? [],
@@ -131,11 +131,11 @@ export async function recordEvaluation(input: NewEvaluation): Promise<string> {
   return data as string;
 }
 
-export async function getEvaluation(initiativeId: string): Promise<Evaluation | null> {
+export async function getEvaluation(actionPlanId: string): Promise<Evaluation | null> {
   const { data, error } = await supabase
     .from('evaluations')
     .select('*')
-    .eq('initiative_id', initiativeId)
+    .eq('action_plan_id', actionPlanId)
     .maybeSingle();
   if (error) throw error;
   return data as Evaluation | null;

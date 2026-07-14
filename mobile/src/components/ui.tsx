@@ -591,7 +591,7 @@ export function ProgressBar({
 // ---------------------------------------------------------------- ProgressOrb (UI-G-001)
 
 /**
- * Orb capaian sistemik untuk header detail Goal/KPI/Strategy/Initiative/Action Plan.
+ * Orb capaian sistemik untuk header detail Goal/KPI/Inisiatif/Rencana Aksi/Tugas.
  * Discrete size 56 (compact) atau 72 (hero). Tone otomatis dari nilai bila tidak diisi:
  *   - 0–34 → danger (merah) "Perlu perhatian"
  *   - 35–69 → warn  (amber) "Berjalan"
@@ -721,7 +721,7 @@ export const TREE_PROGRESS_ORB_COMPACT_SIZE = 38;
 
 /**
  * Orb progress varian tree (§10, WSA-15): default 50×50, mode compact 42×42, angka + "%" di
- * tengah, label visual di bawah (`Capaian` untuk Goal/KPI Area, `Progress` untuk lainnya).
+ * tengah, label visual di bawah (`Capaian` untuk Goal/Strategi, `Progress` untuk lainnya).
  * Ring SVG dgn warna good/risk/bad.
  */
 export function TreeProgressOrb({
@@ -1013,7 +1013,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** UI-S-AP6 (KpiLinkageCard DA-AP6-1). "Masuk KPI Area" + nama + sumber. */
+/** UI-S-AP6 (KpiLinkageCard DA-AP6-1). "Masuk Strategi" + nama + sumber. */
 export function KpiLinkageCard({
   kpiName,
   sourceLabel,
@@ -1024,7 +1024,7 @@ export function KpiLinkageCard({
   return (
     <View className="gap-1 rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/40">
       <Text className="text-xs font-semibold uppercase text-blue-700 dark:text-blue-300">
-        Masuk KPI Area
+        Masuk Strategi
       </Text>
       <Text className="text-base font-bold text-black dark:text-white">{kpiName}</Text>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">{sourceLabel}</Text>
@@ -1074,8 +1074,8 @@ export const IMPACT_APPROVAL_COPY = {
   heading: 'Setelah disetujui Reviewer',
   body: (kpiName: string, proposed: number | string | null) =>
     proposed == null
-      ? `Nilai KPI Area "${kpiName}" akan diperbarui setelah Reviewer menyetujui submission ini.`
-      : `Nilai KPI Area "${kpiName}" akan diperbarui menjadi ${proposed} setelah Reviewer menyetujui submission ini.`,
+      ? `Nilai Strategi "${kpiName}" akan diperbarui setelah Reviewer menyetujui submission ini.`
+      : `Nilai Strategi "${kpiName}" akan diperbarui menjadi ${proposed} setelah Reviewer menyetujui submission ini.`,
 };
 
 export function ImpactApprovalCard({

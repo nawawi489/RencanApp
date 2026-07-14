@@ -5,7 +5,7 @@ import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
-import { DateField } from '@/components/date-field';
+import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
 import { useProblemStatementActions, usePerson } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
@@ -155,8 +155,12 @@ export default function NewProblemStatementScreen() {
             placeholder="mis. screenshot dashboard, link laporan, atau ringkasan observasi"
           />
           <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
-          <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
-          <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
+          <DateRangeField
+            startValue={periodStart}
+            endValue={periodEnd}
+            onStartChange={setPeriodStart}
+            onEndChange={setPeriodEnd}
+          />
           <LabeledInput
             label="Deskripsi (opsional)"
             value={description}

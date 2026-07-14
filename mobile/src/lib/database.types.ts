@@ -7,443 +7,129 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
-      action_plan_instances: {
+      action_plans: {
         Row: {
-          action_plan_id: string
+          archived_at: string | null
           created_at: string
-          current_submission_id: string | null
-          deadline_at: string
+          created_by: string | null
+          description: string | null
           id: string
-          instance_date: string
-          instance_time: string
-          late_minutes: number | null
-          missed_reason: string | null
+          initiative_id: string | null
+          name: string
           organization_id: string
+          period_end: string | null
+          period_start: string | null
           pic_id: string | null
-          repeat_rule_id: string
-          reviewed_at: string | null
-          reviewer_id: string | null
+          problem_statement_id: string | null
           status: string
-          submitted_at: string | null
-          submitted_late: boolean
+          target_result: string | null
+          team_id: string | null
           updated_at: string
         }
         Insert: {
-          action_plan_id: string
+          archived_at?: string | null
           created_at?: string
-          current_submission_id?: string | null
-          deadline_at: string
+          created_by?: string | null
+          description?: string | null
           id?: string
-          instance_date: string
-          instance_time: string
-          late_minutes?: number | null
-          missed_reason?: string | null
+          initiative_id?: string | null
+          name: string
           organization_id: string
+          period_end?: string | null
+          period_start?: string | null
           pic_id?: string | null
-          repeat_rule_id: string
-          reviewed_at?: string | null
-          reviewer_id?: string | null
+          problem_statement_id?: string | null
           status?: string
-          submitted_at?: string | null
-          submitted_late?: boolean
+          target_result?: string | null
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
-          action_plan_id?: string
+          archived_at?: string | null
           created_at?: string
-          current_submission_id?: string | null
-          deadline_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
-          instance_date?: string
-          instance_time?: string
-          late_minutes?: number | null
-          missed_reason?: string | null
+          initiative_id?: string | null
+          name?: string
           organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
           pic_id?: string | null
-          repeat_rule_id?: string
-          reviewed_at?: string | null
-          reviewer_id?: string | null
+          problem_statement_id?: string | null
           status?: string
-          submitted_at?: string | null
-          submitted_late?: boolean
+          target_result?: string | null
+          team_id?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "action_plan_instances_action_plan_id_fkey"
-            columns: ["action_plan_id"]
+            foreignKeyName: "initiatives_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "action_plans"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "action_plan_instances_current_submission_fk"
-            columns: ["current_submission_id"]
-            isOneToOne: false
-            referencedRelation: "action_plan_submissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_instances_organization_id_fkey"
+            foreignKeyName: "initiatives_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "action_plan_instances_pic_id_fkey"
+            foreignKeyName: "initiatives_pic_id_fkey"
             columns: ["pic_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "action_plan_instances_repeat_rule_id_fkey"
-            columns: ["repeat_rule_id"]
+            foreignKeyName: "initiatives_problem_statement_id_fkey"
+            columns: ["problem_statement_id"]
             isOneToOne: false
-            referencedRelation: "action_plan_repeat_rules"
+            referencedRelation: "problem_statements"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "action_plan_instances_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      action_plan_repeat_rules: {
-        Row: {
-          action_plan_id: string
-          created_at: string
-          created_by: string | null
-          custom_dates: string[] | null
-          frequency: string
-          grace_period_minutes: number | null
-          id: string
-          missed_rule: string
-          month_days: number[] | null
-          organization_id: string
-          repeat_end_date: string
-          repeat_start_date: string
-          time_of_day: string
-          updated_at: string
-          weekdays: number[] | null
-        }
-        Insert: {
-          action_plan_id: string
-          created_at?: string
-          created_by?: string | null
-          custom_dates?: string[] | null
-          frequency: string
-          grace_period_minutes?: number | null
-          id?: string
-          missed_rule?: string
-          month_days?: number[] | null
-          organization_id: string
-          repeat_end_date: string
-          repeat_start_date: string
-          time_of_day: string
-          updated_at?: string
-          weekdays?: number[] | null
-        }
-        Update: {
-          action_plan_id?: string
-          created_at?: string
-          created_by?: string | null
-          custom_dates?: string[] | null
-          frequency?: string
-          grace_period_minutes?: number | null
-          id?: string
-          missed_rule?: string
-          month_days?: number[] | null
-          organization_id?: string
-          repeat_end_date?: string
-          repeat_start_date?: string
-          time_of_day?: string
-          updated_at?: string
-          weekdays?: number[] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "action_plan_repeat_rules_action_plan_id_fkey"
-            columns: ["action_plan_id"]
-            isOneToOne: true
-            referencedRelation: "action_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_repeat_rules_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_repeat_rules_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      action_plan_result_values: {
-        Row: {
-          created_at: string
-          id: string
-          kpi_area_id: string | null
-          label: string | null
-          previous_value_text: string | null
-          submission_id: string
-          value_numeric: number | null
-          value_text: string | null
-          value_type: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          kpi_area_id?: string | null
-          label?: string | null
-          previous_value_text?: string | null
-          submission_id: string
-          value_numeric?: number | null
-          value_text?: string | null
-          value_type: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          kpi_area_id?: string | null
-          label?: string | null
-          previous_value_text?: string | null
-          submission_id?: string
-          value_numeric?: number | null
-          value_text?: string | null
-          value_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "action_plan_result_values_kpi_area_id_fkey"
-            columns: ["kpi_area_id"]
-            isOneToOne: false
-            referencedRelation: "kpi_areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_result_values_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "action_plan_submissions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      action_plan_submissions: {
-        Row: {
-          action_plan_id: string
-          action_plan_instance_id: string | null
-          created_at: string
-          id: string
-          note: string | null
-          review_reason: string | null
-          review_status: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          submitted_at: string
-          submitted_by: string | null
-          version_number: number
-        }
-        Insert: {
-          action_plan_id: string
-          action_plan_instance_id?: string | null
-          created_at?: string
-          id?: string
-          note?: string | null
-          review_reason?: string | null
-          review_status?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          submitted_at?: string
-          submitted_by?: string | null
-          version_number: number
-        }
-        Update: {
-          action_plan_id?: string
-          action_plan_instance_id?: string | null
-          created_at?: string
-          id?: string
-          note?: string | null
-          review_reason?: string | null
-          review_status?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          submitted_at?: string
-          submitted_by?: string | null
-          version_number?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "action_plan_submissions_action_plan_id_fkey"
-            columns: ["action_plan_id"]
-            isOneToOne: false
-            referencedRelation: "action_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_submissions_action_plan_instance_id_fkey"
-            columns: ["action_plan_instance_id"]
-            isOneToOne: false
-            referencedRelation: "action_plan_instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_submissions_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plan_submissions_submitted_by_fkey"
-            columns: ["submitted_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      action_plans: {
-        Row: {
-          archived_at: string | null
-          created_at: string
-          created_by: string | null
-          current_submission_id: string | null
-          deadline: string | null
-          deadline_time: string | null
-          definition_of_done: string | null
-          description: string | null
-          evidence_description: string | null
-          evidence_required: boolean
-          expected_output: string | null
-          id: string
-          initiative_id: string
-          name: string
-          organization_id: string
-          pic_id: string | null
-          priority: string | null
-          repeat_setting: string
-          result_value_required: boolean
-          review_required: boolean
-          reviewer_id: string | null
-          start_date: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          archived_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          current_submission_id?: string | null
-          deadline?: string | null
-          deadline_time?: string | null
-          definition_of_done?: string | null
-          description?: string | null
-          evidence_description?: string | null
-          evidence_required?: boolean
-          expected_output?: string | null
-          id?: string
-          initiative_id: string
-          name: string
-          organization_id: string
-          pic_id?: string | null
-          priority?: string | null
-          repeat_setting?: string
-          result_value_required?: boolean
-          review_required?: boolean
-          reviewer_id?: string | null
-          start_date?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          archived_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          current_submission_id?: string | null
-          deadline?: string | null
-          deadline_time?: string | null
-          definition_of_done?: string | null
-          description?: string | null
-          evidence_description?: string | null
-          evidence_required?: boolean
-          expected_output?: string | null
-          id?: string
-          initiative_id?: string
-          name?: string
-          organization_id?: string
-          pic_id?: string | null
-          priority?: string | null
-          repeat_setting?: string
-          result_value_required?: boolean
-          review_required?: boolean
-          reviewer_id?: string | null
-          start_date?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "action_plans_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plans_current_submission_fk"
-            columns: ["current_submission_id"]
-            isOneToOne: false
-            referencedRelation: "action_plan_submissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plans_initiative_id_fkey"
+            foreignKeyName: "initiatives_strategy_id_fkey"
             columns: ["initiative_id"]
             isOneToOne: false
             referencedRelation: "initiatives"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "action_plans_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "initiatives_team_id_fkey"
+            columns: ["team_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plans_pic_id_fkey"
-            columns: ["pic_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "action_plans_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -846,32 +532,32 @@ export type Database = {
       }
       chat_rooms: {
         Row: {
+          action_plan_id: string
           created_at: string
           id: string
-          initiative_id: string
           name: string
           organization_id: string
         }
         Insert: {
+          action_plan_id: string
           created_at?: string
           id?: string
-          initiative_id: string
           name: string
           organization_id: string
         }
         Update: {
+          action_plan_id?: string
           created_at?: string
           id?: string
-          initiative_id?: string
           name?: string
           organization_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "chat_rooms_initiative_id_fkey"
-            columns: ["initiative_id"]
+            columns: ["action_plan_id"]
             isOneToOne: true
-            referencedRelation: "initiatives"
+            referencedRelation: "action_plans"
             referencedColumns: ["id"]
           },
           {
@@ -1054,6 +740,7 @@ export type Database = {
           rejection_reason: string | null
           requestor_id: string
           responded_at: string | null
+          revision_reason: string | null
           status: string
         }
         Insert: {
@@ -1071,6 +758,7 @@ export type Database = {
           rejection_reason?: string | null
           requestor_id: string
           responded_at?: string | null
+          revision_reason?: string | null
           status?: string
         }
         Update: {
@@ -1088,6 +776,7 @@ export type Database = {
           rejection_reason?: string | null
           requestor_id?: string
           responded_at?: string | null
+          revision_reason?: string | null
           status?: string
         }
         Relationships: [
@@ -1231,11 +920,11 @@ export type Database = {
       }
       evaluations: {
         Row: {
+          action_plan_id: string
           created_at: string
           evaluated_by: string
           failure_factors: string[] | null
           id: string
-          initiative_id: string
           lessons_learned: string | null
           organization_id: string
           pic_id: string | null
@@ -1248,11 +937,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          action_plan_id: string
           created_at?: string
           evaluated_by: string
           failure_factors?: string[] | null
           id?: string
-          initiative_id: string
           lessons_learned?: string | null
           organization_id: string
           pic_id?: string | null
@@ -1265,11 +954,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          action_plan_id?: string
           created_at?: string
           evaluated_by?: string
           failure_factors?: string[] | null
           id?: string
-          initiative_id?: string
           lessons_learned?: string | null
           organization_id?: string
           pic_id?: string | null
@@ -1291,9 +980,9 @@ export type Database = {
           },
           {
             foreignKeyName: "evaluations_initiative_id_fkey"
-            columns: ["initiative_id"]
+            columns: ["action_plan_id"]
             isOneToOne: true
-            referencedRelation: "initiatives"
+            referencedRelation: "action_plans"
             referencedColumns: ["id"]
           },
           {
@@ -1354,7 +1043,7 @@ export type Database = {
             foreignKeyName: "evidence_files_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
-            referencedRelation: "action_plan_submissions"
+            referencedRelation: "task_submissions"
             referencedColumns: ["id"]
           },
           {
@@ -1545,287 +1234,86 @@ export type Database = {
       }
       initiatives: {
         Row: {
+          alternative: string | null
           archived_at: string | null
+          contribution_pct: number | null
           created_at: string
           created_by: string | null
           description: string | null
           id: string
+          main_risk: string | null
           name: string
           organization_id: string
           period_end: string | null
           period_start: string | null
           pic_id: string | null
-          problem_statement_id: string | null
+          reason: string | null
           status: string
-          strategy_id: string | null
-          target_result: string | null
-          team_id: string | null
+          strategy_id: string
           updated_at: string
         }
         Insert: {
+          alternative?: string | null
           archived_at?: string | null
+          contribution_pct?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
+          main_risk?: string | null
           name: string
           organization_id: string
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
-          problem_statement_id?: string | null
+          reason?: string | null
           status?: string
-          strategy_id?: string | null
-          target_result?: string | null
-          team_id?: string | null
+          strategy_id: string
           updated_at?: string
         }
         Update: {
+          alternative?: string | null
           archived_at?: string | null
+          contribution_pct?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
+          main_risk?: string | null
           name?: string
           organization_id?: string
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
-          problem_statement_id?: string | null
+          reason?: string | null
           status?: string
-          strategy_id?: string | null
-          target_result?: string | null
-          team_id?: string | null
+          strategy_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "initiatives_created_by_fkey"
+            foreignKeyName: "strategies_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "initiatives_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "initiatives_pic_id_fkey"
-            columns: ["pic_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "initiatives_problem_statement_id_fkey"
-            columns: ["problem_statement_id"]
-            isOneToOne: false
-            referencedRelation: "problem_statements"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "initiatives_strategy_id_fkey"
+            foreignKeyName: "strategies_kpi_area_id_fkey"
             columns: ["strategy_id"]
             isOneToOne: false
             referencedRelation: "strategies"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      kpi_area_target_breakdowns: {
-        Row: {
-          contribution_pct: number
-          created_at: string
-          created_by: string | null
-          id: string
-          kpi_area_id: string
-          organization_id: string
-          parent_quarter_key: string | null
-          period_key: string
-          period_type: string
-          reason: string | null
-          updated_at: string
-        }
-        Insert: {
-          contribution_pct: number
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          kpi_area_id: string
-          organization_id: string
-          parent_quarter_key?: string | null
-          period_key: string
-          period_type: string
-          reason?: string | null
-          updated_at?: string
-        }
-        Update: {
-          contribution_pct?: number
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          kpi_area_id?: string
-          organization_id?: string
-          parent_quarter_key?: string | null
-          period_key?: string
-          period_type?: string
-          reason?: string | null
-          updated_at?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "kpi_area_target_breakdowns_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kpi_area_target_breakdowns_kpi_area_id_fkey"
-            columns: ["kpi_area_id"]
-            isOneToOne: false
-            referencedRelation: "kpi_areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kpi_area_target_breakdowns_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kpi_area_templates: {
-        Row: {
-          created_at: string
-          division: string
-          division_label: string
-          expected_outcome_hint: string | null
-          goal_template_id: string
-          id: string
-          name: string
-          sort_order: number
-          target_hint: string | null
-        }
-        Insert: {
-          created_at?: string
-          division: string
-          division_label: string
-          expected_outcome_hint?: string | null
-          goal_template_id: string
-          id?: string
-          name: string
-          sort_order?: number
-          target_hint?: string | null
-        }
-        Update: {
-          created_at?: string
-          division?: string
-          division_label?: string
-          expected_outcome_hint?: string | null
-          goal_template_id?: string
-          id?: string
-          name?: string
-          sort_order?: number
-          target_hint?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kpi_area_templates_goal_template_id_fkey"
-            columns: ["goal_template_id"]
-            isOneToOne: false
-            referencedRelation: "goal_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kpi_areas: {
-        Row: {
-          archived_at: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          expected_outcome: string | null
-          goal_id: string
-          id: string
-          name: string
-          organization_id: string
-          period_end: string | null
-          period_start: string | null
-          pic_id: string | null
-          status: string
-          target: string | null
-          target_numeric: number | null
-          target_unit: string | null
-          updated_at: string
-        }
-        Insert: {
-          archived_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          expected_outcome?: string | null
-          goal_id: string
-          id?: string
-          name: string
-          organization_id: string
-          period_end?: string | null
-          period_start?: string | null
-          pic_id?: string | null
-          status?: string
-          target?: string | null
-          target_numeric?: number | null
-          target_unit?: string | null
-          updated_at?: string
-        }
-        Update: {
-          archived_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          expected_outcome?: string | null
-          goal_id?: string
-          id?: string
-          name?: string
-          organization_id?: string
-          period_end?: string | null
-          period_start?: string | null
-          pic_id?: string | null
-          status?: string
-          target?: string | null
-          target_numeric?: number | null
-          target_unit?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kpi_areas_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kpi_areas_goal_id_fkey"
-            columns: ["goal_id"]
-            isOneToOne: false
-            referencedRelation: "goals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kpi_areas_organization_id_fkey"
+            foreignKeyName: "strategies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "kpi_areas_pic_id_fkey"
+            foreignKeyName: "strategies_pic_id_fkey"
             columns: ["pic_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2411,38 +1899,38 @@ export type Database = {
       }
       reviews: {
         Row: {
-          action_plan_id: string
           created_at: string
           decision: string
           id: string
           reason: string | null
           reviewer_id: string | null
           submission_id: string
+          task_id: string
         }
         Insert: {
-          action_plan_id: string
           created_at?: string
           decision: string
           id?: string
           reason?: string | null
           reviewer_id?: string | null
           submission_id: string
+          task_id: string
         }
         Update: {
-          action_plan_id?: string
           created_at?: string
           decision?: string
           id?: string
           reason?: string | null
           reviewer_id?: string | null
           submission_id?: string
+          task_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "reviews_action_plan_id_fkey"
-            columns: ["action_plan_id"]
+            columns: ["task_id"]
             isOneToOne: false
-            referencedRelation: "action_plans"
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {
@@ -2456,7 +1944,7 @@ export type Database = {
             foreignKeyName: "reviews_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
-            referencedRelation: "action_plan_submissions"
+            referencedRelation: "task_submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -2767,87 +2255,629 @@ export type Database = {
       }
       strategies: {
         Row: {
-          alternative: string | null
           archived_at: string | null
-          contribution_pct: number | null
           created_at: string
           created_by: string | null
           description: string | null
+          expected_outcome: string | null
+          goal_id: string
           id: string
-          kpi_area_id: string
-          main_risk: string | null
           name: string
           organization_id: string
           period_end: string | null
           period_start: string | null
           pic_id: string | null
-          reason: string | null
           status: string
+          target: string | null
+          target_numeric: number | null
+          target_unit: string | null
           updated_at: string
         }
         Insert: {
-          alternative?: string | null
           archived_at?: string | null
-          contribution_pct?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          expected_outcome?: string | null
+          goal_id: string
           id?: string
-          kpi_area_id: string
-          main_risk?: string | null
           name: string
           organization_id: string
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
-          reason?: string | null
           status?: string
+          target?: string | null
+          target_numeric?: number | null
+          target_unit?: string | null
           updated_at?: string
         }
         Update: {
-          alternative?: string | null
           archived_at?: string | null
-          contribution_pct?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          expected_outcome?: string | null
+          goal_id?: string
           id?: string
-          kpi_area_id?: string
-          main_risk?: string | null
           name?: string
           organization_id?: string
           period_end?: string | null
           period_start?: string | null
           pic_id?: string | null
-          reason?: string | null
           status?: string
+          target?: string | null
+          target_numeric?: number | null
+          target_unit?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "strategies_created_by_fkey"
+            foreignKeyName: "kpi_areas_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "strategies_kpi_area_id_fkey"
-            columns: ["kpi_area_id"]
+            foreignKeyName: "kpi_areas_goal_id_fkey"
+            columns: ["goal_id"]
             isOneToOne: false
-            referencedRelation: "kpi_areas"
+            referencedRelation: "goals"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "strategies_organization_id_fkey"
+            foreignKeyName: "kpi_areas_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "strategies_pic_id_fkey"
+            foreignKeyName: "kpi_areas_pic_id_fkey"
             columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_target_breakdowns: {
+        Row: {
+          contribution_pct: number
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          parent_quarter_key: string | null
+          period_key: string
+          period_type: string
+          reason: string | null
+          strategy_id: string
+          updated_at: string
+        }
+        Insert: {
+          contribution_pct: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          parent_quarter_key?: string | null
+          period_key: string
+          period_type: string
+          reason?: string | null
+          strategy_id: string
+          updated_at?: string
+        }
+        Update: {
+          contribution_pct?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          parent_quarter_key?: string | null
+          period_key?: string
+          period_type?: string
+          reason?: string | null
+          strategy_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_kpi_area_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_area_target_breakdowns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_templates: {
+        Row: {
+          created_at: string
+          division: string
+          division_label: string
+          expected_outcome_hint: string | null
+          goal_template_id: string
+          id: string
+          name: string
+          sort_order: number
+          target_hint: string | null
+        }
+        Insert: {
+          created_at?: string
+          division: string
+          division_label: string
+          expected_outcome_hint?: string | null
+          goal_template_id: string
+          id?: string
+          name: string
+          sort_order?: number
+          target_hint?: string | null
+        }
+        Update: {
+          created_at?: string
+          division?: string
+          division_label?: string
+          expected_outcome_hint?: string | null
+          goal_template_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          target_hint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_area_templates_goal_template_id_fkey"
+            columns: ["goal_template_id"]
+            isOneToOne: false
+            referencedRelation: "goal_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_instances: {
+        Row: {
+          created_at: string
+          current_submission_id: string | null
+          deadline_at: string
+          id: string
+          instance_date: string
+          instance_time: string
+          late_minutes: number | null
+          missed_reason: string | null
+          organization_id: string
+          pic_id: string | null
+          repeat_rule_id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          submitted_at: string | null
+          submitted_late: boolean
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_submission_id?: string | null
+          deadline_at: string
+          id?: string
+          instance_date: string
+          instance_time: string
+          late_minutes?: number | null
+          missed_reason?: string | null
+          organization_id: string
+          pic_id?: string | null
+          repeat_rule_id: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_late?: boolean
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_submission_id?: string | null
+          deadline_at?: string
+          id?: string
+          instance_date?: string
+          instance_time?: string
+          late_minutes?: number | null
+          missed_reason?: string | null
+          organization_id?: string
+          pic_id?: string | null
+          repeat_rule_id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_late?: boolean
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_instances_action_plan_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_current_submission_fk"
+            columns: ["current_submission_id"]
+            isOneToOne: false
+            referencedRelation: "task_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_repeat_rule_id_fkey"
+            columns: ["repeat_rule_id"]
+            isOneToOne: false
+            referencedRelation: "task_repeat_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_instances_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_repeat_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          custom_dates: string[] | null
+          frequency: string
+          grace_period_minutes: number | null
+          id: string
+          missed_rule: string
+          month_days: number[] | null
+          organization_id: string
+          repeat_end_date: string
+          repeat_start_date: string
+          task_id: string
+          time_of_day: string
+          updated_at: string
+          weekdays: number[] | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          custom_dates?: string[] | null
+          frequency: string
+          grace_period_minutes?: number | null
+          id?: string
+          missed_rule?: string
+          month_days?: number[] | null
+          organization_id: string
+          repeat_end_date: string
+          repeat_start_date: string
+          task_id: string
+          time_of_day: string
+          updated_at?: string
+          weekdays?: number[] | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          custom_dates?: string[] | null
+          frequency?: string
+          grace_period_minutes?: number | null
+          id?: string
+          missed_rule?: string
+          month_days?: number[] | null
+          organization_id?: string
+          repeat_end_date?: string
+          repeat_start_date?: string
+          task_id?: string
+          time_of_day?: string
+          updated_at?: string
+          weekdays?: number[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_repeat_rules_action_plan_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_repeat_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_repeat_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_result_values: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          previous_value_text: string | null
+          strategy_id: string | null
+          submission_id: string
+          value_numeric: number | null
+          value_text: string | null
+          value_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          previous_value_text?: string | null
+          strategy_id?: string | null
+          submission_id: string
+          value_numeric?: number | null
+          value_text?: string | null
+          value_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          previous_value_text?: string | null
+          strategy_id?: string | null
+          submission_id?: string
+          value_numeric?: number | null
+          value_text?: string | null
+          value_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_result_values_kpi_area_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_result_values_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "task_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_submissions: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          review_reason: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string | null
+          task_id: string
+          task_instance_id: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          review_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          task_id: string
+          task_instance_id?: string | null
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          review_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          task_id?: string
+          task_instance_id?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_submissions_action_plan_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plan_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_submissions_task_instance_id_fkey"
+            columns: ["task_instance_id"]
+            isOneToOne: false
+            referencedRelation: "task_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          action_plan_id: string
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          current_submission_id: string | null
+          deadline: string | null
+          deadline_time: string | null
+          definition_of_done: string | null
+          description: string | null
+          evidence_description: string | null
+          evidence_required: boolean
+          expected_output: string | null
+          id: string
+          name: string
+          organization_id: string
+          pic_id: string | null
+          priority: string | null
+          repeat_setting: string
+          result_value_required: boolean
+          review_required: boolean
+          reviewer_id: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_plan_id: string
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_submission_id?: string | null
+          deadline?: string | null
+          deadline_time?: string | null
+          definition_of_done?: string | null
+          description?: string | null
+          evidence_description?: string | null
+          evidence_required?: boolean
+          expected_output?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          pic_id?: string | null
+          priority?: string | null
+          repeat_setting?: string
+          result_value_required?: boolean
+          review_required?: boolean
+          reviewer_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_plan_id?: string
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_submission_id?: string | null
+          deadline?: string | null
+          deadline_time?: string | null
+          definition_of_done?: string | null
+          description?: string | null
+          evidence_description?: string | null
+          evidence_required?: boolean
+          expected_output?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          pic_id?: string | null
+          priority?: string | null
+          repeat_setting?: string
+          result_value_required?: boolean
+          review_required?: boolean
+          reviewer_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_current_submission_fk"
+            columns: ["current_submission_id"]
+            isOneToOne: false
+            referencedRelation: "task_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_initiative_id_fkey"
+            columns: ["action_plan_id"]
+            isOneToOne: false
+            referencedRelation: "action_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_pic_id_fkey"
+            columns: ["pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_reviewer_id_fkey"
+            columns: ["reviewer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3112,33 +3142,33 @@ export type Database = {
       }
       video_briefs: {
         Row: {
+          action_plan_id: string
           brief_url: string
           created_at: string
           created_by: string | null
           description: string | null
           duration_seconds: number | null
           id: string
-          initiative_id: string
           organization_id: string
         }
         Insert: {
+          action_plan_id: string
           brief_url: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_seconds?: number | null
           id?: string
-          initiative_id: string
           organization_id: string
         }
         Update: {
+          action_plan_id?: string
           brief_url?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_seconds?: number | null
           id?: string
-          initiative_id?: string
           organization_id?: string
         }
         Relationships: [
@@ -3151,9 +3181,9 @@ export type Database = {
           },
           {
             foreignKeyName: "video_briefs_initiative_id_fkey"
-            columns: ["initiative_id"]
+            columns: ["action_plan_id"]
             isOneToOne: true
-            referencedRelation: "initiatives"
+            referencedRelation: "action_plans"
             referencedColumns: ["id"]
           },
           {
@@ -3167,28 +3197,28 @@ export type Database = {
       }
     }
     Views: {
-      kpi_area_current_values: {
+      strategy_current_values: {
         Row: {
-          kpi_area_id: string | null
           last_approved_at: string | null
           numeric_total: number | null
+          strategy_id: string | null
           text_count: number | null
         }
         Relationships: [
           {
             foreignKeyName: "action_plan_result_values_kpi_area_id_fkey"
-            columns: ["kpi_area_id"]
+            columns: ["strategy_id"]
             isOneToOne: false
-            referencedRelation: "kpi_areas"
+            referencedRelation: "strategies"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Functions: {
-      workspace_card_progress: {
-        Args: { p_card_ids: string[] }
-        Returns: { card_id: string; progress: number }[]
+      action_plan_has_my_task: {
+        Args: { p_action_plan: string }
+        Returns: boolean
       }
       activate_action_plan: {
         Args: { p_action_plan_id: string }
@@ -3203,7 +3233,6 @@ export type Database = {
         Args: { p_initiative_id: string }
         Returns: undefined
       }
-      activate_kpi_area: { Args: { p_kpi_area_id: string }; Returns: undefined }
       activate_problem_statement: {
         Args: { p_problem_statement_id: string }
         Returns: undefined
@@ -3213,6 +3242,7 @@ export type Database = {
         Returns: undefined
       }
       activate_strategy: { Args: { p_strategy_id: string }; Returns: undefined }
+      activate_task: { Args: { p_action_plan_id: string }; Returns: undefined }
       aggregate_repeat_metrics_per_user: {
         Args: { p_end: string; p_org: string; p_start: string; p_user: string }
         Returns: {
@@ -3256,13 +3286,10 @@ export type Database = {
         }
         Returns: string
       }
+      backfill_resolve_stale_notifications: { Args: never; Returns: undefined }
       calculate_period_scores: {
         Args: { p_period_id: string }
         Returns: number
-      }
-      can_access_action_plan: {
-        Args: { p_action_plan: string }
-        Returns: boolean
       }
       can_access_development_area: {
         Args: { p_dev_area: string }
@@ -3273,11 +3300,11 @@ export type Database = {
         Args: { p_initiative: string }
         Returns: boolean
       }
-      can_access_kpi_area: { Args: { p_kpi_area: string }; Returns: boolean }
       can_access_problem_statement: { Args: { p_ps: string }; Returns: boolean }
       can_access_strategy: { Args: { p_strategy: string }; Returns: boolean }
-      can_edit_kpi_area_breakdown: {
-        Args: { p_kpi_area_id: string }
+      can_access_task: { Args: { p_task: string }; Returns: boolean }
+      can_edit_strategy_breakdown: {
+        Args: { p_strategy_id: string }
         Returns: boolean
       }
       can_view_workspace: { Args: never; Returns: boolean }
@@ -3422,8 +3449,8 @@ export type Database = {
       get_chat_rooms: {
         Args: never
         Returns: {
+          action_plan_id: string
           id: string
-          initiative_id: string
           last_message_at: string
           last_message_author_name: string
           last_message_body: string
@@ -3434,24 +3461,24 @@ export type Database = {
       get_near_deadline_items: {
         Args: never
         Returns: {
-          action_plan_id: string
           due: string
           id: string
           kind: string
           name: string
           status: string
+          task_id: string
         }[]
       }
       get_org_today: { Args: never; Returns: string }
       get_overdue_items: {
         Args: never
         Returns: {
-          action_plan_id: string
           due: string
           id: string
           kind: string
           name: string
           status: string
+          task_id: string
         }[]
       }
       get_repeat_compliance: {
@@ -3467,12 +3494,12 @@ export type Database = {
       get_today_repeat_instances: {
         Args: never
         Returns: {
-          action_plan_id: string
           due: string
           id: string
           kind: string
           name: string
           status: string
+          task_id: string
         }[]
       }
       goal_has_my_descendant: { Args: { p_goal: string }; Returns: boolean }
@@ -3488,57 +3515,29 @@ export type Database = {
         Returns: string
       }
       has_permission: { Args: { p_key: string }; Returns: boolean }
-      i_am_initiative_pic: { Args: { p_initiative: string }; Returns: boolean }
-      i_am_problem_statement_pic_via_initiative: {
+      i_am_action_plan_pic: {
+        Args: { p_action_plan: string }
+        Returns: boolean
+      }
+      i_am_problem_statement_pic_via_action_plan: {
+        Args: { p_action_plan: string }
+        Returns: boolean
+      }
+      initiative_has_my_descendant: {
         Args: { p_initiative: string }
         Returns: boolean
       }
-      initiative_has_my_action_plan: {
-        Args: { p_initiative: string }
-        Returns: boolean
-      }
+      initiative_in_my_org: { Args: { p_initiative: string }; Returns: boolean }
       is_chat_member: { Args: { p_room: string }; Returns: boolean }
       is_development_area_pic: {
         Args: { p_dev_area: string }
         Returns: boolean
       }
       is_goal_pic: { Args: { p_goal: string }; Returns: boolean }
-      is_kpi_area_pic: { Args: { p_kpi_area: string }; Returns: boolean }
       is_problem_statement_pic: { Args: { p_ps: string }; Returns: boolean }
+      is_strategy_pic: { Args: { p_strategy: string }; Returns: boolean }
       is_supervisor_of: { Args: { p_user: string }; Returns: boolean }
-      kpi_area_breakdown_replace: {
-        Args: {
-          p_kpi_area_id: string
-          p_month: Json
-          p_quarter: Json
-          p_reason: string
-        }
-        Returns: {
-          contribution_pct: number
-          created_at: string
-          created_by: string | null
-          id: string
-          kpi_area_id: string
-          organization_id: string
-          parent_quarter_key: string | null
-          period_key: string
-          period_type: string
-          reason: string | null
-          updated_at: string
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "kpi_area_target_breakdowns"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      kpi_area_has_my_descendant: {
-        Args: { p_kpi_area: string }
-        Returns: boolean
-      }
-      kpi_area_in_my_org: { Args: { p_kpi_area: string }; Returns: boolean }
-      list_kpi_area_candidates_for_action_plan: {
+      list_strategy_candidates_for_task: {
         Args: { p_action_plan_id: string }
         Returns: {
           id: string
@@ -3559,6 +3558,10 @@ export type Database = {
           p_violation_type: string
         }
         Returns: undefined
+      }
+      map_legacy_entity_type: {
+        Args: { p_entity_type: string }
+        Returns: string
       }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_chat_messages_read: { Args: { p_room: string }; Returns: number }
@@ -3587,14 +3590,22 @@ export type Database = {
         Returns: boolean
       }
       problem_statement_in_my_org: { Args: { p_ps: string }; Returns: boolean }
+      purge_old_activity_logs: {
+        Args: {
+          p_activate_after?: string
+          p_batch_size?: number
+          p_retention_months?: number
+        }
+        Returns: number
+      }
       recompute_chat_room_members: {
         Args: { p_room: string }
         Returns: undefined
       }
       record_evaluation: {
         Args: {
+          p_action_plan_id: string
           p_failure_factors: string[]
-          p_initiative_id: string
           p_lessons_learned: string
           p_results: string
           p_rollout_needed: boolean
@@ -3613,6 +3624,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      resolve_notifications: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_resolution: string
+          p_types: string[]
+        }
+        Returns: number
+      }
       restore_card: {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: undefined
@@ -3625,16 +3645,16 @@ export type Database = {
         Args: { p_new_deadline: string; p_reason: string; p_request_id: string }
         Returns: undefined
       }
-      review_action_plan_instance_submission: {
-        Args: { p_decision: string; p_reason: string; p_submission_id: string }
-        Returns: undefined
-      }
-      review_action_plan_submission: {
-        Args: { p_decision: string; p_reason: string; p_submission_id: string }
-        Returns: undefined
-      }
       review_deadline_change: {
         Args: { p_decision: string; p_reason: string; p_request_id: string }
+        Returns: undefined
+      }
+      review_task_instance_submission: {
+        Args: { p_decision: string; p_reason: string; p_submission_id: string }
+        Returns: undefined
+      }
+      review_task_submission: {
+        Args: { p_decision: string; p_reason: string; p_submission_id: string }
         Returns: undefined
       }
       search_cards: {
@@ -3669,7 +3689,16 @@ export type Database = {
         Args: { p_body: string; p_mentions?: string[]; p_room: string }
         Returns: string
       }
-      set_action_plan_repeat_rule: {
+      set_minimum_breakdown_rule: {
+        Args: {
+          p_child_card_type: string
+          p_enforcement_mode: string
+          p_min_count: number
+          p_parent_card_type: string
+        }
+        Returns: string
+      }
+      set_task_repeat_rule: {
         Args: {
           p_action_plan_id: string
           p_custom_dates: string[]
@@ -3681,15 +3710,6 @@ export type Database = {
           p_repeat_start_date: string
           p_time_of_day: string
           p_weekdays: number[]
-        }
-        Returns: string
-      }
-      set_minimum_breakdown_rule: {
-        Args: {
-          p_child_card_type: string
-          p_enforcement_mode: string
-          p_min_count: number
-          p_parent_card_type: string
         }
         Returns: string
       }
@@ -3710,16 +3730,40 @@ export type Database = {
         }
         Returns: undefined
       }
-      start_action_plan: {
-        Args: { p_action_plan_id: string }
-        Returns: undefined
+      start_task: { Args: { p_action_plan_id: string }; Returns: undefined }
+      strategy_breakdown_replace: {
+        Args: {
+          p_month: Json
+          p_quarter: Json
+          p_reason: string
+          p_strategy_id: string
+        }
+        Returns: {
+          contribution_pct: number
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          parent_quarter_key: string | null
+          period_key: string
+          period_type: string
+          reason: string | null
+          strategy_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "strategy_target_breakdowns"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       strategy_has_my_descendant: {
         Args: { p_strategy: string }
         Returns: boolean
       }
       strategy_in_my_org: { Args: { p_strategy: string }; Returns: boolean }
-      submit_action_plan: {
+      submit_task: {
         Args: {
           p_evidence: Json
           p_note: string
@@ -3728,7 +3772,7 @@ export type Database = {
         }
         Returns: string
       }
-      submit_action_plan_instance: {
+      submit_task_instance: {
         Args: {
           p_evidence: Json
           p_instance_id: string
@@ -3762,6 +3806,13 @@ export type Database = {
         Returns: undefined
       }
       user_role_level: { Args: never; Returns: string }
+      workspace_card_progress: {
+        Args: { p_card_ids: string[] }
+        Returns: {
+          card_id: string
+          progress: number
+        }[]
+      }
       write_activity: {
         Args: {
           p_action: string
@@ -3910,7 +3961,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

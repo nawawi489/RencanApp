@@ -12,10 +12,10 @@ function makeStats(overrides: Partial<HubStats> = {}): HubStats {
 const baseProps = {
   kicker: 'PERFORMANCE',
   title: 'Target Kinerja',
-  meta: 'Goal → KPI Area → Strategy → Initiative → Action Plan',
+  meta: 'Goal → Strategi → Inisiatif → Rencana Aksi → Tugas',
   enterLabel: 'Masuk Performance',
   parentStatLabel: 'Goal',
-  childStatLabel: 'KPI Area',
+  childStatLabel: 'Strategi',
   activeStatLabel: 'Aktif',
   onEnter: () => {},
 };

@@ -87,9 +87,9 @@ beforeEach(() => {
 
 // ------------------------------------------------------------------ [1] placeholder
 describe('InboxScreen — Search Pesan (FTS V1)', () => {
-  it('[1] placeholder input = "Cari Initiative atau pesan" (§3.1 FR-2 / AC-18)', async () => {
+  it('[1] placeholder input = "Cari Rencana Aksi atau pesan" (§3.1 FR-2 / AC-18)', async () => {
     await render(<InboxScreen />, { wrapper: wrapper() });
-    expect(screen.getByPlaceholderText('Cari Initiative atau pesan')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan')).toBeTruthy();
   });
 
   // ------------------------------------------------------------------ [2] idle
@@ -106,7 +106,7 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
   // ------------------------------------------------------------------ [3] hint 1 char
   it('[3] query 1 char → hint "Ketik minimal 2 karakter untuk mencari pesan"; TIDAK render section Pesan', async () => {
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'c');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'c');
     expect(await screen.findByText('Ketik minimal 2 karakter untuk mencari pesan')).toBeTruthy();
     expect(screen.queryByText('Pesan')).toBeNull();
   });
@@ -131,10 +131,10 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
       ],
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'sales');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'sales');
 
     // Section header "Initiative" & "Pesan" dua-duanya ada.
-    expect(await screen.findByText('Initiative')).toBeTruthy();
+    expect(await screen.findByText('Rencana Aksi')).toBeTruthy();
     expect(screen.getByText('Pesan')).toBeTruthy();
 
     // Snippet setiap hit tampil.
@@ -161,7 +161,7 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
     });
     mockUseSearchMessages.mockReturnValue({ ...idleSearch, hits: [] });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'xyzz-nihil');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'xyzz-nihil');
     expect(await screen.findByText('Tidak ada pesan yang cocok dengan pencarianmu')).toBeTruthy();
     expect(screen.getByText('Hapus pencarian')).toBeTruthy();
     // AC-15: TIDAK ada differentiator visual/hint/count untuk silent-filter — copy identik.
@@ -175,7 +175,7 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
       hits: [makeHit({ messageId: 'm-a', roomId: 'r-1', snippet: 'bukti eksekusi terlampir' })],
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'bukti');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'bukti');
     await screen.findByText('bukti eksekusi terlampir');
     expect(screen.queryByText(/^Approve$/i)).toBeNull();
     expect(screen.queryByText(/^Reject$/i)).toBeNull();
@@ -189,7 +189,7 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
       hits: [makeHit({ messageId: 'm-a', roomId: 'r-9', snippet: 'target CPL turun 20%' })],
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'cpl');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'cpl');
     fireEvent.press(await screen.findByText('target CPL turun 20%'));
     expect(mockPush).toHaveBeenCalledWith('/inbox/r-9?highlight=m-a');
   });
@@ -204,7 +204,7 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
       hits: undefined,
     });
     const { rerender } = await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'cpl');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'cpl');
     // A11y label 'Memuat…' dipakai SkeletonList (pola konsisten repo).
     expect(await screen.findByLabelText('Memuat…')).toBeTruthy();
 
@@ -231,7 +231,7 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
       isRpcMissing: true,
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'cpl');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'cpl');
     expect(await screen.findByText(/Pencarian pesan belum aktif di lingkungan ini/i)).toBeTruthy();
     // Degrade: daftar room default tetap tampil (nama_room match client-side masih jalan).
     expect(screen.getByText('Ekspansi Bandung')).toBeTruthy();
@@ -247,7 +247,7 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
       refetch,
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative atau pesan'), 'cpl');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'cpl');
     expect(await screen.findByText('Coba lagi')).toBeTruthy();
     // Room default tetap.
     expect(screen.getByText('Ekspansi Bandung')).toBeTruthy();

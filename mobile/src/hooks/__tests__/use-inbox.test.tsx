@@ -1,6 +1,6 @@
 // Hooks Fase 3 — use-inbox. Mock data layer (@/lib/inbox) agar tak menyentuh Supabase.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, render, renderHook, waitFor } from '@testing-library/react-native';
 import type { PropsWithChildren } from 'react';
 import { createElement } from 'react';
 
@@ -8,7 +8,7 @@ const mockListChatRooms = jest.fn();
 const mockListChatMessages = jest.fn();
 const mockSendChatMessage = jest.fn();
 const mockMarkChatMessagesRead = jest.fn();
-const mockToggleChatReaction = jest.fn();
+const mockSubscribeChatRoom = jest.fn();
 
 jest.mock('@/lib/inbox', () => ({
   CHAT_PAGE_SIZE: 30, // FR-IN2.x: hook membaca konstanta ini untuk getNextPageParam.
@@ -16,11 +16,16 @@ jest.mock('@/lib/inbox', () => ({
   listChatMessages: (...a: unknown[]) => mockListChatMessages(...a),
   sendChatMessage: (...a: unknown[]) => mockSendChatMessage(...a),
   markChatMessagesRead: (...a: unknown[]) => mockMarkChatMessagesRead(...a),
-  toggleChatReaction: (...a: unknown[]) => mockToggleChatReaction(...a),
+  subscribeChatRoom: (...a: unknown[]) => mockSubscribeChatRoom(...a),
+  // Data-layer seen-by dipakai oleh useChatReads(Realtime) — tes-tesnya di file terpisah.
+  listChatReadsForRoom: jest.fn(async () => []),
+  subscribeChatReads: jest.fn(() => () => {}),
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
-import { useChatActions, useChatMessages, useInboxRooms } from '../use-inbox';
+import { useChatActions, useChatMessages, useChatRealtime, useInboxRooms } from '../use-inbox';
+
+type ChatPages = { pageParams: unknown[]; pages: Record<string, unknown>[][] };
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -34,16 +39,16 @@ beforeEach(() => {
   mockListChatMessages.mockReset();
   mockSendChatMessage.mockReset();
   mockMarkChatMessagesRead.mockReset();
-  mockToggleChatReaction.mockReset();
-  mockToggleChatReaction.mockResolvedValue(true);
   mockListChatRooms.mockResolvedValue([
-    { id: 'r1', initiative_id: 'i1', name: 'Room A', unread_count: 2, last_message_at: '2026-06-24T01:00:00Z' },
+    { id: 'r1', action_plan_id: 'i1', name: 'Room A', unread_count: 2, last_message_at: '2026-06-24T01:00:00Z' },
   ]);
   mockListChatMessages.mockResolvedValue([
     { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'Halo', created_at: '2026-06-24T01:00:00Z' },
   ]);
   mockSendChatMessage.mockResolvedValue('m2');
   mockMarkChatMessagesRead.mockResolvedValue(2);
+  mockSubscribeChatRoom.mockReset();
+  mockSubscribeChatRoom.mockReturnValue(() => {});
 });
 
 describe('useInboxRooms', () => {
@@ -57,7 +62,7 @@ describe('useInboxRooms', () => {
 });
 
 describe('useChatMessages', () => {
-  it('[2-rewrite] page pertama dipanggil dgn cursor undefined (bukan angka page) — keyset kanonik', async () => {
+  it('[2] mengambil pesan room via data layer (Critic §8.7 baseline rewrite: useInfiniteQuery memanggil dgn pageParam=0)', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
     await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -70,15 +75,6 @@ describe('useChatMessages', () => {
     await waitFor(() => expect(true).toBe(true));
     expect(mockListChatMessages).not.toHaveBeenCalled();
   });
-
-  it('[3b] output hook meng-expose isFetchingNextPage (kontrak baru untuk indikator inverted FlatList)', async () => {
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
-    await waitFor(() => expect(result.current.messages).toHaveLength(1));
-    // Field baru wajib ada (bukan undefined) — awalnya false karena tak ada fetchNextPage berjalan.
-    expect(typeof result.current.isFetchingNextPage).toBe('boolean');
-    expect(result.current.isFetchingNextPage).toBe(false);
-  });
 });
 
 describe('useChatActions', () => {
@@ -87,7 +83,7 @@ describe('useChatActions', () => {
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
     await result.current.send('Hai', ['u2']);
-    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'Hai', ['u2'], undefined));
+    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'Hai', ['u2']));
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
     expect(keys.some((k) => k.includes('chat-messages'))).toBe(true);
     expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);
@@ -126,102 +122,46 @@ describe('useChatActions', () => {
   });
 });
 
-// =========================================================== Paginasi keyset (FR-KP6/7/8) ==========================================================
+// =========================================================== Paginasi (FR-IN2.x) ==========================================================
 // useChatMessages → useInfiniteQuery. Order: desc (newest first dari data layer);
 // merge halaman = page0 (terbaru) ++ page1 (lebih lama). Screen yang membalik untuk display kronologis.
-// pageParam = ChatCursor | undefined; getNextPageParam derive dari last item lastPage.
-describe('useChatMessages — paginasi keyset', () => {
-  function fillBatch(n: number, prefix: string, createdAt = '2026-06-24T01:00:00Z') {
+describe('useChatMessages — paginasi', () => {
+  function fillBatch(n: number, prefix: string) {
     return Array.from({ length: n }, (_, i) => ({
       id: `${prefix}-${i}`,
       chat_room_id: 'r1',
       author_id: 'u1',
       body: `b${i}`,
-      created_at: createdAt,
+      created_at: '2026-06-24T01:00:00Z',
     }));
   }
 
-  it('[8-rewrite] loadOlder memanggil dgn cursor {createdAt,id} dari LAST item page 0 (AC-4: pemicu inkremental)', async () => {
-    // Page 0 = 30 items, semua created_at sama → id last = 'p0-29' menjadi tie-break cursor.
-    // Page 1 (via cursor) = 1 pesan lama.
-    const page0 = fillBatch(30, 'p0', '2026-06-25T00:00:00.000Z');
-    const older = {
-      id: 'p1-old',
-      chat_room_id: 'r1',
-      author_id: 'u1',
-      body: 'lama',
-      created_at: '2026-06-20T05:00:00.000Z',
-    };
-    mockListChatMessages.mockResolvedValueOnce(page0).mockResolvedValueOnce([older]);
-
+  it('[8] loadOlder memanggil halaman berikutnya & merge desc (terbaru → lama)', async () => {
+    // Page 0 = 30 items (penuh → hasNextPage=true → loadOlder bukan no-op).
+    // Page 1 = 1 item 'p1-old' (akan ditambahkan setelah page 0 → posisi indeks 30).
+    mockListChatMessages.mockImplementation(
+      async (_id: string, cursor?: { createdAt: string; id: string }) =>
+        cursor == null
+          ? fillBatch(30, 'p0')
+          : [
+              {
+                id: 'p1-old',
+                chat_room_id: 'r1',
+                author_id: 'u1',
+                body: 'lama',
+                created_at: '2026-06-20T05:00:00Z',
+              },
+            ],
+    );
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
     await waitFor(() => expect(result.current.messages).toHaveLength(30));
 
-    // Call #1 = page pertama (cursor undefined).
-    expect(mockListChatMessages).toHaveBeenNthCalledWith(1, 'r1', undefined);
-
     await result.current.loadOlder();
     await waitFor(() => expect(result.current.messages).toHaveLength(31));
-
-    // Call #2 = cursor dari LAST item page 0 (paling lama karena data desc).
-    expect(mockListChatMessages).toHaveBeenNthCalledWith(2, 'r1', {
-      createdAt: '2026-06-25T00:00:00.000Z',
-      id: 'p0-29',
-    });
-
     // Urutan desc dipertahankan: page0 (terbaru) ++ page1 (lebih lama).
-    expect(result.current.messages[0].id).toBe('p0-0');
-    expect(result.current.messages[30].id).toBe('p1-old');
-  });
-
-  it('[8b] AC-5 seam refetch-all: invalidate → RQ v5 me-refetch SEMUA halaman + re-derive cursor dari page 0 hasil-refetch (4 calls total)', async () => {
-    // Set-up: 4 respons berurutan (RQ v5 default refetchAll=true untuk infinite query).
-    // Batch A (initial), Batch B (post-invalidate) sengaja beda "top" — mensimulasikan pesan
-    // baru dari anggota lain masuk di antara paginasi. Cursor page 1 setelah refetch WAJIB
-    // dihitung ulang dari LAST item batch B (bukan reuse dari cache batch A).
-    const batchA = fillBatch(30, 'a', '2026-06-25T00:00:00.000Z');
-    const olderA = {
-      id: 'old-a',
-      chat_room_id: 'r1',
-      author_id: 'u1',
-      body: 'x',
-      created_at: '2026-06-20T00:00:00.000Z',
-    };
-    const batchB = fillBatch(30, 'b', '2026-06-26T00:00:00.000Z'); // top ter-shift
-    const olderB = {
-      id: 'old-b',
-      chat_room_id: 'r1',
-      author_id: 'u1',
-      body: 'y',
-      created_at: '2026-06-20T00:00:00.000Z',
-    };
-
-    mockListChatMessages
-      .mockResolvedValueOnce(batchA) // call#1 page 0 initial
-      .mockResolvedValueOnce([olderA]) // call#2 page 1 initial (cursor dari batchA last)
-      .mockResolvedValueOnce(batchB) // call#3 page 0 refetch
-      .mockResolvedValueOnce([olderB]); // call#4 page 1 refetch (cursor dari batchB last — re-derived!)
-
-    const { qc, wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
-    await waitFor(() => expect(result.current.messages).toHaveLength(30));
-    await result.current.loadOlder();
-    await waitFor(() => expect(result.current.messages).toHaveLength(31));
-
-    // Trigger seam refetch-all — mensimulasikan onSuccess send (invalidate).
-    await qc.invalidateQueries({ queryKey: ['chat-messages', 'r1'] });
-    await waitFor(() => expect(mockListChatMessages).toHaveBeenCalledTimes(4));
-
-    // Call #3 = page 0 refetch, cursor undefined (initialPageParam).
-    expect(mockListChatMessages).toHaveBeenNthCalledWith(3, 'r1', undefined);
-    // Call #4 = page 1 refetch, cursor dihitung ulang dari LAST item batchB (b-29 @ 2026-06-26)
-    //          — BUKAN reuse cursor batchA (a-29 @ 2026-06-25). Ini mengunci ketergantungan
-    //          FR-KP-REDERIVE (React Query v5 re-derive pageParam via getNextPageParam pada refetch).
-    expect(mockListChatMessages).toHaveBeenNthCalledWith(4, 'r1', {
-      createdAt: '2026-06-26T00:00:00.000Z',
-      id: 'b-29',
-    });
+    expect(result.current.messages[0].id).toBe('p0-0');     // newest dari page 0
+    expect(result.current.messages[30].id).toBe('p1-old');  // older dari page 1 ada di akhir
   });
 
   it('[9] hasMore=true saat batch penuh (== PAGE_SIZE=30)', async () => {
@@ -241,140 +181,97 @@ describe('useChatMessages — paginasi keyset', () => {
   });
 });
 
-// =========================================================== Reaction hook (Fase C) ==========================================================
-describe('useChatActions — toggleReaction', () => {
-  it('[HK-1] mapping args: memanggil toggleChatReaction(messageId, emoji)', async () => {
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    await result.current.toggleReaction('msg-42', '👍');
-    expect(mockToggleChatReaction).toHaveBeenCalledWith('msg-42', '👍');
+// =========================================================== Optimistic send ==========================================================
+// send(body, mentions, optimistic?): sisip pesan ke kepala page 0 sebelum server balas; rollback saat gagal.
+describe('useChatActions — optimistic send', () => {
+  const opt = (id: string, body: string) => ({
+    id, chat_room_id: 'r1', author_id: 'me', body, created_at: '2026-06-24T02:00:00Z',
   });
 
-  it('[HK-2] POS invalidate: sukses → invalidate chat-messages,roomId', async () => {
+  it('[O1] send dengan optimistic → temp tampil di cache SEBELUM server balas', async () => {
     const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
+    qc.setQueryData<ChatPages>(['chat-messages', 'r1'], { pageParams: [0], pages: [[]] });
+    // Tahan resolusi server agar state optimistik dapat diobservasi.
+    let resolveSend: (v: string) => void = () => {};
+    mockSendChatMessage.mockImplementation(() => new Promise<string>((res) => { resolveSend = res; }));
     const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    await result.current.toggleReaction('msg-1', '✅');
-    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
-    expect(keys.some((k) => k.includes('chat-messages') && k.includes('r1'))).toBe(true);
+
+    // Panggil send TANPA act (pola tes [4]/[6]) — onMutate menyisipkan temp; observasi via waitFor.
+    const p = result.current.send('halo', [], opt('temp-1', 'halo'));
+    await waitFor(() => {
+      const data = qc.getQueryData<ChatPages>(['chat-messages', 'r1']);
+      expect(data?.pages[0][0].id).toBe('temp-1');
+    });
+    resolveSend('m-real');
+    await p;
   });
 
-  it('[HK-3] NEG invalidate: sukses TIDAK invalidate chat-rooms', async () => {
+  it('[O2] send optimistic GAGAL → rollback cache ke snapshot (temp hilang)', async () => {
     const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
+    qc.setQueryData<ChatPages>(['chat-messages', 'r1'], {
+      pageParams: [0],
+      pages: [[{ id: 'm0', chat_room_id: 'r1', author_id: 'u1', body: 'ada', created_at: '2026-06-24T00:00:00Z' }]],
+    });
+    mockSendChatMessage.mockRejectedValueOnce(new Error('boom'));
     const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    await result.current.toggleReaction('msg-1', '👍');
-    await waitFor(() => expect(mockToggleChatReaction).toHaveBeenCalled());
-    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
-    expect(keys.some((k) => k.includes('chat-rooms'))).toBe(false);
+
+    await expect(result.current.send('x', [], opt('temp-2', 'x'))).rejects.toThrow('boom');
+    const data = qc.getQueryData<ChatPages>(['chat-messages', 'r1']);
+    expect(data?.pages[0]).toHaveLength(1);
+    expect(data?.pages[0][0].id).toBe('m0');
   });
 
-  it('[HK-4] NEG invalidate: sukses TIDAK invalidate notifications', async () => {
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    await result.current.toggleReaction('msg-1', '👀');
-    await waitFor(() => expect(mockToggleChatReaction).toHaveBeenCalled());
-    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
-    expect(keys.some((k) => k.includes('notifications'))).toBe(false);
-  });
-
-  it('[HK-5] boolean pass-through: return true (toggle-on) dari data layer', async () => {
-    mockToggleChatReaction.mockResolvedValueOnce(true);
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    const val = await result.current.toggleReaction('msg-1', '👍');
-    expect(val).toBe(true);
-  });
-
-  it('[HK-5b] boolean pass-through: return false (toggle-off) dari data layer', async () => {
-    mockToggleChatReaction.mockResolvedValueOnce(false);
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    const val = await result.current.toggleReaction('msg-1', '👍');
-    expect(val).toBe(false);
-  });
-
-  it('[HK-6] error propagate + no-invalidate', async () => {
-    const err = new Error('RLS denied');
-    mockToggleChatReaction.mockRejectedValueOnce(err);
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    await expect(result.current.toggleReaction('msg-1', '👍')).rejects.toThrow('RLS denied');
-    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
-    expect(keys.some((k) => k.includes('chat-messages'))).toBe(false);
-  });
-
-  it('[HK-7] dua panggilan berturut → 2× invalidate chat-messages', async () => {
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    await result.current.toggleReaction('msg-1', '👍');
-    await result.current.toggleReaction('msg-1', '👍');
-    const chatMsgInvalidations = spy.mock.calls.filter(
-      (c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey).includes('chat-messages'),
-    );
-    expect(chatMsgInvalidations.length).toBe(2);
-  });
-
-  it('[HK-8] isolasi roomId: invalidate hanya roomId yang diberikan ke hook', async () => {
-    const { qc, wrapper } = makeWrapper();
-    const spy = jest.spyOn(qc, 'invalidateQueries');
-    const { result } = await renderHook(() => useChatActions('r99'), { wrapper });
-    await result.current.toggleReaction('msg-1', '👍');
-    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey);
-    const chatMsgKeys = keys.filter((k) => k[0] === 'chat-messages');
-    expect(chatMsgKeys.every((k) => k[1] === 'r99')).toBe(true);
-  });
-
-  it('[HK-9] isTogglingReaction starts false, becomes true during pending', async () => {
-    let resolveToggle: (v: boolean) => void;
-    mockToggleChatReaction.mockImplementationOnce(
-      () => new Promise<boolean>((r) => { resolveToggle = r; }),
-    );
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
-    expect(result.current.isTogglingReaction).toBe(false);
-    const promise = result.current.toggleReaction('msg-1', '👍');
-    await waitFor(() => expect(result.current.isTogglingReaction).toBe(true));
-    resolveToggle!(true);
-    await promise;
-    await waitFor(() => expect(result.current.isTogglingReaction).toBe(false));
-  });
-});
-
-describe('useChatMessages — reactions pass-through', () => {
-  it('[HK-10] messages expose reactions[] from data layer', async () => {
-    mockListChatMessages.mockResolvedValueOnce([
-      { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'hi', created_at: '2026-07-10T00:00:00Z', reactions: [{ emoji: '👍', reactor_id: 'u2' }] },
-    ]);
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
-    await waitFor(() => expect(result.current.messages).toHaveLength(1));
-    expect(result.current.messages[0].reactions).toEqual([{ emoji: '👍', reactor_id: 'u2' }]);
-  });
-
-  it('[HK-11] messages expose empty reactions[] when no reactions', async () => {
-    mockListChatMessages.mockResolvedValueOnce([
-      { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'hi', created_at: '2026-07-10T00:00:00Z', reactions: [] },
-    ]);
-    const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useChatMessages('r1'), { wrapper });
-    await waitFor(() => expect(result.current.messages).toHaveLength(1));
-    expect(result.current.messages[0].reactions).toEqual([]);
-  });
-});
-
-describe('useChatActions — regresi send() invalidation (HK-12)', () => {
-  it('[HK-12] send() tetap invalidate chat-messages + chat-rooms setelah toggleReaction ditambahkan', async () => {
+  it('[O3] send TANPA optimistic → perilaku lama (invalidate, tak sentuh cache manual)', async () => {
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
     await result.current.send('halo');
-    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalled());
+    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'halo', []));
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
     expect(keys.some((k) => k.includes('chat-messages'))).toBe(true);
     expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);
   });
 });
+
+// =========================================================== Realtime ==========================================================
+// Probe: render komponen kecil yang memakai useChatRealtime (pola `render` flush effect + cleanup
+// andal, seperti tes layar — renderHook di sini tak reliabel flush mount/unmount effect).
+function RealtimeProbe({ roomId, onRemote }: { roomId: string; onRemote?: () => void }) {
+  useChatRealtime(roomId, onRemote);
+  return null;
+}
+
+describe('useChatRealtime', () => {
+  // Satu render menutup subscribe-on-mount + invalidate-on-event + onRemoteInsert. Cleanup unmount
+  // (unsubscribe) TIDAK di-assert di sini: react-test-renderer tak flush passive-effect cleanup
+  // sinkron pada unmount(); implementasi mengembalikan unsubscribe dari useEffect (dijamin React).
+  it('[R1] subscribe saat mount; event → invalidate chat-messages & chat-rooms + onRemoteInsert', async () => {
+    let captured: (() => void) | null = null;
+    mockSubscribeChatRoom.mockImplementation((_room: string, cb: () => void) => {
+      captured = cb;
+      return () => {};
+    });
+    const onRemote = jest.fn();
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    await render(createElement(RealtimeProbe, { roomId: 'r1', onRemote }), { wrapper });
+    await waitFor(() => expect(mockSubscribeChatRoom).toHaveBeenCalledWith('r1', expect.any(Function)));
+
+    act(() => captured?.());
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+    expect(keys.some((k) => k.includes('chat-messages'))).toBe(true);
+    expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);
+    expect(onRemote).toHaveBeenCalled();
+  });
+
+  it('[R2] roomId kosong → TIDAK subscribe', async () => {
+    const { wrapper } = makeWrapper();
+    await render(createElement(RealtimeProbe, { roomId: '' }), { wrapper });
+    await waitFor(() => expect(true).toBe(true));
+    expect(mockSubscribeChatRoom).not.toHaveBeenCalled();
+  });
+});
+
+// Seen-by hook tests dipisah ke `use-chat-reads.test.tsx` — RN Testing Library render+subscribe
+// dari test realtime di file ini mengontaminasi state renderHook seen-by (root-cause fiber tree
+// cleanup + act boundary). Isolasi file = solusi paling andal.

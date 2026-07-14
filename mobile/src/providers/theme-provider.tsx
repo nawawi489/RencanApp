@@ -28,7 +28,7 @@ function apply(mode: ThemeMode) {
   if (typeof setter === 'function') {
     setter(scheme);
   }
-  // Web: react-native-web TIDAK implement setColorScheme. Pakai class strategy di root
+  // Web: react-native-web TIDAK implement setColorScheme. Pakai class initiative di root
   // (global.css mendefinisikan @custom-variant dark utk konsumsi class .dark).
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
     const root = document.documentElement;

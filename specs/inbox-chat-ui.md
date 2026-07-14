@@ -140,8 +140,8 @@ export type ChatRoom = {
 - Reactions: tabel `chat_message_reactions` + RPC `toggle_chat_reaction`/`get_chat_message_reactions` — **gate OWNER-2**.
 - Read receipt: RPC `get_chat_message_reads(p_room)` SECURITY DEFINER ber-gate `is_chat_member` — **jangan longgarkan policy `chat_message_reads_select` (`reader_id = auth.uid()`)** — gate DEFER-1 (privasi seen).
 - Reply-quote: kolom `reply_to_id` self-FK + validasi same-room di RPC.
-- System events: `message_type`/`event_type`/`linked_entity_*` + trigger dari `action_plan_submissions`; tidak bisa dipalsukan via composer.
-- Banner konteks per-pesan linked-entity: harus validasi `can_access_action_plan` (bukan sekadar tampilkan nama dari `linked_entity_id`) agar tidak bocor.
+- System events: `message_type`/`event_type`/`linked_entity_*` + trigger dari `task_submissions`; tidak bisa dipalsukan via composer.
+- Banner konteks per-pesan linked-entity: harus validasi `can_access_task` (bukan sekadar tampilkan nama dari `linked_entity_id`) agar tidak bocor.
 
 ### Dampak RLS
 Tidak ada policy tabel chat existing yang dilonggarkan di V1.8.1. FR-DATA.1 hanya menambah kolom output ke RPC SECURITY DEFINER yang sudah `is_chat_member`-gated.

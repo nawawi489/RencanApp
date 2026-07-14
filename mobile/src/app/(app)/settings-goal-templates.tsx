@@ -1,21 +1,21 @@
-// UI — Goal Template Library (mockup 37) + KPI Area Template (mockup 38, nested).
-// Browse read-only template blueprint Fase 4 (data layer sudah ada: goal_templates / kpi_area_templates).
+// UI — Goal Template Library (mockup 37) + Strategi Template (mockup 38, nested).
+// Browse read-only template blueprint Fase 4 (data layer sudah ada: goal_templates / strategy_templates).
 // CTA "Buat Goal dari Template" → goal-wizard (yang menjalankan apply_goal_template). Hanya tampil
-// bila create_goal. Lazy: KPI Area template di-fetch saat baris template di-expand.
+// bila create_goal. Lazy: Strategi template di-fetch saat baris template di-expand.
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { FlatList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { Badge, Button, EmptyState, ErrorState, SkeletonList } from '@/components/ui';
-import { useGoalTemplates, useKpiAreaTemplates } from '@/hooks/use-workspace';
+import { useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import type { GoalTemplate } from '@/lib/goals';
 
 function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; canCreate: boolean; onUse: () => void }) {
   const [expanded, setExpanded] = useState(false);
   // Lazy: id kosong saat collapsed → hook disabled (enabled: !!goalTemplateId).
-  const { items, isLoading } = useKpiAreaTemplates(expanded ? template.id : '');
+  const { items, isLoading } = useStrategyTemplates(expanded ? template.id : '');
 
   return (
     <View className="gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
@@ -29,18 +29,18 @@ function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; c
       <Pressable
         className="min-h-[44px] flex-row items-center justify-between active:opacity-70"
         accessibilityRole="button"
-        accessibilityLabel={expanded ? 'Tutup KPI Area' : 'Lihat KPI Area template'}
+        accessibilityLabel={expanded ? 'Tutup Strategi' : 'Lihat Strategi template'}
         accessibilityState={{ expanded }}
         onPress={() => setExpanded((v) => !v)}>
-        <Text className="text-sm text-neutral-500 dark:text-neutral-400">Blueprint KPI Area</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400">Blueprint Strategi</Text>
         <Text className="text-sm font-semibold text-brand-dark">
-          {expanded ? 'Tutup' : 'Lihat KPI Area'}
+          {expanded ? 'Tutup' : 'Lihat Strategi'}
         </Text>
       </Pressable>
 
       {expanded ? (
         isLoading ? (
-          <Text className="text-sm text-neutral-400">Memuat KPI Area…</Text>
+          <Text className="text-sm text-neutral-400">Memuat Strategi…</Text>
         ) : items.length ? (
           <View className="gap-2">
             {items.map((k) => (
@@ -66,7 +66,7 @@ function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; c
             ))}
           </View>
         ) : (
-          <Text className="text-sm text-neutral-400">Template ini belum punya KPI Area.</Text>
+          <Text className="text-sm text-neutral-400">Template ini belum punya Strategi.</Text>
         )
       ) : null}
 
@@ -103,7 +103,7 @@ export default function SettingsGoalTemplatesScreen() {
     <View className="gap-1 pb-3">
       <Text className="text-2xl font-bold text-black dark:text-white">Goal Template Library</Text>
       <Text className="text-base text-neutral-500 dark:text-neutral-400">
-        Blueprint Goal + KPI Area siap pakai. {canCreate ? 'Pilih untuk membuat Goal lewat wizard.' : 'Hanya untuk referensi.'}
+        Blueprint Goal + Strategi siap pakai. {canCreate ? 'Pilih untuk membuat Goal lewat wizard.' : 'Hanya untuk referensi.'}
       </Text>
     </View>
   );
