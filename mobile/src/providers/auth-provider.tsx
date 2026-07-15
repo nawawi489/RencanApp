@@ -76,7 +76,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           const pushToken = getCurrentPushToken();
           if (pushToken) {
             await unregisterPushToken(pushToken).catch((err) =>
-              reportError('Push unregister on signOut', err, ''),
+              reportError('Push unregister on signOut', err, 'Gagal menonaktifkan notifikasi push.'),
             );
             setCurrentPushToken(null);
           }

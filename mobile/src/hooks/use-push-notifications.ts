@@ -25,13 +25,15 @@ export function usePushRegistration() {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    void Notifications.getPermissionsAsync().then((p) => setPermissionStatus(p.status as string));
+    Notifications.getPermissionsAsync()
+      .then((p) => setPermissionStatus(p.status as string))
+      .catch(() => {});
 
     if (Platform.OS === 'android') {
-      void Notifications.setNotificationChannelAsync('default', {
+      Notifications.setNotificationChannelAsync('default', {
         name: 'default',
         importance: Notifications.AndroidImportance.MAX,
-      });
+      }).catch(() => {});
     }
   }, []);
 
@@ -100,6 +102,8 @@ export function usePushHandler(session: Session | null) {
   }, []);
 
   // Cold-start: proses langsung jika session tersedia, queue bila belum.
+  // Jika session null saat mount, response disimpan di queuedRef — effect berikutnya
+  // (dep: [session, queryClient]) akan memproses queue saat session tersedia.
   useEffect(() => {
     void Notifications.getLastNotificationResponseAsync().then((res) => {
       if (!res) return;

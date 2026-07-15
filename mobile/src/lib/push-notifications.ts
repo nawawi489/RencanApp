@@ -5,6 +5,7 @@
 import type { NotificationType } from './notifications';
 import { supabase } from './supabase';
 
+// Survives hot-reload — signOut clears it, but dev sessions may see stale values.
 let _currentPushToken: string | null = null;
 
 export function setCurrentPushToken(token: string | null): void {
