@@ -70,6 +70,9 @@ EXCLUDES=(
   'specs/prd-vs-'
   # Rename spec + prd-mapping intentionally reference legacy names.
   'specs/rename-workspace-terminology'
+  # Chat attachments spec documents structural guardrails referencing
+  # historical table names (action_plan_submissions) as boundary markers.
+  'specs/inbox-chat-attachments'
   # Rollback plan intentionally references legacy names (revert direction).
   'specs/rollback-plan.md'
   # 0045R migration reverts to legacy names.
@@ -96,6 +99,8 @@ EXCLUDES=(
   'wiki/concepts/design-fidelity-audit'
   'wiki/concepts/workspace-lock-audit'
   'wiki/concepts/ui-prototype-gap'
+  # Scope guardrails concept documents structural separation from legacy tables.
+  'wiki/concepts/scope-guardrails'
   # Source mirrors of external docs.
   'wiki/sources/'
   # Historical QA/test reports document schema at their time-of-run.
