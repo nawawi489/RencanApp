@@ -1610,3 +1610,16 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 - **Swap dilakukan**: `PRD.md` sekarang V1.83 (source of truth), `PRD_EMS_V1.83_Rencanapp.md` disimpan sebagai snapshot versioned, draft typo `PRD_EMS_V1.83_Rencanaapp.md` dihapus.
 - Konten baru V1.83 (adopted): reposisi "Execution Project Management" + 5 prinsip, de-scoring People (urutan kontribusi/status ringan, bukan angka score telanjang), MBR opsional 3 mode (Nonaktif/Peringatan/Blokir), Strategy Template kosong by default (lintas industri), Score Formula/Governance/Activity Log/Manual Score Override di-gate ke Admin Lanjutan, Evaluation dipicu di Action Plan, Home "Fokus Hari Ini" nyorot Task, seed data generik (hilang WhatsApp/Pizza).
 - Follow-up: (a) update memory `prd-v182-source-of-truth.md` → `prd-v183-source-of-truth.md`; (b) wiki/entities & wiki/concepts perlu audit untuk sinkron dengan perubahan V1.83 (People de-scoring, MBR opsional, Strategy Template kosong, Menu restructure); (c) audit kode untuk gap V1.82→V1.83 yang belum ter-implement (mis. MBR mode "Nonaktif" & "Peringatan saja", Home fokus Task, Evaluation di Action Plan).
+
+## [2026-07-15] update | Wiki sync V1.82 → V1.83
+
+- **Pages updated (evergreen only, historical snapshots ditinggal):**
+  - `overview.md` — "EMS V1.8.3" → "Execution Project Management V1.83"; tambah 5 prinsip PRD §2; note reposisi de-scoring People + Admin Lanjutan gating; Home Fokus Hari Ini = Task; Evaluation di Action Plan; Status paragraph list gap kode yang belum landing.
+  - `entities/surfaces.md` — rewrite penuh: Menu section (Akses Cepat = People/Archive/Pusat Bantuan; Pengaturan/Template/Admin Lanjutan gated); People section de-scored (buang Trust/Achievement/Score dari row, add "urutan kontribusi + Status ringan"); Inbox RWT-04 A note; Home fokus Task; Notifications V1.83 gating.
+  - `entities/score-formula.md` — tambah warning V1.83 Admin Lanjutan only + Manual Override via Admin Lanjutan.
+  - `concepts/minimum-breakdown-rule.md` — rewrite: opsional per org/workspace; 3 mode V1.83 (Nonaktif tambah); default 3/3/3/3 → "contoh konfigurasi"; gap kode note.
+  - `concepts/scope-guardrails.md` — V1.8.2 → V1.83; WhatsApp → External chat; KPI child → metric child; masuk-list update; tambah callout V1.83 §18 Satuan opsional bukan pelanggaran.
+  - `index.md` — bump `updated`; 5 entry descriptions disync V1.83.
+- **Pages NOT updated (historical snapshots, sengaja):** `prototype-prd-conformance` (audit V1.82), `workspace-lock-audit/sprint-plan`, `design-fidelity-audit`, `fase5/6-tdd-plan`, `fase6-spec`, `ws-04-governance-debt`, `workspace-progress-orb-tdd-plan`, semua `test-reports/` & `sources/`.
+- **Pages TIDAK butuh update** (sudah V1.8.3 correct): `entities/card-model.md`, `entities/workspace.md`, `entities/action-plan.md`, `entities/database-blueprint.md`, `concepts/execution-loop.md`, `concepts/audit-governance.md`, `concepts/permission-model.md`, `concepts/tech-stack.md`, `concepts/architecture.md`, `concepts/evidence-kinds.md`.
+- Sisa follow-up (belum dikerjakan): audit gap kode V1.82→V1.83.

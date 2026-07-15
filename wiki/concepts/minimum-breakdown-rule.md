@@ -1,29 +1,46 @@
 ---
 type: concept
 tags: [mbr, validation, planning]
-updated: 2026-07-11
+updated: 2026-07-15
 sources: 1
 ---
 
-# Minimum Breakdown Rule (MBR)
+# Minimum Breakdown Rule (label UI: **Aturan Pecah Target**)
 
-Aturan jumlah minimal [[card-model|card turunan]] sebelum user bisa lanjut ke level berikutnya. Tujuan: memaksa breakdown yang cukup sebelum eksekusi, mencegah Goal/Strategy dangkal. Dikelola di [[surfaces#Settings|Settings]].
+Aturan jumlah minimal [[card-model|card turunan]] agar target tidak berhenti sebagai rencana besar tanpa aksi. Dikelola admin di [[surfaces#Settings|Menu → Admin Lanjutan]].
 
-## Default (V1.8.3)
+- **Backend/admin** memakai istilah `Minimum Breakdown Rule` (MBR).
+- **UI user harian** memakai istilah **Aturan Pecah Target** — lebih ramah, tidak jargon.
 
-Per **RWT-09 A** (2026-07-11), pola 3/3/3 lama menjadi 3/3/3/**3** dengan level Task ditambahkan; seed migrasi memasang default 3, admin org boleh menurunkan ke 0.
+## V1.83 §34.4: opsional per organization/workspace
 
-| Performance | Min | Development | Min |
+Prinsip:
+
+1. Rule bersifat **opsional** per organization/workspace (V1.83 mengizinkan Nonaktif — perubahan dari V1.82 yang default Blokir).
+2. Angka minimum dikonfigurasi admin per level card, **bukan angka hard-coded** untuk semua perusahaan.
+3. Jika rule Nonaktif, tombol buat turunan mengikuti permission biasa.
+
+## Mode penerapan (V1.83)
+
+| Mode | Perilaku |
+|---|---|
+| **Nonaktif** | Tombol buat turunan aktif seperti biasa. *(Baru di V1.83.)* |
+| **Peringatan saja** | Tombol tetap aktif, sistem menampilkan warning. |
+| **Blokir Tombol Turunan** | Tombol turunan dinonaktifkan sampai minimum terpenuhi. Klik → popup arahan. |
+
+*(V1.82 punya 3 mode Peringatan/Blokir Aktivasi/Blokir Turunan tanpa mode Nonaktif. V1.83 menyederhanakan menjadi Nonaktif/Peringatan/Blokir.)*
+
+## Contoh konfigurasi (bukan default hard-coded)
+
+Angka di bawah adalah contoh V1.82 lama (RWT-09 A default 3/3/3/3). V1.83 mengubah statusnya menjadi **contoh konfigurasi** — admin bebas menaikkan/menurunkan/mematikan.
+
+| Performance | Contoh Min | Development | Contoh Min |
 |---|---|---|---|
 | Strategy → Initiative | 3 | Development Area → Problem Statement | 1 |
 | Initiative → Action Plan | 3 | Problem Statement → Action Plan | 1 |
 | Action Plan → Task | 3 | Action Plan → Task | 3 |
 
-## Mode penerapan (§40)
-
-1. **Hanya Peringatan** — user tetap bisa lanjut, sistem memperingatkan.
-2. **Blokir Aktivasi** — boleh buat Draft, card tidak bisa Aktif sebelum minimum terpenuhi.
-3. **Blokir Akses Turunan Berikutnya** — tidak bisa membuat card turunan berikutnya sebelum minimum terpenuhi.
+Seed migrasi `0049` masih memasang default 3 (kompat V1.82); admin org tetap bisa turunkan ke 0 (efektif Nonaktif) lewat Admin Lanjutan.
 
 ## Kelengkapan Perencanaan & popup gagal
 
@@ -32,6 +49,9 @@ Indikator di card menampilkan progress turunan vs MBR (mis. "Initiative: 2/3, Be
 ## Catatan implementasi
 
 > [!warning] Default 3/3/3/3 bisa meledak
-> Untuk organisasi kecil, 3/3/3/3 dapat menghasilkan ratusan card wajib. Rekomendasi: mulai mode **Hanya Peringatan**, naikkan ke Blokir setelah tim terbiasa (`BUILD-PLAN.md` Fase 5).
+> Untuk organisasi kecil, 3/3/3/3 dapat menghasilkan ratusan card wajib. Rekomendasi V1.83: mulai dari **Nonaktif** atau **Peringatan saja**, naikkan ke Blokir setelah tim terbiasa dan target-nya kompleks.
+
+> [!info] Gap kode V1.82 → V1.83
+> Kode `mobile/` saat ini hanya mendukung mode Blokir (V1.82 default hard-coded 3). Mode Nonaktif dan Peringatan saja **belum ter-implement** — admin belum bisa memilih mode di Settings. Audit gap kode masih terbuka.
 
 Berkaitan dengan: [[card-model]], [[workspace]], [[surfaces]].
