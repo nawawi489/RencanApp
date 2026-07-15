@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Stack, router } from 'expo-router';
 import { Pressable } from 'react-native';
 
+import { usePushHandler } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/providers/auth-provider';
 
 // RN Web quirk: default Stack header omits back button when navigated via direct URL.
@@ -29,6 +30,8 @@ function HeaderBack() {
 
 export default function AppLayout() {
   const { session } = useAuth();
+  // Wajib sebelum early-return — Rules of Hooks; hook menangani session null secara internal.
+  usePushHandler(session);
 
   if (!session) {
     return <Redirect href="/(auth)/login" />;

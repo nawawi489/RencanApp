@@ -3,7 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 
+import { reportError } from '@/lib/errors';
 import { parseRecoveryUrl } from '@/lib/parse-recovery-url';
+import { getCurrentPushToken, setCurrentPushToken, unregisterPushToken } from '@/lib/push-notifications';
 import { supabase } from '@/lib/supabase';
 
 type AuthContextValue = {
@@ -71,6 +73,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         initializing,
         isRecovering,
         signOut: async () => {
+          const pushToken = getCurrentPushToken();
+          if (pushToken) {
+            await unregisterPushToken(pushToken).catch((err) =>
+              reportError('Push unregister on signOut', err, 'Gagal menonaktifkan notifikasi push.'),
+            );
+            setCurrentPushToken(null);
+          }
           await supabase.auth.signOut();
           // Bersihkan cache React Query agar data org akun lama tidak tersisa di memori
           // (privacy + hindari stale flash saat akun lain login di device yang sama).
