@@ -18,6 +18,20 @@ jest.mock('@/hooks/use-inbox', () => ({
   useInboxRooms: () => mockUseInboxRooms(),
 }));
 
+// Chat FTS V1: idle stub. Test file ini fokus UI-S-IN1; Search Pesan diuji terpisah di
+// inbox.search-messages.test.tsx. Mock ini menghindari useAuth throw (butuh AuthProvider).
+jest.mock('@/hooks/use-search-messages', () => ({
+  useSearchMessages: () => ({
+    hits: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    isRpcMissing: false,
+    refetch: jest.fn(),
+  }),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import InboxScreen from '../inbox';
 
@@ -159,7 +173,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
     await render(<InboxScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.getByText('Marketing Spike')).toBeTruthy();
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi'), 'sales');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'sales');
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.queryByText('Marketing Spike')).toBeNull();
   });
@@ -192,7 +206,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
       rooms: [room({ id: 'r1', name: 'Sales' })], isLoading: false, isError: false, refetch: jest.fn(),
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi'), 'zzzz-tidak-ada');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'zzzz-tidak-ada');
     expect(await screen.findByText(/tidak ditemukan/i)).toBeTruthy();
     // default empty NOT shown
     expect(screen.queryByText('Belum ada percakapan')).toBeNull();

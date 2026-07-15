@@ -2,6 +2,7 @@
 // date divider device-tz, banner governance, composer circular accessibilityLabel='Kirim pesan'.
 // Pola mock per Critic §8.3: useAuth via `let mockSession` yang dibaca LAZY di factory.
 // Pola mock per Critic §8.7: case existing 'data → kirim' di-rewrite ke label baru + mock useAuth.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -12,9 +13,30 @@ jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 // expo-router params — mutable per-test (Critic §8.3 pattern).
 let mockRoomParams: { roomId?: string } = { roomId: 'r1' };
-jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => mockRoomParams,
-}));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => {
+  // Stack.Screen di test me-render headerTitle & headerRight agar isi header dapat
+  // di-query via accessibilityLabel — bukan hanya sekadar ditelan.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react') as typeof import('react');
+  return {
+    useLocalSearchParams: () => mockRoomParams,
+    useRouter: () => ({ push: mockPush }),
+    Stack: {
+      Screen: (props: { options?: Record<string, unknown> }) => {
+        const opts = props?.options ?? {};
+        const bits: React.ReactNode[] = [];
+        if (typeof opts.headerTitle === 'function') {
+          bits.push(React.createElement(opts.headerTitle as React.FC, { key: 'title' }));
+        }
+        if (typeof opts.headerRight === 'function') {
+          bits.push(React.createElement(opts.headerRight as React.FC, { key: 'right' }));
+        }
+        return bits.length ? React.createElement(React.Fragment, {}, ...bits) : null;
+      },
+    },
+  };
+});
 
 // useAuth — Critic §8.3: factory baca `mockSession` lazy di body fungsi (TDZ-safe).
 let mockSession: { user: { id: string } } | null = { user: { id: 'me' } };
@@ -27,9 +49,18 @@ const mockSend = jest.fn();
 const mockMarkRead = jest.fn();
 let mockIsSending = false;
 const mockLoadOlder = jest.fn();
+const mockUseChatRoom = jest.fn();
+const mockUseChatRoomMembers = jest.fn();
+const mockUseChatReads = jest.fn();
 jest.mock('@/hooks/use-inbox', () => ({
   useChatMessages: (...a: unknown[]) => mockUseChatMessages(...a),
   useChatActions: () => ({ send: mockSend, markRead: mockMarkRead, isSending: mockIsSending }),
+  // Realtime hook — no-op di test (tak menyentuh Supabase channel).
+  useChatRealtime: () => {},
+  useChatRoom: (...a: unknown[]) => mockUseChatRoom(...a),
+  useChatRoomMembers: (...a: unknown[]) => mockUseChatRoomMembers(...a),
+  useChatReads: (...a: unknown[]) => mockUseChatReads(...a),
+  useChatReadsRealtime: () => {},
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
@@ -43,7 +74,8 @@ function wrapper() {
   return Wrapper;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await AsyncStorage.clear(); // isolasi flag dismiss banner antar-tes
   mockUseChatMessages.mockReset();
   mockSend.mockReset();
   mockMarkRead.mockReset();
@@ -53,6 +85,13 @@ beforeEach(() => {
   mockSession = { user: { id: 'me' } };
   mockRoomParams = { roomId: 'r1' };
   mockIsSending = false;
+  mockPush.mockReset();
+  mockUseChatRoom.mockReset();
+  mockUseChatRoomMembers.mockReset();
+  mockUseChatReads.mockReset();
+  mockUseChatRoom.mockReturnValue({ room: null });
+  mockUseChatRoomMembers.mockReturnValue({ members: [] });
+  mockUseChatReads.mockReturnValue({ readsByMessage: new Map() });
   mockUseChatMessages.mockReturnValue({
     messages: [],
     isLoading: false,
@@ -109,13 +148,48 @@ describe('ChatRoomScreen — state dasar (existing)', () => {
     await waitFor(() => expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe('Pesan baru'));
     fireEvent.press(screen.getByLabelText('Kirim pesan'));
 
-    await waitFor(() => expect(mockSend).toHaveBeenCalledWith('Pesan baru'));
+    // Kirim kini menyertakan mentions ([]) + pesan optimistik (author_id='me', body sama).
+    await waitFor(() =>
+      expect(mockSend).toHaveBeenCalledWith(
+        'Pesan baru',
+        [],
+        expect.objectContaining({ body: 'Pesan baru', author_id: 'me' }),
+      ),
+    );
     await waitFor(() => expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe(''));
   });
 });
 
 // =========================================================== UI-S-IN2: bubble me/them, urutan, identitas, divider ==========================================================
 describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
+  // Pin device clock ke 2026-07-14 supaya assert label date deterministik
+  // (defuse time bomb [E5] & anchor Hari ini/Kemarin di [E5b]/[E5c]).
+  // doNotFake: hanya Date/Date.now yang dibekukan; setTimeout dsb tetap nyata
+  // supaya waitFor / findBy jalan.
+  beforeAll(() => {
+    jest.useFakeTimers({
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'setInterval',
+        'setTimeout',
+        'clearImmediate',
+        'clearInterval',
+        'clearTimeout',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'queueMicrotask',
+        'performance',
+      ],
+      now: new Date('2026-07-14T05:00:00Z'),
+    });
+  });
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   it('[E1] urutan KRONOLOGIS-MENAIK (terlama di atas, terbaru di bawah) — meskipun data desc dari hook', async () => {
     // hook return desc: ['m-newer','m-older']. Screen harus tampilkan 'lama' (older) sebelum 'baru' (newer).
     mockUseChatMessages.mockReturnValue({
@@ -199,6 +273,57 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
     expect(screen.getAllByText(/\b24 Jun\b/)).toHaveLength(1); // satu hari = tepat satu divider
   });
 
+  it('[E5b] pesan bertanggal hari ini → chip divider "Hari ini" (device tz)', async () => {
+    // Clock dipin ke 2026-07-14T05:00:00Z (beforeAll). Pesan bertanggal sama = "Hari ini".
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'mtoday', chat_room_id: 'r1', author_id: 'them', body: 'halo',
+          created_at: '2026-07-14T08:30:00Z',
+          author: { id: 'them', full_name: 'Budi' } },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Hari ini')).toBeTruthy();
+  });
+
+  it('[E5c] pesan bertanggal H-1 → chip divider "Kemarin"', async () => {
+    // Clock dipin 2026-07-14; H-1 = 2026-07-13.
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'myday', chat_room_id: 'r1', author_id: 'them', body: 'kemarin',
+          created_at: '2026-07-13T14:00:00Z',
+          author: { id: 'them', full_name: 'Budi' } },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Kemarin')).toBeTruthy();
+  });
+
+  it('[E5d] tanggal sama, tahun beda → divider TIDAK merge (dayKey per-tahun)', async () => {
+    // Regresi: label 'd MMM' saja bikin '23 Jun 2025' & '23 Jun 2026' merge jadi satu.
+    // Grouping via dayKey (YYYY-MM-DD) menutupnya → dua chip terpisah muncul.
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'y25', chat_room_id: 'r1', author_id: 'them', body: 'lawas',
+          created_at: '2025-06-23T10:00:00Z',
+          author: { id: 'them', full_name: 'Budi' } },
+        { id: 'y26', chat_room_id: 'r1', author_id: 'them', body: 'setahun',
+          created_at: '2026-06-23T10:00:00Z',
+          author: { id: 'them', full_name: 'Budi' } },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // Dua tanggal beda → dua divider (chip label sama '23 Jun' karena tahun tak tercetak,
+    // jadi assert lewat jumlah bubble yang dipisahnya: kedua body tampil beda urutan/blok).
+    expect(await screen.findByText('lawas')).toBeTruthy();
+    expect(screen.getByText('setahun')).toBeTruthy();
+    // Grup berbeda → chip '23 Jun' harus muncul DUA kali (satu per tahun).
+    expect(screen.getAllByText(/\b23 Jun\b/)).toHaveLength(2);
+  });
+
   it('[E6] created_at INVALID → skip divider (tidak crash, pesan tetap render)', async () => {
     mockUseChatMessages.mockReturnValue({
       messages: [
@@ -212,6 +337,96 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('oke')).toBeTruthy();
     expect(screen.getByText('bad')).toBeTruthy();
+  });
+});
+
+// =========================================================== FR-1 (Batch B) header rebuild ==========================================================
+describe('ChatRoomScreen — FR-1 header rebuild', () => {
+  it('[H1] headerTitle merender room.name saat room termuat', async () => {
+    mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Campaign Paket Hemat' } });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Campaign Paket Hemat')).toBeTruthy();
+  });
+
+  it('[H2] subtitle "N anggota" mencerminkan panjang members', async () => {
+    mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Room' } });
+    mockUseChatRoomMembers.mockReturnValue({
+      members: [
+        { id: 'u1', full_name: 'A' },
+        { id: 'u2', full_name: 'B' },
+        { id: 'u3', full_name: 'C' },
+      ],
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // RoomContextBar in-body sudah dihapus (Task-11) → tepat satu sumber teks.
+    expect((await screen.findAllByText('3 anggota'))).toHaveLength(1);
+  });
+
+  it('[H3] tombol Anggota di header — role=button, ≥44dp inline, buka MembersModal saat ditekan', async () => {
+    mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Room' } });
+    mockUseChatRoomMembers.mockReturnValue({
+      members: [{ id: 'u1', full_name: 'A' }],
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const btn = await screen.findByLabelText('Anggota');
+    expect(btn.props.accessibilityRole).toBe('button');
+    const style = Array.isArray(btn.props.style)
+      ? Object.assign({}, ...btn.props.style)
+      : btn.props.style;
+    expect(style.width).toBeGreaterThanOrEqual(44);
+    expect(style.height).toBeGreaterThanOrEqual(44);
+    fireEvent.press(btn);
+    // MembersModal terbuka → judul dinamis "Anggota (N)" tampil.
+    await waitFor(() => expect(screen.getByText(/^Anggota \(1\)$/)).toBeTruthy());
+  });
+
+  it('[H4] tombol Rencana Aksi tampil saat action_plan_id ada → navigate ke /action-plan/{id}', async () => {
+    mockUseChatRoom.mockReturnValue({
+      room: { id: 'r1', name: 'Room', action_plan_id: 'ap-42' },
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const btn = await screen.findByLabelText('Rencana Aksi');
+    expect(btn.props.accessibilityRole).toBe('button');
+    fireEvent.press(btn);
+    expect(mockPush).toHaveBeenCalledWith('/action-plan/ap-42');
+  });
+
+  it('[H6] regresi: tombol Anggota & Rencana Aksi hanya muncul SEKALI (header saja, tanpa in-body bar)', async () => {
+    mockUseChatRoom.mockReturnValue({
+      room: { id: 'r1', name: 'Room', action_plan_id: 'ap-1' },
+    });
+    mockUseChatRoomMembers.mockReturnValue({ members: [{ id: 'u1', full_name: 'A' }] });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findAllByLabelText('Anggota')).toHaveLength(1);
+    expect(screen.getAllByLabelText('Rencana Aksi')).toHaveLength(1);
+  });
+
+  it('[H7] avatar grup tampil di header — max 3 avatar bertumpuk dari members', async () => {
+    mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Room' } });
+    mockUseChatRoomMembers.mockReturnValue({
+      members: [
+        { id: 'u1', full_name: 'Adi' },
+        { id: 'u2', full_name: 'Budi' },
+        { id: 'u3', full_name: 'Citra' },
+        { id: 'u4', full_name: 'Dian' },
+      ],
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const group = await screen.findByLabelText('Avatar grup');
+    expect(group).toBeTruthy();
+    // Max 3 avatar ditampilkan meski members=4.
+    const avatars = group.children.length;
+    expect(avatars).toBe(3);
+  });
+
+  it('[H5] tombol Rencana Aksi TIDAK muncul saat action_plan_id null', async () => {
+    mockUseChatRoom.mockReturnValue({
+      room: { id: 'r1', name: 'Room', action_plan_id: null },
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // Anggota tetap muncul (memastikan header ter-render).
+    await screen.findByLabelText('Anggota');
+    expect(screen.queryByLabelText('Rencana Aksi')).toBeNull();
   });
 });
 
@@ -269,14 +484,28 @@ describe('ChatRoomScreen — composer & guards', () => {
     expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe('akan gagal');
   });
 
-  it('[E12] banner governance kanonik tampil + dapat ditutup (state lokal — re-mount muncul lagi by design)', async () => {
+  it('[E12] banner governance kanonik tampil + dapat ditutup (persisten AsyncStorage: tak muncul lagi setelahnya)', async () => {
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
     expect(await screen.findByText(/Chat bukan jalur formal|tidak menggantikan/i)).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Tutup banner'));
-    // setState dapat dijalankan async — tunggu unmount.
     await waitFor(() =>
       expect(screen.queryByText(/Chat bukan jalur formal|tidak menggantikan/i)).toBeNull(),
     );
+    // Re-mount → tetap tertutup karena flag tersimpan di AsyncStorage.
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    await waitFor(() => expect(screen.queryByLabelText('Tutup banner')).toBeNull());
+  });
+
+  it('[E12b] placeholder composer diinterpolasi dari room.name (FR-4)', async () => {
+    mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Campaign Paket Hemat' } });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findByPlaceholderText('Tulis pesan ke Campaign Paket Hemat')).toBeTruthy();
+  });
+
+  it('[E12c] room null → placeholder fallback "Tulis pesan…"', async () => {
+    mockUseChatRoom.mockReturnValue({ room: null });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(await screen.findByPlaceholderText('Tulis pesan…')).toBeTruthy();
   });
 
   it('[E13] tombol "Muat pesan lama" hanya muncul saat hasMore=true & memanggil loadOlder', async () => {
@@ -291,5 +520,172 @@ describe('ChatRoomScreen — composer & guards', () => {
     const more = await screen.findByText(/Muat pesan lama/i);
     fireEvent.press(more);
     await waitFor(() => expect(mockLoadOlder).toHaveBeenCalled());
+  });
+});
+
+// =========================================================== Topbar konteks (PRD §30) & @mention ==========================================================
+describe('ChatRoomScreen — konteks room & @mention', () => {
+  const members = [
+    { id: 'u2', full_name: 'Budi', email: null },
+    { id: 'u3', full_name: 'Sari', email: null },
+  ];
+
+  it('[IN5] tombol Anggota di header → modal daftar nama anggota', async () => {
+    mockUseChatRoomMembers.mockReturnValue({ members });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // FR-1 (Batch B): tombol Anggota pindah ke header dgn label statis 'Anggota'.
+    const openMembers = await screen.findByLabelText('Anggota');
+    fireEvent.press(openMembers);
+    expect(await screen.findByText('Anggota (2)')).toBeTruthy();
+    expect(screen.getByText('Budi')).toBeTruthy();
+    expect(screen.getByText('Sari')).toBeTruthy();
+  });
+
+  it('[IN6] tombol "Rencana Aksi" di header → router.push ke /action-plan/{action_plan_id}', async () => {
+    mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Kampanye Q3', action_plan_id: 'ap9' } });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // FR-1: label 'Rencana Aksi' (bukan 'Buka Rencana Aksi').
+    const btn = await screen.findByLabelText('Rencana Aksi');
+    fireEvent.press(btn);
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/action-plan/ap9'));
+  });
+
+  it('[IN7] @mention: ketik "@" → saran anggota; pilih → sisip nama; kirim → mention id diteruskan', async () => {
+    mockUseChatRoomMembers.mockReturnValue({ members });
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'm1', chat_room_id: 'r1', author_id: 'me', body: 'x', created_at: '2026-06-24T01:00:00Z' },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const input = screen.getByPlaceholderText('Tulis pesan…');
+    fireEvent.changeText(input, 'halo @bu');
+    const pick = await screen.findByLabelText('Sebut Budi');
+    fireEvent.press(pick);
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe('halo @Budi '),
+    );
+    fireEvent.press(screen.getByLabelText('Kirim pesan'));
+    await waitFor(() =>
+      expect(mockSend).toHaveBeenCalledWith(
+        'halo @Budi',
+        ['u2'],
+        expect.objectContaining({ body: 'halo @Budi' }),
+      ),
+    );
+  });
+
+  it('[IN9] seen-by: pill "Dilihat oleh N" hanya di me-message TERAKHIR yg punya pembaca lain', async () => {
+    // Dua me-messages, keduanya punya read oleh 'u2'. Pola WhatsApp: hanya bubble terbaru
+    // ('m2') yang menampilkan pill; 'm1' (lebih lama) tidak.
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'm2', chat_room_id: 'r1', author_id: 'me', body: 'yang baru', created_at: '2026-06-24T02:00:00Z' },
+        { id: 'm1', chat_room_id: 'r1', author_id: 'me', body: 'yang lama', created_at: '2026-06-24T01:00:00Z' },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    mockUseChatReads.mockReturnValue({
+      readsByMessage: new Map([
+        ['m1', [{ chat_message_id: 'm1', reader_id: 'u2', read_at: '2026-06-24T01:30:00Z', reader: { id: 'u2', full_name: 'Budi', email: null } }]],
+        ['m2', [{ chat_message_id: 'm2', reader_id: 'u2', read_at: '2026-06-24T02:30:00Z', reader: { id: 'u2', full_name: 'Budi', email: null } }]],
+      ]),
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // Tepat satu pill (pada m2 — bubble terbaru).
+    const pills = await screen.findAllByLabelText(/Dilihat oleh 1 orang/);
+    expect(pills).toHaveLength(1);
+  });
+
+  it('[IN10] seen-by: hanya reader ≠ diri yang dihitung (baca sendiri diabaikan)', async () => {
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'mm', chat_room_id: 'r1', author_id: 'me', body: 'x', created_at: '2026-06-24T01:00:00Z' },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    mockUseChatReads.mockReturnValue({
+      readsByMessage: new Map([
+        ['mm', [{ chat_message_id: 'mm', reader_id: 'me', read_at: '2026-06-24T02:00:00Z', reader: { id: 'me', full_name: 'Saya', email: null } }]],
+      ]),
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(screen.queryByLabelText(/Dilihat oleh/)).toBeNull();
+  });
+
+  it('[IN11] seen-by: tidak muncul pada bubble THEM (privasi — tak track pesan orang lain)', async () => {
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'mt', chat_room_id: 'r1', author_id: 'u2', body: 'pesan dari lain', created_at: '2026-06-24T01:00:00Z',
+          author: { id: 'u2', full_name: 'Budi' } },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    mockUseChatReads.mockReturnValue({
+      readsByMessage: new Map([
+        ['mt', [{ chat_message_id: 'mt', reader_id: 'me', read_at: '2026-06-24T02:00:00Z', reader: { id: 'me', full_name: 'Saya', email: null } }]],
+      ]),
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    expect(screen.queryByLabelText(/Dilihat oleh/)).toBeNull();
+  });
+
+  it('[IN12] tap seen-by → modal "Dilihat oleh (N)" dgn nama pembaca (bukan diri)', async () => {
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'mm', chat_room_id: 'r1', author_id: 'me', body: 'x', created_at: '2026-06-24T01:00:00Z' },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    mockUseChatReads.mockReturnValue({
+      readsByMessage: new Map([
+        ['mm', [
+          { chat_message_id: 'mm', reader_id: 'u2', read_at: '2026-06-24T02:00:00Z', reader: { id: 'u2', full_name: 'Budi', email: null } },
+          { chat_message_id: 'mm', reader_id: 'me', read_at: '2026-06-24T03:00:00Z', reader: { id: 'me', full_name: 'Saya', email: null } },
+        ]],
+      ]),
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByLabelText(/Dilihat oleh 1 orang/));
+    expect(await screen.findByText('Dilihat oleh (1)')).toBeTruthy();
+    expect(screen.getByText('Budi')).toBeTruthy();
+    // Nama diri sendiri TIDAK ada di daftar.
+    expect(screen.queryByText('Saya')).toBeNull();
+  });
+
+  it('[IN13] highlight @Nama di dalam bubble: teks mention tampil sbg elemen terpisah', async () => {
+    mockUseChatRoomMembers.mockReturnValue({ members: [{ id: 'u2', full_name: 'Budi', email: null }] });
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'm1', chat_room_id: 'r1', author_id: 'u3', body: 'halo @Budi apa kabar', created_at: '2026-06-24T01:00:00Z',
+          author: { id: 'u3', full_name: 'Sari' } },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    // findByText default = exact match. Tanpa split, body Text=' halo @Budi apa kabar' → tak
+    // cocok '@Budi' persis. Ketemunya '@Budi' persis membuktikan segmen mention ter-split.
+    expect(await screen.findByText('@Budi')).toBeTruthy();
+  });
+
+  it('[IN8] mention yang sudah dihapus dari teks TIDAK diteruskan', async () => {
+    mockUseChatRoomMembers.mockReturnValue({ members });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const input = screen.getByPlaceholderText('Tulis pesan…');
+    fireEvent.changeText(input, 'halo @bu');
+    fireEvent.press(await screen.findByLabelText('Sebut Budi'));
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe('halo @Budi '),
+    );
+    // User menghapus mention, ganti teks polos (re-query node pasca re-render pick).
+    fireEvent.changeText(screen.getByPlaceholderText('Tulis pesan…'), 'halo semua');
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe('halo semua'),
+    );
+    fireEvent.press(screen.getByLabelText('Kirim pesan'));
+    await waitFor(() =>
+      expect(mockSend).toHaveBeenCalledWith('halo semua', [], expect.any(Object)),
+    );
   });
 });

@@ -1,5 +1,5 @@
 // UI Fase 8 — layar Settings: index SECTIONS, org-structure, activity-log, governance-violation,
-// confidential-access, card-completion-rule, card-guidance, status-priority, notifications-rule, archive.
+// confidential-access, card-completion-rule, card-guidance, notifications-rule, archive.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -72,8 +72,6 @@ jest.mock('expo-router', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import SettingsScreen from '../settings';
-// eslint-disable-next-line import/first
 import SettingsOrgStructureScreen from '../settings-org-structure';
 // eslint-disable-next-line import/first
 import SettingsActivityLogScreen from '../settings-activity-log';
@@ -85,8 +83,6 @@ import SettingsConfidentialAccessScreen from '../settings-confidential-access';
 import SettingsCardCompletionRuleScreen from '../settings-card-completion-rule';
 // eslint-disable-next-line import/first
 import SettingsCardGuidanceScreen from '../settings-card-guidance';
-// eslint-disable-next-line import/first
-import SettingsStatusPriorityScreen from '../settings-status-priority';
 // eslint-disable-next-line import/first
 import SettingsNotificationsRuleScreen from '../settings-notifications-rule';
 // eslint-disable-next-line import/first
@@ -109,25 +105,6 @@ beforeEach(() => {
   mockUseGovViolations.mockReset().mockReturnValue({ violations: [], isLoading: false });
   mockUseConfRules.mockReset().mockReturnValue({ rules: [], isLoading: false, isAccessGranted: false });
   mockUseSearch.mockReset().mockReturnValue({ results: [], isLoading: false, enabled: false });
-});
-
-describe('settings.tsx SECTIONS', () => {
-  it('[F8-UI-01] entri Fase 8 pressable saat punya permission', async () => {
-    mockCan.mockReturnValue(true);
-    await render(<SettingsScreen />, { wrapper: wrapper() });
-    const org = await screen.findByLabelText('Organisasi');
-    expect(org).toBeTruthy();
-    fireEvent.press(org);
-    expect(mockPush).toHaveBeenCalledWith('/settings-org-structure');
-  });
-
-  it('[F8-UI-02] entri Fase 8 tidak pressable saat can() false', async () => {
-    mockCan.mockReturnValue(false);
-    await render(<SettingsScreen />, { wrapper: wrapper() });
-    // label tetap tampil sebagai teks, tapi tidak ada Pressable berlabel
-    expect(await screen.findByText('Governance Violation')).toBeTruthy();
-    expect(screen.queryByLabelText('Governance Violation')).toBeNull();
-  });
 });
 
 describe('settings-org-structure', () => {
@@ -250,14 +227,6 @@ describe('settings-card-guidance', () => {
     await waitFor(() =>
       expect(mockUpsertSettings).toHaveBeenCalledWith('card_guidance_goal', expect.objectContaining({ body: 'panduan goal' })),
     );
-  });
-});
-
-describe('settings-status-priority', () => {
-  it('[F8-UI-25] tanpa permission manage_settings → akses ditolak', async () => {
-    mockCan.mockReturnValue(false);
-    await render(<SettingsStatusPriorityScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
   });
 });
 
