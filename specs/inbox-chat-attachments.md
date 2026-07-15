@@ -122,7 +122,7 @@ Rasional untuk owner: amandemen ini **menajamkan** Rule 4. Hari ini "Bukti lewat
 | # | Goal | Ukuran keberhasilan |
 |---|---|---|
 | G-1 | Anggota room bisa melampirkan gambar tanpa melewati alur Bukti Task | Anggota room **non-PIC** berhasil kirim lampiran; Storage tidak menolak |
-| G-2 | Batas "lampiran ≠ Bukti" ditegakkan **struktural** | Tanpa FK ke `evidence_files`/`action_plan_submissions`; bucket terpisah; whitelist `evidence_files.kind` tidak bertambah; Score Formula tidak pernah membaca kolom lampiran |
+| G-2 | Batas "lampiran ≠ Bukti" ditegakkan **struktural** | Tanpa FK ke `evidence_files`/`task_submissions`; bucket terpisah; whitelist `evidence_files.kind` tidak bertambah; Score Formula tidak pernah membaca kolom lampiran |
 | G-3 | Otorisasi lampiran tidak lebih longgar dari pesan yang memuatnya | Baca ≥ ketat dari `chat_messages_select`; tulis di-gate `is_chat_member` di RPC |
 | G-4 | Validasi MIME & ukuran **server-side** | Bucket config (`file_size_limit`/`allowed_mime_types`) **dan** re-verify RPC via `storage.objects.metadata` |
 | G-5 | Zero bobot governance | Tidak masuk ranking/Score; tidak menghasilkan `activity_log`/`governance_violation` pada jalur normal; tidak muncul di riwayat versi Bukti |
@@ -547,7 +547,7 @@ Pola `cleanup_orphan_upload` (`0019:265-282`) + **org guard wajib** (preseden `0
 ### 6.8 Empat penjaga struktural
 
 1. Bucket berbeda (`chat-attachments` ≠ `evidence`) — anggota room non-PIC tidak akan pernah bisa menulis ke `evidence`.
-2. **Tidak ada FK** dari `chat_messages.attachments` ke `action_plan_submissions`/`evidence_files`.
+2. **Tidak ada FK** dari `chat_messages.attachments` ke `task_submissions`/`evidence_files`.
 3. **`evidence_files.kind` whitelist tidak ditambah** → kind chat ditolak `23514`.
 4. `score-formula` tidak pernah membaca `chat_messages`.
 
