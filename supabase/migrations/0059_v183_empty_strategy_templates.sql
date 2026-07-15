@@ -92,16 +92,13 @@ where (goal_template_id, division, name) in (
 -- Sanity notice.
 do $$
 declare
-  n int;
   n_default int;
 begin
-  select count(*) into n from public.strategy_templates;
   select count(*) into n_default
     from public.strategy_templates st
     join public.goal_templates gt on gt.id = st.goal_template_id
     where gt.key in ('omset', 'profit');
-  raise notice '0059: strategy_templates total rows = %, default (omset/profit) rows = % (should be 0)',
-    n, n_default;
+  raise notice '0059: default (omset/profit) strategy_templates rows = % (should be 0)', n_default;
 end $$;
 
 commit;

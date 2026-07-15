@@ -39,10 +39,6 @@ begin
   if n <> 0 then fails := fails||'omset_items_not_empty('||n||'); '; end if;
   select count(*) into n from public.strategy_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='profit';
   if n <> 0 then fails := fails||'profit_items_not_empty('||n||'); '; end if;
-  if exists (select 1 from public.strategy_templates kt join public.goal_templates t on t.id=kt.goal_template_id
-             where t.key='profit' and kt.division='cfo' and kt.name='Control Budgeting') then
-    fails := fails||'default_seed_row_survived; ';
-  end if;
 
   if fails <> '' then raise exception 'TEST1 schema/seed FAIL: %', fails; end if;
   raise notice 'TEST1 schema/seed PASS';
