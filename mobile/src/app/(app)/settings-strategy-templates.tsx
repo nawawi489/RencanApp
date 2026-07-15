@@ -70,9 +70,16 @@ export default function SettingsStrategyTemplatesScreen() {
               className="min-h-[44px] rounded-xl border border-neutral-300 px-4 text-base text-black dark:border-neutral-700 dark:text-white"
             />
             {grouped.length === 0 ? (
+              // V1.83 §19: Strategy Template kosong secara default; sistem tidak
+              // menyediakan template bawaan. Copy per PRD §19 baris 861-864.
+              // NOTE: CTA "Buat Strategy Template" belum ada CRUD (V1.83 §19
+              // baris 843 wajib create/edit/disable/versioning; screen ini
+              // masih read-only V1). Sementara arahkan ke Goal Template
+              // Library — flow admin sekarang: buat Goal Template dulu,
+              // baru Strategy Template di bawahnya.
               <EmptyState
-                title="Belum ada Strategi Template"
-                description="Buat Goal Template + Strategi Template di Goal Template Library."
+                title="Belum ada Strategy Template"
+                description="Admin dapat membuat template custom nanti. User tetap bisa membuat Strategy manual tanpa template."
                 action={{
                   label: 'Buka Goal Template Library',
                   onPress: () => router.push('/settings-goal-templates' as Href),

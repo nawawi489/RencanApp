@@ -50,9 +50,10 @@ function StrategyTemplatePicker({
   }, [tmplQ.data]);
 
   if (!goalTemplateId) {
+    // V1.83 §18: user "tetap lanjut isi manual" bila library tidak tersedia.
     return (
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        Template tidak tersedia (Goal ini tidak dibuat dari template).
+        Isi Strategy manual — Goal ini tidak dibuat dari Goal Template.
       </Text>
     );
   }
@@ -88,9 +89,24 @@ function StrategyTemplatePicker({
             {tmplQ.isLoading ? (
               <Text className="text-xs text-neutral-400">Memuat template…</Text>
             ) : grouped.length === 0 ? (
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                Belum ada Strategi Template untuk Goal Template ini.
-              </Text>
+              // V1.83 §19: Strategy Template kosong by default; user tetap
+              // bisa membuat Strategy manual tanpa template.
+              <View className="gap-2 py-2">
+                <Text className="text-sm font-semibold text-black dark:text-white">
+                  Belum ada Strategy Template
+                </Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Admin dapat membuat template custom nanti. User tetap bisa membuat Strategy manual tanpa template.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Isi manual"
+                  onPress={() => setOpen(false)}
+                  style={{ minHeight: 44 }}
+                  className="min-h-[44px] items-center justify-center rounded-xl bg-brand-dark px-4 py-2 active:opacity-70">
+                  <Text className="text-sm font-semibold text-white">Isi Manual</Text>
+                </Pressable>
+              </View>
             ) : (
               <ScrollView className="max-h-[60vh]">
                 <View className="gap-3">
