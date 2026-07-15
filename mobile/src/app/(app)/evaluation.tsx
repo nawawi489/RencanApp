@@ -140,7 +140,7 @@ export function LiveEvaluationScreen() {
               );
             })}
           </View>
-          <LabeledInput label="Hasil utama" value={results} onChangeText={setResults} multiline />
+          <LabeledInput label="Hasil tercapai atau belum" value={results} onChangeText={setResults} multiline />
           <LabeledInput label="Lesson learned" value={lessons} onChangeText={setLessons} multiline />
 
           <View className="gap-2">

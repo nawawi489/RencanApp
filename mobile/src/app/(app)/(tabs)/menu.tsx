@@ -104,7 +104,7 @@ const TEMPLATE_ITEMS: MenuItem[] = [
 
 // Bantuan — spec §13. Belum ada layar (help-center/support); tap → toast (owner decision).
 const BANTUAN_ITEMS: MenuItem[] = [
-  { label: 'Pusat Bantuan', description: 'Panduan EMS', text: '?', tone: 'info', toast: true },
+  { label: 'Pusat Bantuan', description: 'Panduan Rencanapp', text: '?', tone: 'info', toast: true },
   { label: 'Support', description: 'Hubungi admin', text: 'CS', tone: 'success', toast: true },
 ];
 
@@ -118,7 +118,7 @@ const PENGATURAN_ITEMS: MenuItem[] = [
   { label: 'Repeat Setting', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
   { label: 'Score Formula', description: 'Rumus score', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
   { label: 'Permission Settings', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
-  { label: 'Minimum Breakdown Rule', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
+  { label: 'Aturan Pecah Target', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
   { label: 'Card Completion Rule', description: 'Aturan selesai', icon: 'checkbox-outline', tone: 'info', href: '/settings-card-completion-rule' as Href, permission: 'manage_card_completion_rule' },
   { label: 'Keterangan Card', description: 'Panduan isi card', icon: 'information-circle-outline', tone: 'info', href: '/settings-card-guidance' as Href, permission: 'manage_card_completion_rule' },
   { label: 'Notifications Rule', description: 'Aturan notifikasi', icon: 'notifications-outline', tone: 'info', href: '/settings-notifications-rule' as Href, permission: 'manage_settings' },

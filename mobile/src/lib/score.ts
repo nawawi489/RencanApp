@@ -15,7 +15,7 @@ export function scoreBand(score: number): ScoreBand {
 export const SCORE_LABEL: Record<ScoreBand, string> = {
   'on-track': 'On track',
   stable: 'Stabil',
-  attention: 'Perlu perhatian',
+  attention: 'Perlu dukungan',
 };
 
 export const SCORE_DESC: Record<ScoreBand, string> = {

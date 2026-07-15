@@ -147,7 +147,6 @@ export default function AppLayout() {
 
       {/* Fase 7 — People & Score (surface) */}
       <Stack.Screen name="people" options={{ headerShown: true, title: 'People' }} />
-      <Stack.Screen name="people-ranking" options={{ headerShown: true, title: 'Ranking' }} />
       <Stack.Screen name="people-profile/[id]" options={{ headerShown: true, title: 'Profil' }} />
       <Stack.Screen
         name="manual-score-override"

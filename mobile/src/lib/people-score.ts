@@ -30,7 +30,6 @@ export const FORMULA_STATUS_LABEL: Record<string, string> = {
 export const PEOPLE_TAB_COPY = {
   monthly: 'Bulan ini',
   quarterly: 'Quarter',
-  ranking: 'Ranking',
   admin: 'Admin',
   quarterlyPlaceholder: 'Laporan Quarter menyusul setelah periode ditutup.',
 } as const;
