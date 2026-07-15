@@ -49,7 +49,7 @@ const ENTRIES: Record<GlossaryTopic, GlossaryEntry> = {
     body: 'Pernyataan masalah di bawah Development Area — fokus pada apa yang perlu diperbaiki, bukan keluhan. Ditangani melalui Rencana Aksi.',
   },
   mbr: {
-    title: 'Minimum Breakdown Rule',
+    title: 'Aturan Pecah Target',
     body: 'Aturan jumlah turunan minimum agar induk bisa diaktifkan (mis. Goal butuh ≥1 Strategi). Mode penegakan: peringatan, blok aktivasi, atau blok tombol tambah.',
   },
   score_formula: {

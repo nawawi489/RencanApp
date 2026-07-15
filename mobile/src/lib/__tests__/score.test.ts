@@ -20,7 +20,7 @@ describe('scoreBand', () => {
 
   it('label & range konsisten dengan threshold', () => {
     expect(SCORE_LABEL['on-track']).toBe('On track');
-    expect(SCORE_LABEL.attention).toBe('Perlu perhatian');
+    expect(SCORE_LABEL.attention).toBe('Perlu dukungan');
     expect(SCORE_RANGE['on-track']).toBe('≥ 85');
     expect(SCORE_RANGE.stable).toBe('70 – 84');
     expect(SCORE_RANGE.attention).toBe('< 70');

@@ -58,7 +58,7 @@ describe('AppLayout', () => {
     await render(<AppLayout />);
 
     expect(String(screen.getByTestId('screen:settings-mbr').props.children)).toContain(
-      JSON.stringify({ headerShown: true, title: 'Minimum Breakdown Rule' }),
+      JSON.stringify({ headerShown: true, title: 'Aturan Pecah Target' }),
     );
     expect(String(screen.getByTestId('screen:settings-score-formula').props.children)).toContain(
       JSON.stringify({ headerShown: true, title: 'Score Formula' }),

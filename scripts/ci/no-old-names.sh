@@ -74,6 +74,9 @@ EXCLUDES=(
   'specs/rollback-plan.md'
   # 0045R migration reverts to legacy names.
   'supabase/migrations/0045R_'
+  # 0059 comments document the pre-rename table name `kpi_area_templates`
+  # (renamed to `strategy_templates` in 0045) for historical context.
+  'supabase/migrations/0059_'
   # Historical SQL contract tests (fase-N_*_contract.sql, 00NN_*_contract.sql).
   # These document DDL against the schema of their time and are not rewritten.
   'supabase/tests/'

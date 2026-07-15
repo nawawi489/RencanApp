@@ -1,4 +1,4 @@
-# PRD FINAL V1.82 - EMS: Rencanapp Execution Management System
+# PRD FINAL V1.83 - Rencanapp Execution Project Management
 
 ## 1. Dokumen
 
@@ -8,14 +8,15 @@ Aturan penamaan: gunakan `Rencanapp` untuk semua penyebutan brand produk di UI, 
 
 Tagline: Rencanakan. Jalankan. Tuntaskan.
 
-Versi PRD: V1.82.
+Versi PRD: V1.83.
 
 Basis revisi:
 
-1. PRD EMS V1.8.1.
+1. PRD EMS V1.82 (source-of-truth sebelumnya, dengan seluruh catatan RWT V1.8.3 dan override 2026-06-29).
 2. API Contract EMS V1.8.1.
 3. Prototype mobile UI terakhir di `outputs/ems-mobile-ui/index.html`.
 4. Keputusan UX terbaru hasil review prototype.
+5. Reposisi V1.83: turunkan tekanan pada staff harian, dorong fitur berat (Score Formula, Governance, Activity Log, Manual Score Override) ke Admin Lanjutan.
 
 Tujuan dokumen ini adalah menjadi source-of-truth untuk implementasi frontend agar Claude Code atau developer lain dapat membuat aplikasi yang sangat mirip dengan prototype saat ini dari sisi fitur, fungsi, UI, UX, dan psikologi penggunaan.
 
@@ -23,17 +24,19 @@ Tujuan dokumen ini adalah menjadi source-of-truth untuk implementasi frontend ag
 
 ## 2. Product Overview
 
-Rencanapp adalah Execution Management System untuk membantu perusahaan mengubah target besar menjadi eksekusi nyata yang bisa dipantau, direview, dibuktikan, dan dipertanggungjawabkan.
+Rencanapp adalah Execution Project Management untuk membantu perusahaan memecah target besar menjadi aksi nyata yang bisa dijalankan, dipantau, direview, dibuktikan, dan dituntaskan.
 
-Rencanapp bukan task management biasa. Task di Rencanapp bukan checklist bebas — Task tunduk Reviewer, evidence, dan Score Formula. Level "Task" adalah unit eksekusi terkecil yang ter-review, bukan to-do publik.
+Rencanapp bukan project management polos yang hanya menyimpan daftar tugas.
+
+Rencanapp bukan task management biasa.
 
 Rencanapp bukan aplikasi chat biasa.
 
 Rencanapp bukan social media.
 
-Rencanapp bukan aplikasi perhitungan KPI formal seperti spreadsheet.
+Rencanapp bukan aplikasi perhitungan indikator formal seperti spreadsheet.
 
-Rencanapp adalah sistem eksekusi berbasis Card yang menghubungkan:
+Rencanapp adalah sistem eksekusi berbasis Card yang menghubungkan target perusahaan dengan pekerjaan harian:
 
 Performance Workspace:
 
@@ -45,21 +48,29 @@ Development Area -> Problem Statement / Development Goal -> Action Plan -> Task
 
 Prinsip utama:
 
-Perusahaan tidak membayar kesibukan. Perusahaan membayar eksekusi yang punya arah, bukti, review, dan hasil.
+1. Target besar harus bisa dipecah menjadi struktur kerja yang mudah dipahami.
+2. User tidak boleh diserbu semua turunan sekaligus; Workspace harus fokus pada periode aktif.
+3. Setiap aksi harus punya PIC, deadline, output yang jelas, dan status yang bisa dipercaya.
+4. Bukti, review, dan hasil dipakai untuk memastikan pekerjaan benar-benar selesai, bukan untuk mempermalukan user.
+5. Fitur penilaian, score, governance, dan aturan lanjutan berada di area admin/advanced, bukan mengganggu user harian.
+
+Kalimat produk:
+
+Rencanakan target. Pecah jadi aksi. Jalankan sampai tuntas.
 
 ---
 
-## 3. Tujuan Produk V1.82
+## 3. Tujuan Produk V1.83
 
 1. Membantu user fokus pada pekerjaan yang relevan hari ini.
-2. Membuat target tahunan dapat dieksekusi dalam periode berjalan tanpa membuat user tenggelam dalam terlalu banyak card.
-3. Menghubungkan Goal tahunan dengan Strategy, Initiative, Action Plan, dan Task secara rapi.
+2. Membuat target perusahaan dapat dipecah menjadi aksi dalam periode berjalan tanpa membuat user tenggelam dalam terlalu banyak Card.
+3. Menghubungkan Goal dengan Strategy, Initiative, Action Plan, dan Task secara rapi.
 4. Membuat Development Workspace fokus pada pembangunan sistem, problem, dan perbaikan proses.
-5. Mengganti follow up manual di WhatsApp dengan Diskusi Rencana Aksi yang kontekstual.
+5. Mengganti follow up manual di chat luar aplikasi dengan Diskusi Rencana Aksi yang kontekstual.
 6. Memastikan setiap pekerjaan punya PIC, Reviewer jika diperlukan, deadline, output, bukti, dan review.
 7. Membuat user non-teknis mudah memahami arti Goal, Strategy, Initiative, Action Plan, dan Task.
-8. Membuat admin dapat mengatur permission, template, score formula, organization, rules, archive, dan governance.
-9. Membuat People menampilkan performa objektif tanpa mempermalukan user.
+8. Membuat admin dapat mengatur permission, template, organization, rules, archive, score formula, dan governance tanpa membebani user harian.
+9. Membuat People menampilkan kontribusi, keterlibatan, dan beban kerja secara objektif tanpa mempermalukan user.
 10. Menjaga UI tetap mobile-first, minimalis, card-based, dan tidak membuat user stres.
 
 ---
@@ -105,7 +116,7 @@ Istilah berikut tetap dipertahankan dalam bahasa Inggris (dengan label UI Bahasa
 10. People.
 11. PIC.
 12. Reviewer.
-13. Minimum Breakdown Rule.
+13. Minimum Breakdown Rule (label UI: Aturan Pecah Target).
 14. Score Formula.
 15. Repeat.
 16. Task Instance (label UI: Instance).
@@ -116,6 +127,8 @@ Catatan V1.8.3:
 Istilah level pada Performance & Development bergeser bottom-up. Identifier kode (tabel DB, RPC, route folder) memakai identifier snake_case baru: `strategy`, `initiative`, `action_plan`, `task`. UI Bahasa Indonesia mengikuti label di kolom "label UI" di atas.
 
 **RWT-12 DECIDED 2026-07-11** — DRI = owner (self), tanggal deliverable = 2026-07-11. Copy label UI di seluruh mobile client sudah shifted ke Indonesian (`Strategi/Inisiatif/Rencana Aksi/Tugas`) via script `english_to_indonesian.js`; body help-popup `glossary.ts` di-rewrite dengan voice PRD §7.8 (tenang, praktis, tidak mengintimidasi). Card guidance seed (`card_guidance_contents`) tetap PENDING follow-up karena butuh review konten setiap topik oleh subject-matter — bisa iteratif tanpa block rilis.
+
+Catatan V1.83: repositioning ke "Execution Project Management" tidak mengubah istilah level di atas. Label UI Indonesia dari RWT-12 tetap berlaku; "Diskusi Rencana Aksi" tetap dipakai untuk chat Action Plan (bukan "Action Plan Chat").
 
 Istilah yang tidak digunakan:
 
@@ -141,9 +154,9 @@ Padanan UI:
 
 ---
 
-## 6. Batasan Produk V1.82
+## 6. Batasan Produk V1.83
 
-Yang masuk V1.82:
+Yang masuk V1.83:
 
 1. Login.
 2. User profile.
@@ -191,7 +204,7 @@ Yang masuk V1.82:
 44. Confidential Access.
 45. Manual Score Override.
 
-Yang tidak masuk V1.82:
+Yang tidak masuk V1.83:
 
 1. Feed.
 2. Company News.
@@ -203,7 +216,7 @@ Yang tidak masuk V1.82:
 8. Payroll.
 9. Inventory.
 10. CRM.
-11. WhatsApp integration.
+11. External chat integration.
 12. Google Calendar integration.
 13. AI Assistant.
 14. AI Review.
@@ -212,12 +225,12 @@ Yang tidak masuk V1.82:
 17. Checklist Routine entity.
 18. Watcher.
 19. Area Goal layer.
-20. KPI child table di bawah Area Goal.
+20. metric child table di bawah Area Goal.
 21. Bobot planning card.
 
 ---
 
-## 7. Keputusan UX Utama V1.82
+## 7. Keputusan UX Utama V1.83
 
 ### 7.1 Bottom Navigation Final
 
@@ -284,19 +297,22 @@ Contoh copy popup:
 
 Lengkapi data wajib terlebih dahulu sebelum Card bisa diaktifkan.
 
-### 7.5 Kelengkapan Perencanaan Tidak Selalu Tampil
+### 7.5 Aturan Pecah Target Tidak Selalu Tampil
 
-Kelengkapan Perencanaan tetap ada sebagai rule backend, tetapi tidak harus selalu tampil sebagai panel besar.
+Aturan Pecah Target tetap ada sebagai rule backend, tetapi tidak harus selalu tampil sebagai panel besar.
 
-Jika user mencoba membuat turunan saat Minimum Breakdown Rule belum terpenuhi:
+Nama backend/admin dapat tetap memakai `Minimum Breakdown Rule`, tetapi UI harian lebih ramah memakai istilah `Aturan Pecah Target`.
+
+Jika Aturan Pecah Target aktif dan user mencoba membuat turunan saat struktur minimum belum terpenuhi:
 
 1. Tombol tambah tetap terlihat.
 2. Saat diklik, sistem menampilkan popup arahan.
-3. Popup menjelaskan kekurangan dan Card apa yang harus dibuat dulu.
+3. Popup menjelaskan jenis Card apa yang perlu dilengkapi dulu.
+4. Angka minimum mengikuti setting admin, bukan angka hard-coded untuk semua perusahaan.
 
 Contoh:
 
-Strategy ini baru punya 2 dari 3 Initiative. Tambahkan 1 Initiative lagi dulu, baru tombol + Action Plan aktif.
+Lengkapi struktur minimum dulu sebelum membuat turunan berikutnya.
 
 ### 7.6 Period Focus Engine
 
@@ -593,7 +609,7 @@ Komponen:
 Performance card:
 
 1. Label: Performance.
-2. Title: Target Kinerja.
+2. Title: Target Perusahaan.
 3. Flow text: Goal -> Strategy -> Initiative -> Action Plan -> Task.
 4. Progress: 72%.
 5. Metric ringkas: Goal, Strategy, Alert.
@@ -630,7 +646,7 @@ Card Goal:
 
 1. Label: Goal.
 2. Period badge: 2026.
-3. Title: Omset 48 Miliar 2026.
+3. Title: Target Pendapatan 48 Miliar 2026.
 4. Metadata: Juni aktif - Target bulan 4M - Aktual 3.1M - Risiko sedang.
 5. Progress orb: Capaian 68%.
 6. Actions: Detail, `...`, + Strategy.
@@ -640,7 +656,7 @@ Card Strategy:
 
 1. Label: Strategy.
 2. Period badge: Juni 2026.
-3. Title: Menambah Jumlah Customer.
+3. Title: Pertumbuhan Pelanggan.
 4. Metadata: Aktual 620 / Target bulan 1.200 - Gap 580 - Butuh 1 Initiative.
 5. Progress orb: 65%.
 6. Actions: Detail, `...`, + Initiative.
@@ -650,8 +666,8 @@ Card Initiative:
 
 1. Label: Initiative.
 2. Period badge: Q2 2026.
-3. Title: Akuisisi Customer via Meta Ads.
-4. Metadata: Kontribusi 42% - Risiko: respon WA lambat - Butuh 1 Action Plan.
+3. Title: Program Akuisisi Pelanggan Digital.
+4. Metadata: Kontribusi 42% - Risiko: respon follow up lambat - Butuh 1 Action Plan.
 5. Progress orb.
 6. Actions: Detail, `...`, + Action Plan.
 7. + Action Plan bisa dikunci Minimum Breakdown Rule.
@@ -660,7 +676,7 @@ Card Action Plan:
 
 1. Label: Action Plan.
 2. Period badge: Juni 2026.
-3. Title: Campaign Paket Hemat Pizza.
+3. Title: Campaign Penawaran Q2.
 4. Metadata: Target 120 lead - PIC Rina - Review bukti tertunda.
 5. Progress orb.
 6. Actions: Detail, `...`, + Task.
@@ -670,7 +686,7 @@ Card Task:
 
 1. Label: Task.
 2. Period badge: Hari ini atau tanggal.
-3. Title: Upload 5 konten angle hemat.
+3. Title: Siapkan materi campaign Q2.
 4. Metadata: Output dan deadline.
 5. Progress orb.
 6. Actions: Detail, `...`.
@@ -700,7 +716,7 @@ Development Area:
 Problem Statement:
 
 1. Label: Problem Statement.
-2. Title: Follow up masih tersebar di WhatsApp.
+2. Title: Follow up pekerjaan belum terpusat.
 3. Metadata: Dampak follow up hilang - Butuh 1 flow review resmi.
 4. Actions: Detail, `...`, + Action Plan.
 
@@ -770,7 +786,7 @@ CTA:
 
 ---
 
-## 18. New Strategy (Area Hasil)
+## 18. New Strategy
 
 Tujuan:
 
@@ -808,14 +824,14 @@ Alasan:
 > terasa seperti spreadsheet". Owner meng-override untuk membuka "% gap" presisi seperti prototype
 > design ("65% / kurang 1.060 customer"). Target angka + Satuan kini **opsional** (bukan wajib) —
 > Strategy kualitatif tetap bebas-satuan, jadi UI tidak dipaksa seperti spreadsheet. Implementasi:
-> migrasi 0032 + `lib/strategy-gap.ts` (rename dari `kpi-gap.ts` di F4) + layar Strategy form/detail + kartu Home "Gap Strategy".
+> migrasi 0032 + `lib/strategy-gap.ts` (rename dari `kpi-gap.ts` di F4) + layar Strategy form/detail + kartu Home "Gap Strategy". Keputusan ini tetap berlaku di V1.83.
 
 Template behavior:
 
 1. Klik Pakai Template membuka bottom sheet.
-2. User memilih tipe Goal: Omset atau Profit.
-3. User memilih area: Sales, Ops, Finance, HC, Growth.
-4. User memilih template.
+2. User memilih template custom yang dibuat admin, atau tetap lanjut isi manual.
+3. Jika library kosong, tampil empty state dan user diarahkan memakai isi manual.
+4. Jika admin sudah membuat template custom, user dapat memilih template.
 5. Setelah template dipilih, Nama Strategy, PIC rekomendasi, Target awal, dan Ekspektasi Hasil terisi otomatis.
 6. User tetap bisa mengedit semua field.
 
@@ -828,53 +844,23 @@ CTA:
 
 ## 19. Strategy Template Library
 
-Template untuk Goal Omset:
+Strategy Template kosong secara default.
 
-Sales & Marketing:
+Sistem tidak menyediakan template bawaan berbasis industri, divisi, atau jenis target tertentu.
 
-1. Menambah Jumlah Customer.
-2. Meningkatkan Basket Size.
+Alasan:
 
-Operations:
+1. EMS harus bisa dipakai lintas industri.
+2. Perusahaan tidak dipaksa mengikuti struktur contoh tertentu.
+3. Admin dapat membuat template sesuai bahasa dan cara kerja perusahaan.
+4. User tetap bisa membuat Strategy manual tanpa template.
 
-1. Meningkatkan Output Produk.
-2. Meningkatkan Produktivitas.
+Empty state:
 
-Finance & Accounting:
-
-1. Ketersediaan Arus Kas yang Memadai.
-2. A/R Collection.
-
-Human Capital:
-
-1. Meningkatkan Kompetensi Karyawan.
-2. Ketersediaan Karyawan (MPP).
-
-Business Growth:
-
-1. Menambah Jumlah Cabang Baru.
-2. Menciptakan Produk / Brand Baru.
-
-Template untuk Goal Profit:
-
-Sales & Marketing:
-
-1. Increase Sales Price.
-2. Minimize Budget.
-
-Operations:
-
-1. Menurunkan OPEX.
-2. Menurunkan Komplain Pelanggan.
-
-Finance & Accounting:
-
-1. Control Budgeting.
-
-Human Capital:
-
-1. Mengurangi Biaya Lembur.
-2. Menurunkan Turnover.
+1. Judul: Belum ada Strategy Template.
+2. Deskripsi: Admin dapat membuat template custom nanti. User tetap bisa membuat Strategy manual tanpa template.
+3. CTA admin: Buat Strategy Template.
+4. CTA user: Isi Manual.
 
 Admin dapat membuat, mengedit, menonaktifkan, dan membuat versi template baru.
 
@@ -882,7 +868,7 @@ Update template tidak otomatis mengubah Strategy aktif.
 
 ---
 
-## 20. New Initiative (Pendekatan Q-focused)
+## 20. New Initiative
 
 Tujuan:
 
@@ -912,7 +898,7 @@ UI:
 
 ---
 
-## 21. New Action Plan (Program Unit)
+## 21. New Action Plan
 
 Tujuan:
 
@@ -1073,18 +1059,18 @@ Backend membuat Notifications dan Activity Log.
 
 ## 26. Evaluation
 
-Evaluation digunakan saat Initiative selesai.
+Evaluation digunakan saat Action Plan selesai.
 
 Field:
 
 1. Target tercapai atau tidak.
-2. Achievement.
+2. Hasil tercapai atau belum.
 3. Faktor berhasil.
 4. Faktor gagal.
 5. Perlu jadi SOP atau tidak.
 6. Perlu rollout atau tidak.
 
-Evaluation default tidak muncul di awal. Ditampilkan saat Initiative sudah mendekati selesai atau selesai.
+Evaluation default tidak muncul di awal. Ditampilkan saat Action Plan sudah mendekati selesai atau selesai.
 
 ---
 
@@ -1102,12 +1088,12 @@ Komponen:
 2. Greeting singkat.
 3. Fokus Hari Ini.
 4. Prioritas yang pas satu layar, tidak horizontal scroll.
-5. Action Plan penting hari ini.
+5. Task penting hari ini.
 6. Update terbaru yang relevan.
 
 Card Fokus Hari Ini:
 
-1. Menampilkan Action Plan atau Repeat Action Plan yang perlu perhatian.
+1. Menampilkan Task atau Repeat Task yang perlu perhatian.
 2. CTA cukup satu: Detail.
 3. Tidak menampilkan banyak CTA seperti Bukti, Chat, Detail sekaligus.
 
@@ -1143,9 +1129,9 @@ Jenis Notifications:
 3. Deadline change request.
 4. Deadline lewat.
 5. Mention.
-6. Permission berubah.
-7. Governance warning.
-8. Minimum Breakdown Rule warning.
+6. Permission berubah jika relevan untuk user tersebut.
+7. Aturan Pecah Target warning jika user sedang membuat turunan.
+8. Warning governance hanya untuk admin/user berwenang.
 9. Repeat due today.
 
 UX:
@@ -1223,49 +1209,53 @@ murni cosmetic.
 
 Tujuan:
 
-Pintu masuk ke profil, People, tools admin, template, settings, archive, dan logout.
+Pintu masuk ke profil, People, bantuan, settings, archive, dan admin tools sesuai permission.
 
 Komponen:
 
 1. Header Menu.
 2. Profile card.
 3. Akses Cepat.
-4. Template accordion.
-5. Bantuan accordion.
-6. Pengaturan accordion.
-7. Admin Lanjutan accordion.
+4. Bantuan accordion.
+5. Pengaturan accordion.
+6. Template accordion jika user punya akses template.
+7. Admin Lanjutan accordion jika user punya akses admin.
 8. Logout.
 
 Akses Cepat:
 
 1. People.
-2. Log Aktivitas.
-3. Archive.
+2. Archive.
+3. Pusat Bantuan.
 
 Template:
 
 1. Goal Template.
 2. Strategy Template.
 
+Strategy Template kosong secara default (§19). Goal Template tetap berisi kategori dasar (Omset/Profit) — bukan daftar per-industri seperti Strategy Template lama, jadi tidak melanggar prinsip lintas-industri §19. Accordion Template hanya tampil jika user punya akses membuat/mengelola template.
+
 Pengaturan:
 
 1. Organisasi.
 2. Repeat Setting.
-3. Score Formula.
-4. Permission Settings.
-5. Minimum Breakdown Rule.
+3. Permission Settings jika user admin.
 
 Admin Lanjutan:
 
-1. Governance.
-2. Confidential.
-3. Override Score.
+1. Minimum Breakdown Rule / Aturan Pecah Target.
+2. Score Formula.
+3. Governance.
+4. Confidential.
+5. Override Score.
+6. Log Aktivitas.
 
 UX:
 
 1. Icon harus berada di tengah frame.
 2. Judul kategori harus seragam ukuran text.
 3. Item admin hanya tampil jika permission mengizinkan.
+4. Staff biasa tidak melihat Score Formula, Governance, Override Score, atau Log Aktivitas sistem sebagai shortcut utama.
 
 ---
 
@@ -1273,16 +1263,16 @@ UX:
 
 Tujuan:
 
-Melihat ranking dan profil pencapaian user secara objektif.
+Melihat daftar People, urutan kontribusi, dan profil user secara objektif.
 
-People bukan tempat mempermalukan orang.
+People bukan tempat mempermalukan orang dan bukan dashboard score yang agresif.
 
 Komponen:
 
 1. Header People.
 2. Search People.
-3. Tabs: Ranking, Bulan ini, Q3 2026, Admin.
-4. Ranking People list.
+3. Filter ringan: Semua, Bulan ini, Tim Saya, Admin jika berwenang.
+4. People list dengan nomor urut kontribusi.
 5. Button Lihat Profil di tiap row.
 6. Admin panel kelola user jika permission admin.
 
@@ -1300,9 +1290,11 @@ People row menampilkan:
 2. Avatar.
 3. Nama.
 4. Jabatan.
-5. Achievement summary.
-6. Score.
+5. Ringkasan kontribusi singkat.
+6. Status ringan jika diperlukan.
 7. Tombol Lihat Profil.
+
+People row tidak menampilkan Trust, Achievement, score formula, governance status, atau angka teknis yang membuat user merasa dinilai berlebihan.
 
 ---
 
@@ -1310,23 +1302,23 @@ People row menampilkan:
 
 Tujuan:
 
-Melihat profil pencapaian dan kontribusi user.
+Melihat profil kontribusi dan keterlibatan user.
 
 Komponen:
 
 1. Profile header.
 2. Nama.
 3. Jabatan dan tanggal bergabung.
-4. Ranking People.
+4. Ranking ringan.
 5. Detail People.
 6. Tugas sebagai accordion.
 7. Kontribusi bulan ini.
-8. Rincian Score.
-9. Riwayat Score.
+8. Rincian kontribusi.
+9. Score detail hanya jika user punya permission admin/management.
 
-Header tidak menampilkan terlalu banyak angka.
+Header tidak menampilkan terlalu banyak angka dan tidak memakai label Trust/Achievement sebagai elemen utama.
 
-Keterlibatan accordion berisi keterlibatan user di:
+Tugas accordion berisi keterlibatan user di:
 
 1. Task.
 2. Action Plan.
@@ -1352,7 +1344,9 @@ Setiap perubahan permission wajib:
 
 ### 34.2 Score Formula
 
-Mengatur rumus score.
+Mengatur rumus score sebagai fitur admin lanjutan.
+
+Score Formula tidak tampil di UI utama staff.
 
 Wajib mendukung:
 
@@ -1375,24 +1369,35 @@ Mengatur:
 5. Reporting line.
 6. Role Template.
 
-### 34.4 Minimum Breakdown Rule
+### 34.4 Minimum Breakdown Rule / Aturan Pecah Target
 
-Mengatur batas minimum Card turunan.
+Mengatur batas minimum Card turunan agar target tidak berhenti sebagai rencana besar tanpa aksi.
 
-Default Performance:
+Prinsip:
 
-1. Strategy minimal 3 Initiative sebelum + Action Plan aktif.
-2. Initiative minimal 3 Action Plan sebelum + Task aktif.
-3. Action Plan minimal 3 Task sebagai standar eksekusi lengkap.
-4. Task tidak punya MBR default (level operasional harian). Seed migrasi 0049 memasang default 3 sesuai RWT-09 A; admin org bisa turunkan ke 0 lewat Settings.
+1. Rule ini bersifat opsional per organization/workspace.
+2. Angka minimum dapat dikonfigurasi admin.
+3. UI user harian memakai istilah `Aturan Pecah Target`.
+4. Backend tetap boleh memakai istilah `Minimum Breakdown Rule`.
+5. Jika rule nonaktif, tombol buat turunan mengikuti permission biasa.
 
-Default Development:
+Contoh konfigurasi Performance:
 
-1. Development Area minimal 1 Problem Statement / Development Goal.
-2. Problem Statement minimal 1 Action Plan.
-3. Action Plan minimal 3 Task.
+1. Strategy membutuhkan sejumlah Initiative sebelum + Action Plan aktif.
+2. Initiative membutuhkan sejumlah Action Plan sebelum + Task aktif.
+3. Action Plan dapat mensyaratkan sejumlah Task agar dianggap lengkap.
 
-Mode default: Blokir Tombol Turunan.
+Contoh konfigurasi Development:
+
+1. Development Area dapat mensyaratkan Problem Statement / Development Goal.
+2. Problem Statement dapat mensyaratkan Action Plan.
+3. Action Plan dapat mensyaratkan Task.
+
+Mode yang didukung:
+
+1. Nonaktif.
+2. Peringatan saja.
+3. Blokir Tombol Turunan.
 
 ### 34.5 Card Completion Rule
 
@@ -1425,7 +1430,7 @@ Mengatur akses khusus dengan alasan, approval, dan log.
 
 ### 34.10 Manual Score Override
 
-Hanya untuk user berwenang.
+Hanya untuk user berwenang dan tidak tampil di UI default.
 
 Tidak menghapus score otomatis.
 
@@ -1444,12 +1449,13 @@ Catatan V1.8.3 (RWT-07 default A): row historis Activity Log yang menyimpan lite
 TIDAK di-backfill demi audit integrity. Read-side rendering memakai helper
 `public.map_legacy_entity_type(text)` untuk menampilkan label baru; row baru menulis literal enum
 V1.8.3 (`'strategy'` = area hasil, `'initiative'` = pendekatan, `'action_plan'` = program unit,
-`'task'` = unit eksekusi, `'task_instance'`).
+`'task'` = unit eksekusi, `'task_instance'`). Kebijakan ini tetap berlaku di V1.83.
 
 Default:
 
-1. Di detail Card tampil sebagai accordion tertutup.
-2. Di Menu ada screen Log Aktivitas untuk pencarian.
+1. Di detail Card tampil sebagai accordion tertutup jika relevan.
+2. Di Menu hanya tampil untuk admin/user berwenang.
+3. Staff tidak melihat Log Aktivitas sebagai shortcut utama.
 
 Event yang dicatat:
 
@@ -1473,18 +1479,18 @@ Event yang dicatat:
 
 ## 36. Governance Violation
 
-Governance Violation muncul saat rule penting dilanggar.
+Governance Violation muncul saat rule penting dilanggar, tetapi UI default staff cukup menerima arahan singkat melalui popup/Notifications.
 
 Contoh:
 
 1. Reviewer sama dengan PIC.
-2. User mencoba membuat turunan saat Minimum Breakdown Rule belum terpenuhi.
+2. User mencoba membuat turunan saat Aturan Pecah Target aktif dan struktur minimum belum terpenuhi.
 3. User mencoba aktifkan Card dengan field wajib kosong.
 4. User melewati deadline Task Repeat.
 5. User mencoba akses confidential tanpa izin.
 6. User mengubah target tanpa alasan.
 
-UI:
+UI admin:
 
 1. Menampilkan severity.
 2. Menampilkan entity terkait.
@@ -1576,7 +1582,7 @@ Prinsip:
 
 Contoh empty:
 
-Belum ada Action Plan untuk periode ini. Buat Action Plan setelah Initiative aktif.
+Belum ada Task untuk periode ini. Buat Task setelah Action Plan aktif.
 
 Contoh error:
 
@@ -1633,7 +1639,7 @@ Error response:
 
 ---
 
-## 42. Screen List V1.82
+## 42. Screen List V1.83
 
 Screens wajib:
 
@@ -1670,21 +1676,21 @@ Screens wajib:
 31. Menu.
 32. People.
 33. People Profile.
-34. Score Formula Settings.
-35. Permission Settings.
+34. Score Formula Settings (admin/advanced).
+35. Permission Settings (admin).
 36. Repeat Rule Settings.
 37. Goal Template Library.
 38. Strategy Template Library.
 39. Organization Settings.
-40. Minimum Breakdown Rule Settings.
-41. Activity Log.
-42. Governance Violation.
+40. Minimum Breakdown Rule Settings (admin/advanced).
+41. Activity Log (admin/permission-based).
+42. Governance Violation (admin/permission-based).
 43. Archive.
 44. Global Search.
-45. Confidential Access.
-46. Manual Score Override.
+45. Confidential Access (admin/permission-based).
+46. Manual Score Override (admin/advanced).
 
-People Ranking terpisah tidak wajib menjadi screen utama karena ranking sudah ada di People. Jika tetap dibuat, posisinya sebagai sub-view People, bukan bottom nav baru.
+Screen People Ranking terpisah tidak dibuat di UI default. Urutan kontribusi cukup berada di People, bukan bottom nav dan bukan shortcut utama.
 
 ---
 
@@ -1699,51 +1705,51 @@ User utama:
 
 1. Rina Jaya.
 2. Initial: RJ.
-3. Role: Staf Marketing.
-4. Score: 86.
-5. Rank: 1.
+3. Role: Staff.
+4. Urutan kontribusi: 1.
+5. Status: Stabil.
 
 Performance example:
 
-1. Goal: Omset 48 Miliar 2026.
-2. Strategy: Menambah Jumlah Customer.
-3. Strategy: Meningkatkan Basket Size.
-4. Strategy: Meningkatkan Output Produk.
-5. Initiative: Akuisisi Customer via Meta Ads.
-6. Action Plan: Campaign Paket Hemat Pizza.
-7. Task: Upload 5 konten angle hemat.
+1. Goal: Target Pendapatan 48 Miliar 2026.
+2. Strategy: Pertumbuhan Pelanggan.
+3. Strategy: Peningkatan Nilai Transaksi.
+4. Strategy: Peningkatan Kapasitas Output.
+5. Initiative: Program Akuisisi Pelanggan Digital.
+6. Action Plan: Campaign Penawaran Q2.
+7. Task: Siapkan materi campaign Q2.
 
 Development example:
 
 1. Development Area: Pembangunan Sistem.
-2. Problem Statement: Follow up masih tersebar di WhatsApp.
-3. Action Plan: Bangun EMS V1.
-4. Task: Finalisasi UI blueprint mobile.
+2. Problem Statement: Follow up pekerjaan belum terpusat.
+3. Action Plan: Bangun alur review terpusat.
+4. Task: Finalisasi flow review mobile.
 
 Inbox example:
 
-1. Campaign Paket Hemat Pizza.
-2. Pindahkan Review dari WA ke EMS.
-3. Outlet Promo Landing Flow.
-4. SOP Finance Development.
+1. Campaign Penawaran Q2.
+2. Pindahkan Review ke sistem kerja.
+3. Optimasi Alur Konversi.
+4. Standarisasi Proses Review.
 
 People example:
 
-1. Rina Jaya - Score 86 - Rank 1.
-2. Arman Malik - Score 82 - Rank 2.
-3. Maya Sari - Score 78 - Rank 3.
-4. Dika Saputra - Score 74 - Rank 4.
+1. Rina Jaya - Urutan kontribusi 1 - Stabil.
+2. Arman Malik - Urutan kontribusi 2 - Stabil.
+3. Maya Sari - Urutan kontribusi 3 - Perlu dukungan.
+4. Dika Saputra - Urutan kontribusi 4 - Stabil.
 
 ---
 
 ## 44. Acceptance Criteria
 
-Frontend dianggap sesuai V1.82 jika:
+Frontend dianggap sesuai V1.83 jika:
 
 1. Mobile-first dan nyaman di viewport 390 px.
 2. Bottom nav final: Home, Notif, Workspace, Inbox, Menu.
 3. Header global Rencanapp konsisten.
-4. Menu menjadi akses People, Template, Settings, Admin, Archive, Logout.
+4. Menu default berisi People, Archive, Pusat Bantuan, dan akses settings/admin sesuai permission.
 5. Workspace memakai card tree dengan Detail dan panah terpisah.
 6. Performance dan Development punya pola UI yang sama.
 7. Periode aktif default bulan berjalan.
@@ -1754,7 +1760,7 @@ Frontend dianggap sesuai V1.82 jika:
 12. Strategy punya pecahan target Quarter dan Bulan total 100%.
 13. New Strategy default manual, template sebagai solusi cepat via popup.
 14. Kelengkapan Card tidak memenuhi layar, tetapi divalidasi saat Aktifkan Card.
-15. Minimum Breakdown Rule mengunci tombol turunan dengan popup.
+15. Minimum Breakdown Rule / Aturan Pecah Target mengunci tombol turunan dengan popup jika rule aktif.
 16. Task mendukung One Time dan Repeat.
 17. Repeat menghasilkan Task Instance.
 18. Bukti memakai versioning.
@@ -1763,9 +1769,9 @@ Frontend dianggap sesuai V1.82 jika:
 21. Task dapat membuka chat dengan konteks reply.
 22. Notifications bukan chat.
 23. Inbox bukan action queue.
-24. People menampilkan ranking objektif tanpa mempermalukan user.
+24. People menampilkan urutan kontribusi ringan tanpa mempermalukan user.
 25. Admin settings mengikuti permission.
-26. Activity Log default tidak intimidatif.
+26. Activity Log tidak menjadi shortcut default staff dan hanya tampil sesuai permission.
 27. Search dan Archive mengikuti permission.
 28. Tidak ada Feed, Company News, Announcement, Routine, Checklist Routine, Watcher, Area Goal.
 
@@ -1773,7 +1779,7 @@ Frontend dianggap sesuai V1.82 jika:
 
 ## 45. Final Product Statement
 
-Rencanapp V1.82 adalah mobile-first execution governance app yang membantu perusahaan menjalankan target tahunan menjadi eksekusi bulanan, quarter, dan harian tanpa membuat user bingung.
+Rencanapp V1.83 adalah mobile-first execution governance app yang membantu perusahaan menjalankan target tahunan menjadi eksekusi bulanan, quarter, dan harian tanpa membuat user bingung.
 
 User staff melihat pekerjaan yang perlu dilakukan.
 

@@ -132,7 +132,15 @@ export default function GoalWizardScreen() {
                   />
                 ))}
               </View>
-            ) : null}
+            ) : (
+              // V1.83 §19: Strategy Template kosong secara default — Goal Template ini
+              // belum punya Strategy Template custom. Generate tetap membuat Goal, tapi
+              // tanpa Strategy turunan; jangan biarkan itu jadi kejutan diam-diam.
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                Belum ada Strategy Template untuk Goal Template ini. Goal akan dibuat tanpa
+                Strategy — tambahkan Strategy secara manual setelah Generate.
+              </Text>
+            )}
 
             <View className="flex-row gap-3">
               <Button label="Kembali" variant="secondary" onPress={back} />

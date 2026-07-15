@@ -125,7 +125,7 @@ export default function AppLayout() {
       <Stack.Screen name="settings-goal-templates" options={{ headerShown: true, title: 'Goal Template' }} />
       <Stack.Screen
         name="settings-mbr"
-        options={{ headerShown: true, title: 'Minimum Breakdown Rule' }}
+        options={{ headerShown: true, title: 'Aturan Pecah Target' }}
       />
       <Stack.Screen
         name="settings-score-formula"
@@ -147,7 +147,6 @@ export default function AppLayout() {
 
       {/* Fase 7 — People & Score (surface) */}
       <Stack.Screen name="people" options={{ headerShown: true, title: 'People' }} />
-      <Stack.Screen name="people-ranking" options={{ headerShown: true, title: 'Ranking' }} />
       <Stack.Screen name="people-profile/[id]" options={{ headerShown: true, title: 'Profil' }} />
       <Stack.Screen
         name="manual-score-override"

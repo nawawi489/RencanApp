@@ -34,7 +34,7 @@ function MbrExampleCard() {
         <Badge label="Edukasi" tone="info" />
       </View>
       <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-        Saat kartu induk belum memenuhi Minimum Breakdown Rule, tombol Aktifkan akan tampil non-aktif
+        Saat kartu induk belum memenuhi Aturan Pecah Target, tombol Aktifkan akan tampil non-aktif
         dengan indikator rasio turunan.
       </Text>
       <View className="gap-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
@@ -169,10 +169,10 @@ export default function SettingsMbrScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Minimum Breakdown Rule' }} />
+      <Stack.Screen options={{ title: 'Aturan Pecah Target' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Minimum Breakdown Rule</Text>
+          <Text className="text-2xl font-bold text-black dark:text-white">Aturan Pecah Target</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Aturan jumlah minimum kartu turunan per tingkat.
           </Text>
@@ -183,7 +183,7 @@ export default function SettingsMbrScreen() {
               Anda tidak memiliki akses
             </Text>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Pengaturan Minimum Breakdown Rule hanya untuk pemegang izin Kelola Minimum Breakdown Rule.
+              Pengaturan Aturan Pecah Target hanya untuk pemegang izin Kelola Aturan Pecah Target.
             </Text>
           </SectionCard>
         ) : isLoading ? (
