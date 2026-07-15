@@ -69,7 +69,7 @@ jest.mock('@/hooks/use-chat-attachment-flow', () => ({
 
 jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
-  MediaTypeOptions: { Images: 'Images' },
+  MediaType: { images: 'images' },
 }));
 
 jest.mock('@/hooks/use-profile', () => ({

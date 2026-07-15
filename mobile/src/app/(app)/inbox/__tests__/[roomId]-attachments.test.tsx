@@ -65,7 +65,7 @@ jest.mock('@/hooks/use-chat-attachment-flow', () => ({
 const mockLaunchImageLibraryAsync = jest.fn();
 jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: (...a: unknown[]) => mockLaunchImageLibraryAsync(...a),
-  MediaTypeOptions: { Images: 'Images' },
+  MediaType: { images: 'images' },
 }));
 
 jest.mock('expo-linking', () => ({

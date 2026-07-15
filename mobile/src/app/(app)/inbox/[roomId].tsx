@@ -748,7 +748,7 @@ export default function ChatRoomScreen() {
   async function handleAttach() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsMultipleSelection: true,
         selectionLimit: CHAT_MAX_ATTACHMENTS - pendingFiles.length,
         quality: 0.8,
