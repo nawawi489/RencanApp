@@ -10,12 +10,12 @@ import { reportError } from '@/lib/errors';
 import { upsertSettings } from '@/lib/governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 
-const CARD_TYPES = ['goal', 'strategy', 'initiative', 'action_plan', 'task'] as const;
+const CARD_TYPES = ['goal', 'kpi_area', 'strategy', 'initiative', 'action_plan'] as const;
 
 export default function SettingsCardCompletionRuleScreen() {
   const { can } = useProfile();
   const allowed = can('manage_card_completion_rule') || can('manage_settings');
-  const [cardType, setCardType] = useState<(typeof CARD_TYPES)[number]>('task');
+  const [cardType, setCardType] = useState<(typeof CARD_TYPES)[number]>('action_plan');
   const [minComments, setMinComments] = useState('0');
   const [requireEvidence, setRequireEvidence] = useState(true);
   const [saving, setSaving] = useState(false);

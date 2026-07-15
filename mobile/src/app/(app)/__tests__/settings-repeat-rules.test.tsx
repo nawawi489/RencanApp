@@ -45,14 +45,14 @@ describe('Settings > Repeat Setting (inventory)', () => {
   it('empty state — tidak ada repeat rule', async () => {
     mockListAll.mockResolvedValue([]);
     await render(<SettingsRepeatRulesScreen />, { wrapper: wrapper() });
-    await waitFor(() => expect(screen.getByText(/Belum ada Tugas repeat/i)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Belum ada Action Plan repeat/i)).toBeTruthy());
   });
 
   it('list — render frequency + range + status badge', async () => {
     mockListAll.mockResolvedValue([
       {
         id: 'r1',
-        task_id: 'ap1',
+        action_plan_id: 'ap1',
         frequency: 'daily',
         weekdays: null,
         month_days: null,
@@ -66,7 +66,7 @@ describe('Settings > Repeat Setting (inventory)', () => {
         created_at: '2026-06-01T00:00:00Z',
         updated_at: '2026-06-15T00:00:00Z',
         created_by: 'u1',
-        task: { id: 'ap1', name: 'Cek performa outlet harian', status: 'in_progress' },
+        action_plan: { id: 'ap1', name: 'Cek performa outlet harian', status: 'in_progress' },
       },
     ]);
     await render(<SettingsRepeatRulesScreen />, { wrapper: wrapper() });
@@ -75,11 +75,11 @@ describe('Settings > Repeat Setting (inventory)', () => {
     expect(screen.getByText(/2026-06-01 → 2026-12-31/)).toBeTruthy();
   });
 
-  it('tap row → push /task/<id>', async () => {
+  it('tap row → push /action-plan/<id>', async () => {
     mockListAll.mockResolvedValue([
       {
         id: 'r1',
-        task_id: 'ap1',
+        action_plan_id: 'ap1',
         frequency: 'weekly',
         weekdays: [1, 3, 5],
         month_days: null,
@@ -93,12 +93,12 @@ describe('Settings > Repeat Setting (inventory)', () => {
         created_at: '2026-06-01T00:00:00Z',
         updated_at: '2026-06-10T00:00:00Z',
         created_by: 'u1',
-        task: { id: 'ap1', name: 'Standup mingguan', status: 'assigned' },
+        action_plan: { id: 'ap1', name: 'Standup mingguan', status: 'assigned' },
       },
     ]);
     await render(<SettingsRepeatRulesScreen />, { wrapper: wrapper() });
     const row = await screen.findByText('Standup mingguan');
     fireEvent.press(row);
-    expect(mockPush).toHaveBeenCalledWith('/task/ap1');
+    expect(mockPush).toHaveBeenCalledWith('/action-plan/ap1');
   });
 });

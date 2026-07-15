@@ -2,10 +2,8 @@
 //
 // Alur: verifikasi JWT pemanggil → cek has_permission('manage_users_permissions') (server penegak
 // akhir; pola guard sama dengan set_user_permission 0041) → guard eskalasi role → admin.createUser
-// dengan app_metadata.role_level → PIN role_template_id di public.profiles secara eksplisit
-// (trigger handle_new_user 0015/F-5 berjalan AFTER INSERT sebelum GoTrue meng-UPDATE app_metadata,
-// sehingga role_level tidak kelihatan; manual test ADM-16 2026-07-10 menangkap regresi ini) →
-// audit ke activity_logs.
+// dengan app_metadata.role_level (dihormati trigger handle_new_user 0015/F-5, yang membuat
+// public.profiles otomatis) → audit ke activity_logs.
 //
 // Guard eskalasi: role 'ceo' tidak bisa dibuat dari endpoint ini; 'c_level' hanya oleh CEO.
 // SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY di-inject otomatis oleh platform.
@@ -112,45 +110,15 @@ Deno.serve(async (req) => {
     return reply(500, { error: 'Gagal membuat user. Coba lagi.', requestId });
   }
 
-  // Pin role_template_id di profil user baru. Trigger handle_new_user (AFTER INSERT auth.users)
-  // jalan sebelum GoTrue meng-UPDATE app_metadata, jadi role_level belum tampak dan trigger
-  // jatuh ke default 'staff'. Kita perbaiki di sini pakai org milik actor + level yang diminta;
-  // fallback ke 'staff' bila tidak ketemu agar user tetap punya profil valid.
+  // Audit best-effort (pola write_activity 0005): user SUDAH dibuat — kegagalan audit tidak
+  // membatalkan hasil, hanya dicatat ke log.
   const { data: actorProfile } = await adminClient
     .from('profiles')
     .select('organization_id')
     .eq('id', actorId)
     .single();
-  const orgId = actorProfile?.organization_id ?? null;
-  if (orgId) {
-    const { data: roleRow } = await adminClient
-      .from('role_templates')
-      .select('id')
-      .eq('organization_id', orgId)
-      .eq('level', roleLevel)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (roleRow?.id) {
-      const { error: profileError } = await adminClient
-        .from('profiles')
-        .update({ role_template_id: roleRow.id, organization_id: orgId })
-        .eq('id', created.user.id);
-      if (profileError)
-        log('error', 'profile_role_pin_failed', {
-          actorId,
-          userId: created.user.id,
-          code: (profileError as { code?: string }).code,
-        });
-    } else {
-      log('warn', 'role_template_missing', { actorId, orgId, roleLevel });
-    }
-  }
-
-  // Audit best-effort (pola write_activity 0005): user SUDAH dibuat — kegagalan audit tidak
-  // membatalkan hasil, hanya dicatat ke log.
   const { error: auditError } = await adminClient.from('activity_logs').insert({
-    organization_id: orgId,
+    organization_id: actorProfile?.organization_id ?? null,
     actor_id: actorId,
     entity_type: 'user',
     entity_id: created.user.id,

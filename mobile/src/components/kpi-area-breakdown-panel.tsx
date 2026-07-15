@@ -1,8 +1,8 @@
-// Panel "Pecahan Target Strategi" (UI-S-K01) — PRD V1.8.2 §12.
+// Panel "Pecahan Target KPI Area" (UI-S-K01) — PRD V1.8.2 §12.
 //
-// Tampil di strategy/[id]. Membaca breakdown via useStrategyBreakdown; gating Edit lewat:
+// Tampil di kpi-area/[id]. Membaca breakdown via useKpiAreaBreakdown; gating Edit lewat:
 //   - has_permission('manage_others_cards')
-//   - ATAU current user = pic_id / created_by Strategi (server tetap penegak akhir di RPC).
+//   - ATAU current user = pic_id / created_by KPI Area (server tetap penegak akhir di RPC).
 //
 // Editor modal:
 //   - Tab Quarter: 4 input numerik (Q1..Q4), bar progress Σ live (target 100%).
@@ -14,7 +14,7 @@ import { Modal, TextInput } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, ProgressBar, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
-import { useStrategyBreakdown, useStrategyBreakdownActions } from '@/hooks/use-workspace';
+import { useKpiAreaBreakdown, useKpiAreaBreakdownActions } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import {
   MONTH_KEYS,
@@ -27,7 +27,7 @@ import {
   type MonthKey,
   type QuarterInput,
   type QuarterKey,
-} from '@/lib/strategy-breakdown';
+} from '@/lib/kpi-area-breakdown';
 import { alertFriendlyError } from '@/lib/errors';
 
 type EditTab = 'quarter' | 'month';
@@ -51,17 +51,17 @@ function parsePct(s: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function StrategyBreakdownPanel({
-  strategyId,
+export function KpiAreaBreakdownPanel({
+  kpiAreaId,
   picId,
   createdBy,
 }: {
-  strategyId: string;
+  kpiAreaId: string;
   picId: string | null | undefined;
   createdBy: string | null | undefined;
 }) {
   const { profile, can } = useProfile();
-  const { rows, isLoading, isError, refetch } = useStrategyBreakdown(strategyId);
+  const { rows, isLoading, isError, refetch } = useKpiAreaBreakdown(kpiAreaId);
 
   const canEdit =
     can('manage_others_cards') ||
@@ -181,7 +181,7 @@ export function StrategyBreakdownPanel({
       <BreakdownEditorModal
         open={open}
         onClose={() => setOpen(false)}
-        strategyId={strategyId}
+        kpiAreaId={kpiAreaId}
         initialQuarter={quarterMap}
         initialMonth={monthMap}
       />
@@ -205,13 +205,13 @@ function emptyMonthDraft(): MonthDraft {
 function BreakdownEditorModal({
   open,
   onClose,
-  strategyId,
+  kpiAreaId,
   initialQuarter,
   initialMonth,
 }: {
   open: boolean;
   onClose: () => void;
-  strategyId: string;
+  kpiAreaId: string;
   initialQuarter: Record<QuarterKey, number>;
   initialMonth: Record<QuarterKey, Partial<Record<MonthKey, number>>>;
 }) {
@@ -233,7 +233,7 @@ function BreakdownEditorModal({
   });
   const [reason, setReason] = useState('');
   const placeholderColor = usePlaceholderColor();
-  const { replace, isPending } = useStrategyBreakdownActions(strategyId);
+  const { replace, isPending } = useKpiAreaBreakdownActions(kpiAreaId);
 
   // Reset draft saat modal transisi tertutup → terbuka (pola "adjust state on prop change" react.dev).
   // Selama modal terbuka, perubahan initialQuarter/initialMonth diabaikan agar tidak menimpa edit user.

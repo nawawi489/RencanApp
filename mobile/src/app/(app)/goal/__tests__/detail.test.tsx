@@ -10,12 +10,12 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockUseGoal = jest.fn();
-const mockUseStrategies = jest.fn();
+const mockUseKpiAreas = jest.fn();
 const mockActivate = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useGoal: (id: string) => mockUseGoal(id),
-  useStrategies: (id: string) => mockUseStrategies(id),
+  useKpiAreas: (id: string) => mockUseKpiAreas(id),
   useGoalActions: () => ({ activate: mockActivate, isPending: false }),
 }));
 
@@ -46,15 +46,15 @@ const refetch = jest.fn();
 
 beforeEach(() => {
   mockUseGoal.mockReset();
-  mockUseStrategies.mockReset();
+  mockUseKpiAreas.mockReset();
   mockActivate.mockReset();
   refetch.mockReset();
   // default: KPI list resolved kosong; tiap test override yang relevan.
-  mockUseStrategies.mockReturnValue({ strategies: [], isLoading: false, isError: false, refetch });
+  mockUseKpiAreas.mockReturnValue({ kpiAreas: [], isLoading: false, isError: false, refetch });
 });
 
 describe('GoalDetailScreen', () => {
-  it('data → nama goal + status badge + Strategi tampil', async () => {
+  it('data → nama goal + status badge + KPI Area tampil', async () => {
     mockUseGoal.mockReturnValue({
       goal: {
         id: 'g1',
@@ -69,8 +69,8 @@ describe('GoalDetailScreen', () => {
       isError: false,
       refetch,
     });
-    mockUseStrategies.mockReturnValue({
-      strategies: [{ id: 'k1', name: 'Akuisisi Pelanggan', status: 'active' }],
+    mockUseKpiAreas.mockReturnValue({
+      kpiAreas: [{ id: 'k1', name: 'Akuisisi Pelanggan', status: 'active' }],
       isLoading: false,
       isError: false,
       refetch,
@@ -80,7 +80,7 @@ describe('GoalDetailScreen', () => {
 
     expect(await screen.findByText('Tumbuhkan pendapatan')).toBeTruthy();
     expect(screen.getByText('Draft')).toBeTruthy(); // status badge goal
-    expect(screen.getByText('Akuisisi Pelanggan')).toBeTruthy(); // minimal satu Strategi
+    expect(screen.getByText('Akuisisi Pelanggan')).toBeTruthy(); // minimal satu KPI Area
   });
 
   it('deep-link luar scope → ErrorState generik, tidak membocorkan nama card', async () => {

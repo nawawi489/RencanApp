@@ -1,5 +1,5 @@
 // Notifications (Fase 3) — segmentasi 8 tab + 4 state per tab. Baris menandai dibaca saat ditekan;
-// notifikasi task membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
+// notifikasi action_plan membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
 // UI-S-N01 — tombol aksi inline per row sesuai (type, entity_type).
 // UI-S-N02 — section "Baru" (≤24 jam) vs "Sebelumnya".
 import { Ionicons } from '@expo/vector-icons';
@@ -79,14 +79,14 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
 function inlineAction(item: Notification): { label: string; href: Href | null } | null {
   const t: NotificationType = item.type;
   const et = item.entity_type;
-  const detail: Href = (et === 'task_instance'
-    ? `/task/instance/${item.entity_id}`
-    : `/task/${item.entity_id}`) as Href;
+  const detail: Href = (et === 'action_plan_instance'
+    ? `/action-plan/instance/${item.entity_id}`
+    : `/action-plan/${item.entity_id}`) as Href;
   if (item.resolved_at) return { label: 'Lihat Detail', href: detail };
-  if (et === 'task_instance') {
+  if (et === 'action_plan_instance') {
     return { label: 'Buka Instance', href: detail };
   }
-  if (et === 'task') {
+  if (et === 'action_plan') {
     if (t === 'review_request') return { label: 'Review Sekarang', href: detail };
     if (t === 'rejected') return { label: 'Lihat Revisi', href: detail };
     if (t === 'approved') return { label: 'Lihat Bukti', href: detail };
@@ -233,10 +233,10 @@ export function LiveNotificationsScreen() {
 
   function openRow(item: Notification) {
     markRead(item.id);
-    if (item.entity_type === 'task') {
-      router.push(`/task/${item.entity_id}` as Href);
-    } else if (item.entity_type === 'task_instance') {
-      router.push(`/task/instance/${item.entity_id}` as Href);
+    if (item.entity_type === 'action_plan') {
+      router.push(`/action-plan/${item.entity_id}` as Href);
+    } else if (item.entity_type === 'action_plan_instance') {
+      router.push(`/action-plan/instance/${item.entity_id}` as Href);
     }
   }
 

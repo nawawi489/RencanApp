@@ -33,7 +33,7 @@ beforeEach(() => {
   mockSendChatMessage.mockReset();
   mockMarkChatMessagesRead.mockReset();
   mockListChatRooms.mockResolvedValue([
-    { id: 'r1', action_plan_id: 'i1', name: 'Room A', unread_count: 2, last_message_at: '2026-06-24T01:00:00Z' },
+    { id: 'r1', initiative_id: 'i1', name: 'Room A', unread_count: 2, last_message_at: '2026-06-24T01:00:00Z' },
   ]);
   mockListChatMessages.mockResolvedValue([
     { id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'Halo', created_at: '2026-06-24T01:00:00Z' },

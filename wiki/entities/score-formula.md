@@ -1,16 +1,13 @@
 ---
 type: entity
-tags: [score, performance, formula, admin-lanjutan]
-updated: 2026-07-15
+tags: [score, performance, formula]
+updated: 2026-06-22
 sources: 1
 ---
 
 # Score Formula
 
-Mesin penilaian performa user. Kontras penting: planning card **tanpa bobot**, tetapi **Score Formula punya bobot**.
-
-> [!warning] V1.83 §34.2 — Admin Lanjutan only
-> Score Formula tidak tampil di UI utama staff. Setting-nya di **Menu → Admin Lanjutan** (gated per permission). Angka score juga tidak lagi ditampilkan di [[surfaces#People|People]] row untuk staff biasa — People row V1.83 menampilkan "urutan kontribusi + status ringan" (Stabil/Perlu dukungan), bukan Trust/Achievement/Score. Score detail hanya muncul di People Profile jika viewer punya permission admin/management. Kalkulasi tetap berjalan seperti biasa — yang berubah hanya visibility.
+Mesin penilaian performa user di [[surfaces#People|People]]. Kontras penting: planning card **tanpa bobot**, tetapi **Score Formula punya bobot**. Dapat dicustom dari [[surfaces#Settings|Settings]].
 
 ## Aturan inti
 
@@ -29,6 +26,6 @@ Mesin penilaian performa user. Kontras penting: planning card **tanpa bobot**, t
 
 ## Manual Override
 
-Bukan default; hanya user berwenang. **V1.83 §34.10:** tidak tampil di UI default — akses via **Menu → Admin Lanjutan → Override Score**. Wajib simpan auto-calculated score, manual adjusted score, reason, changed/approved by, timestamp, + entri [[audit-governance#Activity Log|Activity Log]] & Governance. **Tidak boleh menghapus hasil perhitungan otomatis.**
+Bukan default; hanya user berwenang. Wajib simpan auto-calculated score, manual adjusted score, reason, changed/approved by, timestamp, + entri [[audit-governance#Activity Log|Activity Log]]. **Tidak boleh menghapus hasil perhitungan otomatis.**
 
 Berkaitan dengan: [[action-plan]], [[surfaces]], [[audit-governance]], [[database-blueprint]].

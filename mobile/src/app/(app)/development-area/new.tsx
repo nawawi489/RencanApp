@@ -4,10 +4,10 @@ import { Alert } from 'react-native';
 import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
-import { DateRangeField } from '@/components/date-range-field';
+import { DateField } from '@/components/date-field';
 import { UserPicker } from '@/components/user-picker';
 import { useDevelopmentAreaActions } from '@/hooks/use-workspace';
-import { periodError } from '@/lib/date';
+import { DATE_HINT, periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
 import type { PersonRef } from '@/lib/cards';
 
@@ -64,12 +64,8 @@ export default function NewDevelopmentAreaScreen() {
             placeholder="mis. System Development"
           />
           <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
-          <DateRangeField
-            startValue={periodStart}
-            endValue={periodEnd}
-            onStartChange={setPeriodStart}
-            onEndChange={setPeriodEnd}
-          />
+          <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
+          <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
           <LabeledInput
             label="Deskripsi (opsional)"
             value={description}

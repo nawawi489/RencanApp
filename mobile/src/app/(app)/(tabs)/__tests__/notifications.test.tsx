@@ -39,7 +39,7 @@ function wrapper() {
 const ROW = {
   id: 'n1',
   type: 'review_request',
-  entity_type: 'task',
+  entity_type: 'action_plan',
   entity_id: 'ap1',
   title: 'Review diminta',
   body: 'Bukti menunggu keputusan Anda',
@@ -128,7 +128,7 @@ describe('NotificationsScreen', () => {
     await render(<NotificationsScreen />, { wrapper: wrapper() });
     fireEvent.press(screen.getByText('Review diminta'));
     expect(mockMarkRead).toHaveBeenCalledWith('n1');
-    expect(mockPush).toHaveBeenCalledWith('/task/ap1');
+    expect(mockPush).toHaveBeenCalledWith('/action-plan/ap1');
   });
 
   // ISSUE-005 — kartu resolved menampilkan label hasil (bukan pill tipe biasa)

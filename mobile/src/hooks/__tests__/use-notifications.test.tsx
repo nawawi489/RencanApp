@@ -28,9 +28,9 @@ function makeWrapper() {
 }
 
 const ITEMS = [
-  { id: 'n1', type: 'review_request', is_read: false, entity_type: 'task', entity_id: 'ap1' },
-  { id: 'n2', type: 'comment', is_read: true, entity_type: 'task', entity_id: 'ap2' },
-  { id: 'n3', type: 'mention', is_read: false, entity_type: 'task', entity_id: 'ap3' },
+  { id: 'n1', type: 'review_request', is_read: false, entity_type: 'action_plan', entity_id: 'ap1' },
+  { id: 'n2', type: 'comment', is_read: true, entity_type: 'action_plan', entity_id: 'ap2' },
+  { id: 'n3', type: 'mention', is_read: false, entity_type: 'action_plan', entity_id: 'ap3' },
 ];
 
 beforeEach(() => {

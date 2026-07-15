@@ -86,7 +86,7 @@ describe('people-score label maps', () => {
     const keys = Object.keys(METRIC_LABEL);
     expect(keys).toEqual(
       expect.arrayContaining([
-        'task_completion',
+        'action_plan_completion',
         'repeat_compliance',
         'on_time_rate',
         'review_pass_rate',

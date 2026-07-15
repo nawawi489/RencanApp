@@ -1,6 +1,6 @@
 // Preamble tunggal untuk semua create-* card (INSERT ber-RLS): getUser → profiles.organization_id.
-// Sebelumnya diduplikasi di goals/strategies/action-plans/development-areas/problem-statements/cards
-// (createActionPlan & createTask). Ponytail: satu helper, satu shape kesalahan.
+// Sebelumnya diduplikasi di goals/kpi-areas/strategies/development-areas/problem-statements/cards
+// (createInitiative & createActionPlan). Ponytail: satu helper, satu shape kesalahan.
 import { supabase } from './supabase';
 
 /** Fetch org context for the currently authenticated user. Throws if unauthenticated

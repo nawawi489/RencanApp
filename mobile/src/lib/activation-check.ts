@@ -11,17 +11,17 @@ import { CARD_TYPE_LABEL, type MbrCompliance } from './settings-mbr';
 
 export type ActivatableCardType =
   | 'goal'
+  | 'kpi_area'
   | 'strategy'
   | 'initiative'
-  | 'action_plan'
   | 'development_area'
   | 'problem_statement';
 
 const CARD_LABEL: Record<ActivatableCardType, string> = {
   goal: 'Goal',
-  strategy: 'Strategi',
-  initiative: 'Inisiatif',
-  action_plan: 'Rencana Aksi',
+  kpi_area: 'KPI Area',
+  strategy: 'Strategy',
+  initiative: 'Initiative',
   development_area: 'Development Area',
   problem_statement: 'Problem Statement',
 };
@@ -61,15 +61,15 @@ export function missingRequiredFor(cardType: ActivatableCardType, card: CardForC
   if (!card.period_end) missing.push('Periode selesai');
 
   switch (cardType) {
-    case 'strategy':
+    case 'kpi_area':
       if (trimEmpty(card.target)) missing.push('Target');
       break;
-    case 'initiative':
+    case 'strategy':
       if (trimEmpty(card.reason)) missing.push('Alasan');
       if (trimEmpty(card.main_risk)) missing.push('Risiko Utama');
       if (trimEmpty(card.alternative)) missing.push('Alternatif');
       break;
-    case 'action_plan':
+    case 'initiative':
       if (trimEmpty(card.target_result)) missing.push('Target Hasil');
       break;
     case 'goal':
@@ -101,8 +101,8 @@ export function guardActivationFields(
  * Kalimat guard MBR §12.3 untuk tombol "+ <next>" di tree (terkunci spec §6.6/§12.3):
  * "<ParentType> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu,
  *  baru tombol + <NextButton> aktif."
- * `parentTypeLabel` = label TIPE parent (mis. "Strategi"); `nextButtonLabel` = turunan yang
- * tombolnya di-guard (mis. "Rencana Aksi"); jenis child yang dihitung diambil dari compliance.
+ * `parentTypeLabel` = label TIPE parent (mis. "KPI Area"); `nextButtonLabel` = turunan yang
+ * tombolnya di-guard (mis. "Initiative"); jenis child yang dihitung diambil dari compliance.
  */
 export function mbrBreakdownGuardMessage(
   parentTypeLabel: string,

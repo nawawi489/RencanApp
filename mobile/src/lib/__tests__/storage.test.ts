@@ -74,7 +74,7 @@ describe('safeFilename', () => {
 describe('buildEvidencePath', () => {
   it('[S20] path = {org}/{ap}/{draft}/{uuid}-{safe}; tidak ada prefix bucket', () => {
     const p = buildEvidencePath({
-      orgId: 'org-1', taskId: 'ap-2', submissionDraftId: 'sd-3', fileName: 'a b.pdf',
+      orgId: 'org-1', actionPlanId: 'ap-2', submissionDraftId: 'sd-3', fileName: 'a b.pdf',
     });
     expect(p.startsWith('org-1/ap-2/sd-3/')).toBe(true);
     expect(p.endsWith('-a_b.pdf')).toBe(true);
@@ -86,7 +86,7 @@ describe('uploadEvidenceFile', () => {
   it('[S21] upload sukses → return {path, mimeType}; supabase.storage.from("evidence").upload dipanggil', async () => {
     mockUpload.mockResolvedValueOnce({ data: { path: 'ignored' }, error: null });
     const res = await uploadEvidenceFile({
-      orgId: 'o', taskId: 'a', submissionDraftId: 's',
+      orgId: 'o', actionPlanId: 'a', submissionDraftId: 's',
       file: { uri: 'file:///tmp/x.pdf', name: 'x.pdf', size: 100, mimeType: 'application/pdf' },
     });
     expect(mockFrom).toHaveBeenCalledWith('evidence');
@@ -97,13 +97,13 @@ describe('uploadEvidenceFile', () => {
   it('[S22] error dari storage → throw', async () => {
     mockUpload.mockResolvedValueOnce({ data: null, error: { message: 'denied' } });
     await expect(uploadEvidenceFile({
-      orgId: 'o', taskId: 'a', submissionDraftId: 's',
+      orgId: 'o', actionPlanId: 'a', submissionDraftId: 's',
       file: { uri: 'file:///x', name: 'x.pdf', size: 1, mimeType: 'application/pdf' },
     })).rejects.toEqual({ message: 'denied' });
   });
   it('[S23] file > 10MB → tolak SEBELUM upload (validateFile fires)', async () => {
     await expect(uploadEvidenceFile({
-      orgId: 'o', taskId: 'a', submissionDraftId: 's',
+      orgId: 'o', actionPlanId: 'a', submissionDraftId: 's',
       file: { uri: 'file:///x', name: 'big.pdf', size: FILE_MAX_BYTES + 1, mimeType: 'application/pdf' },
     })).rejects.toThrow(/melebihi.*10 MB/);
     expect(mockUpload).not.toHaveBeenCalled();

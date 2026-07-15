@@ -1,12 +1,12 @@
 // Smoke test manual untuk pipeline React Query → logger. Route sengaja di root (bukan
 // di dalam `(app)`) agar bisa diakses tanpa login saat verifikasi web dev preview.
-// Guard produksi: konten tak dirender jika EXPO_PUBLIactionPlanP_ENV === 'production'.
+// Guard produksi: konten tak dirender jika EXPO_PUBLIC_APP_ENV === 'production'.
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 function isProduction(): boolean {
-  return process.env.EXPO_PUBLIactionPlanP_ENV === 'production';
+  return process.env.EXPO_PUBLIC_APP_ENV === 'production';
 }
 
 // Query yang selalu gagal; disable by default, aktif via `enabled` saat tombol ditekan

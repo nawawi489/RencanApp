@@ -9,24 +9,22 @@ sources: 2
 
 Card adalah unit kerja & unit visual utama [[overview|EMS]]. Setiap unit kerja — dari arah besar sampai pekerjaan harian — berbentuk card. Card hidup dalam salah satu dari dua [[workspace]].
 
-## Hierarki (V1.8.3)
+## Hierarki
 
-- **Performance:** Goal → Strategy → Initiative → [[action-plan|Action Plan]] → [[action-plan|Task]]
-- **Development:** Development Area → Problem Statement / Development Goal → [[action-plan|Action Plan]] → [[action-plan|Task]]
-
-*(Rename V1.8.3 per RWT-01 A: dulu KPI Area/Strategy/Initiative/Action Plan bergeser satu tingkat menjadi Strategy/Initiative/Action Plan/Task; Development chain ikut.)*
+- **Performance:** Goal → KPI Area → Strategy → Initiative → [[action-plan|Action Plan]]
+- **Development:** Development Area → Problem Statement / Development Goal → Initiative → [[action-plan|Action Plan]]
 
 ## Makna & field wajib tiap card
 
-| Card (V1.8.3) | Pertanyaan kunci | Field wajib aktif (selain Nama & Periode) |
+| Card | Pertanyaan kunci | Field wajib aktif (selain Nama & Periode) |
 |---|---|---|
-| **Goal** | Apa yang ingin dicapai? | PIC/Owner; minimal punya Strategy sesuai [[minimum-breakdown-rule|MBR]]. Default pembuat: CEO/Super Admin. |
-| **Strategy** (dulu KPI Area) | Area hasil apa yang harus bergerak? | PIC/Owner, **Target**. Tanpa bobot/satuan/metode wajib. |
-| **Initiative** (dulu Strategy) | Bagaimana cara mencapai hasil itu? | **Alasan, Risiko Utama, Alternatif** (wajib agar tidak dangkal); PIC otomatis dari Strategy. |
-| **Action Plan** (dulu Initiative) | Program apa yang dijalankan? | Target Hasil; PIC otomatis dari Initiative. Otomatis dapat chat room (**Diskusi Rencana Aksi** — [[surfaces#Inbox]]). |
-| **Task** (dulu Action Plan) | Siapa melakukan apa & kapan? | PIC, Reviewer, Deadline, Output, Definition of Done, Prioritas, Repeat Setting. Detail: [[action-plan|Task]]. |
+| **Goal** | Apa yang ingin dicapai? | PIC/Owner; minimal punya KPI Area sesuai [[minimum-breakdown-rule|MBR]]. Default pembuat: CEO/Super Admin. |
+| **KPI Area** | Area hasil apa yang harus bergerak? | PIC/Owner, **Target**. Tanpa bobot/satuan/metode wajib. |
+| **Strategy** | Bagaimana cara mencapai hasil itu? | **Alasan, Risiko Utama, Alternatif** (wajib agar tidak dangkal); PIC otomatis dari KPI Area. |
+| **Initiative** | Program apa yang dijalankan? | Target Hasil; PIC otomatis dari Strategy. Otomatis dapat chat room ([[surfaces#Inbox]]). |
+| **Action Plan** | Siapa melakukan apa & kapan? | PIC, Reviewer, Deadline, Output, Definition of Done, Prioritas, Repeat Setting. Detail: [[action-plan]]. |
 | **Development Area** | Area pengembangan apa? | Untuk System, People, Organization, Technology, Infrastructure, Brand, Governance. |
-| **Problem Statement** | Masalah/perbaikan apa? | Dasar Action Plan Development. |
+| **Problem Statement** | Masalah/perbaikan apa? | Dasar Initiative Development. |
 
 ## Kelengkapan Card
 
@@ -34,7 +32,7 @@ Validasi data wajib sebelum card dapat **diaktifkan**. Belum lengkap → card te
 
 ## Keterangan Card
 
-Edukasi singkat in-app yang menjelaskan makna tiap jenis card (cegah semua ditulis sebagai Task). Wajib tampil di: form buat card, detail card, popup bantuan, empty state, onboarding.
+Edukasi singkat in-app yang menjelaskan makna tiap jenis card (cegah semua ditulis sebagai Action Plan). Wajib tampil di: form buat card, detail card, popup bantuan, empty state, onboarding.
 
 ## Prinsip card turunan
 

@@ -29,8 +29,8 @@ function makeWrapper() {
 const RULE = {
   id: 'r1',
   organization_id: 'org1',
-  parent_card_type: 'strategy' as const,
-  child_card_type: 'initiative' as const,
+  parent_card_type: 'kpi_area' as const,
+  child_card_type: 'strategy' as const,
   min_count: 3,
   enforcement_mode: 'hanya_peringatan' as const,
   created_at: null,
@@ -39,7 +39,7 @@ const RULE = {
 };
 
 const COMPLIANCE = {
-  child_card_type: 'initiative' as const,
+  child_card_type: 'strategy' as const,
   child_count: 2,
   min_count: 3,
   enforcement_mode: 'blokir_aktivasi' as const,
@@ -84,14 +84,14 @@ describe('useMbrRules', () => {
 describe('useMbrCompliance', () => {
   it('[4] queryKey ["mbr_compliance", parentType, parentId] terisolasi per pasangan', async () => {
     const { qc, wrapper } = makeWrapper();
-    await renderHook(() => useMbrCompliance('strategy', 'k1'), { wrapper });
-    await waitFor(() => expect(mockCheckMbrCompliance).toHaveBeenCalledWith('strategy', 'k1'));
-    expect(qc.getQueryData(['mbr_compliance', 'strategy', 'k1'])).toEqual(COMPLIANCE);
+    await renderHook(() => useMbrCompliance('kpi_area', 'k1'), { wrapper });
+    await waitFor(() => expect(mockCheckMbrCompliance).toHaveBeenCalledWith('kpi_area', 'k1'));
+    expect(qc.getQueryData(['mbr_compliance', 'kpi_area', 'k1'])).toEqual(COMPLIANCE);
   });
 
   it('[5] tidak fetch saat id kosong (enabled=false)', async () => {
     const { wrapper } = makeWrapper();
-    await renderHook(() => useMbrCompliance('strategy', ''), { wrapper });
+    await renderHook(() => useMbrCompliance('kpi_area', ''), { wrapper });
     await waitFor(() => expect(true).toBe(true));
     expect(mockCheckMbrCompliance).not.toHaveBeenCalled();
   });
@@ -99,7 +99,7 @@ describe('useMbrCompliance', () => {
   it('[6] tidak fetch saat parentType kosong', async () => {
     const { wrapper } = makeWrapper();
     await renderHook(
-      () => useMbrCompliance('' as unknown as 'strategy', 'k1'),
+      () => useMbrCompliance('' as unknown as 'kpi_area', 'k1'),
       { wrapper },
     );
     await waitFor(() => expect(true).toBe(true));
@@ -111,7 +111,7 @@ describe('useMbrCompliance', () => {
       () => new Promise(() => undefined), // pending: compliance undefined
     );
     const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useMbrCompliance('strategy', 'k1'), { wrapper });
+    const { result } = await renderHook(() => useMbrCompliance('kpi_area', 'k1'), { wrapper });
     // Sebelum data tersedia: compliance undefined → isCompliant true (fail-open client; server otoritatif).
     expect(result.current.compliance).toBeUndefined();
     expect(result.current.isCompliant).toBe(true);
@@ -119,14 +119,14 @@ describe('useMbrCompliance', () => {
 
   it('[8] saat data tiba, isCompliant mengikuti compliance.is_compliant', async () => {
     const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useMbrCompliance('strategy', 'k1'), { wrapper });
+    const { result } = await renderHook(() => useMbrCompliance('kpi_area', 'k1'), { wrapper });
     await waitFor(() => expect(result.current.compliance).not.toBeUndefined());
     expect(result.current.isCompliant).toBe(false);
   });
 
   it('[8b] mengekspos refetch() untuk refresh indikator (dipakai useFocusEffect induk)', async () => {
     const { wrapper } = makeWrapper();
-    const { result } = await renderHook(() => useMbrCompliance('strategy', 'k1'), { wrapper });
+    const { result } = await renderHook(() => useMbrCompliance('kpi_area', 'k1'), { wrapper });
     await waitFor(() => expect(mockCheckMbrCompliance).toHaveBeenCalledTimes(1));
     expect(typeof result.current.refetch).toBe('function');
     await act(() => result.current.refetch());
@@ -164,7 +164,7 @@ describe('useMbrCompliance — Fase 6 dev types', () => {
 
   it('[F6-13] meneruskan parentType "problem_statement"', async () => {
     const PS_COMPLIANCE = {
-      child_card_type: 'action_plan' as const,
+      child_card_type: 'initiative' as const,
       child_count: 1,
       min_count: 1,
       enforcement_mode: 'hanya_peringatan' as const,
@@ -188,15 +188,15 @@ describe('useMbrRuleActions', () => {
     const { result } = await renderHook(() => useMbrRuleActions(), { wrapper });
     const id = await act(() =>
       result.current.setRule({
-        parentCardType: 'strategy',
-        childCardType: 'initiative',
+        parentCardType: 'kpi_area',
+        childCardType: 'strategy',
         minCount: 3,
         enforcementMode: 'hanya_peringatan',
       }),
     );
     expect(mockSetMbrRule).toHaveBeenCalledWith({
-      parentCardType: 'strategy',
-      childCardType: 'initiative',
+      parentCardType: 'kpi_area',
+      childCardType: 'strategy',
       minCount: 3,
       enforcementMode: 'hanya_peringatan',
     });
@@ -209,8 +209,8 @@ describe('useMbrRuleActions', () => {
     const { result } = await renderHook(() => useMbrRuleActions(), { wrapper });
     await act(() =>
       result.current.setRule({
-        parentCardType: 'strategy',
-        childCardType: 'initiative',
+        parentCardType: 'kpi_area',
+        childCardType: 'strategy',
         minCount: 3,
         enforcementMode: 'hanya_peringatan',
       }),
@@ -228,8 +228,8 @@ describe('useMbrRuleActions', () => {
     await expect(
       act(() =>
         result.current.setRule({
-          parentCardType: 'strategy',
-          childCardType: 'initiative',
+          parentCardType: 'kpi_area',
+          childCardType: 'strategy',
           minCount: 3,
           enforcementMode: 'hanya_peringatan',
         }),

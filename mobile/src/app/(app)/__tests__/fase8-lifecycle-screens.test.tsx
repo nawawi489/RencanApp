@@ -78,7 +78,7 @@ beforeEach(() => {
 
 describe('deadline-change-request', () => {
   it('[F8-UI-11] validasi deadline baru wajib > deadline lama', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     await render(<DeadlineChangeRequestScreen />, { wrapper: wrapper() });
     const dl = screen.getByLabelText(/Deadline baru/i);
     fireEvent.changeText(dl, '2026-06-30');
@@ -89,7 +89,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[F8-UI-12] alasan wajib (tidak boleh kosong)', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     await render(<DeadlineChangeRequestScreen />, { wrapper: wrapper() });
     const dl = screen.getByLabelText(/Deadline baru/i);
     fireEvent.changeText(dl, '2026-07-10');
@@ -100,7 +100,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[F8-UI-13] riwayat DCR menampilkan status Menunggu Review', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockUseDcrRequests.mockReturnValue({
       requests: [
         { id: 'req1', status: 'pending', requestor_id: 'u-pic', old_deadline: '2026-07-01', new_deadline: '2026-07-10', reason: 'r' },
@@ -113,7 +113,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[DCR-UI-1] reviewer melihat 3 aksi Setujui/Tolak/Minta Revisi saat pending & !isSelf', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockCan.mockReturnValue(true);
     mockProfile.id = 'u-approver';
     mockUseDcrRequests.mockReturnValue({
@@ -128,7 +128,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[DCR-UI-2] Minta Revisi wajib alasan (client validation) sebelum reviewRequest', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockCan.mockReturnValue(true);
     mockProfile.id = 'u-approver';
     mockUseDcrRequests.mockReturnValue({
@@ -153,7 +153,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[DCR-UI-3] Tolak mengirim alasan asli reviewer (bukan hardcode "Ditolak")', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockCan.mockReturnValue(true);
     mockProfile.id = 'u-approver';
     mockUseDcrRequests.mockReturnValue({
@@ -183,7 +183,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[DCR-UI-4] badge "Perlu Revisi" muncul saat status revision_requested', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockUseDcrRequests.mockReturnValue({
       requests: [{
         id: 'req1', status: 'revision_requested', requestor_id: 'u-pic',
@@ -197,7 +197,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[DCR-UI-5] pengaju lihat form revisi inline + alasan reviewer read-only; "Kirim Revisi" panggil resubmit (bukan create)', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockProfile.id = 'u-pic';
     mockUseDcrRequests.mockReturnValue({
       requests: [{
@@ -230,7 +230,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[DCR-UI-6] reviewer tidak melihat tombol aksi saat status revision_requested', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockCan.mockReturnValue(true);
     mockProfile.id = 'u-approver';
     mockUseDcrRequests.mockReturnValue({
@@ -249,7 +249,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[DCR-UI-7] anti double-submit: isPending true → onPress reviewer tidak memanggil handler', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockCan.mockReturnValue(true);
     mockProfile.id = 'u-approver';
     mockDcrIsPending.current = true;
@@ -263,7 +263,7 @@ describe('deadline-change-request', () => {
   });
 
   it('[F8-UI-14] approver lihat tombol Setujui/Tolak; anti-self menyembunyikan', async () => {
-    mockParams.current = { taskId: 'ap1', oldDeadline: '2026-07-01' };
+    mockParams.current = { actionPlanId: 'ap1', oldDeadline: '2026-07-01' };
     mockCan.mockReturnValue(true);
     mockProfile.id = 'u-approver';
     mockUseDcrRequests.mockReturnValue({
@@ -288,16 +288,16 @@ describe('deadline-change-request', () => {
 
 describe('evaluation', () => {
   it('[F8-UI-17] anti-self: PIC = profil → tidak bisa submit + pesan error', async () => {
-    mockParams.current = { actionPlanId: 'i1', picId: 'u-pic', status: 'done' };
+    mockParams.current = { initiativeId: 'i1', picId: 'u-pic', status: 'done' };
     mockProfile.id = 'u-pic';
     await render(<EvaluationScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText(/tidak dapat mengevaluasi action_plannya sendiri/i)).toBeTruthy();
+    expect(await screen.findByText(/tidak dapat mengevaluasi initiativenya sendiri/i)).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Simpan Evaluasi'));
     await waitFor(() => expect(mockRecord).not.toHaveBeenCalled());
   });
 
   it('[F8-UI-18] UPSERT pre-fill existing evaluation; submit memanggil record', async () => {
-    mockParams.current = { actionPlanId: 'i1', picId: 'u-pic', status: 'done' };
+    mockParams.current = { initiativeId: 'i1', picId: 'u-pic', status: 'done' };
     mockProfile.id = 'u-reviewer';
     mockUseEvaluation.mockReturnValue({
       evaluation: { id: 'ev1', target_achieved: 'sebagian', results: 'hampir tercapai', lessons_learned: '' },
@@ -310,12 +310,12 @@ describe('evaluation', () => {
     await waitFor(() => expect(input.props.value).toBe('lebih baik'));
     fireEvent.press(screen.getByLabelText('Simpan Evaluasi'));
     await waitFor(() =>
-      expect(mockRecord).toHaveBeenCalledWith(expect.objectContaining({ actionPlanId: 'i1', results: 'lebih baik' })),
+      expect(mockRecord).toHaveBeenCalledWith(expect.objectContaining({ initiativeId: 'i1', results: 'lebih baik' })),
     );
   });
 
   it('[F8-UI-19] status bukan done/active → prompt evaluasi tidak muncul', async () => {
-    mockParams.current = { actionPlanId: 'i1', picId: 'u-pic', status: 'draft' };
+    mockParams.current = { initiativeId: 'i1', picId: 'u-pic', status: 'draft' };
     mockProfile.id = 'u-reviewer';
     await render(<EvaluationScreen />, { wrapper: wrapper() });
     expect(await screen.findByText(/belum tersedia/i)).toBeTruthy();
@@ -331,12 +331,12 @@ describe('search', () => {
 
   it('[F8-UI-20b] hasil pencarian dengan label entity_type', async () => {
     mockUseSearch.mockReturnValue({
-      results: [{ id: 'i1', entity_type: 'action_plan', name: 'Migrasi Server', status: 'active' }],
+      results: [{ id: 'i1', entity_type: 'initiative', name: 'Migrasi Server', status: 'active' }],
       isLoading: false,
       enabled: true,
     });
     await render(<SearchScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Migrasi Server')).toBeTruthy();
-    expect(screen.getByText('Rencana Aksi')).toBeTruthy();
+    expect(screen.getByText('Initiative')).toBeTruthy();
   });
 });

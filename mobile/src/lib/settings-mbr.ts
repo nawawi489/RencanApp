@@ -7,10 +7,10 @@ import { supabase } from './supabase';
 /** Jenis kartu yang relevan untuk rule MBR (mengikuti PRD §39–43). */
 export type CardType =
   | 'goal'
+  | 'kpi_area'
   | 'strategy'
   | 'initiative'
   | 'action_plan'
-  | 'task'
   | 'development_area'
   | 'problem_statement';
 
@@ -53,10 +53,10 @@ export const ENFORCEMENT_MODE_LABEL: Record<EnforcementMode, string> = {
 /** Label jenis kartu untuk tampilan Settings ("Parent → Child"). */
 export const CARD_TYPE_LABEL: Record<CardType, string> = {
   goal: 'Goal',
-  strategy: 'Strategi',
-  initiative: 'Inisiatif',
-  action_plan: 'Rencana Aksi',
-  task: 'Tugas',
+  kpi_area: 'KPI Area',
+  strategy: 'Strategy',
+  initiative: 'Initiative',
+  action_plan: 'Action Plan',
   development_area: 'Development Area',
   problem_statement: 'Problem Statement',
 };

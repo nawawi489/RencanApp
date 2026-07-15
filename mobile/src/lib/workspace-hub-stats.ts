@@ -11,7 +11,7 @@ export type HubStats = {
   orbPercent: number | null;
   /** Total card lvl-1 (Goal / DevArea). */
   parentCount: number;
-  /** Total card lvl-2 turunan (Strategi / Problem Statement) — dari embedded count. */
+  /** Total card lvl-2 turunan (KPI Area / Problem Statement) — dari embedded count. */
   childCount: number;
   /** Card lvl-1 berstatus `active`. */
   activeCount: number;
@@ -26,7 +26,7 @@ function ratioActive(items: { status: string }[]): number | null {
 
 export function derivePerformanceHubStats(goals: GoalWithKpiCount[]): HubStats {
   const childCount = goals.reduce((sum, g) => {
-    const c = g.strategies?.[0]?.count ?? 0;
+    const c = g.kpi_areas?.[0]?.count ?? 0;
     return sum + (typeof c === 'number' ? c : 0);
   }, 0);
   const activeCount = goals.filter((g) => g.status === 'active').length;

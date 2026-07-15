@@ -75,7 +75,7 @@ describe('listMbrRules', () => {
   it('[5] SELECT * dari minimum_breakdown_rules, order parent_card_type asc; tidak panggil RPC', async () => {
     const { builder, calls } = makeQueryThenable({
       data: [
-        { id: 'r1', parent_card_type: 'strategy', child_card_type: 'initiative', min_count: 3 },
+        { id: 'r1', parent_card_type: 'kpi_area', child_card_type: 'strategy', min_count: 3 },
       ],
       error: null,
     });
@@ -88,7 +88,7 @@ describe('listMbrRules', () => {
     expect(calls.order).toEqual(['parent_card_type', { ascending: true }]);
     expect(mockRpc).not.toHaveBeenCalled();
     expect(rules).toEqual([
-      { id: 'r1', parent_card_type: 'strategy', child_card_type: 'initiative', min_count: 3 },
+      { id: 'r1', parent_card_type: 'kpi_area', child_card_type: 'strategy', min_count: 3 },
     ]);
   });
 
@@ -103,14 +103,14 @@ describe('setMbrRule', () => {
   it('[7] memanggil rpc set_minimum_breakdown_rule dengan p_* args; map camelCase→snake_case', async () => {
     mockRpc.mockResolvedValue({ data: 'rule-uuid', error: null });
     const id = await setMbrRule({
-      parentCardType: 'strategy',
-      childCardType: 'initiative',
+      parentCardType: 'kpi_area',
+      childCardType: 'strategy',
       minCount: 3,
       enforcementMode: 'hanya_peringatan',
     });
     expect(mockRpc).toHaveBeenCalledWith('set_minimum_breakdown_rule', {
-      p_parent_card_type: 'strategy',
-      p_child_card_type: 'initiative',
+      p_parent_card_type: 'kpi_area',
+      p_child_card_type: 'strategy',
       p_min_count: 3,
       p_enforcement_mode: 'hanya_peringatan',
     });
@@ -122,8 +122,8 @@ describe('setMbrRule', () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'permission denied' } });
     await expect(
       setMbrRule({
-        parentCardType: 'strategy',
-        childCardType: 'initiative',
+        parentCardType: 'kpi_area',
+        childCardType: 'strategy',
         minCount: 3,
         enforcementMode: 'hanya_peringatan',
       }),
@@ -136,7 +136,7 @@ describe('checkMbrCompliance', () => {
     mockRpc.mockResolvedValue({
       data: [
         {
-          child_card_type: 'initiative',
+          child_card_type: 'strategy',
           current_count: 2,
           required_count: 3,
           enforcement_mode: 'blokir_aktivasi',
@@ -145,13 +145,13 @@ describe('checkMbrCompliance', () => {
       ],
       error: null,
     });
-    const c = await checkMbrCompliance('strategy', 'k1');
+    const c = await checkMbrCompliance('kpi_area', 'k1');
     expect(mockRpc).toHaveBeenCalledWith('check_minimum_breakdown_compliance', {
-      p_parent_card_type: 'strategy',
+      p_parent_card_type: 'kpi_area',
       p_parent_card_id: 'k1',
     });
     expect(c).toEqual({
-      child_card_type: 'initiative',
+      child_card_type: 'strategy',
       child_count: 2,
       min_count: 3,
       enforcement_mode: 'blokir_aktivasi',
@@ -159,7 +159,7 @@ describe('checkMbrCompliance', () => {
     });
 
     mockRpc.mockResolvedValueOnce({ data: null, error: null });
-    const empty = await checkMbrCompliance('strategy', 'k2');
+    const empty = await checkMbrCompliance('kpi_area', 'k2');
     expect(empty).toEqual({
       child_card_type: null,
       child_count: 0,
@@ -169,6 +169,6 @@ describe('checkMbrCompliance', () => {
     });
 
     mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'not allowed' } });
-    await expect(checkMbrCompliance('strategy', 'k3')).rejects.toEqual({ message: 'not allowed' });
+    await expect(checkMbrCompliance('kpi_area', 'k3')).rejects.toEqual({ message: 'not allowed' });
   });
 });

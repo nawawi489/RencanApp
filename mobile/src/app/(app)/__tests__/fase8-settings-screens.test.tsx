@@ -68,7 +68,7 @@ jest.mock('@/hooks/use-search', () => ({
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
-  useLocalSearchParams: () => ({ entityType: 'action_plan', entityId: 'i1' }),
+  useLocalSearchParams: () => ({ entityType: 'initiative', entityId: 'i1' }),
 }));
 
 // eslint-disable-next-line import/first
@@ -194,7 +194,7 @@ describe('settings-governance-violation', () => {
   it('[F8-UI-10] severity badge menampilkan label teks (bukan hanya warna)', async () => {
     mockCan.mockReturnValue(true);
     mockUseGovViolations.mockReturnValue({
-      violations: [{ id: 'v1', violation_type: 'self_evaluation', severity: 'high', entity_type: 'action_plan' }],
+      violations: [{ id: 'v1', violation_type: 'self_evaluation', severity: 'high', entity_type: 'initiative' }],
       isLoading: false,
     });
     await render(<SettingsGovernanceViolationScreen />, { wrapper: wrapper() });
@@ -212,7 +212,7 @@ describe('settings-confidential-access', () => {
   it('[F8-UI-22] dengan permission → daftar rule (entity_type, user, access_level)', async () => {
     mockCan.mockReturnValue(true);
     mockUseConfRules.mockReturnValue({
-      rules: [{ id: 'r1', entity_type: 'action_plan', user_id: 'u2', access_level: 'confidential' }],
+      rules: [{ id: 'r1', entity_type: 'initiative', user_id: 'u2', access_level: 'confidential' }],
       isLoading: false,
       isAccessGranted: true,
     });
@@ -234,7 +234,7 @@ describe('settings-card-completion-rule', () => {
     await render(<SettingsCardCompletionRuleScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Simpan Aturan'));
     await waitFor(() =>
-      expect(mockUpsertSettings).toHaveBeenCalledWith('card_completion_rule_task', expect.any(Object)),
+      expect(mockUpsertSettings).toHaveBeenCalledWith('card_completion_rule_action_plan', expect.any(Object)),
     );
   });
 });

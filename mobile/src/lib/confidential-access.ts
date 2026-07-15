@@ -6,7 +6,7 @@ import { supabase } from './supabase';
 export type ConfidentialAccessRule = Tables<'confidential_access_rules'>;
 
 /** Tipe entity yang mendukung confidential rule (subset card). */
-export type ConfidentialEntityType = 'goal' | 'strategy' | 'initiative' | 'action_plan' | 'task';
+export type ConfidentialEntityType = 'goal' | 'kpi_area' | 'strategy' | 'initiative' | 'action_plan';
 
 export const ACCESS_LEVEL_LABEL: Record<string, string> = {
   restricted: 'Terbatas',

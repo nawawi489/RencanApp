@@ -1,86 +1,48 @@
 ---
 type: entity
 tags: [ui, navigation, surface]
-updated: 2026-07-15
+updated: 2026-06-27
 sources: 2
 ---
 
 # Surfaces (Main Navigation)
 
-Lima surface utama [[overview|Rencanapp]] di bottom nav (PRD V1.83 §7.1). Settings dan People **tidak** tampil sebagai bottom nav mandiri — keduanya masuk lewat **Menu**.
+Lima surface utama [[overview|EMS]] di bottom nav (PRD V1.8.2 §7.1). Settings dan People **tidak** tampil sebagai bottom nav mandiri — keduanya masuk lewat **Menu**.
 
 `Home · Notifications · Workspace · Inbox · Menu`
 
-> [!warning] Kode `mobile/` masih lag di beberapa titik
-> Bottom nav sudah 5-tab (Home/Notif/Workspace/Inbox/Menu). Namun perubahan V1.83 tambahan **belum landing**: (a) Home Fokus Hari Ini masih nyorot Action Plan, seharusnya Task; (b) People row masih tampilkan Trust/Achievement/Score, seharusnya urutan kontribusi + status ringan; (c) Menu Akses Cepat & Admin Lanjutan gating belum diverifikasi. Lihat [[ui-prototype-gap]].
+> [!warning] Berubah di V1.8.2 — kode shipped masih lag
+> V1.8.1 memakai slot 5 = **People**. **V1.8.2 §7.1: slot 5 = Menu**, People pindah ke dalam Menu. Kode `mobile/src/app/(app)/(tabs)/_layout.tsx` masih memakai People (perlu fix **P0**). Lihat [[ui-prototype-gap#3 Gap navigasi struktural|UI-N-001]] (resolved).
 
 ## Home — Today Command Center
 
-Menjawab "hari ini saya harus fokus apa?". V1.83 §27: menampilkan **Task atau Repeat Task yang perlu perhatian** (bukan Action Plan penuh). CTA cukup satu: Detail. Tidak menumpuk banyak CTA (Bukti/Chat/Detail) sekaligus.
-
-Home tidak boleh menampilkan: Shortcut besar duplikat nav, Feed sosial, Announcement, Company news.
+Menjawab "hari ini saya harus fokus apa?". Menampilkan Action Plan hari ini, Repeat jatuh tempo, card butuh review, card Terlewat, deadline mendekat, revisi, ringkasan progress & tanggung jawab pribadi, peringatan Kelengkapan Card.
+**Tidak menampilkan** Feed, Announcement, Company News, social activity.
 
 ## Notifications
 
-Pusat alert & tindakan: review request, approval/rejection, komentar, mention, deadline reminder, deadline change request, Task Terlewat, Repeat due, warning Aturan Pecah Target (bagi user yang sedang buat turunan).
-
+Pusat alert & tindakan: review request, approval/rejection, komentar, mention, deadline reminder, deadline change request, Action Plan Terlewat, Repeat due, governance warning, MBR warning.
 Tabs: Semua, Perlu Tindakan, Review, Deadline, Komentar, Terlewat, Repeat, Governance.
-
-**V1.83 gating:** Governance warning hanya untuk admin/user berwenang. Permission change notification hanya jika relevan bagi user tersebut.
 
 ## Workspace
 
-Akses ke dua [[workspace|workspace]] (Performance & Development) dan navigasi hierarki card. Menampilkan struktur per **periode aktif** (Period Focus Engine, V1.83 §7.6): default bulan berjalan, bisa pindah Quarter; Goal tahunan tetap konteks. Card periode lewat dibuat redup dan dikunci untuk turunan baru (§7.7).
+Akses ke dua [[workspace|workspace]] (Performance & Development) dan navigasi hierarki card. Menampilkan struktur per **periode aktif** (Period Focus Engine, V1.8.2 §7.6): default bulan berjalan, bisa pindah Quarter; Goal tahunan tetap konteks. Card periode lewat dibuat redup dan dikunci untuk turunan baru (§7.7).
 
 ## Inbox
 
-Pusat **Diskusi Rencana Aksi** (chat per Action Plan). Setiap Action Plan otomatis punya **chat room** setelah aktif. **Inbox bukan tempat approval resmi** — keputusan resmi tetap via Comment, Review, Status, [[audit-governance#Activity Log|Activity Log]]. Member chat ikut akses card Action Plan (lihat [[permission-model]]). RWT-04 A: membership chat stabil, room di-key `action_plan_id` (rename cosmetic dari lama "Initiative Chat").
+Pusat chat per Initiative. Setiap Initiative otomatis punya **chat room**. **Inbox bukan tempat approval resmi** — keputusan resmi tetap via Comment, Review, Status, [[audit-governance#Activity Log|Activity Log]]. Member chat ikut akses card Initiative (lihat [[permission-model]]).
 
-## Menu (slot 5, V1.83 §7.1 / §31)
+## Menu (slot 5, V1.8.2 §7.1 / §31)
 
-Pintu masuk ke profil, People, bantuan, settings, archive, dan admin tools **sesuai permission**. Bergaya Facebook mobile.
-
-**Akses Cepat (default, semua user):**
-
-- People
-- Archive
-- Pusat Bantuan
-
-**Pengaturan (semua user, sebagian conditional):**
-
-- Organisasi
-- Repeat Setting
-- Permission Settings *(hanya admin)*
-
-**Template (conditional — hanya user berhak):**
-
-- Goal Template
-- Strategy Template *(kosong by default V1.83 §19)*
-
-**Admin Lanjutan (conditional — hanya user berhak):**
-
-- Minimum Breakdown Rule / Aturan Pecah Target
-- Score Formula
-- Governance
-- Confidential
-- Override Score
-- Log Aktivitas
-
-**Yang berubah dari V1.82:** V1.82 menempatkan Log Aktivitas, Score Formula, Minimum Breakdown Rule di Pengaturan (visible untuk lebih banyak user). V1.83 memindahkan semua fitur berat ke Admin Lanjutan yang di-gate per permission. Staff biasa tidak melihat Score Formula, Governance, Override Score, atau Log Aktivitas sebagai shortcut utama.
+Pintu masuk sekunder bergaya Facebook mobile: profil, **People**, tools admin, Goal & KPI Area Template Library, **Settings**, **Archive**, dan logout. Menggantikan slot bottom nav ke-5 (sebelumnya People). Alasan: People bukan aktivitas harian utama semua user; Menu memberi akses cepat ke admin/settings tanpa membuang slot.
 
 ## People (di dalam Menu)
 
-**De-scoring V1.83.** Melihat daftar People, urutan kontribusi, dan profil user secara objektif. People **bukan** tempat mempermalukan orang dan **bukan** dashboard score yang agresif.
+Performa user secara objektif: Achievement Score, Action Plan Completion, Repeat Compliance, On-Time Rate, Review Pass Rate, Result Achievement, Development Contribution, Governance Discipline, Ranking, Trend. Skor dihitung via [[score-formula]].
+**Bukan tempat mempermalukan** — dilarang label "karyawan terburuk/staff malas". Hanya data objektif.
 
-- Filter ringan: Semua, Bulan ini, Tim Saya, Admin (bila berwenang).
-- People row menampilkan: Rank, Avatar, Nama, Jabatan, **Ringkasan kontribusi singkat**, **Status ringan** (mis. "Stabil" / "Perlu dukungan"), tombol Lihat Profil.
-- People row **tidak menampilkan**: Trust, Achievement, score formula, governance status, atau angka teknis yang membuat user merasa dinilai berlebihan.
-- People Profile: Score detail hanya jika user punya permission admin/management. Header tidak memakai label Trust/Achievement sebagai elemen utama.
+## Settings (via Menu / avatar)
 
-Skor mendetail tetap dihitung via [[score-formula]] tapi **tidak ditampilkan di surface staff** — hanya di Admin Lanjutan.
-
-## Settings (via Menu)
-
-Diakses dari Menu — **bukan** bottom nav mandiri. Konten Pengaturan/Admin Lanjutan sesuai daftar di atas. [[minimum-breakdown-rule|MBR / Aturan Pecah Target]], [[score-formula|Score Formula]], [[audit-governance|Activity Log & Governance Violation]] semua di Admin Lanjutan V1.83.
+Diakses dari Menu (atau avatar/profile) — **bukan** bottom nav mandiri. Mengelola: User & Permission, Role Template, Organization/Department/Position/Team, Goal & KPI Area Template Library, [[minimum-breakdown-rule|Minimum Breakdown Rule]], Card Completion Rule, Keterangan Card, Status, Prioritas, Notifications Rule, [[score-formula|Score Formula]], [[audit-governance|Activity Log & Governance Violation]], Archive, Confidential Access.
 
 Berkaitan dengan: [[permission-model]], [[score-formula]], [[audit-governance]], [[workspace]].

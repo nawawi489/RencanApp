@@ -1,31 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Redirect, Stack, router } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Redirect, Stack } from 'expo-router';
 
 import { useAuth } from '@/providers/auth-provider';
-
-// RN Web quirk: default Stack header omits back button when navigated via direct URL.
-// Force render sebuah custom back Pressable yang panggil router.back() jika bisa,
-// atau router.replace('/') sebagai fallback. Ukuran 44×44 patuh DESIGN.md §4 touch target.
-function HeaderBack() {
-  return (
-    <Pressable
-      onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-      accessibilityRole="button"
-      accessibilityLabel="Kembali"
-      style={({ pressed }) => ({
-        minHeight: 44,
-        minWidth: 44,
-        marginLeft: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: pressed ? 0.6 : 1,
-      })}
-    >
-      <Ionicons name="chevron-back" size={26} color="#1564b3" />
-    </Pressable>
-  );
-}
 
 export default function AppLayout() {
   const { session } = useAuth();
@@ -35,25 +10,30 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        // Force back button visible di semua Stack.Screen dgn headerShown: true.
-        headerBackVisible: true,
-        headerLeft: () => <HeaderBack />,
-      }}
-    >
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
-      <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Rencana Aksi' }} />
+      <Stack.Screen
+        name="initiative/new"
+        options={{ headerShown: true, title: 'Initiative Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen name="initiative/[id]" options={{ headerShown: true, title: 'Initiative' }} />
+      <Stack.Screen
+        name="action-plan/new"
+        options={{ headerShown: true, title: 'Action Plan Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Action Plan' }} />
+      <Stack.Screen
+        name="action-plan/instance/[id]"
+        options={{ headerShown: true, title: 'Instance' }}
+      />
+      <Stack.Screen
+        name="action-plan/submit"
+        options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
+      />
+      <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Initiative' }} />
 
-      {/* Fase 4 — Performance Workspace V1.8.3:
-          Goal → Strategy → Initiative → Action Plan → Task
-          Route folder ↔ label UI:
-            strategy/    → Strategi (level 1, dulu KPI Area)
-            initiative/  → Inisiatif (level 2, dulu Strategy)
-            action-plan/ → Rencana Aksi (level 3, dulu Initiative) — otomatis dapat Diskusi Rencana Aksi
-            task/        → Tugas (level 4, dulu Action Plan) */}
+      {/* Fase 4 — Performance Workspace (Hierarki Strategis) */}
       <Stack.Screen
         name="goal-wizard"
         options={{ headerShown: true, title: 'Goal Wizard', presentation: 'modal' }}
@@ -61,33 +41,15 @@ export default function AppLayout() {
       <Stack.Screen name="goal/new" options={{ headerShown: true, title: 'Goal Baru', presentation: 'modal' }} />
       <Stack.Screen name="goal/[id]" options={{ headerShown: true, title: 'Goal' }} />
       <Stack.Screen
+        name="kpi-area/new"
+        options={{ headerShown: true, title: 'KPI Area Baru', presentation: 'modal' }}
+      />
+      <Stack.Screen name="kpi-area/[id]" options={{ headerShown: true, title: 'KPI Area' }} />
+      <Stack.Screen
         name="strategy/new"
-        options={{ headerShown: true, title: 'Strategi Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Strategy Baru', presentation: 'modal' }}
       />
-      <Stack.Screen name="strategy/[id]" options={{ headerShown: true, title: 'Strategi' }} />
-      <Stack.Screen
-        name="initiative/new"
-        options={{ headerShown: true, title: 'Inisiatif Baru', presentation: 'modal' }}
-      />
-      <Stack.Screen name="initiative/[id]" options={{ headerShown: true, title: 'Inisiatif' }} />
-      <Stack.Screen
-        name="action-plan/new"
-        options={{ headerShown: true, title: 'Rencana Aksi Baru', presentation: 'modal' }}
-      />
-      <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Rencana Aksi' }} />
-      <Stack.Screen
-        name="task/new"
-        options={{ headerShown: true, title: 'Tugas Baru', presentation: 'modal' }}
-      />
-      <Stack.Screen name="task/[id]" options={{ headerShown: true, title: 'Tugas' }} />
-      <Stack.Screen
-        name="task/instance/[id]"
-        options={{ headerShown: true, title: 'Instance' }}
-      />
-      <Stack.Screen
-        name="task/submit"
-        options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
-      />
+      <Stack.Screen name="strategy/[id]" options={{ headerShown: true, title: 'Strategy' }} />
 
       {/* Fase 6 — Development Workspace */}
       <Stack.Screen
@@ -138,12 +100,8 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'User & Permission' }}
       />
       <Stack.Screen
-        name="settings-user-new"
-        options={{ headerShown: true, title: 'Tambah User' }}
-      />
-      <Stack.Screen
-        name="settings-strategy-templates"
-        options={{ headerShown: true, title: 'Strategi Template' }}
+        name="settings-kpi-area-templates"
+        options={{ headerShown: true, title: 'KPI Area Template' }}
       />
       <Stack.Screen name="search" options={{ headerShown: true, title: 'Cari' }} />
 

@@ -24,12 +24,12 @@ import {
 import {
   ACTION_PLAN_STATUS_LABEL,
   STATUS_TONE,
-  countCompletedTasksInPeriod,
+  countCompletedActionPlansInPeriod,
   getOrgProfileDetail,
-  listTasksByPic,
+  listActionPlansByPic,
   listOrgProfiles,
   personLabel,
-  type TaskWithPeople,
+  type ActionPlanWithPeople,
   type PersonRef,
 } from '@/lib/cards';
 import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
@@ -94,14 +94,14 @@ export function LivePeopleProfileScreen() {
   const { ranking } = useRanking(closed?.id ?? '');
   const closedEntry = useMemo(() => ranking.find((r) => r.user_id === id), [ranking, id]);
 
-  // UI-S-PR4 — Tugas (Tugas) yang user ini jadi PIC-nya. Collapsible.
+  // UI-S-PR4 — Tugas (Action Plan) yang user ini jadi PIC-nya. Collapsible.
   const [tasksOpen, setTasksOpen] = useState(false);
   const tasksQ = useQuery({
     queryKey: ['person-tasks', id],
-    queryFn: () => listTasksByPic(id ?? ''),
+    queryFn: () => listActionPlansByPic(id ?? ''),
     enabled: !!id && tasksOpen,
   });
-  const tasks = (tasksQ.data ?? []) as TaskWithPeople[];
+  const tasks = (tasksQ.data ?? []) as ActionPlanWithPeople[];
 
   const isSelf = profile?.id === id;
   const canManage = can('manage_score_formula');
@@ -112,7 +112,7 @@ export function LivePeopleProfileScreen() {
   // bila count=0 untuk menghindari ambiguitas 0-nyata vs RLS-hidden.
   const contributionQ = useQuery({
     queryKey: ['contribution', id, active?.id ?? 'none'],
-    queryFn: () => countCompletedTasksInPeriod(id ?? '', active ?? null),
+    queryFn: () => countCompletedActionPlansInPeriod(id ?? '', active ?? null),
     enabled: !!id && !!active,
   });
   const contributionCount = contributionQ.data ?? 0;
@@ -310,7 +310,7 @@ export function LivePeopleProfileScreen() {
           </SectionCard>
         ) : null}
 
-        {/* UI-S-PR4 — Tugas (Tugas aktif yang user ini PIC-nya). Lazy fetch saat expand. */}
+        {/* UI-S-PR4 — Tugas (Action Plan aktif yang user ini PIC-nya). Lazy fetch saat expand. */}
         <SectionCard>
           <Pressable
             accessibilityRole="button"
@@ -330,7 +330,7 @@ export function LivePeopleProfileScreen() {
               </Text>
             ) : tasks.length === 0 ? (
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                Tidak ada Tugas aktif untuk anggota ini.
+                Tidak ada Action Plan aktif untuk anggota ini.
               </Text>
             ) : (
               <View className="gap-2">
@@ -339,7 +339,7 @@ export function LivePeopleProfileScreen() {
                     key={t.id}
                     accessibilityRole="button"
                     accessibilityLabel={`Buka ${t.name}`}
-                    onPress={() => router.push(`/task/${t.id}` as Href)}
+                    onPress={() => router.push(`/action-plan/${t.id}` as Href)}
                     className="gap-1 rounded-xl bg-neutral-50 p-3 active:opacity-70 dark:bg-neutral-900">
                     <View className="flex-row items-start justify-between gap-2">
                       <Text className="flex-1 text-sm font-medium text-black dark:text-white">

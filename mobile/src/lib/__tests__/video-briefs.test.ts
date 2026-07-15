@@ -14,16 +14,16 @@ beforeEach(() => {
   mockFrom.mockReset();
 });
 
-it('[34] listVideoBriefs eq action_plan_id return array', async () => {
+it('[34] listVideoBriefs eq initiative_id return array', async () => {
   const { builder, calls } = makeQueryThenable({ data: [{ id: 'v1' }], error: null });
   mockFrom.mockReturnValue(builder);
   const rows = await listVideoBriefs('i1');
   expect(mockFrom).toHaveBeenCalledWith('video_briefs');
-  expect(someCall(calls, 'eq', (a) => a[0] === 'action_plan_id' && a[1] === 'i1')).toBe(true);
+  expect(someCall(calls, 'eq', (a) => a[0] === 'initiative_id' && a[1] === 'i1')).toBe(true);
   expect(rows).toEqual([{ id: 'v1' }]);
 });
 
-it('[34b] getVideoBrief eq action_plan_id maybeSingle', async () => {
+it('[34b] getVideoBrief eq initiative_id maybeSingle', async () => {
   const { builder } = makeSingleBuilder({ data: { id: 'v1' }, error: null });
   mockFrom.mockReturnValue(builder);
   const v = await getVideoBrief('i1');

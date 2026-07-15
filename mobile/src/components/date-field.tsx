@@ -7,13 +7,8 @@ import { Modal, Platform } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { usePlaceholderColor } from '@/components/ui';
-import {
-  DATE_HINT,
-  DATE_RE,
-  addDaysISO,
-  endOfMonthISO,
-  todayISO,
-} from '@/lib/date';
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function parseISODate(s: string): Date | null {
   if (!DATE_RE.test(s)) return null;
@@ -53,64 +48,18 @@ type Props = {
   onChange: (v: string) => void;
   required?: boolean;
   placeholder?: string;
-  // Override a11y label — dipakai layar dgn banyak field sama (mis. per-baris DCR resubmit).
-  accessibilityLabel?: string;
-  // Tampilkan quick chips ("Hari ini", "Besok", "+7 hari", "Akhir bulan") di atas picker button.
-  // Menghemat 2–3 tap untuk kasus deadline tersering.
-  quickChips?: boolean;
 };
-
-const QUICK_CHIPS: { label: string; value: () => string }[] = [
-  { label: 'Hari ini', value: todayISO },
-  { label: 'Besok', value: () => addDaysISO(todayISO(), 1) },
-  { label: '+7 hari', value: () => addDaysISO(todayISO(), 7) },
-  { label: 'Akhir bulan', value: () => endOfMonthISO() },
-];
 
 export function DateField({
   label,
   value,
   onChange,
   required,
-  placeholder,
-  accessibilityLabel,
-  quickChips,
+  placeholder = 'Pilih tanggal',
 }: Props) {
   const [show, setShow] = useState(false);
   const placeholderColor = usePlaceholderColor();
-  const a11yLabel = accessibilityLabel ?? label;
-  const buttonPlaceholder = placeholder ?? 'Pilih tanggal';
-  const inputPlaceholder = placeholder ?? DATE_HINT;
   const current = parseISODate(value) ?? new Date();
-
-  const chips = quickChips ? (
-    <View className="flex-row flex-wrap gap-2">
-      {QUICK_CHIPS.map((c) => {
-        const chipValue = c.value();
-        const active = value === chipValue;
-        return (
-          <Pressable
-            key={c.label}
-            accessibilityRole="button"
-            accessibilityLabel={`${label}: ${c.label}`}
-            accessibilityState={{ selected: active }}
-            onPress={() => onChange(chipValue)}
-            className={`min-h-[36px] justify-center rounded-full border px-3 py-1.5 active:opacity-70 ${
-              active
-                ? 'border-brand-dark bg-brand-dark'
-                : 'border-neutral-300 dark:border-neutral-700'
-            }`}>
-            <Text
-              className={`text-xs font-semibold ${
-                active ? 'text-white' : 'text-black dark:text-white'
-              }`}>
-              {c.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  ) : null;
 
   // Fallback (web/test/native module hilang): TextInput pola lama.
   if (!Picker) {
@@ -120,11 +69,10 @@ export function DateField({
           {label}
           {required ? <Text className="text-red-500"> *</Text> : null}
         </Text>
-        {chips}
         <TextInput
-          accessibilityLabel={a11yLabel}
+          accessibilityLabel={label}
           className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-          placeholder={inputPlaceholder}
+          placeholder="YYYY-MM-DD"
           placeholderTextColor={placeholderColor}
           value={value}
           onChangeText={onChange}
@@ -140,14 +88,13 @@ export function DateField({
         {label}
         {required ? <Text className="text-red-500"> *</Text> : null}
       </Text>
-      {chips}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${a11yLabel}: ${value || buttonPlaceholder}`}
+        accessibilityLabel={`${label}: ${value || placeholder}`}
         onPress={() => setShow(true)}
         className="min-h-[44px] justify-center rounded-xl border border-neutral-300 px-4 py-3 active:opacity-70 dark:border-neutral-700">
         <Text className={value ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
-          {value || buttonPlaceholder}
+          {value || placeholder}
         </Text>
       </Pressable>
 

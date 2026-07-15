@@ -7,7 +7,7 @@ import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
 import { DetailChildRow } from '@/components/detail-child-row';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressBar, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
-import { useGoal, useGoalActions, useStrategies } from '@/hooks/use-workspace';
+import { useGoal, useGoalActions, useKpiAreas } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
@@ -17,7 +17,7 @@ export function LiveGoalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const goalQ = useGoal(id);
-  const kpiQ = useStrategies(id);
+  const kpiQ = useKpiAreas(id);
   const { activate, restore, activatePending, restorePending } = useGoalActions();
   // WSA-08 §14.4 — CTA "+ Tambah" dihapus dari detail page; tambah turunan HANYA dari tree Workspace.
 
@@ -36,15 +36,15 @@ export function LiveGoalDetailScreen() {
     try {
       await activate(id);
     } catch (e) {
-      alertFriendlyError('Tidak bisa diaktifkan', e, 'Goal butuh minimal 1 Strategi sebelum diaktifkan.');
+      alertFriendlyError('Tidak bisa diaktifkan', e, 'Goal butuh minimal 1 KPI Area sebelum diaktifkan.');
     }
   }
 
-  // PRD §50: pulihkan Strategi dari template yang belum ada (idempoten, tak menimpa data aktif).
+  // PRD §50: pulihkan KPI Area dari template yang belum ada (idempoten, tak menimpa data aktif).
   async function onRestore() {
     try {
       const added = await restore(id);
-      Alert.alert('Pulihkan dari template', added > 0 ? `${added} Strategi ditambahkan.` : 'Semua item template sudah ada.');
+      Alert.alert('Pulihkan dari template', added > 0 ? `${added} KPI Area ditambahkan.` : 'Semua item template sudah ada.');
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan. Coba lagi.');
     }
@@ -71,8 +71,8 @@ export function LiveGoalDetailScreen() {
                 </View>
                 <ProgressOrb
                   size={72}
-                  value={ratioDoneOfChildren(kpiQ.strategies ?? [])}
-                  sublabel={childrenSublabel(kpiQ.strategies ?? [])}
+                  value={ratioDoneOfChildren(kpiQ.kpiAreas ?? [])}
+                  sublabel={childrenSublabel(kpiQ.kpiAreas ?? [])}
                 />
               </View>
               <MetaGrid
@@ -87,27 +87,27 @@ export function LiveGoalDetailScreen() {
               />
             </View>
 
-            {/* UI-S-GD1 — Progress vs Capaian: "Progress kerja" (Strategi sudah bergerak dari draft)
-                vs "Capaian hasil" (Strategi selesai). Indikatif dari status anak, lihat lib/progress.ts. */}
+            {/* UI-S-GD1 — Progress vs Capaian: "Progress kerja" (KPI Area sudah bergerak dari draft)
+                vs "Capaian hasil" (KPI Area selesai). Indikatif dari status anak, lihat lib/progress.ts. */}
             <SectionCard>
               <Text className="text-sm font-bold text-black dark:text-white">Progress vs Capaian</Text>
               <View className="gap-1.5">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400">Progress kerja</Text>
                   <Text className="text-xs font-semibold text-black dark:text-white">
-                    {ratioActiveOfChildren(kpiQ.strategies ?? [])}%
+                    {ratioActiveOfChildren(kpiQ.kpiAreas ?? [])}%
                   </Text>
                 </View>
-                <ProgressBar value={ratioActiveOfChildren(kpiQ.strategies ?? [])} tone="brand" />
+                <ProgressBar value={ratioActiveOfChildren(kpiQ.kpiAreas ?? [])} tone="brand" />
               </View>
               <View className="gap-1.5">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400">Capaian hasil</Text>
                   <Text className="text-xs font-semibold text-black dark:text-white">
-                    {ratioDoneOfChildren(kpiQ.strategies ?? [])}%
+                    {ratioDoneOfChildren(kpiQ.kpiAreas ?? [])}%
                   </Text>
                 </View>
-                <ProgressBar value={ratioDoneOfChildren(kpiQ.strategies ?? [])} tone="success" />
+                <ProgressBar value={ratioDoneOfChildren(kpiQ.kpiAreas ?? [])} tone="success" />
               </View>
             </SectionCard>
 
@@ -133,28 +133,28 @@ export function LiveGoalDetailScreen() {
 
             <View className="gap-3">
               <View className="flex-row items-center gap-2">
-                <Text className="text-lg font-bold text-black dark:text-white">Strategi</Text>
-                <CardHelpTrigger topic="strategy" />
+                <Text className="text-lg font-bold text-black dark:text-white">KPI Area</Text>
+                <CardHelpTrigger topic="kpi_area" />
               </View>
 
               {kpiQ.isLoading ? (
                 <SkeletonList count={2} />
               ) : kpiQ.isError ? (
                 <ErrorState onRetry={() => kpiQ.refetch()} />
-              ) : kpiQ.strategies.length > 0 ? (
-                kpiQ.strategies.map((item) => (
+              ) : kpiQ.kpiAreas.length > 0 ? (
+                kpiQ.kpiAreas.map((item) => (
                   <DetailChildRow
                     key={item.id}
                     name={item.name}
                     statusLabel={PLANNING_STATUS_LABEL[item.status] ?? item.status}
                     statusTone={STATUS_TONE[item.status]}
-                    onPress={() => router.push(`/strategy/${item.id}` as Href)}
+                    onPress={() => router.push(`/kpi-area/${item.id}` as Href)}
                   />
                 ))
               ) : (
                 <EmptyState
-                  title="Belum ada Strategi"
-                  description="Pecah Goal ini menjadi Strategi terukur, lalu turunkan jadi Inisiatif dan Rencana Aksi."
+                  title="Belum ada KPI Area"
+                  description="Pecah Goal ini menjadi KPI Area terukur, lalu turunkan jadi Strategy dan Initiative."
                 />
               )}
             </View>

@@ -50,7 +50,7 @@ function wrapper() {
 }
 
 const ROWS = [
-  { key: 'create_initiative', label: 'Buat Inisiatif', granted: true, is_default: true },
+  { key: 'create_strategy', label: 'Buat Strategy', granted: true, is_default: true },
   { key: 'view_all_workspace', label: 'Lihat Semua Workspace', granted: false, is_default: false },
   { key: 'manage_others_cards', label: 'Kelola Card Orang Lain', granted: true, is_default: false },
 ];
@@ -96,7 +96,7 @@ describe('SettingsPermissionUsersScreen', () => {
 
   it('[P-UI-03] default-role toggle terkunci (disabled)', async () => {
     await drillIntoRina();
-    const sw = screen.getByLabelText('Buat Inisiatif');
+    const sw = screen.getByLabelText('Buat Strategy');
     expect(sw.props.accessibilityState.disabled).toBe(true);
     fireEvent.press(sw);
     // tak ada modal terbuka (locked).

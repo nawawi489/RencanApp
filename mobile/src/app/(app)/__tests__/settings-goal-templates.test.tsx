@@ -1,4 +1,4 @@
-// UI — Goal Template Library. Browse template + nested Strategi (lazy expand) + CTA gated create_goal.
+// UI — Goal Template Library. Browse template + nested KPI Area (lazy expand) + CTA gated create_goal.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -8,11 +8,11 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockUseGoalTemplates = jest.fn();
-const mockUseStrategyTemplates = jest.fn();
+const mockUseKpiAreaTemplates = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useGoalTemplates: (...a: unknown[]) => mockUseGoalTemplates(...a),
-  useStrategyTemplates: (...a: unknown[]) => mockUseStrategyTemplates(...a),
+  useKpiAreaTemplates: (...a: unknown[]) => mockUseKpiAreaTemplates(...a),
 }));
 
 const mockCan = jest.fn();
@@ -41,10 +41,10 @@ function wrapper() {
 
 beforeEach(() => {
   mockUseGoalTemplates.mockReset();
-  mockUseStrategyTemplates.mockReset();
+  mockUseKpiAreaTemplates.mockReset();
   mockCan.mockReset();
   mockPush.mockReset();
-  mockUseStrategyTemplates.mockReturnValue({ items: [], isLoading: false, isError: false });
+  mockUseKpiAreaTemplates.mockReturnValue({ items: [], isLoading: false, isError: false });
   mockCan.mockReturnValue(true);
 });
 
@@ -78,20 +78,20 @@ describe('SettingsGoalTemplatesScreen', () => {
     expect(screen.queryByLabelText('Buat Goal dari Template')).toBeNull();
   });
 
-  it('[4] expand → Strategi template muncul (lazy)', async () => {
+  it('[4] expand → KPI Area template muncul (lazy)', async () => {
     mockUseGoalTemplates.mockReturnValue({
       templates: [{ id: 't1', name: 'Pertumbuhan Omset', description: null, sort_order: 1 }],
       isLoading: false,
       isError: false,
     });
-    mockUseStrategyTemplates.mockReturnValue({
+    mockUseKpiAreaTemplates.mockReturnValue({
       items: [{ id: 'k1', name: 'Revenue', division_label: 'Sales', goal_template_id: 't1' }],
       isLoading: false,
       isError: false,
     });
     await render(<SettingsGoalTemplatesScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Lihat Strategi template'));
+      fireEvent.press(await screen.findByLabelText('Lihat KPI Area template'));
     });
     expect(screen.getByText('Revenue')).toBeTruthy();
     expect(screen.getByText('Sales')).toBeTruthy();

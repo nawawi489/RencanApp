@@ -86,10 +86,10 @@ export function SubmissionCard({ s }: { s: SubmissionDetail }) {
         </View>
       ) : null}
 
-      {s.task_result_values.length > 0 ? (
+      {s.action_plan_result_values.length > 0 ? (
         <View className="gap-1.5">
           <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Nilai Hasil</Text>
-          {s.task_result_values.map((rv) => (
+          {s.action_plan_result_values.map((rv) => (
             <ResultValueItem key={rv.id} rv={rv} />
           ))}
         </View>

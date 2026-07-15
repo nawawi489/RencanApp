@@ -4,11 +4,11 @@ import type { Tables } from './database.types';
 import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
+export type Initiative = Tables<'initiatives'>;
 export type ActionPlan = Tables<'action_plans'>;
-export type Tugas = Tables<'tasks'>;
-export type Submission = Tables<'task_submissions'>;
+export type Submission = Tables<'action_plan_submissions'>;
 export type EvidenceFile = Tables<'evidence_files'>;
-export type ResultValue = Tables<'task_result_values'>;
+export type ResultValue = Tables<'action_plan_result_values'>;
 
 export type PersonRef = { id: string; full_name: string | null; email: string | null } | null;
 
@@ -17,14 +17,14 @@ export function personLabel(p: PersonRef | undefined, fallback = 'Tanpa nama'): 
   return p?.full_name?.trim() || p?.email || fallback;
 }
 
-export type TaskWithPeople = Tugas & {
+export type ActionPlanWithPeople = ActionPlan & {
   pic: PersonRef;
   reviewer: PersonRef;
 };
 
 export type SubmissionDetail = Submission & {
   evidence_files: EvidenceFile[];
-  task_result_values: ResultValue[];
+  action_plan_result_values: ResultValue[];
   submitter: PersonRef;
   reviewer: PersonRef;
 };
@@ -92,18 +92,18 @@ export const RESULT_VALUE_TYPE_LABEL: Record<string, string> = {
 // ---------------------------------------------------------------- queries
 
 /**
- * Daftar Rencana Aksi. Fase 4: `opts.initiativeId` memfilter berdasarkan induk Inisiatif —
- * `null` = Rencana Aksi datar (tanpa Inisiatif, section "Tanpa Goal"); string = anak Inisiatif tertentu.
+ * Daftar Initiative. Fase 4: `opts.strategyId` memfilter berdasarkan induk Strategy —
+ * `null` = Initiative datar (tanpa Strategy, section "Tanpa Goal"); string = anak Strategy tertentu.
  * Fase 6: `opts.problemStatementId` memfilter berdasarkan induk Problem Statement (sama semantik).
  * Tanpa opts = semua (backward-compat Fase 1, pemanggil lama tak berubah).
  */
-export async function listActionPlans(opts?: {
-  initiativeId?: string | null;
+export async function listInitiatives(opts?: {
+  strategyId?: string | null;
   problemStatementId?: string | null;
-}): Promise<ActionPlan[]> {
-  let query = supabase.from('action_plans').select('*');
-  if (opts && opts.initiativeId !== undefined) {
-    query = opts.initiativeId === null ? query.is('initiative_id', null) : query.eq('initiative_id', opts.initiativeId);
+}): Promise<Initiative[]> {
+  let query = supabase.from('initiatives').select('*');
+  if (opts && opts.strategyId !== undefined) {
+    query = opts.strategyId === null ? query.is('strategy_id', null) : query.eq('strategy_id', opts.strategyId);
   }
   if (opts && opts.problemStatementId !== undefined) {
     query =
@@ -116,49 +116,49 @@ export async function listActionPlans(opts?: {
   return data;
 }
 
-/** UI-S-DA2 — hitung Rencana Aksi di bawah beberapa Problem Statement sekaligus (satu query, hindari N+1). */
-export async function listActionPlansByProblemStatementIds(ids: string[]): Promise<ActionPlan[]> {
+/** UI-S-DA2 — hitung Initiative di bawah beberapa Problem Statement sekaligus (satu query, hindari N+1). */
+export async function listInitiativesByProblemStatementIds(ids: string[]): Promise<Initiative[]> {
   if (ids.length === 0) return [];
-  const { data, error } = await supabase.from('action_plans').select('*').in('problem_statement_id', ids);
+  const { data, error } = await supabase.from('initiatives').select('*').in('problem_statement_id', ids);
   if (error) throw error;
   return data;
 }
 
-export async function getActionPlan(id: string): Promise<ActionPlan> {
-  const { data, error } = await supabase.from('action_plans').select('*').eq('id', id).single();
+export async function getInitiative(id: string): Promise<Initiative> {
+  const { data, error } = await supabase.from('initiatives').select('*').eq('id', id).single();
   if (error) throw error;
   return data;
 }
 
-export async function listTasks(actionPlanId: string): Promise<TaskWithPeople[]> {
+export async function listActionPlans(initiativeId: string): Promise<ActionPlanWithPeople[]> {
   const { data, error } = await supabase
-    .from('tasks')
+    .from('action_plans')
     .select('*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email)')
-    .eq('action_plan_id', actionPlanId)
+    .eq('initiative_id', initiativeId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return data as unknown as TaskWithPeople[];
+  return data as unknown as ActionPlanWithPeople[];
 }
 
-export async function getTask(id: string): Promise<TaskWithPeople | null> {
+export async function getActionPlan(id: string): Promise<ActionPlanWithPeople | null> {
   // maybeSingle, BUKAN single: id di luar akses/tidak ada → RLS menyaring jadi 0 baris.
   // single() membalas 406 dan React Query terus retry → skeleton tak pernah selesai.
   const { data, error } = await supabase
-    .from('tasks')
+    .from('action_plans')
     .select('*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email)')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as TaskWithPeople | null;
+  return data as unknown as ActionPlanWithPeople | null;
 }
 
-export async function listSubmissions(taskId: string): Promise<SubmissionDetail[]> {
+export async function listSubmissions(actionPlanId: string): Promise<SubmissionDetail[]> {
   const { data, error } = await supabase
-    .from('task_submissions')
+    .from('action_plan_submissions')
     .select(
-      '*, evidence_files(*), task_result_values(*), submitter:submitted_by(id, full_name, email), reviewer:reviewed_by(id, full_name, email)',
+      '*, evidence_files(*), action_plan_result_values(*), submitter:submitted_by(id, full_name, email), reviewer:reviewed_by(id, full_name, email)',
     )
-    .eq('task_id', taskId)
+    .eq('action_plan_id', actionPlanId)
     .order('version_number', { ascending: false });
   if (error) throw error;
   return data as unknown as SubmissionDetail[];
@@ -263,71 +263,71 @@ export async function getOrgProfileDetail(id: string): Promise<OrgProfileDetail 
 }
 
 /** Action plan di mana user adalah Reviewer & status menunggu review (untuk Home). */
-export async function listPendingReviews(): Promise<TaskWithPeople[]> {
+export async function listPendingReviews(): Promise<ActionPlanWithPeople[]> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return [];
   const { data, error } = await supabase
-    .from('tasks')
+    .from('action_plans')
     .select('*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email)')
     .eq('reviewer_id', uid)
     .eq('status', 'submitted')
     .order('deadline', { ascending: true });
   if (error) throw error;
-  return data as unknown as TaskWithPeople[];
+  return data as unknown as ActionPlanWithPeople[];
 }
 
 /**
  * UI-S-PR4 — Action plan di mana user TERTENTU adalah PIC (untuk people-profile).
  * RLS otomatis menyaring; statuses ke-aktif (assigned/in_progress/revision/submitted).
  */
-export async function listTasksByPic(userId: string): Promise<TaskWithPeople[]> {
+export async function listActionPlansByPic(userId: string): Promise<ActionPlanWithPeople[]> {
   const { data, error } = await supabase
-    .from('tasks')
+    .from('action_plans')
     .select('*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email)')
     .eq('pic_id', userId)
     .in('status', ['assigned', 'in_progress', 'submitted', 'revision'])
     .order('deadline', { ascending: true, nullsFirst: false });
   if (error) throw error;
-  return data as unknown as TaskWithPeople[];
+  return data as unknown as ActionPlanWithPeople[];
 }
 
 /** Action plan di mana user adalah PIC & masih harus dikerjakan (untuk Home). */
-export async function listMyTasks(): Promise<TaskWithPeople[]> {
+export async function listMyActionPlans(): Promise<ActionPlanWithPeople[]> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return [];
   const { data, error } = await supabase
-    .from('tasks')
+    .from('action_plans')
     .select('*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email)')
     .eq('pic_id', uid)
     .in('status', ['assigned', 'in_progress', 'revision'])
     .order('deadline', { ascending: true });
   if (error) throw error;
-  return data as unknown as TaskWithPeople[];
+  return data as unknown as ActionPlanWithPeople[];
 }
 
 // ---------------------------------------------------------------- mutations
 
-export type NewActionPlan = {
+export type NewInitiative = {
   name: string;
   target_result: string | null;
   pic_id: string | null;
   period_start: string | null;
   period_end: string | null;
   description?: string | null;
-  /** Fase 4: induk Inisiatif. null/absen = Rencana Aksi datar (backward-compat Fase 1). */
-  initiative_id?: string | null;
-  /** Fase 6: induk Problem Statement (jalur Development). Mutually exclusive dgn initiative_id (CHECK action_plans_single_parent). */
+  /** Fase 4: induk Strategy. null/absen = Initiative datar (backward-compat Fase 1). */
+  strategy_id?: string | null;
+  /** Fase 6: induk Problem Statement (jalur Development). Mutually exclusive dgn strategy_id (CHECK initiatives_single_parent). */
   problem_statement_id?: string | null;
   /** UI-S-I01 — PRD §21 "Tim" wajib. NULL diizinkan saat Draft. */
   team_id?: string | null;
 };
 
-export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan> {
+export async function createInitiative(input: NewInitiative): Promise<Initiative> {
   const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
-    .from('action_plans')
+    .from('initiatives')
     .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
@@ -335,8 +335,8 @@ export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan
   return data;
 }
 
-export type NewTask = {
-  action_plan_id: string;
+export type NewActionPlan = {
+  initiative_id: string;
   name: string;
   pic_id: string | null;
   reviewer_id: string | null;
@@ -354,10 +354,10 @@ export type NewTask = {
   description?: string | null;
 };
 
-export async function createTask(input: NewTask): Promise<Tugas> {
+export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan> {
   const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
-    .from('tasks')
+    .from('action_plans')
     .insert({ ...input, organization_id: orgId, created_by: uid })
     .select('*')
     .single();
@@ -367,18 +367,18 @@ export async function createTask(input: NewTask): Promise<Tugas> {
 
 // ---------------------------------------------------------------- RPC (lifecycle & loop)
 
+export async function activateInitiative(id: string): Promise<void> {
+  const { error } = await supabase.rpc('activate_initiative', { p_initiative_id: id });
+  if (error) throw error;
+}
+
 export async function activateActionPlan(id: string): Promise<void> {
   const { error } = await supabase.rpc('activate_action_plan', { p_action_plan_id: id });
   if (error) throw error;
 }
 
-export async function activateTask(id: string): Promise<void> {
-  const { error } = await supabase.rpc('activate_task', { p_action_plan_id: id });
-  if (error) throw error;
-}
-
-export async function startTask(id: string): Promise<void> {
-  const { error } = await supabase.rpc('start_task', { p_action_plan_id: id });
+export async function startActionPlan(id: string): Promise<void> {
+  const { error } = await supabase.rpc('start_action_plan', { p_action_plan_id: id });
   if (error) throw error;
 }
 
@@ -391,20 +391,20 @@ export type EvidenceInput = {
   mime_type?: string | null;
 };
 
-/** Per addendum §10.2 ER-1: strategy_id wajib di RPC (kecuali OD-1 fallback Fase 1). */
+/** Per addendum §10.2 ER-1: kpi_area_id wajib di RPC (kecuali OD-1 fallback Fase 1). */
 export type ResultValueInput = {
-  strategy_id: string | null; // null hanya valid bila OD-1 fallback (0 kandidat) — server validate.
+  kpi_area_id: string | null; // null hanya valid bila OD-1 fallback (0 kandidat) — server validate.
   label: string | null;
   value_type: string;
   value_text: string | null;
   value_numeric?: number | null;
 };
 
-/** Kandidat Strategi untuk picker (RPC list_strategy_candidates_for_task). */
-export type StrategyCandidate = { id: string; name: string };
+/** Kandidat KPI Area untuk picker (RPC list_kpi_area_candidates_for_action_plan). */
+export type KpiAreaCandidate = { id: string; name: string };
 
-/** Snapshot agregat dari VIEW strategy_current_values (untuk render "nilai lama"). */
-export type StrategyCurrentValue = {
+/** Snapshot agregat dari VIEW kpi_area_current_values (untuk render "nilai lama"). */
+export type KpiAreaCurrentValue = {
   numeric_total: number;
   text_count: number;
   last_approved_at: string | null;
@@ -416,11 +416,11 @@ export type StrategyCurrentValue = {
  * Return draft id yang dipakai untuk path Storage upload.
  */
 export async function createSubmissionDraft(
-  taskId: string,
+  actionPlanId: string,
   attachmentCount: number,
 ): Promise<string> {
   const { data, error } = await supabase.rpc('create_submission_draft', {
-    p_action_plan_id: taskId,
+    p_action_plan_id: actionPlanId,
     p_attachment_count: attachmentCount,
   });
   if (error) throw error;
@@ -429,7 +429,7 @@ export async function createSubmissionDraft(
 
 /**
  * 2-phase commit step 3: finalize draft → submitted.
- * Sekarang menerima `submissionDraftId` (BUKAN taskId — signature lama BREAKING per OQ-4 deploy-atomic).
+ * Sekarang menerima `submissionDraftId` (BUKAN actionPlanId — signature lama BREAKING per OQ-4 deploy-atomic).
  * Server compute previous_value_text (ER-8 anti-TOCTOU).
  */
 export async function finalizeSubmission(args: {
@@ -438,7 +438,7 @@ export async function finalizeSubmission(args: {
   evidence: EvidenceInput[];
   resultValues: ResultValueInput[];
 }): Promise<string> {
-  const { data, error } = await supabase.rpc('submit_task', {
+  const { data, error } = await supabase.rpc('submit_action_plan', {
     p_submission_draft_id: args.submissionDraftId,
     p_note: args.note ?? '',
     p_evidence: args.evidence as never,
@@ -448,28 +448,28 @@ export async function finalizeSubmission(args: {
   return data as string;
 }
 
-/** List Strategi kandidat untuk Tugas ini (chain action_plan→initiative→strategy).
+/** List KPI Area kandidat untuk Action Plan ini (chain initiative→strategy→kpi_area).
  * 0 baris = Fase 1 fallback (OD-1 → UI hide section Nilai Hasil). */
-export async function listStrategyCandidates(taskId: string): Promise<StrategyCandidate[]> {
-  const { data, error } = await supabase.rpc('list_strategy_candidates_for_task', {
-    p_action_plan_id: taskId,
+export async function listKpiAreaCandidates(actionPlanId: string): Promise<KpiAreaCandidate[]> {
+  const { data, error } = await supabase.rpc('list_kpi_area_candidates_for_action_plan', {
+    p_action_plan_id: actionPlanId,
   });
   if (error) throw error;
-  return (data ?? []) as StrategyCandidate[];
+  return (data ?? []) as KpiAreaCandidate[];
 }
 
-/** Read current aggregate value untuk Strategi (sumber "nilai lama" di UI DeltaArrow). */
-export async function getStrategyCurrentValue(strategyId: string): Promise<StrategyCurrentValue | null> {
+/** Read current aggregate value untuk KPI Area (sumber "nilai lama" di UI DeltaArrow). */
+export async function getKpiAreaCurrentValue(kpiAreaId: string): Promise<KpiAreaCurrentValue | null> {
   const { data, error } = await supabase
-    .from('strategy_current_values')
+    .from('kpi_area_current_values')
     .select('numeric_total, text_count, last_approved_at')
-    .eq('strategy_id', strategyId)
+    .eq('kpi_area_id', kpiAreaId)
     .maybeSingle();
   if (error) throw error;
-  return (data as StrategyCurrentValue | null) ?? null;
+  return (data as KpiAreaCurrentValue | null) ?? null;
 }
 
-/** UI-S-KD2/KD3 — satu submission yang menyumbang Nilai Hasil ke Strategi ini (approved/pending/rejected). */
+/** UI-S-KD2/KD3 — satu submission yang menyumbang Nilai Hasil ke KPI Area ini (approved/pending/rejected). */
 export type KpiResultValueSource = {
   id: string;
   value_numeric: number | null;
@@ -477,24 +477,24 @@ export type KpiResultValueSource = {
   created_at: string;
   submission: {
     id: string;
-    task_id: string;
+    action_plan_id: string;
     review_status: string;
     submitted_at: string;
-    task: { id: string; name: string } | null;
+    action_plan: { id: string; name: string } | null;
   } | null;
 };
 
 /**
- * Daftar Nilai Hasil (result value) yang menunjuk ke Strategi ini, lintas Tugas, terurut terbaru.
+ * Daftar Nilai Hasil (result value) yang menunjuk ke KPI Area ini, lintas Action Plan, terurut terbaru.
  * Dipakai untuk kartu "Nilai Hasil" (proposed vs current) dan panel "Sumber Nilai Hasil".
  */
-export async function listStrategyResultValueSources(strategyId: string): Promise<KpiResultValueSource[]> {
+export async function listKpiAreaResultValueSources(kpiAreaId: string): Promise<KpiResultValueSource[]> {
   const { data, error } = await supabase
-    .from('task_result_values')
+    .from('action_plan_result_values')
     .select(
-      'id, value_numeric, value_text, created_at, submission:submission_id(id, task_id, review_status, submitted_at, task:task_id(id, name))',
+      'id, value_numeric, value_text, created_at, submission:submission_id(id, action_plan_id, review_status, submitted_at, action_plan:action_plan_id(id, name))',
     )
-    .eq('strategy_id', strategyId)
+    .eq('kpi_area_id', kpiAreaId)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as KpiResultValueSource[];
@@ -505,7 +505,7 @@ export async function reviewSubmission(args: {
   decision: 'approve' | 'reject';
   reason: string | null;
 }): Promise<void> {
-  const { error } = await supabase.rpc('review_task_submission', {
+  const { error } = await supabase.rpc('review_action_plan_submission', {
     p_submission_id: args.submissionId,
     p_decision: args.decision,
     p_reason: args.reason ?? '',
@@ -516,25 +516,25 @@ export async function reviewSubmission(args: {
 // ---------------------------------------------------------------- PPL-06 Kontribusi (OQ-6)
 
 /**
- * Jumlah Tugas yang telah selesai (status='done') oleh PIC pada rentang periode aktif.
+ * Jumlah Action Plan yang telah selesai (status='done') oleh PIC pada rentang periode aktif.
  * PPL-06 / OQ-6 diputuskan 2026-07-05: metrik "Kontribusi bulan ini" = count AP done PIC pada periode.
  *
  * SEMANTIK APPROKSIMASI: idealnya filter pakai kolom `completed_at`, tapi schema tak punya kolom
  * itu dan spec §NG-5 tidak mengizinkan migrasi baru untuk bug UI. Pakai `updated_at` sebagai
  * approksimasi — untuk AP `done` yang tidak diedit setelahnya, updated_at ≈ completed_at.
  *
- * RLS `tasks` menyaring visibility per organisasi + permission. Viewer di luar scope →
+ * RLS `action_plans` menyaring visibility per organisasi + permission. Viewer di luar scope →
  * `[]` graceful (count=0, bukan error). Konsumen UI HARUS membedakan 0-nyata vs RLS-hidden.
  *
  * Guard: userId kosong atau period null → 0 tanpa fetch (dan tanpa auth.getUser).
  */
-export async function countCompletedTasksInPeriod(
+export async function countCompletedActionPlansInPeriod(
   userId: string,
   period: { period_start: string; period_end: string } | null | undefined,
 ): Promise<number> {
   if (!userId || !period) return 0;
   const { data, error } = await supabase
-    .from('tasks')
+    .from('action_plans')
     .select('id')
     .eq('pic_id', userId)
     .eq('status', 'done')

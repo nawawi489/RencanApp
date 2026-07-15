@@ -15,7 +15,7 @@ const mockApplyTemplate = jest.fn();
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useGoalTemplates: () => ({ templates: mockTemplates(), isLoading: false, isError: false }),
-  useStrategyTemplates: () => ({ items: [], isLoading: false, isError: false }),
+  useKpiAreaTemplates: () => ({ items: [], isLoading: false, isError: false }),
   useGoalActions: () => ({ applyTemplate: mockApplyTemplate, isPending: false }),
 }));
 

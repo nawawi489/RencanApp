@@ -54,21 +54,19 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 
 Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), `ui.tsx`.
 
-### Workspace category (letter-badge pill V1.8.3)
+### Workspace category (letter-badge pill V1.82)
 
 Warna kategori kartu Workspace mengikuti prototype final `outputs/ems-mobile-ui/index.html`. Nilai hex di bawah adalah kanonik untuk area Workspace dan dipakai inline (bukan class Tailwind) agar persis prototype — sumber tunggal di [`workspace-kind-pill.tsx`](mobile/src/components/workspace-kind-pill.tsx).
 
-Per **RWT-03 (default B) — DECIDED 2026-07-11**: palet warna **terikat POSISI hierarki** (bukan nama). Rename V1.8.3 menggeser label + huruf; palet per level TETAP:
-
-| Level | Kategori (V1.8.3) | Huruf | Teks | Latar | Border | Lingkaran |
-|---|---|---|---|---|---|---|
-| 0 | Goal | `G` | `#145ebc` | `#e8f2ff` | `#cce2ff` | `#1877f2` |
-| 1 | **Strategy** (dulu KPI Area) | **`S`** | `#b76b00` | `#fff3d7` | `#ffe1a1` | `#b76b00` |
-| 2 | **Initiative** (dulu Strategy) | **`I`** | `#6941c6` | `#f1ebff` | `#dfd1ff` | `#6941c6` |
-| 3 | **Action Plan** (dulu Initiative) | **`AP`** | `#14845c` | `#e7f7ef` | `#c9ebda` | `#14845c` (font 8px) |
-| 4 | **Task** (dulu Action Plan) | **`T`** | `#145ebc` | `#eef6ff` | `#cce2ff` | `#145ebc` |
-| — | Development Area | `D` | `#0f766e` | `#e6fffb` | `#99f6e4` | `#0f766e` |
-| — | Problem Statement | `P` | `#c2410c` | `#fff7ed` | `#fed7aa` | `#c2410c` |
+| Kategori | Huruf | Teks | Latar | Border | Lingkaran |
+|---|---|---|---|---|---|
+| Goal | `G` | `#145ebc` | `#e8f2ff` | `#cce2ff` | `#1877f2` |
+| KPI Area | `K` | `#b76b00` | `#fff3d7` | `#ffe1a1` | `#b76b00` |
+| Strategy | `S` | `#6941c6` | `#f1ebff` | `#dfd1ff` | `#6941c6` |
+| Initiative | `I` | `#14845c` | `#e7f7ef` | `#c9ebda` | `#14845c` |
+| Action Plan | `AP` | `#145ebc` | `#eef6ff` | `#cce2ff` | `#145ebc` (font 8px) |
+| Development Area | `D` | `#0f766e` | `#e6fffb` | `#99f6e4` | `#0f766e` |
+| Problem Statement | `P` | `#c2410c` | `#fff7ed` | `#fed7aa` | `#c2410c` |
 
 Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line border `#d9e2ec`. Connector L-shape `#cfd8e5`.
 
@@ -164,9 +162,9 @@ Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line bo
 | `UploadButton` (DA-AP5-1) | `min-h-[44px] rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 px-4 py-3`; ikon ➕ + label "Pilih file"; `accessibilityRole='button'` + `accessibilityLabel='Pilih file bukti'`; disabled saat sudah ≥5 file (`opacity-40`) atau `uploading` (`accessibilityState={{disabled}}` eksplisit) | `mobile/src/app/(app)/action-plan/submit.tsx` |
 | `AttachmentRow` (DA-AP5-2) | `flex-row items-center gap-3 rounded-xl border border-neutral-200 dark:border-neutral-800 p-3`; thumbnail icon (📄/🖼/📕 per kind), filename `text-sm font-semibold` truncate, size `text-xs text-neutral-500`, chip MIME kind (Badge tone neutral), tombol Remove (`accessibilityLabel='Hapus {filename}'`, hitSlop 8) | `mobile/src/app/(app)/action-plan/submit.tsx` |
 | `ProgressPill` (DA-AP5-3) | chip kecil `rounded-full px-2.5 py-1 text-xs font-semibold` dengan 4 state warna: `'Siap unggah'` neutral-100/600, `'Mengunggah'` blue-100/700 (+optional spinner inline), `'OK'` green-100/700, `'Gagal'` red-100/700 + tombol "Coba lagi" inline. `accessibilityLabel` selalu sertakan state eksplisit (DESIGN §4: warna ≠ satu-satunya sinyal) | `mobile/src/app/(app)/action-plan/submit.tsx` |
-| `StrategyLinkageCard` (DA-AP6-1) | `rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40 p-4 gap-2`; baris atas: "Masuk Strategy" kicker + nama Strategy bold; baris bawah: "Sumber: Task {name}" muted; ada link Detail jika perlu | `mobile/src/app/(app)/task/submit.tsx` |
+| `KpiLinkageCard` (DA-AP6-1) | `rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40 p-4 gap-2`; baris atas: "Masuk KPI Area" kicker + nama KPI bold; baris bawah: "Sumber: Action Plan {name}" muted; ada link Detail jika perlu | `mobile/src/app/(app)/action-plan/submit.tsx` |
 | `DeltaArrow` (DA-AP6-2) | `flex-row items-center gap-2`; angka lama `text-base font-bold text-neutral-500`, ikon arrow (↑ green-700 / ↓ amber-700 / → neutral-500), angka baru `text-2xl font-extrabold` (tone sama dgn arah). **A11y mengikat**: `accessibilityLabel` selalu menyebut arah eksplisit (`naik 25`, `turun 12`, `tetap`); warna BUKAN satu-satunya sinyal (DESIGN §4) — ikon + label teks wajib | `mobile/src/app/(app)/action-plan/submit.tsx` |
-| `ImpactApprovalCard` (DA-AP6-3) | `rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40 p-3 gap-1`; ikon ⚠ + heading "Setelah disetujui Reviewer" + body teks (mis. "Nilai Strategy X akan menjadi 145"); copy diambil dari konstanta `IMPACT_APPROVAL_COPY` (FR-AP6-10) — tidak hardcoded inline | `mobile/src/app/(app)/task/submit.tsx` |
+| `ImpactApprovalCard` (DA-AP6-3) | `rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40 p-3 gap-1`; ikon ⚠ + heading "Setelah disetujui Reviewer" + body teks (mis. "Nilai KPI Area X akan menjadi 145"); copy diambil dari konstanta `IMPACT_APPROVAL_COPY` (FR-AP6-10) — tidak hardcoded inline | `mobile/src/app/(app)/action-plan/submit.tsx` |
 | `WeightInput` (DA-SF1-1) | `min-w-[64px] min-h-[44px] rounded-xl border border-neutral-300 px-3 py-2 text-base text-right text-black dark:border-neutral-700 dark:text-white`; `keyboardType='numeric'`, `maxLength=3`, regex client `^\d{0,3}$`, clamp 0..100 sebelum apply ke state; saat read-only: `editable={false}` + `opacity-60` | `mobile/src/app/(app)/settings-score-formula.tsx` |
 | `RoleChipGroup` (DA-SF1-2) | `flex-row flex-wrap gap-2`; chip = `min-h-[44px] rounded-full px-4 py-2`; active `bg-brand-dark` (teks `text-white`), inactive `border border-neutral-300` (teks `text-black/dark:text-white`); 4 chip V1: Staff/Management/C-Level/CEO (Custom HIDE per §6 DEC-9); `accessibilityRole='tab'` + `accessibilityState={{selected}}` | `mobile/src/app/(app)/settings-score-formula.tsx` |
 | `WeightTotalBadge` (DA-SF1-3) | chip `self-start rounded-full px-2.5 py-1 text-xs font-semibold`; valid (sum==100) `bg-green-100 text-green-700`; invalid `bg-amber-100 text-amber-700`; `accessibilityLabel` selalu menyebut total + status eksplisit ("Total bobot 95%, harus 100% untuk aktivasi") — DESIGN §4 warna ≠ satu-satunya sinyal | `mobile/src/app/(app)/settings-score-formula.tsx` |
@@ -174,7 +172,7 @@ Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line bo
 | `VersionStatusBadge` (DA-SF1-5) | reuse `Badge` dengan tone: `draft`→warn (kuning), `active`→success (hijau), `archived`→neutral (abu); label dari `FORMULA_STATUS_LABEL` konstanta yg sudah ada di `lib/people-score.ts` | `mobile/src/app/(app)/settings-score-formula.tsx` |
 | `IconTile` (UI-G-011) | tile ikon per kartu/baris Menu — prototype `.menu-icon` 40×40 radius 8, ikon 22px stroke. App: `View` `rounded-xl` (radius md) ukuran default 40 (`items-center justify-center`) + `Ionicons` size ≈55% tile. Latar soft + warna ikon per **tone** selaras palet app (DESIGN §8), BUKAN hex prototype: `info` bg-blue-50/dark blue-950/40 ikon `#1564b3`→dark `#93c5fd`; `success` bg-green-50 ikon `#15803d`→`#86efac`; `warn` bg-amber-50 ikon `#b45309`→`#fcd34d`; `danger` bg-red-50 ikon `#b91c1c`→`#fca5a5`; `violet` bg-violet-50 ikon `#6d28d9`→`#c4b5fd`; `neutral` bg-neutral-100/800 ikon `#525252`→`#a3a3a3`. Warna ikon dipilih via `useColorScheme()` (pola `Badge` `dark:text-*-300`). Ikon = dekorasi (label teks tetap sumber makna — DESIGN §4), jadi tile `accessibilityElementsHidden`/tanpa label sendiri. | `mobile/src/components/ui.tsx`, grid & list Menu `settings.tsx` |
 | `NotificationRow` (UI-S-N01/N02) | kartu `rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950` berisi 2 sibling: Pressable baris (IconTile 40 tipe→ikon Ionicons outline, tone = `NOTIFICATION_TYPE_TONE`; judul `text-base` — `font-bold` saat unread, `font-semibold` saat read; body muted; meta row `Badge` label tipe + waktu relatif `text-xs text-neutral-500`) + tombol aksi kompak (`self-start min-h-[44px] rounded-xl bg-brand-dark px-5`, teks putih AA) di `pl-[52px]` sejajar kolom teks. **Sibling, bukan nested** — Pressable dalam Pressable = `<button>` bersarang invalid di web. Dot unread `h-2.5 w-2.5 bg-red-600` kanan-atas + `accessibilityLabel="Belum dibaca"` (§4 warna ≠ satu-satunya sinyal). "Tandai semua dibaca" = link-button `checkmark-done-outline` + teks `text-brand-dark dark:text-blue-300`, min-h 44 | `mobile/src/app/(app)/(tabs)/notifications.tsx` |
-| `ProgressOrb` (UI-G-001) | SVG ring 2 lapis (`Circle` track `#e2e8f0` + `Circle` value rotate `-90`, `strokeLinecap='round'`); size diskrit **56** (stroke 6) atau **72** (stroke 8); angka persen di tengah (`font-extrabold`, 16/20px). Tone otomatis dari nilai: `<35 danger` (red-700 `#b91c1c`), `35–69 warn` (amber-700 `#b45309`), `70–99 brand` (brand-dark `#1564b3`), `100 success` (green-700 `#15803d`); override via prop `tone` jika perlu. **A11y mengikat** (DESIGN §4: warna ≠ satu-satunya sinyal): `accessibilityRole='progressbar'` + `accessibilityLabel` selalu menyebut persen + label tone eksplisit (mis. "Capaian 68 persen, Berjalan"); angka tetap tampil di tengah orb | `mobile/src/components/ui.tsx`, header detail Goal/Strategy/Initiative/Action Plan/Task |
+| `ProgressOrb` (UI-G-001) | SVG ring 2 lapis (`Circle` track `#e2e8f0` + `Circle` value rotate `-90`, `strokeLinecap='round'`); size diskrit **56** (stroke 6) atau **72** (stroke 8); angka persen di tengah (`font-extrabold`, 16/20px). Tone otomatis dari nilai: `<35 danger` (red-700 `#b91c1c`), `35–69 warn` (amber-700 `#b45309`), `70–99 brand` (brand-dark `#1564b3`), `100 success` (green-700 `#15803d`); override via prop `tone` jika perlu. **A11y mengikat** (DESIGN §4: warna ≠ satu-satunya sinyal): `accessibilityRole='progressbar'` + `accessibilityLabel` selalu menyebut persen + label tone eksplisit (mis. "Capaian 68 persen, Berjalan"); angka tetap tampil di tengah orb | `mobile/src/components/ui.tsx`, header detail Goal/KPI Area/Strategy/Initiative/Action Plan |
 
 ---
 
@@ -240,6 +238,6 @@ Mode tampilan dapat dipilih oleh pengguna di **Settings → Tampilan** dengan 3 
 
 **Kontrol UI:** segmented 3 chip (Sistem/Terang/Gelap) di **Menu → Tampilan** ([`menu.tsx`](mobile/src/app/(app)/(tabs)/menu.tsx) `ThemeSwitch`; pindah dari Settings saat hub `/settings` pensiun), `accessibilityRole='radiogroup'` + tiap chip `radio` dengan `accessibilityState.selected`. Touch target ≥44px sesuai §4. Tiap chip: ikon Ionicons + label (§10 ikon = penguat, tak pernah sendirian) — `contrast`/`sunny`/`moon`, **filled saat aktif, `-outline` saat inaktif** (sinyal seleksi non-warna tambahan). Aktif `bg-brand-dark` + ikon/teks putih; inaktif `border border-neutral-300 bg-white` (dark: `border-neutral-700 bg-neutral-900`), warna ikon inaktif via `effective`.
 
-**Cakupan:** semua layar utama (Home, Workspace, Inbox, People, Notifications, Settings + sub-settings, detail Goal/Strategy/Initiative/Action Plan/Task, Login) sudah memakai pola `class dark:class` sehingga otomatis terbaca di kedua mode. Saat menambah layar/komponen baru, **wajib** sediakan varian `dark:*` untuk: latar (`bg-*`), border (`border-*`), teks (`text-*`), dan placeholder/icon non-tailwind (pakai `useThemePreference().effective` untuk pick warna eksplisit).
+**Cakupan:** semua layar utama (Home, Workspace, Inbox, People, Notifications, Settings + sub-settings, detail Goal/KPI/Strategy/Initiative/Action Plan, Login) sudah memakai pola `class dark:class` sehingga otomatis terbaca di kedua mode. Saat menambah layar/komponen baru, **wajib** sediakan varian `dark:*` untuk: latar (`bg-*`), border (`border-*`), teks (`text-*`), dan placeholder/icon non-tailwind (pakai `useThemePreference().effective` untuk pick warna eksplisit).
 
 Saat sebuah keputusan diambil, perbarui token terkait di sini + `global.css`.

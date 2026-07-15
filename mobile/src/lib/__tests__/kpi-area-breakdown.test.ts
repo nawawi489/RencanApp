@@ -1,4 +1,4 @@
-// Strategi Target Breakdown — pure helpers (PRD V1.8.2 §12). Migrasi 0021.
+// KPI Area Target Breakdown — pure helpers (PRD V1.8.2 §12). Migrasi 0021.
 jest.mock('../supabase', () => ({ supabase: {} }));
 
 import {
@@ -9,13 +9,13 @@ import {
   indexQuarterRows,
   indexMonthRowsPerQuarter,
   type BreakdownRow,
-} from '../strategy-breakdown';
+} from '../kpi-area-breakdown';
 
 function row(over: Partial<BreakdownRow>): BreakdownRow {
   return {
     id: 'x',
     organization_id: 'org',
-    strategy_id: 'k',
+    kpi_area_id: 'k',
     period_type: 'quarter',
     period_key: 'Q1',
     parent_quarter_key: null,

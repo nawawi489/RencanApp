@@ -106,7 +106,7 @@ describe('cardPeriodStatus', () => {
   it('current: kartu tanpa tanggal sama sekali', () => {
     expect(cardPeriodStatus({}, focus)).toBe('current');
   });
-  it('task: start_date/deadline juga dikenali', () => {
+  it('action_plan: start_date/deadline juga dikenali', () => {
     expect(cardPeriodStatus({ start_date: '2026-01-01', deadline: '2026-05-31' }, focus)).toBe('past');
     expect(cardPeriodStatus({ start_date: '2026-07-01', deadline: '2026-07-31' }, focus)).toBe('future');
   });

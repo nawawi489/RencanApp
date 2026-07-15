@@ -1,7 +1,7 @@
 // UI-G-001 — derivasi capaian header detail.
 import {
   childrenSublabel,
-  computeTaskProgress,
+  computeActionPlanProgress,
   ratioActiveOfChildren,
   ratioDoneOfChildren,
 } from '../progress';
@@ -73,34 +73,34 @@ describe('ratioActiveOfChildren', () => {
   });
 });
 
-describe('computeTaskProgress', () => {
+describe('computeActionPlanProgress', () => {
   it('repeat → compliancePercent (null → 0)', () => {
     expect(
-      computeTaskProgress({ status: 'in_progress', repeat: true, compliancePercent: 80 }),
+      computeActionPlanProgress({ status: 'in_progress', repeat: true, compliancePercent: 80 }),
     ).toBe(80);
     expect(
-      computeTaskProgress({ status: 'draft', repeat: true, compliancePercent: null }),
+      computeActionPlanProgress({ status: 'draft', repeat: true, compliancePercent: null }),
     ).toBe(0);
   });
 
   it('one-time → status-based heuristik', () => {
     expect(
-      computeTaskProgress({ status: 'draft', repeat: false, compliancePercent: null }),
+      computeActionPlanProgress({ status: 'draft', repeat: false, compliancePercent: null }),
     ).toBe(0);
     expect(
-      computeTaskProgress({ status: 'in_progress', repeat: false, compliancePercent: null }),
+      computeActionPlanProgress({ status: 'in_progress', repeat: false, compliancePercent: null }),
     ).toBe(50);
     expect(
-      computeTaskProgress({ status: 'done', repeat: false, compliancePercent: null }),
+      computeActionPlanProgress({ status: 'done', repeat: false, compliancePercent: null }),
     ).toBe(100);
     expect(
-      computeTaskProgress({ status: 'revision', repeat: false, compliancePercent: null }),
+      computeActionPlanProgress({ status: 'revision', repeat: false, compliancePercent: null }),
     ).toBe(30);
   });
 
   it('status tak dikenal → 0 (fail-open ringan, tidak menipu user)', () => {
     expect(
-      computeTaskProgress({ status: 'mystery', repeat: false, compliancePercent: null }),
+      computeActionPlanProgress({ status: 'mystery', repeat: false, compliancePercent: null }),
     ).toBe(0);
   });
 });

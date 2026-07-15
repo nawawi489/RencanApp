@@ -6,9 +6,9 @@
 // create_department SENGAJA tidak di sini (ISSUE-001, ikuti PRD §34.3): Department = admin-only,
 // hanya CEO/Super Admin bypass atau grant eksplisit lewat Permission Settings.
 export const MGR_DEFAULT_KEYS = [
-  'create_action_plan',
-  'create_task',
   'create_initiative',
+  'create_action_plan',
+  'create_strategy',
   'manage_teams',
   'review_deadline_changes',
 ] as const;

@@ -63,8 +63,8 @@ describe('InboxScreen', () => {
   it('data → daftar room + badge unread, tap → navigasi ke chat', async () => {
     mockUseInboxRooms.mockReturnValue({
       rooms: [
-        { id: 'r1', action_plan_id: 'i1', name: 'Room A', unread_count: 3, last_message_at: '2026-06-24T01:00:00Z', last_message_body: 'Halo tim', last_message_author_name: 'Budi' },
-        { id: 'r2', action_plan_id: 'i2', name: 'Room B', unread_count: 0, last_message_at: null, last_message_body: null, last_message_author_name: null },
+        { id: 'r1', initiative_id: 'i1', name: 'Room A', unread_count: 3, last_message_at: '2026-06-24T01:00:00Z', last_message_body: 'Halo tim', last_message_author_name: 'Budi' },
+        { id: 'r2', initiative_id: 'i2', name: 'Room B', unread_count: 0, last_message_at: null, last_message_body: null, last_message_author_name: null },
       ],
       isLoading: false,
       isError: false,
@@ -89,7 +89,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
     id: string; name: string; unread: number; body: string | null; author: string | null; at: string | null;
   }> = {}) => ({
     id: over.id ?? 'r1',
-    action_plan_id: 'i-' + (over.id ?? 'r1'),
+    initiative_id: 'i-' + (over.id ?? 'r1'),
     name: over.name ?? 'Room A',
     unread_count: over.unread ?? 0,
     last_message_at: over.at === undefined ? '2026-06-24T01:00:00Z' : over.at,
@@ -159,7 +159,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
     await render(<InboxScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.getByText('Marketing Spike')).toBeTruthy();
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi'), 'sales');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative'), 'sales');
     expect(await screen.findByText('Sales Q2')).toBeTruthy();
     expect(screen.queryByText('Marketing Spike')).toBeNull();
   });
@@ -192,7 +192,7 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
       rooms: [room({ id: 'r1', name: 'Sales' })], isLoading: false, isError: false, refetch: jest.fn(),
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi'), 'zzzz-tidak-ada');
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Initiative'), 'zzzz-tidak-ada');
     expect(await screen.findByText(/tidak ditemukan/i)).toBeTruthy();
     // default empty NOT shown
     expect(screen.queryByText('Belum ada percakapan')).toBeNull();

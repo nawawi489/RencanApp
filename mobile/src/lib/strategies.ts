@@ -1,32 +1,32 @@
-// Data layer Fase 4 — strategies.ts (Planning).
-// Otorisasi ditegakkan di server (RLS + RPC); fungsi di sini hanya pemanggil tipis.
-// Card dibuat via INSERT ber-RLS (pola createActionPlan); hanya activate_* yang lewat RPC.
+// Data layer Fase 4 — Strategy (turunan dari KPI Area). Pemanggil tipis: card dibuat via INSERT
+// ber-RLS (mengisi organization_id dari profiles + created_by), aktivasi lewat RPC SECURITY DEFINER.
+// Otorisasi ditegakkan di server.
+import { STATUS_TONE } from './cards';
 import type { Tables } from './database.types';
 import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
-// Re-export token semantik dari sumber tunggal (cards) — JANGAN duplikasi nilai.
-export { STATUS_TONE } from './cards';
-export type { PersonRef } from './cards';
+export type Strategy = Tables<'strategies'>;
 
-export type Strategi = Tables<'strategies'>;
+export { STATUS_TONE };
 
 export { PLANNING_STATUS_LABEL } from './goals';
 
 // ---------------------------------------------------------------- queries
 
-export async function listStrategies(goalId: string): Promise<Strategi[]> {
-  if (!goalId) return [];
+/** Strategi di bawah satu KPI Area, terlama dulu. Guard parentId kosong → []. */
+export async function listStrategies(kpiAreaId: string): Promise<Strategy[]> {
+  if (!kpiAreaId) return [];
   const { data, error } = await supabase
     .from('strategies')
     .select('*')
-    .eq('goal_id', goalId)
+    .eq('kpi_area_id', kpiAreaId)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data;
 }
 
-export async function getStrategy(id: string): Promise<Strategi> {
+export async function getStrategy(id: string): Promise<Strategy> {
   const { data, error } = await supabase.from('strategies').select('*').eq('id', id).single();
   if (error) throw error;
   return data;
@@ -35,56 +35,24 @@ export async function getStrategy(id: string): Promise<Strategi> {
 // ---------------------------------------------------------------- mutations
 
 export type NewStrategy = {
-  goal_id: string;
+  kpi_area_id: string;
   name: string;
   description?: string | null;
-  target: string | null;
-  /** Override PRD §18 (0032): basis angka untuk "% gap"; NULL = KPI kualitatif (teks `target` saja). */
-  target_numeric?: number | null;
-  /** Satuan tampilan, mis. "customer", "Rp" (0032). */
-  target_unit?: string | null;
-  /** UI-S-K03 — PRD §18 wajib "Ekspektasi Hasil". */
-  expected_outcome?: string | null;
+  reason: string | null;
+  main_risk: string | null;
+  alternative: string | null;
   pic_id: string | null;
   period_start: string | null;
   period_end: string | null;
+  /** UI-S-S01 — PRD §20 "Kontribusi Quarter" (% ke parent KPI Area); NULL diizinkan saat Draft. */
+  contribution_pct?: number | null;
 };
 
-export async function createStrategy(input: NewStrategy): Promise<Strategi> {
+export async function createStrategy(input: NewStrategy): Promise<Strategy> {
   const { uid, orgId } = await getOrgContext();
   const { data, error } = await supabase
     .from('strategies')
     .insert({ ...input, organization_id: orgId, created_by: uid })
-    .select('*')
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-/**
- * Lengkapi/ubah Strategi Draft (mis. isi Target untuk Strategi hasil template yang awalnya null).
- * Update ber-RLS (policy strategies_update: creator/PIC/manage_others). Server tetap penegak akhir.
- */
-export type StrategyPatch = Partial<
-  Pick<
-    NewStrategy,
-    | 'name'
-    | 'description'
-    | 'target'
-    | 'target_numeric'
-    | 'target_unit'
-    | 'expected_outcome'
-    | 'pic_id'
-    | 'period_start'
-    | 'period_end'
-  >
->;
-
-export async function updateStrategy(id: string, patch: StrategyPatch): Promise<Strategi> {
-  const { data, error } = await supabase
-    .from('strategies')
-    .update(patch)
-    .eq('id', id)
     .select('*')
     .single();
   if (error) throw error;

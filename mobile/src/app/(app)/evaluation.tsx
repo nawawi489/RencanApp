@@ -1,4 +1,4 @@
-// Fase 8 — Evaluation Rencana Aksi (opsional, setelah selesai). Anti-self (PIC ≠ evaluator).
+// Fase 8 — Evaluation Initiative (opsional, setelah selesai). Anti-self (PIC ≠ evaluator).
 // UPSERT: pre-fill bila evaluation sudah ada. Prompt hanya saat status 'done'/'active'.
 // UI-S-EV1: tambah checklist "Perlu jadi SOP?" + "Perlu rollout?" (loop balik ke Development) + catatan rollout.
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -48,11 +48,11 @@ function CheckboxRow({
 
 export function LiveEvaluationScreen() {
   const { profile } = useProfile();
-  const params = useLocalSearchParams<{ actionPlanId?: string; picId?: string; status?: string }>();
-  const actionPlanId = params.actionPlanId ?? '';
+  const params = useLocalSearchParams<{ initiativeId?: string; picId?: string; status?: string }>();
+  const initiativeId = params.initiativeId ?? '';
   const picId = params.picId ?? '';
   const status = params.status ?? '';
-  const { evaluation } = useEvaluation(actionPlanId);
+  const { evaluation } = useEvaluation(initiativeId);
   const { record, isPending } = useEvaluationActions();
 
   // pre-fill saat evaluation existing tersedia (UPSERT). Initial value dari evaluation (bila sudah cache),
@@ -86,11 +86,11 @@ export function LiveEvaluationScreen() {
   async function handleSave() {
     setError(null);
     if (isSelf) {
-      setError('PIC tidak dapat mengevaluasi action_plannya sendiri.');
+      setError('PIC tidak dapat mengevaluasi initiativenya sendiri.');
       return;
     }
     await record({
-      actionPlanId,
+      initiativeId,
       targetAchieved: target,
       results: results.trim(),
       lessonsLearned: lessons.trim(),
@@ -108,7 +108,7 @@ export function LiveEvaluationScreen() {
           <SectionCard>
             <Text className="text-base font-semibold text-black dark:text-white">Evaluasi belum tersedia</Text>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Evaluasi tersedia setelah Rencana Aksi berjalan atau selesai.
+              Evaluasi tersedia setelah Initiative berjalan atau selesai.
             </Text>
           </SectionCard>
         </View>
@@ -170,7 +170,7 @@ export function LiveEvaluationScreen() {
 
           {isSelf ? (
             <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
-              PIC tidak dapat mengevaluasi action_plannya sendiri.
+              PIC tidak dapat mengevaluasi initiativenya sendiri.
             </Text>
           ) : null}
           {error ? (

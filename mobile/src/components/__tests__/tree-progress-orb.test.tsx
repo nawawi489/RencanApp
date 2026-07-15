@@ -10,7 +10,7 @@ describe('TreeProgressOrb', () => {
     expect(screen.getByText('Progress')).toBeTruthy();
   });
 
-  it('label "Capaian" untuk Goal/Strategi', async () => {
+  it('label "Capaian" untuk Goal/KPI Area', async () => {
     await render(<TreeProgressOrb value={82} label="Capaian" />);
     expect(screen.getByText('Capaian')).toBeTruthy();
     expect(screen.getByText('82%')).toBeTruthy();

@@ -1,4 +1,4 @@
-// UI-S-KT1 — Layar mandiri Strategi Template, grouping per Goal Template (proxy divisi).
+// UI-S-KT1 — Layar mandiri KPI Area Template, grouping per Goal Template (proxy divisi).
 // Read-only V1; edit/tambah baris dilakukan di Goal Template Library (settings-goal-templates)
 // karena baris template anak dimiliki goal template parent. Tombol "Edit di Template"
 // melempar ke parent Goal Template.
@@ -10,18 +10,18 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/c
 import { AccessDenied } from '@/components/access-denied';
 import { Button, EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
-import { listAllStrategyTemplates, type StrategyTemplateWithParent } from '@/lib/goals';
+import { listAllKpiAreaTemplates, type KpiAreaTemplateWithParent } from '@/lib/goals';
 
-export default function SettingsStrategyTemplatesScreen() {
+export default function SettingsKpiAreaTemplatesScreen() {
   const router = useRouter();
   const { can } = useProfile();
-  const allowed = can('manage_strategy_templates') || can('manage_goal_templates');
+  const allowed = can('manage_kpi_area_templates') || can('manage_goal_templates');
   const placeholderColor = usePlaceholderColor();
   const [q, setQ] = useState('');
 
   const tplQ = useQuery({
-    queryKey: ['strategy_templates', 'all'],
-    queryFn: listAllStrategyTemplates,
+    queryKey: ['kpi_area_templates', 'all'],
+    queryFn: listAllKpiAreaTemplates,
     enabled: allowed,
   });
 
@@ -32,7 +32,7 @@ export default function SettingsStrategyTemplatesScreen() {
       const hay = `${r.name ?? ''} ${r.goal_templates?.name ?? ''}`.toLowerCase();
       return hay.includes(needle);
     });
-    const map = new Map<string, { parent: { id: string; name: string } | null; rows: StrategyTemplateWithParent[] }>();
+    const map = new Map<string, { parent: { id: string; name: string } | null; rows: KpiAreaTemplateWithParent[] }>();
     for (const r of filtered) {
       const key = r.goal_template_id ?? 'orphan';
       const slot = map.get(key) ?? { parent: r.goal_templates, rows: [] };
@@ -44,26 +44,26 @@ export default function SettingsStrategyTemplatesScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Strategi Template' }} />
+      <Stack.Screen options={{ title: 'KPI Area Template' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Strategi Template</Text>
+          <Text className="text-2xl font-bold text-black dark:text-white">KPI Area Template</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
-            Library Strategi siap pakai, dikelompokkan per Goal Template.
+            Library KPI Area siap pakai, dikelompokkan per Goal Template.
           </Text>
         </View>
         {!allowed ? (
-          <AccessDenied message="Pengelolaan Strategi Template memerlukan izin Goal/Strategi Template." />
+          <AccessDenied message="Pengelolaan KPI Area Template memerlukan izin Goal/KPI Area Template." />
         ) : tplQ.isLoading ? (
           <SkeletonList count={5} />
         ) : (
           <>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Strategi Template di-grup per Goal Template parent. Edit baris dilakukan di Goal Template Library.
+              KPI Area Template di-grup per Goal Template parent. Edit baris dilakukan di Goal Template Library.
             </Text>
             <TextInput
-              accessibilityLabel="Cari Strategi Template"
-              placeholder="Cari nama Strategi atau Goal Template…"
+              accessibilityLabel="Cari KPI Area Template"
+              placeholder="Cari nama KPI Area atau Goal Template…"
               placeholderTextColor={placeholderColor}
               value={q}
               onChangeText={setQ}
@@ -71,8 +71,8 @@ export default function SettingsStrategyTemplatesScreen() {
             />
             {grouped.length === 0 ? (
               <EmptyState
-                title="Belum ada Strategi Template"
-                description="Buat Goal Template + Strategi Template di Goal Template Library."
+                title="Belum ada KPI Area Template"
+                description="Buat Goal Template + KPI Area Template di Goal Template Library."
                 action={{
                   label: 'Buka Goal Template Library',
                   onPress: () => router.push('/settings-goal-templates' as Href),

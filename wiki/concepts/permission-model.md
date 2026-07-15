@@ -13,18 +13,18 @@ Model hak akses [[overview|EMS]]: **berbasis tanggung jawab, bukan granular**. U
 
 1. **PIC card** → lihat card itu.
 2. **Reviewer** → lihat card yang direview.
-3. **PIC card induk** → lihat **seluruh** turunannya (Goal→KPI→Strategy→Initiative→[[action-plan|Task]]→Instance).
+3. **PIC card induk** → lihat **seluruh** turunannya (Goal→KPI→Strategy→Initiative→[[action-plan|Action Plan]]→Instance).
 
 **Lihat ≠ Edit:** PIC induk boleh lihat semua turunan, tapi edit/approve tetap ikut wewenang. PIC induk **tidak boleh** mengubah bukti yang sudah dikirim staff di luar flow sah — [[audit-governance|audit trail]] tidak boleh rusak.
 
 ## Delegasi bertingkat
 
 Pemilik card induk membuat turunan & menentukan PIC + Reviewer-nya:
-- PIC Strategy → buat Strategy + set PIC/Reviewer Strategy.
+- PIC KPI Area → buat Strategy + set PIC/Reviewer Strategy.
 - PIC Strategy → buat Initiative + set PIC/Reviewer Initiative.
-- PIC Initiative → buat Task + set PIC/Reviewer Task.
+- PIC Initiative → buat Action Plan + set PIC/Reviewer Action Plan.
 
-**Default PIC turunan:** ikut PIC induk jika tidak diubah. **Pengecualian:** Task wajib punya PIC eksekutor eksplisit. **PIC tidak boleh approve pekerjaannya sendiri.**
+**Default PIC turunan:** ikut PIC induk jika tidak diubah. **Pengecualian:** Action Plan wajib punya PIC eksekutor eksplisit. **PIC tidak boleh approve pekerjaannya sendiri.**
 
 ## Permission yang bisa dicustom (User Settings)
 
@@ -36,7 +36,7 @@ Bukan system rule: boleh membuat tiap jenis card; lihat seluruh Workspace; kelol
 |---|---|
 | **CEO / Super Admin** | Semua. |
 | **C-Level** | Sesuai area authority; buat card jika jadi PIC induknya; lihat turunan miliknya. |
-| **Management / Manager / Head** | Buat Strategy/Initiative/Task jika PIC induk; tentukan PIC/Reviewer turunannya. |
+| **Management / Manager / Head** | Buat Strategy/Initiative/Action Plan jika PIC induk; tentukan PIC/Reviewer turunannya. |
 | **Staff** | Lihat & kerjakan card yang dia PIC/Reviewer; submit Bukti & Nilai Hasil; comment. **Tidak** boleh buat card, lihat seluruh Workspace, kelola card orang lain, ubah Settings. |
 
 ## Konsekuensi teknis

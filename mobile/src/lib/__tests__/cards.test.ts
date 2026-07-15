@@ -1,5 +1,5 @@
 // cards.ts meng-import ./supabase di top-level → mock agar tak butuh env saat import.
-// Menguji label maps (murni) + Fase 4: listActionPlans filter initiative_id & createActionPlan passthrough initiative_id.
+// Menguji label maps (murni) + Fase 4: listInitiatives filter strategy_id & createInitiative passthrough strategy_id.
 const mockFrom = jest.fn();
 const mockGetUser = jest.fn();
 
@@ -15,13 +15,13 @@ import {
   ACTION_PLAN_STATUS_LABEL,
   INITIATIVE_STATUS_LABEL,
   STATUS_TONE,
-  countCompletedTasksInPeriod,
-  createActionPlan,
+  countCompletedActionPlansInPeriod,
+  createInitiative,
   getPersonRef,
-  listActionPlans,
-  listActionPlansByProblemStatementIds,
-  listStrategyResultValueSources,
-  type NewActionPlan,
+  listInitiatives,
+  listInitiativesByProblemStatementIds,
+  listKpiAreaResultValueSources,
+  type NewInitiative,
 } from '../cards';
 
 /** Builder thenable: metode chainable kembalikan builder; await resolve di titik mana pun. */
@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe('cards label maps', () => {
-  it('[1] memetakan status action_plan ke label Indonesia', () => {
+  it('[1] memetakan status initiative ke label Indonesia', () => {
     expect(INITIATIVE_STATUS_LABEL.active).toBe('Aktif');
     expect(INITIATIVE_STATUS_LABEL.done).toBe('Selesai');
   });
@@ -78,44 +78,44 @@ describe('cards label maps', () => {
   });
 });
 
-describe('listActionPlans — filter initiative_id (Fase 4)', () => {
-  it('[4] tanpa opts → tidak memfilter initiative_id, order desc', async () => {
+describe('listInitiatives — filter strategy_id (Fase 4)', () => {
+  it('[4] tanpa opts → tidak memfilter strategy_id, order desc', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'i1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const rows = await listActionPlans();
-    expect(mockFrom).toHaveBeenCalledWith('action_plans');
+    const rows = await listInitiatives();
+    expect(mockFrom).toHaveBeenCalledWith('initiatives');
     expect(calls.is).toBeUndefined();
     expect(calls.eq).toBeUndefined();
     expect(calls.order).toEqual(['created_at', { ascending: false }]);
     expect(rows).toEqual([{ id: 'i1' }]);
   });
 
-  it('[5] initiativeId:null → .is(initiative_id, null) (section Tanpa Goal)', async () => {
+  it('[5] strategyId:null → .is(strategy_id, null) (section Tanpa Goal)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listActionPlans({ initiativeId: null });
-    expect(calls.is).toEqual(['initiative_id', null]);
+    await listInitiatives({ strategyId: null });
+    expect(calls.is).toEqual(['strategy_id', null]);
     expect(calls.eq).toBeUndefined();
   });
 
-  it('[6] initiativeId:"s1" → .eq(initiative_id, s1)', async () => {
+  it('[6] strategyId:"s1" → .eq(strategy_id, s1)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listActionPlans({ initiativeId: 's1' });
-    expect(calls.eq).toEqual(['initiative_id', 's1']);
+    await listInitiatives({ strategyId: 's1' });
+    expect(calls.eq).toEqual(['strategy_id', 's1']);
     expect(calls.is).toBeUndefined();
   });
 
   it('[7] propagasi error', async () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(listActionPlans()).rejects.toEqual({ message: 'boom' });
+    await expect(listInitiatives()).rejects.toEqual({ message: 'boom' });
   });
 
   it('[7a] problemStatementId:"p1" → .eq(problem_statement_id, p1) (Fase 6)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listActionPlans({ problemStatementId: 'p1' });
+    await listInitiatives({ problemStatementId: 'p1' });
     expect(calls.eq).toEqual(['problem_statement_id', 'p1']);
     expect(calls.is).toBeUndefined();
   });
@@ -123,14 +123,14 @@ describe('listActionPlans — filter initiative_id (Fase 4)', () => {
   it('[7b] problemStatementId:null → .is(problem_statement_id, null)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listActionPlans({ problemStatementId: null });
+    await listInitiatives({ problemStatementId: null });
     expect(calls.is).toEqual(['problem_statement_id', null]);
     expect(calls.eq).toBeUndefined();
   });
 });
 
-describe('createActionPlan — passthrough initiative_id (Fase 4)', () => {
-  const base: NewActionPlan = {
+describe('createInitiative — passthrough strategy_id (Fase 4)', () => {
+  const base: NewInitiative = {
     name: 'Init',
     target_result: null,
     pic_id: null,
@@ -145,55 +145,55 @@ describe('createActionPlan — passthrough initiative_id (Fase 4)', () => {
     return { profiles, inits };
   }
 
-  it('[8] meneruskan initiative_id ke payload INSERT + org & created_by', async () => {
+  it('[8] meneruskan strategy_id ke payload INSERT + org & created_by', async () => {
     const { inits } = setup();
-    await createActionPlan({ ...base, initiative_id: 's1' });
+    await createInitiative({ ...base, strategy_id: 's1' });
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect(payload.initiative_id).toBe('s1');
+    expect(payload.strategy_id).toBe('s1');
     expect(payload.organization_id).toBe('org1');
     expect(payload.created_by).toBe('u1');
   });
 
-  it('[9] initiative_id:null eksplisit tetap diteruskan (backward-compat datar)', async () => {
+  it('[9] strategy_id:null eksplisit tetap diteruskan (backward-compat datar)', async () => {
     const { inits } = setup();
-    await createActionPlan({ ...base, initiative_id: null });
+    await createInitiative({ ...base, strategy_id: null });
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect(payload.initiative_id).toBeNull();
+    expect(payload.strategy_id).toBeNull();
   });
 
-  it('[10] tanpa initiative_id → payload tidak memuat field itu (Fase 1 tak berubah)', async () => {
+  it('[10] tanpa strategy_id → payload tidak memuat field itu (Fase 1 tak berubah)', async () => {
     const { inits } = setup();
-    await createActionPlan(base);
+    await createInitiative(base);
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect('initiative_id' in payload).toBe(false);
+    expect('strategy_id' in payload).toBe(false);
   });
 
   it('[10a] meneruskan problem_statement_id ke payload INSERT (Fase 6)', async () => {
     const { inits } = setup();
-    await createActionPlan({ ...base, problem_statement_id: 'ps1' });
+    await createInitiative({ ...base, problem_statement_id: 'ps1' });
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
     expect(payload.problem_statement_id).toBe('ps1');
   });
 
   it('[10b] tanpa problem_statement_id → payload tidak memuat field itu', async () => {
     const { inits } = setup();
-    await createActionPlan(base);
+    await createInitiative(base);
     const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
     expect('problem_statement_id' in payload).toBe(false);
   });
 });
 
-describe('listActionPlansByProblemStatementIds (UI-S-DA2)', () => {
+describe('listInitiativesByProblemStatementIds (UI-S-DA2)', () => {
   it('[14] ids kosong → [] tanpa query', async () => {
-    expect(await listActionPlansByProblemStatementIds([])).toEqual([]);
+    expect(await listInitiativesByProblemStatementIds([])).toEqual([]);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('[15] ids → .in(problem_statement_id, ids)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'i1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const rows = await listActionPlansByProblemStatementIds(['p1', 'p2']);
-    expect(mockFrom).toHaveBeenCalledWith('action_plans');
+    const rows = await listInitiativesByProblemStatementIds(['p1', 'p2']);
+    expect(mockFrom).toHaveBeenCalledWith('initiatives');
     expect(calls.in).toEqual(['problem_statement_id', ['p1', 'p2']]);
     expect(rows).toEqual([{ id: 'i1' }]);
   });
@@ -201,17 +201,17 @@ describe('listActionPlansByProblemStatementIds (UI-S-DA2)', () => {
   it('[16] propagasi error', async () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(listActionPlansByProblemStatementIds(['p1'])).rejects.toEqual({ message: 'boom' });
+    await expect(listInitiativesByProblemStatementIds(['p1'])).rejects.toEqual({ message: 'boom' });
   });
 });
 
-describe('listStrategyResultValueSources (UI-S-KD2/KD3)', () => {
-  it('[17] filter strategy_id, order terbaru dahulu', async () => {
+describe('listKpiAreaResultValueSources (UI-S-KD2/KD3)', () => {
+  it('[17] filter kpi_area_id, order terbaru dahulu', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'rv1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const rows = await listStrategyResultValueSources('k1');
-    expect(mockFrom).toHaveBeenCalledWith('task_result_values');
-    expect(calls.eq).toEqual(['strategy_id', 'k1']);
+    const rows = await listKpiAreaResultValueSources('k1');
+    expect(mockFrom).toHaveBeenCalledWith('action_plan_result_values');
+    expect(calls.eq).toEqual(['kpi_area_id', 'k1']);
     expect(calls.order).toEqual(['created_at', { ascending: false }]);
     expect(rows).toEqual([{ id: 'rv1' }]);
   });
@@ -219,13 +219,13 @@ describe('listStrategyResultValueSources (UI-S-KD2/KD3)', () => {
   it('[18] data null → []', async () => {
     const { builder } = makeQueryThenable({ data: null, error: null });
     mockFrom.mockReturnValue(builder);
-    expect(await listStrategyResultValueSources('k1')).toEqual([]);
+    expect(await listKpiAreaResultValueSources('k1')).toEqual([]);
   });
 
   it('[19] propagasi error', async () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(listStrategyResultValueSources('k1')).rejects.toEqual({ message: 'boom' });
+    await expect(listKpiAreaResultValueSources('k1')).rejects.toEqual({ message: 'boom' });
   });
 });
 
@@ -259,7 +259,7 @@ describe('getPersonRef (prefill PIC dari pic_id)', () => {
 // Semantik "AP selesai bulan ini" (OQ-6 diputuskan 2026-07-05): idealnya `completed_at` window,
 // namun schema tak punya kolom itu dan spec §NG-5 tidak mengizinkan migrasi baru untuk bug ini.
 // Approksimasi: `updated_at` window. Untuk AP `done` yang tidak lagi diedit, updated_at ≈ completed_at.
-describe('countCompletedTasksInPeriod — PPL-06 Kontribusi (OQ-6, approksimasi updated_at)', () => {
+describe('countCompletedActionPlansInPeriod — PPL-06 Kontribusi (OQ-6, approksimasi updated_at)', () => {
   const period = { period_start: '2026-07-01', period_end: '2026-07-31' };
 
   it('[D7] userId kosong → 0 tanpa fetch dan tanpa auth.getUser', async () => {
@@ -268,7 +268,7 @@ describe('countCompletedTasksInPeriod — PPL-06 Kontribusi (OQ-6, approksimasi 
       called = true;
       return makeQueryThenable({ data: [], error: null }).builder;
     });
-    const n = await countCompletedTasksInPeriod('', period);
+    const n = await countCompletedActionPlansInPeriod('', period);
     expect(n).toBe(0);
     expect(called).toBe(false);
     expect(mockGetUser).not.toHaveBeenCalled();
@@ -280,19 +280,19 @@ describe('countCompletedTasksInPeriod — PPL-06 Kontribusi (OQ-6, approksimasi 
       called = true;
       return makeQueryThenable({ data: [], error: null }).builder;
     });
-    const n = await countCompletedTasksInPeriod('u1', null);
+    const n = await countCompletedActionPlansInPeriod('u1', null);
     expect(n).toBe(0);
     expect(called).toBe(false);
   });
 
-  it('[D9] query shape: from(tasks) eq(pic_id,userId) eq(status,done) gte(updated_at,start) lte(updated_at,end)', async () => {
+  it('[D9] query shape: from(action_plans) eq(pic_id,userId) eq(status,done) gte(updated_at,start) lte(updated_at,end)', async () => {
     const { builder } = makeQueryThenable({
       data: [{ id: 'ap1' }, { id: 'ap2' }, { id: 'ap3' }],
       error: null,
     });
     mockFrom.mockReturnValue(builder);
-    const n = await countCompletedTasksInPeriod('u1', period);
-    expect(mockFrom).toHaveBeenCalledWith('tasks');
+    const n = await countCompletedActionPlansInPeriod('u1', period);
+    expect(mockFrom).toHaveBeenCalledWith('action_plans');
     const eqCalls = (builder.eq as jest.Mock).mock.calls;
     expect(eqCalls).toEqual(
       expect.arrayContaining([
@@ -310,13 +310,13 @@ describe('countCompletedTasksInPeriod — PPL-06 Kontribusi (OQ-6, approksimasi 
   it('[D10] return data.length (belum ada AP selesai → 0)', async () => {
     const { builder } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    const n = await countCompletedTasksInPeriod('u1', period);
+    const n = await countCompletedActionPlansInPeriod('u1', period);
     expect(n).toBe(0);
   });
 
   it('[D11] propagasi error', async () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(countCompletedTasksInPeriod('u1', period)).rejects.toEqual({ message: 'boom' });
+    await expect(countCompletedActionPlansInPeriod('u1', period)).rejects.toEqual({ message: 'boom' });
   });
 });

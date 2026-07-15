@@ -10,7 +10,7 @@ import { reportError } from '@/lib/errors';
 import { upsertSettings } from '@/lib/governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 
-const CARD_TYPES = ['goal', 'strategy', 'initiative', 'action_plan', 'task'] as const;
+const CARD_TYPES = ['goal', 'kpi_area', 'strategy', 'initiative', 'action_plan'] as const;
 
 export default function SettingsCardGuidanceScreen() {
   const { can } = useProfile();

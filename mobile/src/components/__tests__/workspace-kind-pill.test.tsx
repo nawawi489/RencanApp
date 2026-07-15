@@ -15,21 +15,19 @@ describe('WorkspaceKindPill', () => {
     expect(screen.getByText('Goal')).toBeTruthy();
   });
 
-  it('action_plan → letter "AP" (dua huruf) + label "Rencana Aksi"', async () => {
+  it('action_plan → letter "AP" (dua huruf) + label "Action Plan"', async () => {
     await render(<WorkspaceKindPill kind="action_plan" />);
     expect(screen.getByText('AP')).toBeTruthy();
-    expect(screen.getByText('Rencana Aksi')).toBeTruthy();
+    expect(screen.getByText('Action Plan')).toBeTruthy();
   });
 
-  it('mapping huruf per posisi hierarki (RWT-03 B: warna+huruf terikat POSISI, bukan nama)', () => {
-    // Post-rename V1.8.3: hierarki bergeser bottom-up, huruf ikut nama baru.
-    // Palet warna tetap terikat POSISI (level 1 = orange, level 2 = purple, dst).
+  it('mapping huruf per kategori sesuai spec §9', () => {
     const expected: Record<string, string> = {
       goal: 'G',
+      kpi_area: 'K',
       strategy: 'S',
       initiative: 'I',
       action_plan: 'AP',
-      task: 'T',
       development_area: 'D',
       problem_statement: 'P',
     };
