@@ -1,4 +1,5 @@
 // Step 8 REFACTOR — Unit tests untuk resolveNotificationRoute (pure function).
+import { ENTITY_ROUTE_SEGMENT } from '../entity-routes';
 import { resolveNotificationRoute } from '../push-route-resolver';
 
 describe('resolveNotificationRoute', () => {
@@ -19,15 +20,8 @@ describe('resolveNotificationRoute', () => {
   });
 
   it('[PN-ROUTE-4] semua CardEntityType menghasilkan rute yang tidak null', () => {
-    const cardTypes = [
-      'goal',
-      'kpi_area',
-      'strategy',
-      'initiative',
-      'action_plan',
-      'development_area',
-      'problem_statement',
-    ] as const;
+    const cardTypes = Object.keys(ENTITY_ROUTE_SEGMENT);
+    expect(cardTypes.length).toBeGreaterThan(0);
     for (const t of cardTypes) {
       const route = resolveNotificationRoute(t, 'some-id');
       expect(route).not.toBeNull();
