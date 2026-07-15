@@ -3,6 +3,7 @@
 const mockFrom = jest.fn();
 const mockRpc = jest.fn();
 const mockUpload = jest.fn();
+const mockCreateSignedUrl = jest.fn();
 const mockFetchImpl = jest.fn();
 
 jest.mock('../supabase', () => ({
@@ -20,12 +21,21 @@ beforeAll(() => {
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import {
+  CHAT_ALLOWED_MIMES,
+  CHAT_FILE_MAX_BYTES,
+  CHAT_MAX_ATTACHMENTS,
   FILE_MAX_BYTES,
+  buildChatAttachmentPath,
   buildEvidencePath,
   classifyKind,
+  cleanupOrphanChatUpload,
   cleanupOrphanUpload,
+  getChatAttachmentSignedUrl,
   safeFilename,
+  uploadChatAttachment,
   uploadEvidenceFile,
+  validateChatAttachmentCount,
+  validateChatFile,
   validateFile,
 } from '../storage';
 
@@ -33,8 +43,12 @@ beforeEach(() => {
   mockFrom.mockReset();
   mockRpc.mockReset();
   mockUpload.mockReset();
+  mockCreateSignedUrl.mockReset();
   mockFetchImpl.mockReset();
-  mockFrom.mockReturnValue({ upload: (...a: unknown[]) => mockUpload(...a) });
+  mockFrom.mockReturnValue({
+    upload: (...a: unknown[]) => mockUpload(...a),
+    createSignedUrl: (...a: unknown[]) => mockCreateSignedUrl(...a),
+  });
   mockFetchImpl.mockResolvedValue({ blob: async () => 'blob-fake' });
 });
 
@@ -119,5 +133,146 @@ describe('cleanupOrphanUpload', () => {
   it('[S25] error → throw (propagate)', async () => {
     mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'forbid' } });
     await expect(cleanupOrphanUpload('p')).rejects.toEqual({ message: 'forbid' });
+  });
+});
+
+// ============================================================
+// Chat Attachments — Fase 1: Pure Functions & Constants
+// ============================================================
+
+describe('Chat attachment constants (CA-1,2,3)', () => {
+  it('[CA-1] CHAT_FILE_MAX_BYTES = 5 MB', () => {
+    expect(CHAT_FILE_MAX_BYTES).toBe(5 * 1024 * 1024);
+  });
+  it('[CA-2] CHAT_ALLOWED_MIMES = jpeg, png, webp', () => {
+    expect(CHAT_ALLOWED_MIMES).toEqual(['image/jpeg', 'image/png', 'image/webp']);
+  });
+  it('[CA-3] CHAT_MAX_ATTACHMENTS = 3', () => {
+    expect(CHAT_MAX_ATTACHMENTS).toBe(3);
+  });
+});
+
+describe('validateChatFile (CA-4..10)', () => {
+  it('[CA-4] 5 MB boundary → OK', () => {
+    expect(() => validateChatFile({ name: 'ok.jpg', size: CHAT_FILE_MAX_BYTES, mimeType: 'image/jpeg' })).not.toThrow();
+  });
+  it('[CA-5] > 5 MB → throw', () => {
+    expect(() => validateChatFile({ name: 'big.jpg', size: CHAT_FILE_MAX_BYTES + 1, mimeType: 'image/jpeg' })).toThrow(/5 MB/);
+  });
+  it('[CA-6] PDF → throw (MIME not allowed)', () => {
+    expect(() => validateChatFile({ name: 'doc.pdf', size: 100, mimeType: 'application/pdf' })).toThrow(/tidak didukung/);
+  });
+  it('[CA-7] null MIME → throw', () => {
+    expect(() => validateChatFile({ name: 'x', size: 100, mimeType: null })).toThrow(/tidak didukung/);
+  });
+  it('[CA-8] 0 bytes → throw', () => {
+    expect(() => validateChatFile({ name: 'empty.jpg', size: 0, mimeType: 'image/jpeg' })).toThrow(/kosong/);
+  });
+  it('[CA-9] image/webp → OK', () => {
+    expect(() => validateChatFile({ name: 'x.webp', size: 100, mimeType: 'image/webp' })).not.toThrow();
+  });
+  it('[CA-10] image/svg+xml → throw (not in whitelist)', () => {
+    expect(() => validateChatFile({ name: 'x.svg', size: 100, mimeType: 'image/svg+xml' })).toThrow(/tidak didukung/);
+  });
+});
+
+describe('validateChatAttachmentCount (CA-11,12,13)', () => {
+  it('[CA-11] 3 → OK (boundary)', () => {
+    expect(() => validateChatAttachmentCount(3)).not.toThrow();
+  });
+  it('[CA-12] 4 → throw', () => {
+    expect(() => validateChatAttachmentCount(4)).toThrow(/3 gambar/);
+  });
+  it('[CA-13] 0 → OK', () => {
+    expect(() => validateChatAttachmentCount(0)).not.toThrow();
+  });
+});
+
+describe('buildChatAttachmentPath (CA-14,15,16)', () => {
+  it('[CA-14] format = {org}/{room}/{uuid}-{safe_filename}', () => {
+    const p = buildChatAttachmentPath({ orgId: 'org-1', roomId: 'room-2', fileName: 'foto rapat.jpg' });
+    expect(p).toMatch(/^org-1\/room-2\/[0-9a-f-]+-foto_rapat\.jpg$/);
+  });
+  it('[CA-15] no bucket prefix', () => {
+    const p = buildChatAttachmentPath({ orgId: 'o', roomId: 'r', fileName: 'x.png' });
+    expect(p.startsWith('chat-attachments/')).toBe(false);
+  });
+  it('[CA-16] path has >= 3 segments', () => {
+    const p = buildChatAttachmentPath({ orgId: 'o', roomId: 'r', fileName: 'x.png' });
+    expect(p.split('/').length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ============================================================
+// Fase 2: Storage Operations (mocked)
+// ============================================================
+
+describe('uploadChatAttachment (step 10-11)', () => {
+  it('success → returns {path, mimeType}; uses chat-attachments bucket', async () => {
+    mockUpload.mockResolvedValueOnce({ data: { path: 'ignored' }, error: null });
+    const res = await uploadChatAttachment({
+      orgId: 'o', roomId: 'r',
+      file: { uri: 'file:///tmp/x.jpg', name: 'x.jpg', size: 100, mimeType: 'image/jpeg' },
+    });
+    expect(mockFrom).toHaveBeenCalledWith('chat-attachments');
+    expect(mockUpload).toHaveBeenCalled();
+    expect(res.path.startsWith('o/r/')).toBe(true);
+    expect(res.mimeType).toBe('image/jpeg');
+  });
+  it('storage error → throw', async () => {
+    mockUpload.mockResolvedValueOnce({ data: null, error: { message: 'denied' } });
+    await expect(uploadChatAttachment({
+      orgId: 'o', roomId: 'r',
+      file: { uri: 'file:///x', name: 'x.jpg', size: 1, mimeType: 'image/jpeg' },
+    })).rejects.toEqual({ message: 'denied' });
+  });
+  it('pre-upload validation rejects > 5MB before upload', async () => {
+    await expect(uploadChatAttachment({
+      orgId: 'o', roomId: 'r',
+      file: { uri: 'file:///x', name: 'big.jpg', size: CHAT_FILE_MAX_BYTES + 1, mimeType: 'image/jpeg' },
+    })).rejects.toThrow(/5 MB/);
+    expect(mockUpload).not.toHaveBeenCalled();
+  });
+  it('pre-upload validation rejects bad MIME before upload', async () => {
+    await expect(uploadChatAttachment({
+      orgId: 'o', roomId: 'r',
+      file: { uri: 'file:///x', name: 'x.pdf', size: 100, mimeType: 'application/pdf' },
+    })).rejects.toThrow(/tidak didukung/);
+    expect(mockUpload).not.toHaveBeenCalled();
+  });
+  it('[15a] passes contentType in upload options', async () => {
+    mockUpload.mockResolvedValueOnce({ data: { path: 'ok' }, error: null });
+    await uploadChatAttachment({
+      orgId: 'o', roomId: 'r',
+      file: { uri: 'file:///x', name: 'x.png', size: 100, mimeType: 'image/png' },
+    });
+    const uploadArgs = mockUpload.mock.calls[0];
+    expect(uploadArgs[2]).toEqual(expect.objectContaining({ contentType: 'image/png' }));
+  });
+});
+
+describe('cleanupOrphanChatUpload (step 12-13)', () => {
+  it('calls RPC cleanup_orphan_chat_upload({p_path})', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: null });
+    await cleanupOrphanChatUpload('o/r/uuid-x.jpg');
+    expect(mockRpc).toHaveBeenCalledWith('cleanup_orphan_chat_upload', { p_path: 'o/r/uuid-x.jpg' });
+  });
+  it('error → throw', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'forbid' } });
+    await expect(cleanupOrphanChatUpload('p')).rejects.toEqual({ message: 'forbid' });
+  });
+});
+
+describe('getChatAttachmentSignedUrl (step 14-15)', () => {
+  it('calls createSignedUrl on chat-attachments bucket', async () => {
+    mockCreateSignedUrl.mockResolvedValueOnce({ data: { signedUrl: 'https://x/signed' }, error: null });
+    const url = await getChatAttachmentSignedUrl('o/r/uuid-x.jpg');
+    expect(mockFrom).toHaveBeenCalledWith('chat-attachments');
+    expect(mockCreateSignedUrl).toHaveBeenCalledWith('o/r/uuid-x.jpg', 60);
+    expect(url).toBe('https://x/signed');
+  });
+  it('error → throw', async () => {
+    mockCreateSignedUrl.mockResolvedValueOnce({ data: null, error: { message: 'nope' } });
+    await expect(getChatAttachmentSignedUrl('p')).rejects.toEqual({ message: 'nope' });
   });
 });

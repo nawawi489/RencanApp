@@ -63,6 +63,19 @@ jest.mock('@/hooks/use-inbox', () => ({
   useChatReadsRealtime: () => {},
 }));
 
+jest.mock('@/hooks/use-chat-attachment-flow', () => ({
+  useChatAttachmentFlow: () => ({ run: jest.fn(), isUploading: false }),
+}));
+
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: jest.fn(),
+  MediaType: { images: 'images' },
+}));
+
+jest.mock('@/hooks/use-profile', () => ({
+  useProfile: () => ({ profile: { organization_id: 'org-1' }, isLoading: false, can: () => true }),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import ChatRoomScreen from '../[roomId]';
 
@@ -90,7 +103,7 @@ beforeEach(async () => {
   mockUseChatRoomMembers.mockReset();
   mockUseChatReads.mockReset();
   mockUseChatRoom.mockReturnValue({ room: null });
-  mockUseChatRoomMembers.mockReturnValue({ members: [] });
+  mockUseChatRoomMembers.mockReturnValue({ members: [{ id: 'me', full_name: 'Saya', email: null }] });
   mockUseChatReads.mockReturnValue({ readsByMessage: new Map() });
   mockUseChatMessages.mockReturnValue({
     messages: [],
@@ -526,6 +539,7 @@ describe('ChatRoomScreen — composer & guards', () => {
 // =========================================================== Topbar konteks (PRD §30) & @mention ==========================================================
 describe('ChatRoomScreen — konteks room & @mention', () => {
   const members = [
+    { id: 'me', full_name: 'Saya', email: null },
     { id: 'u2', full_name: 'Budi', email: null },
     { id: 'u3', full_name: 'Sari', email: null },
   ];
@@ -536,7 +550,7 @@ describe('ChatRoomScreen — konteks room & @mention', () => {
     // FR-1 (Batch B): tombol Anggota pindah ke header dgn label statis 'Anggota'.
     const openMembers = await screen.findByLabelText('Anggota');
     fireEvent.press(openMembers);
-    expect(await screen.findByText('Anggota (2)')).toBeTruthy();
+    expect(await screen.findByText('Anggota (3)')).toBeTruthy();
     expect(screen.getByText('Budi')).toBeTruthy();
     expect(screen.getByText('Sari')).toBeTruthy();
   });

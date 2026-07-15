@@ -451,6 +451,7 @@ export type Database = {
       chat_messages: {
         Row: {
           actor_id: string | null
+          attachments: Json
           author_id: string | null
           body: string
           chat_room_id: string
@@ -466,6 +467,7 @@ export type Database = {
         }
         Insert: {
           actor_id?: string | null
+          attachments?: Json
           author_id?: string | null
           body: string
           chat_room_id: string
@@ -481,6 +483,7 @@ export type Database = {
         }
         Update: {
           actor_id?: string | null
+          attachments?: Json
           author_id?: string | null
           body?: string
           chat_room_id?: string
@@ -3251,6 +3254,7 @@ export type Database = {
       }
     }
     Functions: {
+      _valid_chat_attachments: { Args: { p_att: Json }; Returns: boolean }
       action_plan_has_my_task: {
         Args: { p_action_plan: string }
         Returns: boolean
@@ -3330,6 +3334,10 @@ export type Database = {
         Args: { p_action_plan: string }
         Returns: boolean
       }
+      can_access_confidential_chat: {
+        Args: { p_ap_id: string }
+        Returns: boolean
+      }
       can_access_development_area: {
         Args: { p_dev_area: string }
         Returns: boolean
@@ -3346,7 +3354,9 @@ export type Database = {
         Args: { p_strategy_id: string }
         Returns: boolean
       }
+      can_read_chat_attachment: { Args: { p_room: string }; Returns: boolean }
       can_view_workspace: { Args: never; Returns: boolean }
+      can_write_chat_attachment: { Args: { p_room: string }; Returns: boolean }
       cancel_card: {
         Args: { p_entity_id: string; p_entity_type: string; p_reason: string }
         Returns: string
@@ -3360,6 +3370,10 @@ export type Database = {
           meets_requirement: boolean
           required_count: number
         }[]
+      }
+      cleanup_orphan_chat_upload: {
+        Args: { p_path: string }
+        Returns: undefined
       }
       cleanup_orphan_upload: { Args: { p_path: string }; Returns: undefined }
       close_period_snapshot: { Args: { p_period_id: string }; Returns: number }
@@ -3730,6 +3744,7 @@ export type Database = {
       }
       send_chat_message: {
         Args: {
+          p_attachments?: Json
           p_body: string
           p_context_action_plan?: string
           p_mentions?: string[]

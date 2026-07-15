@@ -65,7 +65,7 @@ begin
   raise notice 'PASS a: DDL kolom + constraint + FK reply_to ada';
 end $$;
 
--- ============================================================ (b) send_chat_message signature baru (5 param)
+-- ============================================================ (b) send_chat_message signature (5→6 param after 0059)
 do $$
 declare
   v_nargs int;
@@ -75,10 +75,10 @@ begin
   if v_nargs is null then
     raise exception 'FAIL b: send_chat_message function not found';
   end if;
-  if v_nargs <> 5 then
-    raise exception 'FAIL b: send_chat_message has % args, expected 5', v_nargs;
+  if v_nargs <> 6 then
+    raise exception 'FAIL b: send_chat_message has % args, expected 6 (after 0059)', v_nargs;
   end if;
-  raise notice 'PASS b: send_chat_message memiliki 5 parameter';
+  raise notice 'PASS b: send_chat_message memiliki 6 parameter (v2 after 0059)';
 end $$;
 
 -- ============================================================ (c) send konteks sah → context_label = server snapshot nama AP

@@ -10,12 +10,14 @@
 // dan accessibilityState={{disabled}} eksplisit.
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { useChatAttachmentFlow } from '@/hooks/use-chat-attachment-flow';
 import {
   useChatActions,
   useChatMessages,
@@ -29,10 +31,13 @@ import { personLabel } from '@/lib/cards';
 import { dayKey, dividerLabel } from '@/lib/chat-day';
 import { composerPlaceholder } from '@/lib/chat-placeholder';
 import { reportError } from '@/lib/errors';
-import type { ChatMember, ChatMessage, ChatReaction, ChatRead } from '@/lib/inbox';
+import type { ChatAttachment, ChatMember, ChatMessage, ChatReaction, ChatRead } from '@/lib/inbox';
 import { createLogger } from '@/lib/logger';
 import { parseMentions } from '@/lib/mention-parse';
 import { applyMention, collectMentionIds, matchMentionQuery, type MentionPick } from '@/lib/mentions';
+import type { LocalFile } from '@/lib/storage';
+import { CHAT_MAX_ATTACHMENTS } from '@/lib/storage';
+import { useProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth-provider';
 
 const log = createLogger('chat-room');
@@ -275,6 +280,13 @@ function MessageBubble({
                 ),
               )}
         </Text>
+        {(m.attachments ?? []).length > 0 ? (
+          <View className="mt-1 gap-1">
+            {(m.attachments as ChatAttachment[]).map((att) => (
+              <ChatAttachmentThumbnail key={att.path} attachment={att} />
+            ))}
+          </View>
+        ) : null}
         <Text className={`mt-1 text-[10px] ${isMe ? 'text-white/80' : 'text-neutral-400'}`}>
           {formatTime(m.created_at)}
         </Text>
@@ -512,6 +524,21 @@ function MentionSuggestions({
   );
 }
 
+function ChatAttachButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel="Lampirkan gambar"
+      accessibilityState={{ disabled }}
+      style={{ width: 44, height: 44 }}
+      className={`items-center justify-center rounded-full ${disabled ? 'opacity-40' : 'active:opacity-80'}`}>
+      <Ionicons name="attach" size={22} color="#208aef" />
+    </Pressable>
+  );
+}
+
 function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
   // Critic §8.4: inline 44×44 + accessibilityState eksplisit.
   return (
@@ -528,6 +555,55 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
   );
 }
 
+function AttachmentPreviewRow({
+  files,
+  onRemove,
+}: {
+  files: LocalFile[];
+  onRemove: (index: number) => void;
+}) {
+  if (files.length === 0) return null;
+  return (
+    <View className="flex-row gap-2 px-1 pb-1">
+      {files.map((f, i) => (
+        <View
+          key={`${f.name}-${i}`}
+          className="flex-row items-center gap-1 rounded-lg bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
+          <Image
+            source={{ uri: f.uri }}
+            style={{ width: 32, height: 32, borderRadius: 4 }}
+            accessibilityLabel={`Pratinjau ${f.name}`}
+          />
+          <Text className="max-w-[80px] text-xs text-black dark:text-white" numberOfLines={1}>
+            {f.name}
+          </Text>
+          <Pressable
+            onPress={() => onRemove(i)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Hapus ${f.name}`}>
+            <Ionicons name="close-circle" size={18} color="#ef4444" />
+          </Pressable>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment }) {
+  return (
+    <View
+      className="mt-1 overflow-hidden rounded-lg"
+      accessibilityLabel={`Lampiran ${attachment.name}`}>
+      <Image
+        source={{ uri: `placeholder://${attachment.path}` }}
+        style={{ width: 200, height: 150, borderRadius: 8 }}
+        resizeMode="cover"
+      />
+    </View>
+  );
+}
+
 export default function ChatRoomScreen() {
   const { roomId } = useLocalSearchParams<{ roomId?: string }>();
   const router = useRouter();
@@ -537,6 +613,8 @@ export default function ChatRoomScreen() {
   const { messages, isLoading, isError, refetch, loadOlder, hasMore } = useChatMessages(safeRoomId);
   const { send, markRead, isSending, toggleReaction, isTogglingReaction } =
     useChatActions(safeRoomId);
+  const { run: runAttachmentFlow } = useChatAttachmentFlow();
+  const { profile } = useProfile();
   const { room } = useChatRoom(safeRoomId);
   const { members } = useChatRoomMembers(safeRoomId);
   const { readsByMessage } = useChatReads(safeRoomId);
@@ -546,9 +624,14 @@ export default function ChatRoomScreen() {
   // di luar itu `undefined` agar TextInput bebas mengelola kursor sendiri saat user mengetik biasa.
   const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
   const [mentions, setMentions] = useState<MentionPick[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [membersOpen, setMembersOpen] = useState(false);
   const [readsOpenFor, setReadsOpenFor] = useState<string | null>(null);
   const placeholderColor = usePlaceholderColor();
+  const isMember = useMemo(
+    () => currentUserId != null && members.some((m) => m.id === currentUserId),
+    [members, currentUserId],
+  );
   const [sendError, setSendError] = useState<string | null>(null);
   // Banner governance: mulai `null` = "belum tahu". Setelah AsyncStorage terbaca, jadi bool.
   // Render banner HANYA saat sudah tahu belum di-dismiss → tak flicker saat kembali ke room.
@@ -660,11 +743,59 @@ export default function ChatRoomScreen() {
     return out;
   }, [ordered, todayKey]);
 
+  const attachSendingRef = useRef(false);
+
+  async function handleAttach() {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        selectionLimit: CHAT_MAX_ATTACHMENTS - pendingFiles.length,
+        quality: 0.8,
+      });
+      if (result.canceled) return;
+      const newFiles: LocalFile[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.fileName ?? `image-${Date.now()}.jpg`,
+        size: a.fileSize ?? 0,
+        mimeType: a.type ?? null,
+      }));
+      setPendingFiles((prev) => [...prev, ...newFiles].slice(0, CHAT_MAX_ATTACHMENTS));
+    } catch {
+      log.warn({ event: 'attach_picker_error' });
+    }
+  }
+
   async function handleSend() {
     if (isSending) return; // anti double-submit (Critic §8.5)
     const body = text.trim();
     if (!body) return;
     setSendError(null);
+
+    if (pendingFiles.length > 0) {
+      if (attachSendingRef.current) return;
+      attachSendingRef.current = true;
+      try {
+        await runAttachmentFlow({
+          orgId: profile?.organization_id ?? '',
+          roomId: safeRoomId,
+          body,
+          mentions: collectMentionIds(body, mentions),
+          files: pendingFiles,
+          send,
+        });
+        setText('');
+        setSelection(undefined);
+        setMentions([]);
+        setPendingFiles([]);
+      } catch (e) {
+        setSendError(reportError('Kirim pesan', e, 'Gagal mengirim pesan.'));
+      } finally {
+        attachSendingRef.current = false;
+      }
+      return;
+    }
+
     // Optimistic: bubble 'me' tampil instan; hook rollback bila server menolak.
     const optimistic: ChatMessage = {
       id: `temp-${Date.now()}`,
@@ -817,30 +948,44 @@ export default function ChatRoomScreen() {
           </ScrollView>
         )}
 
-        <View className="gap-2 border-t border-neutral-200 px-5 pb-3 pt-2 dark:border-neutral-800">
-          <MentionSuggestions members={mentionSuggestions} onPick={handlePickMention} />
-          <View className="flex-row items-end gap-2">
-            <TextInput
-              className="max-h-32 flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-              placeholder={composerPlaceholder(room?.name)}
-              placeholderTextColor={placeholderColor}
-              value={text}
-              onChangeText={(t) => {
-                setText(t);
-                setSelection(undefined);
-              }}
-              selection={selection}
-              onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-              multiline
+        {isMember ? (
+          <View className="gap-2 border-t border-neutral-200 px-5 pb-3 pt-2 dark:border-neutral-800">
+            <MentionSuggestions members={mentionSuggestions} onPick={handlePickMention} />
+            <AttachmentPreviewRow
+              files={pendingFiles}
+              onRemove={(i) => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
             />
-            <SendButton disabled={composerDisabled} onPress={handleSend} />
+            {pendingFiles.length > 0 && text.trim().length === 0 ? (
+              <Text
+                className="text-xs text-neutral-500 dark:text-neutral-400"
+                accessibilityLiveRegion="polite">
+                Tambahkan keterangan singkat untuk gambar ini.
+              </Text>
+            ) : null}
+            <View className="flex-row items-end gap-2">
+              <ChatAttachButton disabled={isSending} onPress={handleAttach} />
+              <TextInput
+                className="max-h-32 flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+                placeholder={composerPlaceholder(room?.name)}
+                placeholderTextColor={placeholderColor}
+                value={text}
+                onChangeText={(t) => {
+                  setText(t);
+                  setSelection(undefined);
+                }}
+                selection={selection}
+                onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                multiline
+              />
+              <SendButton disabled={composerDisabled} onPress={handleSend} />
+            </View>
+            {sendError ? (
+              <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
+                {sendError}
+              </Text>
+            ) : null}
           </View>
-          {sendError ? (
-            <Text className="text-sm text-red-700 dark:text-red-400" accessibilityRole="alert">
-              {sendError}
-            </Text>
-          ) : null}
-        </View>
+        ) : null}
       </KeyboardAvoidingView>
     </View>
   );

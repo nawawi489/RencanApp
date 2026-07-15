@@ -106,6 +106,7 @@ const SENSITIVE_FRAGMENTS = [
   'bearer',
   'servicekey',
   'supabase',
+  'storagepath',
 ];
 
 // PII karyawan (aplikasi EMS) — dicocokkan pada key SETELAH normalisasi. Whole-key

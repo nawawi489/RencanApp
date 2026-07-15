@@ -39,6 +39,14 @@ export type SystemEventType =
   | 'deadline_change_revision_requested'
   | 'deadline_change_resubmitted';
 
+export type ChatAttachment = {
+  path: string;
+  name: string;
+  mime: string;
+  size: number;
+  kind: 'photo';
+};
+
 export type ChatMessage = {
   id: string;
   chat_room_id: string;
@@ -50,6 +58,7 @@ export type ChatMessage = {
   actor_id?: string | null;
   author?: PersonRef;
   reactions?: ChatReaction[];
+  attachments?: ChatAttachment[];
   context_entity_type?: string | null;
   context_entity_id?: string | null;
   context_label?: string | null;
@@ -89,7 +98,7 @@ export async function listChatMessages(
   if (!roomId) return [];
   let qb = supabase
     .from('chat_messages')
-    .select('id, chat_room_id, author_id, body, created_at, kind, system_event_type, actor_id, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id), context_entity_type, context_entity_id, context_label, reply_to_message_id, reply_to:reply_to_message_id(id, body, author_id, author:author_id(full_name))')
+    .select('id, chat_room_id, author_id, body, created_at, kind, system_event_type, actor_id, author:author_id(id, full_name, email), reactions:chat_message_reactions(emoji, reactor_id), attachments, context_entity_type, context_entity_id, context_label, reply_to_message_id, reply_to:reply_to_message_id(id, body, author_id, author:author_id(full_name))')
     .eq('chat_room_id', roomId);
   if (cursor) qb = qb.or(buildKeysetOr(cursor));
   const { data, error } = await qb
@@ -97,8 +106,8 @@ export async function listChatMessages(
     .order('id', { ascending: false })
     .limit(CHAT_PAGE_SIZE);
   if (error) throw error;
-  return ((data ?? []) as unknown as (ChatMessage & { reactions: ChatReaction[] | null; reply_to: ChatMessageReplyTo | null })[]).map(
-    (row) => ({ ...row, reactions: row.reactions ?? [], reply_to: row.reply_to ?? null }),
+  return ((data ?? []) as unknown as (ChatMessage & { reactions: ChatReaction[] | null; reply_to: ChatMessageReplyTo | null; attachments: ChatAttachment[] | null })[]).map(
+    (row) => ({ ...row, reactions: row.reactions ?? [], reply_to: row.reply_to ?? null, attachments: row.attachments ?? [] }),
   );
 }
 
@@ -115,6 +124,7 @@ function buildKeysetOr(cursor: ChatCursor): string {
 export type SendChatMessageOpts = {
   contextActionPlan?: string;
   replyTo?: string;
+  attachments?: ChatAttachment[];
 };
 
 /** Kirim pesan. mentions = id user (hanya yang anggota room yang diproses server). */
@@ -128,6 +138,7 @@ export async function sendChatMessage(
     p_room: roomId,
     p_body: body,
     p_mentions: mentions,
+    p_attachments: opts?.attachments ?? undefined,
     p_context_action_plan: opts?.contextActionPlan ?? undefined,
     p_reply_to: opts?.replyTo ?? undefined,
   });
