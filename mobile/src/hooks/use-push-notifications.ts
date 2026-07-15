@@ -105,17 +105,21 @@ export function usePushHandler(session: Session | null) {
   // Jika session null saat mount, response disimpan di queuedRef — effect berikutnya
   // (dep: [session, queryClient]) akan memproses queue saat session tersedia.
   useEffect(() => {
-    void Notifications.getLastNotificationResponseAsync().then((res) => {
-      if (!res) return;
-      if (sessionRef.current) {
-        const data = (res.notification.request.content.data ?? {}) as Record<string, unknown>;
-        const route = resolveNotificationRoute(data.entity_type as string, data.entity_id as string);
-        if (route) routerRef.current.push(route as never);
-        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      } else {
-        queuedRef.current = res;
-      }
-    });
+    // .catch swallow — native bridge kadang reject saat cold-start di simulator/permission edge.
+    // Kegagalan cold-start bukan blocker; foreground listener di effect terpisah tetap aktif.
+    Notifications.getLastNotificationResponseAsync()
+      .then((res) => {
+        if (!res) return;
+        if (sessionRef.current) {
+          const data = (res.notification.request.content.data ?? {}) as Record<string, unknown>;
+          const route = resolveNotificationRoute(data.entity_type as string, data.entity_id as string);
+          if (route) routerRef.current.push(route as never);
+          void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        } else {
+          queuedRef.current = res;
+        }
+      })
+      .catch(() => {});
   }, [queryClient]);
 
   // Proses queue saat session tersedia (trigger hanya saat session berubah).

@@ -1,9 +1,12 @@
 import { Redirect, Stack } from 'expo-router';
 
+import { usePushHandler } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function AppLayout() {
   const { session } = useAuth();
+  // Wajib sebelum early-return — Rules of Hooks; hook menangani session null secara internal.
+  usePushHandler(session);
 
   if (!session) {
     return <Redirect href="/(auth)/login" />;

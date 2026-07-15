@@ -6,6 +6,10 @@ jest.mock('@/providers/auth-provider', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
+jest.mock('@/hooks/use-push-notifications', () => ({
+  usePushHandler: jest.fn(),
+}));
+
 jest.mock('expo-router', () => {
   const React = jest.requireActual('react');
   const RN = jest.requireActual('react-native');
