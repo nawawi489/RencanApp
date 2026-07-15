@@ -1623,3 +1623,11 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 - **Pages NOT updated (historical snapshots, sengaja):** `prototype-prd-conformance` (audit V1.82), `workspace-lock-audit/sprint-plan`, `design-fidelity-audit`, `fase5/6-tdd-plan`, `fase6-spec`, `ws-04-governance-debt`, `workspace-progress-orb-tdd-plan`, semua `test-reports/` & `sources/`.
 - **Pages TIDAK butuh update** (sudah V1.8.3 correct): `entities/card-model.md`, `entities/workspace.md`, `entities/action-plan.md`, `entities/database-blueprint.md`, `concepts/execution-loop.md`, `concepts/audit-governance.md`, `concepts/permission-model.md`, `concepts/tech-stack.md`, `concepts/architecture.md`, `concepts/evidence-kinds.md`.
 - Sisa follow-up (belum dikerjakan): audit gap kode V1.82→V1.83.
+
+## [2026-07-15] update | OWNER-F: sweeper orphan chat-attachments DEFER
+
+- Keputusan owner OWNER-F (opsi a): sweeper otomatis untuk objek orphan di bucket `chat-attachments` **DEFER**, tidak dibangun sekarang.
+- Alasan mengikat: (1) menambah komponen operasional (schedule + monitoring + failure mode) di atas bucket yang immutability-nya (`specs/inbox-chat-attachments.md` §6.5) baru dibangun; (2) auto-delete berbasis retensi manual bertentangan dengan immutability by design; (3) angka retensi tanpa data pemakaian nyata = tebakan.
+- Spec bersyarat ditulis di `specs/chat-attachments-orphan-sweeper.md` (PR [#66](https://github.com/nawawi489/RencanApp/pull/66)): prasyarat telemetri 4 minggu pasca-landing V2 attachments, ambang keputusan build (orphan ratio ≥5% atau volume ≥500 MB/bulan), rancangan bersyarat (pg_cron + RPC `SECURITY DEFINER` + `pg_net`, pola konsisten `0043_activity_logs_retention.sql`), 7 test kontrak wajib sebelum implementasi.
+- Dua garis pertahanan tetap berlaku selama defer: FR-ATT-1.5 pre-commit cleanup klien (`Promise.allSettled`), dan immutability bucket itu sendiri (tidak ada policy UPDATE/DELETE).
+- Follow-up: buka `specs/chat-attachments-orphan-sweeper.md` §6 (OS-1..3) hanya setelah telemetri §3 terkumpul.
