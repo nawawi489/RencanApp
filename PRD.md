@@ -1232,7 +1232,7 @@ Template:
 1. Goal Template.
 2. Strategy Template.
 
-Template kosong secara default dan hanya tampil jika user punya akses membuat/mengelola template.
+Strategy Template kosong secara default (§19). Goal Template tetap berisi kategori dasar (Omset/Profit) — bukan daftar per-industri seperti Strategy Template lama, jadi tidak melanggar prinsip lintas-industri §19. Accordion Template hanya tampil jika user punya akses membuat/mengelola template.
 
 Pengaturan:
 

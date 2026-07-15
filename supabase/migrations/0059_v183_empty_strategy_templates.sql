@@ -32,46 +32,60 @@
 --      Goal tidak eksplisit menuntut hapus; keputusan owner terpisah.
 --      Konsekuensi: Menu → Template → Goal Template masih menampilkan
 --      2 entri, tapi Strategy Template picker di dalamnya akan kosong.
---   2. Contract test `supabase/tests/fase4_performance_workspace_
---      contract.sql` TEST 1 (baris 37-46) masih meng-assert seed 10/9
---      pakai nama lama `kpi_area_templates` (broken post-0045 rename
---      juga). Perlu di-invert ke `count(*)=0` + rename tabel.
---   3. `apply_goal_template` RPC di-DROP di 0046:132 dan tidak
---      di-recreate — `mobile/src/lib/goals.ts:123` calls a dead
---      function. Bukan bug V1.83 tapi ekosistem Goal Template memang
---      sudah rusak sebelum ini.
+--
+-- CORRECTION (post-review, lihat wiki/log.md): klaim awal migrasi ini bahwa
+-- `apply_goal_template` adalah dead function TIDAK BENAR. RPC itu di-DROP
+-- lalu langsung di-CREATE OR REPLACE lagi di 0046:430 — hidup, dan dipanggil
+-- dari `mobile/src/lib/goals.ts:114` via tombol live "Buat Goal dari
+-- Template" (`settings-goal-templates.tsx` → `goal-wizard.tsx`). Body RPC-nya
+-- `INSERT INTO strategies ... SELECT ... FROM strategy_templates WHERE
+-- goal_template_id = ...` — begitu tabel ini kosong, RPC tetap sukses tapi
+-- menghasilkan Goal dengan NOL Strategy turunan, tanpa error. Ini bukan bug
+-- RPC (INSERT ... SELECT dari 0 baris memang valid), tapi behavior-nya harus
+-- eksplisit, bukan diam-diam:
+--   - `goal-wizard.tsx` step 2 sekarang menampilkan catatan saat
+--     kpiTemplates kosong, menjelaskan Goal akan dibuat tanpa Strategy.
+--   - Contract test TEST 1 di `fase4_performance_workspace_contract.sql`
+--     sudah diperbaiki (nama tabel + assert count=0). TEST 4 & TEST 6 di
+--     file yang sama JUGA meng-assert count=10 dari apply_goal_template dan
+--     sudah diupdate ke count=0 — tapi keduanya (plus TEST 3, TEST 5) masih
+--     tidak bisa dieksekusi karena referensi tabel pre-rename `kpi_areas`
+--     yang sudah tidak ada sejak 0045 (debt terpisah, di luar scope migrasi
+--     ini — lihat komentar di masing-masing TEST).
 
 begin;
 
 -- Hapus 19 baris seed default (10 Omset + 9 Profit) per PRD V1.82 §47-48.
--- WHERE selektif berdasarkan goal_template.key + nama PRD PASTI —
--- baris admin custom (nama non-PRD) tidak tersentuh.
+-- WHERE selektif berdasarkan goal_template.key + division + nama PRD PASTI
+-- (3-tuple, cocok dengan unique key asli `(goal_template_id, division, name)`
+-- di 0010:35) — baris admin custom (nama non-PRD, atau nama PRD yang
+-- di-reuse di division LAIN) tidak tersentuh.
 delete from public.strategy_templates
-where (goal_template_id, name) in (
-  select gt.id, x.name
+where (goal_template_id, division, name) in (
+  select gt.id, x.division, x.name
   from (values
     -- §47 Omset (10 items)
-    ('omset',  'Menambah Jumlah Customer'),
-    ('omset',  'Meningkatkan Basket Size'),
-    ('omset',  'Meningkatkan Output Produk'),
-    ('omset',  'Meningkatkan Produktivitas'),
-    ('omset',  'Ketersediaan Arus Kas yang Memadai'),
-    ('omset',  'A/R Collection'),
-    ('omset',  'Meningkatkan Kompetensi Karyawan'),
-    ('omset',  'Ketersediaan Karyawan (MPP)'),
-    ('omset',  'Menambah Jumlah Cabang Baru'),
-    ('omset',  'Menciptakan Produk / Brand Baru'),
+    ('omset',  'cmo',  'Menambah Jumlah Customer'),
+    ('omset',  'cmo',  'Meningkatkan Basket Size'),
+    ('omset',  'coo',  'Meningkatkan Output Produk'),
+    ('omset',  'coo',  'Meningkatkan Produktivitas'),
+    ('omset',  'cfo',  'Ketersediaan Arus Kas yang Memadai'),
+    ('omset',  'cfo',  'A/R Collection'),
+    ('omset',  'chro', 'Meningkatkan Kompetensi Karyawan'),
+    ('omset',  'chro', 'Ketersediaan Karyawan (MPP)'),
+    ('omset',  'cbo',  'Menambah Jumlah Cabang Baru'),
+    ('omset',  'cbo',  'Menciptakan Produk / Brand Baru'),
     -- §48 Profit (9 items)
-    ('profit', 'Increase Sales Price'),
-    ('profit', 'Minimize Budget'),
-    ('profit', 'Menurunkan OPEX'),
-    ('profit', 'Menurunkan Komplain Pelanggan'),
-    ('profit', 'Control Budgeting'),
-    ('profit', 'Mengurangi Biaya Lembur'),
-    ('profit', 'Menurunkan Turnover'),
-    ('profit', 'Ketersediaan Pendanaan Ekspansi Outlet Baru'),
-    ('profit', 'Efisiensi Biaya Ekspansi')
-  ) as x (tkey, name)
+    ('profit', 'cmo',  'Increase Sales Price'),
+    ('profit', 'cmo',  'Minimize Budget'),
+    ('profit', 'coo',  'Menurunkan OPEX'),
+    ('profit', 'coo',  'Menurunkan Komplain Pelanggan'),
+    ('profit', 'cfo',  'Control Budgeting'),
+    ('profit', 'chro', 'Mengurangi Biaya Lembur'),
+    ('profit', 'chro', 'Menurunkan Turnover'),
+    ('profit', 'cbo',  'Ketersediaan Pendanaan Ekspansi Outlet Baru'),
+    ('profit', 'cbo',  'Efisiensi Biaya Ekspansi')
+  ) as x (tkey, division, name)
   join public.goal_templates gt on gt.key = x.tkey
 );
 
