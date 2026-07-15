@@ -107,7 +107,7 @@ Komponen Inbox: header lokal, search Initiative/pesan, filter (Semua, Belum diba
 
 Initiative Chat: setiap Initiative otomatis punya chat room saat aktif. Member = PIC Initiative, Reviewer Initiative, PIC/Reviewer Action Plan di bawahnya, PIC induk yang punya akses turunan. **Tanpa akses Initiative → tidak bisa buka chat-nya.**
 
-**Inbox bukan tempat approval resmi** — keputusan resmi tetap via Comment / Review / Status / Activity Log. Bukti tetap dikirim melalui Action Plan, bukan sebagai chat biasa.
+**Inbox bukan tempat approval resmi** — keputusan resmi tetap via Comment / Review / Status / Activity Log. **Bukti formal** (masuk riwayat versi, terkunci saat direview, dinilai Reviewer) tetap dikirim melalui Action Plan. **Lampiran diskusi** di chat bersifat informal — tidak pernah menjadi Bukti, tidak masuk riwayat versi, tidak menjadi input Review, dan tidak berbobot dalam Score Formula; batas ini ditegakkan struktural di database, bukan hanya konvensi UI. Lihat `specs/inbox-chat-attachments.md` (amandemen owner 2026-07-15).
 
 Action Plan dapat membuka chat dengan **konteks reply**, tidak membuat chat terpisah.
 
