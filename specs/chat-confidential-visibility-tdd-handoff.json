@@ -1,0 +1,92 @@
+{
+  "issue": 64,
+  "issue_url": "https://github.com/nawawi489/RencanApp/issues/64",
+  "title": "security(chat): tutup gap confidential pada pesan TEKS chat (RLS + FTS)",
+  "status": "siap-red-phase",
+  "workflow": {
+    "run_id": "wf_b8b8acf5-233",
+    "generated_at": "2026-07-15",
+    "initial_verdict": "perlu-perbaikan",
+    "post_owner_decisions_status": "siap-red-phase-2026-07-15"
+  },
+  "plan_doc": "specs/chat-confidential-visibility-tdd-plan.md",
+  "migration_target": "supabase/migrations/0059_chat_confidential_rls_fts.sql",
+  "test_target": "supabase/tests/db_contract/0059_chat_confidential_rls_fts.sql",
+  "owner_decisions_locked_2026_07_15": {
+    "OWNER-A": {
+      "question": "Fix #64 membalik resolusi 2026-07-12 (docstring 0054:22-26)?",
+      "decision": "Ya, balik — chat honor confidential",
+      "action": "Update docstring 0054:22-26 menyebut resolusi baru + referensi #64."
+    },
+    "OWNER-B": {
+      "question": "Task-reviewer/PIC non-grantee di chat_room_members AP confidential — apa yang dilihat?",
+      "decision": "Auto-remove dari chat_room_members saat AP jadi confidential",
+      "action": "CREATE OR REPLACE recompute_chat_room_members supaya skip AP confidential + one-shot backfill DELETE FROM chat_room_members untuk existing rows."
+    },
+    "OWNER-C": {
+      "question": "get_chat_rooms preview — mana yang di-mask?",
+      "decision": "Hanya last_message_body (unread_count + last_message_at tetap muncul)",
+      "action": "CASE WHEN <klausa b> THEN cm.body ELSE NULL END pada kolom last_message_body saja."
+    },
+    "OWNER-D": {
+      "question": "Pesan kind='system' dikecualikan dari gate?",
+      "decision": "Dikecualikan — system event selalu terlihat untuk semua member",
+      "action": "Klausa (b) ditambahi guard: `chat_messages.kind = 'system' OR <klausa b confidential>`."
+    },
+    "SCOPE-1": {
+      "question": "Permukaan turunan (mentions, reactions, reads) scope-in atau follow-up?",
+      "decision": "Scope-in mentions + reactions + reads ke 0059",
+      "action": "DROP+CREATE POLICY mentions_select, chat_message_reactions_select, chat_message_reads_select dengan klausa (b) yang sama (tanpa exemption system — mereka mengikuti visibilitas parent).",
+      "not_in_scope": "Reply-quote (0056) — butuh audit terpisah apakah body parent di-embed."
+    }
+  },
+  "surfaces_to_patch_in_0059": [
+    {
+      "surface": "RLS chat_messages_select",
+      "source": "supabase/migrations/0008_fase3_collab.sql:336-341",
+      "op": "DROP + CREATE POLICY dengan klausa (a) + (b + exemption system OWNER-D)"
+    },
+    {
+      "surface": "RPC search_chat_messages",
+      "source": "supabase/migrations/0054_search_chat_messages.sql:50-127",
+      "op": "CREATE OR REPLACE + REVOKE public,anon + GRANT authenticated + update docstring paritas #64 (OWNER-A)"
+    },
+    {
+      "surface": "RPC get_chat_rooms (last_message_body)",
+      "source": "supabase/migrations/0057_chat_system_events.sql:241-273",
+      "op": "CREATE OR REPLACE dengan CASE WHEN <klausa b> THEN cm.body ELSE NULL END (OWNER-C: body only)"
+    },
+    {
+      "surface": "Function recompute_chat_room_members + backfill",
+      "source": "supabase/migrations/0046:1815-1853",
+      "op": "CREATE OR REPLACE skip AP confidential untuk non-grantee/non-CEO/non-PIC + DELETE existing rows (OWNER-B)"
+    },
+    {
+      "surface": "RLS mentions_select",
+      "source": "supabase/migrations/0008_fase3_collab.sql:361-372 (dan/atau 0046 rewrite)",
+      "op": "DROP + CREATE POLICY dengan klausa (b) (SCOPE-1)"
+    },
+    {
+      "surface": "RLS chat_message_reactions_select",
+      "source": "supabase/migrations/0055_chat_message_reactions.sql",
+      "op": "DROP + CREATE POLICY dengan klausa (b) (SCOPE-1)"
+    },
+    {
+      "surface": "RLS chat_message_reads_select",
+      "source": "supabase/migrations/0008_fase3_collab.sql:344-347 (dan/atau 0053)",
+      "op": "DROP + CREATE POLICY dengan klausa (b) (SCOPE-1)"
+    }
+  ],
+  "test_execution": {
+    "db_contract": "docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/db_contract/0059_chat_confidential_rls_fts.sql",
+    "http_e2e": "node supabase/tests/0045_keyset_list_chat_messages_http.mjs",
+    "mobile_regression": "cd mobile && npm test -- --testPathPattern='(inbox|use-search-messages|cards)'"
+  },
+  "fatal_sql_bugs_fixed_in_plan_v2": [
+    "F1: chat_messages.action_plan_id → JOIN via chat_rooms.action_plan_id",
+    "F2: is_chat_member(id, auth.uid()) → is_chat_member(chat_room_id) (1 arg)",
+    "F3: users.role_level='ceo' → public.user_role_level()='ceo'",
+    "F4: search_chat_messages positional → named args (p_query, p_limit)"
+  ],
+  "next_action_recommended": "Mulai red-phase (langkah 1-10 di plan §3). Semua blocker owner decision sudah locked."
+}
