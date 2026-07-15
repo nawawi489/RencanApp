@@ -82,7 +82,7 @@ Semua langkah di fase ini menulis pgTAP di `supabase/tests/` dan menjalankan via
 | 0.32 | GREEN | RPC-11,12 | Body cleanup (§6.7 §6.6): 7 langkah dengan org guard dan `pg_advisory_xact_lock` |
 | 0.33 | RED | SEC-1 (append-only) | `has_table_privilege('authenticated','public.chat_messages','INSERT')` = false; `UPDATE` = false; `DELETE` = false (grant sudah dicabut di 0008:1037-1044, verifikasi tetap benar setelah 0059) |
 | 0.34 | GREEN | SEC-1 | Verifikasi (tak ada perubahan grant) |
-| 0.35 | RED | SEC-2,3 (structural guards) | (a) tidak ada FK `chat_messages` → `evidence_files`/`action_plan_submissions`; (b) whitelist `evidence_files.kind` = 9 nilai (tak ditambah); (c) `chat_messages.attachments[*].kind` ≠ subset `evidence_files.kind` (kolom bertipe berbeda konseptual) |
+| 0.35 | RED | SEC-2,3 (structural guards) | (a) tidak ada FK `chat_messages` → `evidence_files`/`task_submissions`; (b) whitelist `evidence_files.kind` = 9 nilai (tak ditambah); (c) `chat_messages.attachments[*].kind` ≠ subset `evidence_files.kind` (kolom bertipe berbeda konseptual) |
 | 0.36 | GREEN | SEC-2,3 | Verifikasi (guard alami — tak ada langkah migrasi) |
 | 0.37 | RED | REGRESI | Suite `0019_ap5_ap6_contract.sql`, `0055_chat_message_reactions_contract.sql` (jika ada), `0056_*`, `0057_*` **100% hijau tanpa modifikasi** |
 | 0.38 | GREEN | REGRESI | Tidak ada perubahan test lama; hanya jalankan `supabase test db` (atau eq lokal) |

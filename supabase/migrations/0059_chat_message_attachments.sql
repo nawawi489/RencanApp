@@ -8,7 +8,7 @@
 -- Bucket TERPISAH dari evidence (§6.3 — reuse ditolak secara teknis).
 -- Empat penjaga struktural (§6.8):
 --   1. Bucket berbeda (chat-attachments ≠ evidence).
---   2. Tanpa FK ke evidence_files / action_plan_submissions.
+--   2. Tanpa FK ke evidence_files / task_submissions.
 --   3. evidence_files.kind whitelist TIDAK ditambah.
 --   4. score-formula tidak pernah membaca chat_messages.
 --

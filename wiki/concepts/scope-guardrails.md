@@ -34,7 +34,7 @@ Feed, Company News, Announcement, CEO Broadcast, SOP Center penuh, Knowledge Cen
 > - **Zero bobot governance/skor** — tidak masuk [[score-formula]], ranking People, atau Governance Discipline; tidak dicatat sebagai `governance_violation`/`activity_log`.
 > - **Tanpa promosi ke Bukti** — tidak ada tombol/RPC/pointer yang mengubah lampiran chat menjadi Bukti Task; whitelist `evidence_files.kind` tidak bertambah.
 > - **Bukan input Review** — lampiran chat tidak pernah muncul di layar Review; Reviewer menilai dari Bukti Task, bukan dari foto di chat.
-> - **Batas ditegakkan struktural di database**, bukan hanya konvensi UI: bucket terpisah (`chat-attachments`), tanpa FK ke `evidence_files`/`action_plan_submissions`, Score Formula buta terhadap kolom lampiran.
+> - **Batas ditegakkan struktural di database**, bukan hanya konvensi UI: bucket terpisah (`chat-attachments`), tanpa FK ke `evidence_files`/`task_submissions`, Score Formula buta terhadap kolom lampiran.
 > - **Otorisasi = keanggotaan room + workspace-viewer + confidential-aware** (bukan member-only seperti Reaction pill): CEO/audit yang punya `can_view_workspace` boleh melihat, kecuali action plan confidential — di situ hanya CEO/PIC/grantee yang lolos.
 >
 > Rasional: yang dilarang Rule 4 lama adalah *bukti informal masuk jalur formal dan mencemari Review/Score* (integritas scoring). Larangan tumpul "semua file di chat dilarang" ikut memblokir klarifikasi visual yang sah — dan pihak yang paling mungkin butuh (Reviewer, PIC induk) justru yang paling pasti ditolak alur Bukti Task karena bukan PIC. Amandemen ini **memperkuat** garis formal/informal: memindahkannya dari "aturan yang dihafal" ke "invarian yang ditegakkan Postgres."

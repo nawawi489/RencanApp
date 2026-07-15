@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import type { ChatAttachment, ChatMessage } from '@/lib/inbox';
 import {
@@ -20,17 +20,20 @@ export type ChatAttachmentFlowInput = {
 
 export function useChatAttachmentFlow() {
   const inFlight = useRef<Promise<string> | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const run = (input: ChatAttachmentFlowInput): Promise<string> => {
     if (inFlight.current) return inFlight.current;
+    setIsUploading(true);
     const p = execute(input).finally(() => {
       inFlight.current = null;
+      setIsUploading(false);
     });
     inFlight.current = p;
     return p;
   };
 
-  return { run, isUploading: inFlight.current !== null };
+  return { run, isUploading };
 }
 
 async function execute(input: ChatAttachmentFlowInput): Promise<string> {
