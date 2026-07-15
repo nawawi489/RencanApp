@@ -237,10 +237,10 @@ Penomoran: `FR-ATT-<grup>.<n>`. `[BLOCKED]` = menunggu keputusan owner (§9).
 
 ### 4.0 Gate amandemen
 
-- **FR-ATT-0.1 [BLOCKED]** — Tidak boleh masuk TDD sebelum amandemen tertulis mendarat di: `PRD.md` §30 Rule 4 + daftar komponen; `prd/03 §B.7`; `wiki/concepts/scope-guardrails.md` §pengecualian sempit; `prd/01 §12`; `specs/inbox-chat-ui.md` FR-IN4.5.
+- **FR-ATT-0.1 ✅ LANDED (PR #65, 2026-07-15)** — Amandemen tertulis mendarat di: `PRD.md` §30 Rule 4 + daftar komponen; `prd/03 §B.7`; `wiki/concepts/scope-guardrails.md` §pengecualian sempit; `prd/01 §12`; `specs/inbox-chat-ui.md` FR-IN4.5.
 - **FR-ATT-0.2** — Larangan build `specs/inbox-chat-ui.md` **L192 tetap berlaku** sampai V2 dijadwalkan (preseden reactions).
-- **FR-ATT-0.3** — Amandemen memuat koreksi sitasi §35 → §24.1 (§1.3).
-- **FR-ATT-0.4** — Token `ChatAttachmentBubble` + `ChatAttachmentThumbnail` didaftarkan di `DESIGN.md §7` + `global.css` **sebelum** kode UI (Fase-0; preseden: 3 token reaction didaftarkan sebagai prasyarat non-jadwal).
+- **FR-ATT-0.3 ✅** — Koreksi sitasi §35 → §24.1 landed bersama FR-ATT-0.1 (§1.3).
+- **FR-ATT-0.4 ✅ DESIGN.md LANDED (2026-07-15)** — Token `ChatAttachButton` + `ChatAttachmentBubble` + `ChatAttachmentThumbnail` didaftarkan di `DESIGN.md §7` (Fase-0; preseden: 3 token reaction). **`global.css` tidak butuh entri baru** — semua warna/radius direuse dari skala existing (`brand-dark`, `neutral-100/800`, `Skeleton`, radius `xl`), sama seperti preseden `ReactionPill` yang juga nol penambahan `global.css`.
 
 ### 4.1 Composer & pengiriman
 
