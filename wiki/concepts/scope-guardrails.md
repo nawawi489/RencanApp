@@ -29,6 +29,18 @@ Feed, Company News, Announcement, CEO Broadcast, SOP Center penuh, Knowledge Cen
 >
 > Spec teknis: [inbox-chat-reactions](../../specs/inbox-chat-reactions.md). Milestone build tetap V2 (specs/inbox-chat-ui.md L27).
 
+> [!info] Pengecualian sempit — Lampiran diskusi Initiative Chat (owner 2026-07-15)
+> "Lampiran diskusi (gambar) tingkat-pesan" pada [[surfaces|Initiative Chat]] (PRD §30 komponen 11 pasca-amandemen) **dikecualikan** dari rule "Bukti tetap dikirim melalui Task" (PRD §30 Rule 4) yang **dipersempit** menjadi "Bukti *formal* tetap dikirim melalui Task; lampiran diskusi informal boleh di chat." Fitur ini **diizinkan** dibangun, dengan syarat semua invarian berikut terpenuhi:
+> - **Zero bobot governance/skor** — tidak masuk [[score-formula]], ranking People, atau Governance Discipline; tidak dicatat sebagai `governance_violation`/`activity_log`.
+> - **Tanpa promosi ke Bukti** — tidak ada tombol/RPC/pointer yang mengubah lampiran chat menjadi Bukti Task; whitelist `evidence_files.kind` tidak bertambah.
+> - **Bukan input Review** — lampiran chat tidak pernah muncul di layar Review; Reviewer menilai dari Bukti Task, bukan dari foto di chat.
+> - **Batas ditegakkan struktural di database**, bukan hanya konvensi UI: bucket terpisah (`chat-attachments`), tanpa FK ke `evidence_files`/`action_plan_submissions`, Score Formula buta terhadap kolom lampiran.
+> - **Otorisasi = keanggotaan room + workspace-viewer + confidential-aware** (bukan member-only seperti Reaction pill): CEO/audit yang punya `can_view_workspace` boleh melihat, kecuali action plan confidential — di situ hanya CEO/PIC/grantee yang lolos.
+>
+> Rasional: yang dilarang Rule 4 lama adalah *bukti informal masuk jalur formal dan mencemari Review/Score* (integritas scoring). Larangan tumpul "semua file di chat dilarang" ikut memblokir klarifikasi visual yang sah — dan pihak yang paling mungkin butuh (Reviewer, PIC induk) justru yang paling pasti ditolak alur Bukti Task karena bukan PIC. Amandemen ini **memperkuat** garis formal/informal: memindahkannya dari "aturan yang dihafal" ke "invarian yang ditegakkan Postgres."
+>
+> Spec teknis: [inbox-chat-attachments](../../specs/inbox-chat-attachments.md). Milestone build V2; larangan `specs/inbox-chat-ui.md` L192 tetap berlaku sampai V2 dijadwalkan.
+
 ## Guardrail filosofis
 
 - **Tanpa bobot pada planning card** — bobot hanya ada di [[score-formula]].
