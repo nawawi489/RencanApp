@@ -34,11 +34,11 @@ Mobile app (iOS + Android) di atas **Expo (React Native) + TypeScript**, dengan 
 - Task One Time & Repeat (menghasilkan Instance terjadwal).
 - Loop eksekusi: Bukti → Nilai Hasil → Review (dengan submission versioning & evidence locking).
 - Permission berbasis tanggung jawab (PIC / Reviewer / akses turunan), lihat [[permission-model]].
-- Surface (bottom nav V1.83 §7.1): Home (Fokus Hari Ini = Task), Notifications, Workspace, Inbox (Diskusi Rencana Aksi = chat pada Action Plan), **Menu** (profil/People/bantuan/settings/archive + Admin Lanjutan bila punya izin). People masuk ke Menu, bukan tab mandiri.
+- Surface (bottom nav V1.83 §7.1): Home (menyorot Task/Repeat Task hari ini), Notifications, Workspace, Inbox (Diskusi Rencana Aksi = chat pada Action Plan), **Menu** (profil/People/bantuan/settings/archive + Admin Lanjutan bila punya izin). People masuk ke Menu, bukan tab mandiri.
 - Period Focus Engine (§7.6): Workspace fokus periode aktif (Bulan default / Quarter), Goal tahunan konteks; Strategy Target Breakdown total 100% (§12).
 - Audit append-only: Activity Log & Governance Violation — V1.83 di-gate ke Admin Lanjutan, staff hanya menerima arahan singkat via popup/Notifications.
 - Score Formula berbobot per level — V1.83 fitur admin lanjutan, tidak tampil di UI utama staff.
-- Evaluation dipicu di **Action Plan** (bukan Initiative) saat mendekati selesai atau selesai.
+- Evaluation dipicu di **Action Plan** (bukan Initiative) saat mendekati selesai atau selesai. Pasca-rename V1.8.3, tabel `action_plans` = level 4 (program unit) — kode sudah menargetkan level yang benar.
 
 ## Architecture
 
@@ -46,4 +46,20 @@ Mobile app (iOS + Android) di atas **Expo (React Native) + TypeScript**, dengan 
 
 ## Status
 
-Implementasi berjalan (Fase 0–8 + Inbox/Score/Theme + rename V1.8.3 + push notif spec). **Sumber kebenaran = `PRD.md`** (root repo, V1.83, promoted 2026-07-15); breakdown per-topik di `prd/` (3 bagian) belum disinkronkan ke V1.83. Perubahan V1.83 belum semua ter-implement di kode — audit gap masih terbuka: MBR mode "Nonaktif" & "Peringatan saja", Home Fokus Hari Ini pada Task (masih Action Plan), Evaluation di Action Plan (masih Initiative), People de-scoring (row masih tampilkan Score/Achievement).
+Implementasi berjalan (Fase 0–8 + Inbox/Score/Theme + rename V1.8.3 + push notif spec). **Sumber kebenaran = `PRD.md`** (root repo, V1.83, promoted 2026-07-15); breakdown per-topik di `prd/` (3 bagian) belum disinkronkan ke V1.83.
+
+Gap kode V1.82 → V1.83 (audit 2026-07-15, urut prioritas):
+
+- **Blocker: 19 template Strategy bawaan masih ter-seed** — `0010:472-501` insert "Menambah Jumlah Customer", "Control Budgeting", dst; `0045:62` cuma rename tabel. V1.83 §19 menuntut kosong.
+- **Tinggi: People belum di-de-scoring** — `people.tsx` row masih render `ScoreBadge` ("Score 87 · On track") + rank number; `ScoreLegend` ekspos formula; score detail di Profile **ungated** di klien.
+- **Tinggi: Menu 100% V1.82** — `menu.tsx:96` Log Aktivitas di Akses Cepat tanpa permission apa pun; Score Formula & MBR di Pengaturan (dim, bukan hidden); `MENU_UI_LOCK_SPEC_V1.82.md §22.6` mengklaim menang atas PRD → harus di-supersede eksplisit sebelum coding.
+- **Tinggi: People Ranking screen masih reachable** — ter-route + di-link dari People & Settings. V1.83 §42 minta tidak dibuat di UI default.
+- **Sedang: MBR mode "Nonaktif" absen** dari enum `enforcement_mode`; `blokir_aktivasi` (V1.82) justru surplus. Mode "Peringatan saja" **sudah ada** (`hanya_peringatan`), sama halnya "Blokir Tombol Turunan" (`blokir_akses_turunan`).
+- **Sedang: label UI "Aturan Pecah Target" nihil** — semua copy klien masih "Minimum Breakdown Rule".
+- **Sedang: seed MBR orphan pasca-rename** — `0011:61-66` seed pakai taksonomi lama (`goal→kpi_area`), trigger `0046:2540-2562` cari taksonomi baru. Dampak enforcement nihil (seed bermode `hanya_peringatan`, bukan `blokir_akses_turunan`), tapi 3 baris jadi dead data.
+- **Sedang: positioning "Execution Project Management"** — 0 hit di `mobile/src/`; `menu.tsx:107` masih "Panduan EMS".
+- **Rendah: `score.ts:21` "Perlu perhatian"** → V1.83 minta "Perlu dukungan".
+- **Rendah: `evaluation.tsx:143` label "Hasil utama"** → V1.83 §26 minta "Hasil tercapai atau belum".
+- **Rendah (pre-existing, bukan V1.83)**: Card "Fokus Hari Ini" belum ada sama sekali (`grep "fokus hari ini"` → 0 hit); §26 field 3–4 (`success_factors`/`failure_factors`) belum di-collect UI.
+
+Sudah correct pasca-rename (bukan gap): Home data layer sudah `.from('tasks')`, Evaluation entry di action-plan detail sudah `action_plan_id`.

@@ -16,7 +16,7 @@ Aturan jumlah minimal [[card-model|card turunan]] agar target tidak berhenti seb
 
 Prinsip:
 
-1. Rule bersifat **opsional** per organization/workspace (V1.83 mengizinkan Nonaktif — perubahan dari V1.82 yang default Blokir).
+1. Rule bersifat **opsional** per organization/workspace.
 2. Angka minimum dikonfigurasi admin per level card, **bukan angka hard-coded** untuk semua perusahaan.
 3. Jika rule Nonaktif, tombol buat turunan mengikuti permission biasa.
 
@@ -28,19 +28,15 @@ Prinsip:
 | **Peringatan saja** | Tombol tetap aktif, sistem menampilkan warning. |
 | **Blokir Tombol Turunan** | Tombol turunan dinonaktifkan sampai minimum terpenuhi. Klik → popup arahan. |
 
-*(V1.82 punya 3 mode Peringatan/Blokir Aktivasi/Blokir Turunan tanpa mode Nonaktif. V1.83 menyederhanakan menjadi Nonaktif/Peringatan/Blokir.)*
+## Contoh konfigurasi (bukan default)
 
-## Contoh konfigurasi (bukan default hard-coded)
+Angka di bawah adalah contoh **rekomendasi** untuk organisasi dewasa — bukan default yang di-seed sistem. Admin bebas menaikkan/menurunkan/mematikan.
 
-Angka di bawah adalah contoh V1.82 lama (RWT-09 A default 3/3/3/3). V1.83 mengubah statusnya menjadi **contoh konfigurasi** — admin bebas menaikkan/menurunkan/mematikan.
-
-| Performance | Contoh Min | Development | Contoh Min |
+| Performance | Contoh | Development | Contoh |
 |---|---|---|---|
 | Strategy → Initiative | 3 | Development Area → Problem Statement | 1 |
 | Initiative → Action Plan | 3 | Problem Statement → Action Plan | 1 |
 | Action Plan → Task | 3 | Action Plan → Task | 3 |
-
-Seed migrasi `0049` masih memasang default 3 (kompat V1.82); admin org tetap bisa turunkan ke 0 (efektif Nonaktif) lewat Admin Lanjutan.
 
 ## Kelengkapan Perencanaan & popup gagal
 
@@ -48,10 +44,18 @@ Indikator di card menampilkan progress turunan vs MBR (mis. "Initiative: 2/3, Be
 
 ## Catatan implementasi
 
-> [!warning] Default 3/3/3/3 bisa meledak
-> Untuk organisasi kecil, 3/3/3/3 dapat menghasilkan ratusan card wajib. Rekomendasi V1.83: mulai dari **Nonaktif** atau **Peringatan saja**, naikkan ke Blokir setelah tim terbiasa dan target-nya kompleks.
+> [!info] Status kode (audit 2026-07-15)
+> Kolom `enforcement_mode` sudah ada sejak migrasi `0011:32-34` dengan tiga nilai enum: `hanya_peringatan` (= "Peringatan saja"), `blokir_aktivasi` (blokir aktivasi kartu induk — konsep V1.82 lama), `blokir_akses_turunan` (= "Blokir Tombol Turunan"). Semua enforcement jalan: trigger BEFORE INSERT di `0046:2524-2600`, gate aktivasi di `0046:337`, guard client di `mobile/src/components/mbr-completion.tsx`. Admin bisa pilih mode + ubah angka lewat `settings-mbr.tsx`.
 
-> [!info] Gap kode V1.82 → V1.83
-> Kode `mobile/` saat ini hanya mendukung mode Blokir (V1.82 default hard-coded 3). Mode Nonaktif dan Peringatan saja **belum ter-implement** — admin belum bisa memilih mode di Settings. Audit gap kode masih terbuka.
+> [!warning] Gap V1.82 → V1.83 (belum landing)
+> 1. **Mode `Nonaktif` absen** — CHECK constraint `0011:32-34` hanya mengenumeratsi 3 nilai; picker di `settings-mbr.tsx:120-146` juga 3. V1.83 memerlukan nilai keempat.
+> 2. **`blokir_aktivasi` justru surplus** — V1.83 §34.4 hanya mendaftar 3 mode dan activation-blocking bukan salah satunya. Perlu keputusan: migrasi drop, remap, atau tetap dipertahankan sebagai backend-only.
+> 3. **Label UI "Aturan Pecah Target" nihil** — semua copy klien (`settings-mbr.tsx:172,175,186`, `menu.tsx:119`, `glossary.ts:52`) masih "Minimum Breakdown Rule". Backend boleh keep sesuai PRD §7.5, tapi render-layer wajib pindah.
+
+> [!warning] Bug pre-existing: seed row orphan pasca-rename
+> Seed sistem di `0011:61-66` semuanya `min_count = 1` (bukan 3), dan masih ber-taksonomi pre-rename: `goal→kpi_area`, `kpi_area→strategy`, `problem_statement→initiative`. Tidak ada migrasi apapun yang re-key mereka (`grep "update public.minimum_breakdown_rules"` di 51 migrasi = 0 hit). Sementara trigger post-rename di `0046:2540-2562` mencari taksonomi baru: `('goal','strategy')`, `('action_plan','task')`, `('problem_statement','action_plan')`. Tidak ada system row untuk pasangan ini → `current_minimum_breakdown_rule` NULL → fail-open. Dampak enforcement praktisnya kecil (semua row seed bermode `hanya_peringatan`/`blokir_aktivasi`, bukan `blokir_akses_turunan` yang jadi jalur trigger), tapi berarti 3 baris seed kini dead data dan 2 baris dipetakan ke pasangan yang berbeda semantiknya.
+
+> [!warning] Bug: stale error copy
+> `0046:2233` masih raise `'Aturan Goal → KPI Area dikunci...'` di dalam branch `goal`/`strategy` (KPI Area = nama pre-rename Strategy). Logic-nya benar, string-nya stale.
 
 Berkaitan dengan: [[card-model]], [[workspace]], [[surfaces]].
