@@ -292,3 +292,274 @@ begin
 
   raise notice 'PASS g: push_deliveries unique + FK ke notifications & push_tokens';
 end $$;
+
+-- ============================================================ (h) RPC signature: register/unregister exist
+do $$
+declare
+  v_reg_args text;
+  v_unreg_args text;
+begin
+  select pg_get_function_identity_arguments(oid) into v_reg_args
+  from pg_proc where proname='register_push_token' and pronamespace='public'::regnamespace;
+  if v_reg_args is null then raise exception 'FAIL h: register_push_token missing'; end if;
+  if v_reg_args not ilike '%p_expo_token text%' or v_reg_args not ilike '%p_platform text%' or v_reg_args not ilike '%p_device_id text%' then
+    raise exception 'FAIL h: register_push_token args = %, expected (p_expo_token text, p_platform text, p_device_id text)', v_reg_args;
+  end if;
+
+  select pg_get_function_identity_arguments(oid) into v_unreg_args
+  from pg_proc where proname='unregister_push_token' and pronamespace='public'::regnamespace;
+  if v_unreg_args is null then raise exception 'FAIL h: unregister_push_token missing'; end if;
+  if v_unreg_args not ilike '%p_expo_token text%' then
+    raise exception 'FAIL h: unregister_push_token args = %, expected (p_expo_token text)', v_unreg_args;
+  end if;
+
+  raise notice 'PASS h: register_push_token + unregister_push_token signatures ok';
+end $$;
+
+-- ============================================================ (i) RPC security: SECURITY DEFINER + search_path=''
+do $$
+declare
+  v_reg_secdef boolean; v_reg_path text;
+  v_unreg_secdef boolean; v_unreg_path text;
+begin
+  select prosecdef, coalesce(array_to_string(proconfig, ','), '') into v_reg_secdef, v_reg_path
+  from pg_proc where proname='register_push_token' and pronamespace='public'::regnamespace;
+  if v_reg_secdef is null then raise exception 'FAIL i: register_push_token missing (proc not found)'; end if;
+  if not v_reg_secdef then raise exception 'FAIL i: register_push_token bukan SECURITY DEFINER'; end if;
+  if v_reg_path not ilike '%search_path=%' then
+    raise exception 'FAIL i: register_push_token tidak set search_path (proconfig=%)', v_reg_path;
+  end if;
+
+  select prosecdef, coalesce(array_to_string(proconfig, ','), '') into v_unreg_secdef, v_unreg_path
+  from pg_proc where proname='unregister_push_token' and pronamespace='public'::regnamespace;
+  if v_unreg_secdef is null then raise exception 'FAIL i: unregister_push_token missing (proc not found)'; end if;
+  if not v_unreg_secdef then raise exception 'FAIL i: unregister_push_token bukan SECURITY DEFINER'; end if;
+  if v_unreg_path not ilike '%search_path=%' then
+    raise exception 'FAIL i: unregister_push_token tidak set search_path (proconfig=%)', v_unreg_path;
+  end if;
+
+  raise notice 'PASS i: kedua RPC SECURITY DEFINER + search_path pinned';
+end $$;
+
+-- ============================================================ (j) Idempotent register — 2 panggilan same expo_token → 1 row
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000001';
+  v_token text := 'ExponentPushToken[j-idempotent-test]';
+  v_count int;
+  v_platform_after text;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active)
+    values (v_userA, v_org, 'User-A idempotent', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+
+  perform public.register_push_token(v_token, 'ios', 'device-1');
+  -- Panggilan kedua: byte-for-byte upsert. Bebas efek — verifikasi via count & platform.
+  perform public.register_push_token(v_token, 'android', 'device-1');
+
+  select count(*), platform into v_count, v_platform_after
+  from public.push_tokens where expo_token = v_token group by platform;
+  if v_count <> 1 then raise exception 'FAIL j: idempotent violated — % rows for same expo_token', v_count; end if;
+  if v_platform_after <> 'android' then
+    raise exception 'FAIL j: platform tidak update ke ''android'' (got %)', v_platform_after;
+  end if;
+
+  raise notice 'PASS j: register idempotent (1 row) + field update (platform android)';
+end $$;
+rollback;
+
+-- ============================================================ (k) unregister sets revoked_at (idempotent)
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000002';
+  v_token text := 'ExponentPushToken[k-unregister-test]';
+  v_revoked_at timestamptz;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active)
+    values (v_userA, v_org, 'User-A unregister', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+
+  perform public.register_push_token(v_token, 'android', null);
+  perform public.unregister_push_token(v_token);
+
+  select revoked_at into v_revoked_at from public.push_tokens where expo_token = v_token;
+  if v_revoked_at is null then raise exception 'FAIL k: revoked_at masih null pasca unregister'; end if;
+
+  -- Idempotent: unregister lagi tidak error (silent no-op karena revoked_at sudah set).
+  perform public.unregister_push_token(v_token);
+  raise notice 'PASS k: unregister set revoked_at + idempotent';
+end $$;
+rollback;
+
+-- ============================================================ (l) Anti-hijack transfer + audit write_activity + NO expo_token leak
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000003';
+  v_userB uuid := '99999999-2222-0000-0000-aaaa00000004';
+  v_token text := 'ExponentPushToken[l-hijack-test]';
+  v_owner uuid;
+  v_audit_count int;
+  v_audit_detail jsonb;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA), (v_userB) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active) values
+    (v_userA, v_org, 'User-A hijack', true),
+    (v_userB, v_org, 'User-B hijack', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  -- User A registers token first.
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+  perform public.register_push_token(v_token, 'ios', 'device-shared');
+
+  -- User B (different actor) registers SAME token → transfer + audit + rate-limit check.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userB::text, 'role','authenticated')::text, true);
+  perform public.register_push_token(v_token, 'ios', 'device-shared');
+
+  -- Ownership pindah.
+  select user_id into v_owner from public.push_tokens where expo_token = v_token;
+  if v_owner <> v_userB then raise exception 'FAIL l: token TIDAK transfer ke User-B (owner=%)', v_owner; end if;
+
+  -- Audit row tercatat.
+  select count(*), (array_agg(detail order by created_at desc))[1]
+    into v_audit_count, v_audit_detail
+  from public.activity_logs
+  where action = 'push_token_transferred' and actor_id = v_userB;
+  if v_audit_count < 1 then raise exception 'FAIL l: audit push_token_transferred TIDAK tercatat'; end if;
+
+  -- CRITICAL: detail JSON TIDAK PERNAH mengandung expo_token (owner decision — leak guard).
+  if v_audit_detail ? 'expo_token' then
+    raise exception 'FAIL l: LEAK — detail audit mengandung expo_token: %', v_audit_detail;
+  end if;
+
+  -- Detail wajib berisi from_user_id, to_user_id, device_id, platform.
+  if not (v_audit_detail ? 'from_user_id' and v_audit_detail ? 'to_user_id'
+          and v_audit_detail ? 'device_id' and v_audit_detail ? 'platform') then
+    raise exception 'FAIL l: detail audit kurang key wajib: %', v_audit_detail;
+  end if;
+
+  raise notice 'PASS l: anti-hijack transfer + audit tercatat + zero expo_token leak';
+end $$;
+rollback;
+
+-- ============================================================ (m) Rate-limit anti-hijack: 3 transfer/24h → transfer ke-4 raise
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000005';
+  v_userB uuid := '99999999-2222-0000-0000-aaaa00000006';
+  v_i int;
+  v_raised boolean := false;
+  v_sqlstate text;
+  v_msg text;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA), (v_userB) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active) values
+    (v_userA, v_org, 'User-A rl', true),
+    (v_userB, v_org, 'User-B rl', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  -- 4 token berbeda, semua diregister User-A pertama.
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+  for v_i in 1..4 loop
+    perform public.register_push_token('ExponentPushToken[m-rl-' || v_i || ']', 'ios', 'device-m-' || v_i);
+  end loop;
+
+  -- User-B transfer 3 pertama sukses.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userB::text, 'role','authenticated')::text, true);
+  for v_i in 1..3 loop
+    begin
+      perform public.register_push_token('ExponentPushToken[m-rl-' || v_i || ']', 'ios', 'device-m-' || v_i);
+    exception when others then
+      raise exception 'FAIL m: transfer #% seharusnya sukses tapi raise % (%)', v_i, SQLERRM, SQLSTATE;
+    end;
+  end loop;
+
+  -- Transfer ke-4 wajib raise ratelimit_exceeded (SQLSTATE '54000' program_limit_exceeded).
+  begin
+    perform public.register_push_token('ExponentPushToken[m-rl-4]', 'ios', 'device-m-4');
+    v_raised := false;
+  exception when others then
+    v_raised := true;
+    v_sqlstate := SQLSTATE;
+    v_msg := SQLERRM;
+  end;
+
+  if not v_raised then
+    raise exception 'FAIL m: transfer ke-4 seharusnya raise ratelimit_exceeded';
+  end if;
+  if v_sqlstate <> '54000' then
+    raise exception 'FAIL m: SQLSTATE = % (msg=%), expected 54000 program_limit_exceeded', v_sqlstate, v_msg;
+  end if;
+  if v_msg not ilike '%coba lagi besok%' then
+    raise exception 'FAIL m: pesan error tidak cocok kontrak (%), expected mengandung ''coba lagi besok''', v_msg;
+  end if;
+
+  raise notice 'PASS m: rate-limit 3/24h + SQLSTATE 54000 + pesan ID';
+end $$;
+rollback;
+
+-- ============================================================ (n) Platform format validation
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000007';
+  v_raised boolean := false;
+  v_sqlstate text;
+  v_msg text;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active)
+    values (v_userA, v_org, 'User-A n', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+
+  -- Platform 'web' tidak didukung Expo Push → raise (CHECK constraint push_tokens_platform_check).
+  begin
+    perform public.register_push_token('ExponentPushToken[n-web]', 'web', null);
+    v_raised := false;
+  exception when others then
+    v_raised := true;
+    v_sqlstate := SQLSTATE;
+    v_msg := SQLERRM;
+  end;
+  if not v_raised then raise exception 'FAIL n: platform ''web'' seharusnya di-reject'; end if;
+  -- Tolak false-positive: kalau SQLSTATE '42883' (undefined_function) berarti RPC belum ada, bukan validasi format.
+  if v_sqlstate = '42883' then
+    raise exception 'FAIL n: register_push_token tidak ada — RED phase (msg=%)', v_msg;
+  end if;
+
+  raise notice 'PASS n: platform format validation';
+end $$;
+rollback;
