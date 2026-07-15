@@ -18,7 +18,7 @@ export function LiveSearchScreen() {
     <View className="pb-3">
       <TextInput
         className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-        placeholder="Cari Goal, Initiative, Action Plan…"
+        placeholder="Cari Goal, Rencana Aksi, Tugas…"
         placeholderTextColor={placeholderColor}
         value={query}
         onChangeText={setQuery}

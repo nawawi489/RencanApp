@@ -1,9 +1,10 @@
-// Fase 8 — Deadline Change Request (Action Plan). PIC mengajukan; Reviewer approve/reject/minta-revisi.
+// Fase 8 — Deadline Change Request (Tugas). PIC mengajukan; Reviewer approve/reject/minta-revisi.
 // Anti-self UI gate: requestor = user → tombol review disembunyikan (server tetap penegak akhir).
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
+import { DateField } from '@/components/date-field';
 import { Badge, Button, LabeledInput, SectionCard, usePlaceholderColor } from '@/components/ui';
 import { DATE_RE } from '@/lib/date';
 import { reportError } from '@/lib/errors';
@@ -20,10 +21,10 @@ const STATUS_TONE: Record<string, 'neutral' | 'warn' | 'success' | 'danger'> = {
 
 export default function DeadlineChangeRequestScreen() {
   const { profile, can } = useProfile();
-  const params = useLocalSearchParams<{ actionPlanId?: string; oldDeadline?: string }>();
-  const actionPlanId = params.actionPlanId ?? '';
+  const params = useLocalSearchParams<{ taskId?: string; oldDeadline?: string }>();
+  const taskId = params.taskId ?? '';
   const oldDeadline = params.oldDeadline ?? '';
-  const { requests } = useDeadlineChangeRequests(actionPlanId);
+  const { requests } = useDeadlineChangeRequests(taskId);
   const { createRequest, reviewRequest, resubmitRequest, isPending } = useDeadlineChangeActions();
 
   const [newDeadline, setNewDeadline] = useState('');
@@ -55,7 +56,7 @@ export default function DeadlineChangeRequestScreen() {
       return;
     }
     try {
-      await createRequest({ entityId: actionPlanId, oldDeadline, newDeadline: next, reason: reason.trim(), impact });
+      await createRequest({ entityId: taskId, oldDeadline, newDeadline: next, reason: reason.trim(), impact });
       setNewDeadline('');
       setReason('');
       setImpact('');
@@ -72,12 +73,11 @@ export default function DeadlineChangeRequestScreen() {
           <Text className="text-sm text-neutral-500 dark:text-neutral-400">
             Deadline saat ini: {oldDeadline || '—'}
           </Text>
-          <LabeledInput
-            label="Deadline baru (YYYY-MM-DD)"
+          <DateField
+            label="Deadline baru"
             value={newDeadline}
-            onChangeText={setNewDeadline}
+            onChange={setNewDeadline}
             required
-            placeholder="2026-07-15"
           />
           <LabeledInput label="Alasan" value={reason} onChangeText={setReason} required multiline />
           <LabeledInput label="Dampak jika ditolak" value={impact} onChangeText={setImpact} multiline />
@@ -243,17 +243,13 @@ function RequestRow({
 
       {showRevisionForm ? (
         <View className="gap-2">
-          <View className="gap-1.5">
-            <Text className="text-sm font-semibold text-black dark:text-white">Deadline baru (YYYY-MM-DD)</Text>
-            <TextInput
-              className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-              accessibilityLabel={`Deadline baru revisi untuk ${r.id}`}
-              placeholder="2026-07-15"
-              placeholderTextColor={placeholderColor}
-              value={resubmitDeadline}
-              onChangeText={setResubmitDeadline}
-            />
-          </View>
+          <DateField
+            label="Deadline baru"
+            value={resubmitDeadline}
+            onChange={setResubmitDeadline}
+            accessibilityLabel={`Deadline baru revisi untuk ${r.id}`}
+            required
+          />
           <View className="gap-1.5">
             <Text className="text-sm font-semibold text-black dark:text-white">Alasan (revisi)</Text>
             <TextInput

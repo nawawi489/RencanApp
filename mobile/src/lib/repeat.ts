@@ -1,18 +1,18 @@
-// Data layer Fase 2 — Action Plan Repeat.
+// Data layer Fase 2 — Tugas Repeat.
 // Semua otorisasi & generasi instance ditegakkan di server (RLS + RPC SECURITY DEFINER);
-// fungsi di sini hanya pemanggil tipis. Label/tone instance TERPISAH dari label parent action_plans
-// karena enum instance punya status 'missed' (Terlewat) yang tidak ada di action_plans.
+// fungsi di sini hanya pemanggil tipis. Label/tone instance TERPISAH dari label parent tasks
+// karena enum instance punya status 'missed' (Terlewat) yang tidak ada di tasks.
 import type { Tables } from './database.types';
 import type { EvidenceInput, PersonRef, ResultValueInput, SubmissionDetail } from './cards';
 import { supabase } from './supabase';
 
-export type RepeatRule = Tables<'action_plan_repeat_rules'>;
-export type Instance = Tables<'action_plan_instances'>;
+export type RepeatRule = Tables<'task_repeat_rules'>;
+export type Instance = Tables<'task_instances'>;
 
 export type InstanceWithSubmissions = Instance & {
   pic: PersonRef;
   reviewer: PersonRef;
-  action_plan_submissions: SubmissionDetail[];
+  task_submissions: SubmissionDetail[];
 };
 
 export type RepeatCompliance = {
@@ -61,21 +61,21 @@ export const MISSED_RULE_LABEL: Record<string, string> = {
 
 // ---------------------------------------------------------------- queries
 
-// Embed submissions HARUS disambiguasi via nama FK: action_plan_instances kini punya DUA
-// relasi ke action_plan_submissions — daftar (action_plan_instance_id) + balikan
+// Embed submissions HARUS disambiguasi via nama FK: task_instances kini punya DUA
+// relasi ke task_submissions — daftar (task_instance_id) + balikan
 // current_submission_id. Tanpa `!fk` PostgREST balas 300 PGRST201 (ambiguous embedding),
 // membuat getInstance/listInstances gagal & layar instance blank. Pakai relasi daftar.
 const INSTANCE_SELECT =
   '*, pic:pic_id(id, full_name, email), reviewer:reviewer_id(id, full_name, email), ' +
-  'action_plan_submissions!action_plan_submissions_action_plan_instance_id_fkey(' +
-  '*, evidence_files(*), action_plan_result_values(*), ' +
+  'task_submissions!task_submissions_task_instance_id_fkey(' +
+  '*, evidence_files(*), task_result_values(*), ' +
   'submitter:submitted_by(id, full_name, email), reviewer:reviewed_by(id, full_name, email))';
 
-export async function listInstances(actionPlanId: string): Promise<InstanceWithSubmissions[]> {
+export async function listInstances(taskId: string): Promise<InstanceWithSubmissions[]> {
   const { data, error } = await supabase
-    .from('action_plan_instances')
+    .from('task_instances')
     .select(INSTANCE_SELECT)
-    .eq('action_plan_id', actionPlanId)
+    .eq('task_id', taskId)
     .order('instance_date', { ascending: true });
   if (error) throw error;
   return data as unknown as InstanceWithSubmissions[];
@@ -83,7 +83,7 @@ export async function listInstances(actionPlanId: string): Promise<InstanceWithS
 
 export async function getInstance(id: string): Promise<InstanceWithSubmissions> {
   const { data, error } = await supabase
-    .from('action_plan_instances')
+    .from('task_instances')
     .select(INSTANCE_SELECT)
     .eq('id', id)
     .single();
@@ -92,15 +92,15 @@ export async function getInstance(id: string): Promise<InstanceWithSubmissions> 
 }
 
 // Inventory layar Settings > Repeat Setting (PRD §31). Read-only daftar seluruh repeat-rule
-// yang user boleh lihat (RLS). Dipakai untuk navigasi cepat ke Action Plan induk.
+// yang user boleh lihat (RLS). Dipakai untuk navigasi cepat ke Tugas induk.
 export type RepeatRuleWithContext = RepeatRule & {
-  action_plan: { id: string; name: string; status: string } | null;
+  task: { id: string; name: string; status: string } | null;
 };
 
 export async function listAllRepeatRules(): Promise<RepeatRuleWithContext[]> {
   const { data, error } = await supabase
-    .from('action_plan_repeat_rules')
-    .select('*, action_plan:action_plans(id, name, status)')
+    .from('task_repeat_rules')
+    .select('*, task:tasks(id, name, status)')
     .order('updated_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as RepeatRuleWithContext[];
@@ -120,9 +120,9 @@ export type RepeatRuleInput = {
   gracePeriodMinutes: number | null;
 };
 
-export async function setRepeatRule(actionPlanId: string, input: RepeatRuleInput): Promise<string> {
-  const { data, error } = await supabase.rpc('set_action_plan_repeat_rule', {
-    p_action_plan_id: actionPlanId,
+export async function setRepeatRule(taskId: string, input: RepeatRuleInput): Promise<string> {
+  const { data, error } = await supabase.rpc('set_task_repeat_rule', {
+    p_action_plan_id: taskId,
     p_frequency: input.frequency,
     p_weekdays: input.weekdays as never,
     p_month_days: input.monthDays as never,
@@ -143,7 +143,7 @@ export async function submitInstance(args: {
   evidence: EvidenceInput[];
   resultValues: ResultValueInput[];
 }): Promise<string> {
-  const { data, error } = await supabase.rpc('submit_action_plan_instance', {
+  const { data, error } = await supabase.rpc('submit_task_instance', {
     p_instance_id: args.instanceId,
     // RPC memakai nullif(trim(...),'') → string kosong setara null (paritas Fase 1).
     p_note: args.note ?? '',
@@ -159,7 +159,7 @@ export async function reviewInstanceSubmission(args: {
   decision: 'approve' | 'reject';
   reason: string | null;
 }): Promise<void> {
-  const { error } = await supabase.rpc('review_action_plan_instance_submission', {
+  const { error } = await supabase.rpc('review_task_instance_submission', {
     p_submission_id: args.submissionId,
     p_decision: args.decision,
     p_reason: args.reason ?? '',
@@ -167,9 +167,9 @@ export async function reviewInstanceSubmission(args: {
   if (error) throw error;
 }
 
-export async function getRepeatCompliance(actionPlanId: string): Promise<RepeatCompliance> {
+export async function getRepeatCompliance(taskId: string): Promise<RepeatCompliance> {
   const { data, error } = await supabase.rpc('get_repeat_compliance', {
-    p_action_plan_id: actionPlanId,
+    p_action_plan_id: taskId,
   });
   if (error) throw error;
   const rows = (data ?? []) as RepeatCompliance[];

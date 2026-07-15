@@ -81,11 +81,11 @@ const RULE_INPUT: RepeatRuleInput = {
 };
 
 describe('setRepeatRule', () => {
-  it('[3] memanggil rpc set_action_plan_repeat_rule dengan nama p_* benar & semua field', async () => {
+  it('[3] memanggil rpc set_task_repeat_rule dengan nama p_* benar & semua field', async () => {
     mockRpc.mockResolvedValue({ data: 'rule-1', error: null });
     const id = await setRepeatRule('ap-1', RULE_INPUT);
     expect(id).toBe('rule-1');
-    expect(mockRpc).toHaveBeenCalledWith('set_action_plan_repeat_rule', {
+    expect(mockRpc).toHaveBeenCalledWith('set_task_repeat_rule', {
       p_action_plan_id: 'ap-1',
       p_frequency: 'daily',
       p_weekdays: null,
@@ -111,16 +111,16 @@ describe('listInstances', () => {
     const { builder, calls } = makeQuery({ data: rows, error: null });
     mockFrom.mockReturnValue(builder);
     const out = await listInstances('ap-1');
-    expect(mockFrom).toHaveBeenCalledWith('action_plan_instances');
+    expect(mockFrom).toHaveBeenCalledWith('task_instances');
     const selectArg = String(calls.select?.[0]);
     expect(selectArg).toContain('pic:pic_id');
     expect(selectArg).toContain('reviewer:reviewer_id');
     // WS-3c: embed submissions WAJIB disambiguasi ke FK daftar. Tanpa `!...fkey`
-    // PostgREST balas 300 PGRST201 (ada 2 relasi ke action_plan_submissions).
+    // PostgREST balas 300 PGRST201 (ada 2 relasi ke task_submissions).
     expect(selectArg).toContain(
-      'action_plan_submissions!action_plan_submissions_action_plan_instance_id_fkey',
+      'task_submissions!task_submissions_task_instance_id_fkey',
     );
-    expect(calls.eq).toEqual(['action_plan_id', 'ap-1']);
+    expect(calls.eq).toEqual(['task_id', 'ap-1']);
     expect(calls.order?.[0]).toBe('instance_date');
     expect(out).toBe(rows);
   });
@@ -134,15 +134,15 @@ describe('listInstances', () => {
 
 describe('getInstance', () => {
   it('[7] memakai .single() dengan filter id dan mengembalikan satu instance', async () => {
-    const row = { id: 'i1', pic: null, reviewer: null, action_plan_submissions: [] };
+    const row = { id: 'i1', pic: null, reviewer: null, task_submissions: [] };
     const { builder, calls } = makeQuery({ data: row, error: null });
     mockFrom.mockReturnValue(builder);
     const out = await getInstance('i1');
-    expect(mockFrom).toHaveBeenCalledWith('action_plan_instances');
+    expect(mockFrom).toHaveBeenCalledWith('task_instances');
     // WS-3c: getInstance memakai INSTANCE_SELECT yang sama — embed submissions harus
     // ber-FK eksplisit agar `.single()` tidak gagal 300 (layar instance blank).
     expect(String(calls.select?.[0])).toContain(
-      'action_plan_submissions!action_plan_submissions_action_plan_instance_id_fkey',
+      'task_submissions!task_submissions_task_instance_id_fkey',
     );
     expect(calls.eq).toEqual(['id', 'i1']);
     expect(builder.single).toHaveBeenCalled();
@@ -151,20 +151,20 @@ describe('getInstance', () => {
 });
 
 describe('submitInstance', () => {
-  it('[8] rpc submit_action_plan_instance dgn p_instance_id + evidence/result, note null→""', async () => {
+  it('[8] rpc submit_task_instance dgn p_instance_id + evidence/result, note null→""', async () => {
     mockRpc.mockResolvedValue({ data: 'sub-1', error: null });
     const out = await submitInstance({
       instanceId: 'i1',
       note: null,
       evidence: [{ kind: 'text_note', text_content: 'ok' }],
-      resultValues: [{ kpi_area_id: null, label: 'Selisih', value_type: 'currency', value_text: '0' }],
+      resultValues: [{ strategy_id: null, label: 'Selisih', value_type: 'currency', value_text: '0' }],
     });
     expect(out).toBe('sub-1');
-    expect(mockRpc).toHaveBeenCalledWith('submit_action_plan_instance', {
+    expect(mockRpc).toHaveBeenCalledWith('submit_task_instance', {
       p_instance_id: 'i1',
       p_note: '',
       p_evidence: [{ kind: 'text_note', text_content: 'ok' }],
-      p_result_values: [{ kpi_area_id: null, label: 'Selisih', value_type: 'currency', value_text: '0' }],
+      p_result_values: [{ strategy_id: null, label: 'Selisih', value_type: 'currency', value_text: '0' }],
     });
   });
 
@@ -177,10 +177,10 @@ describe('submitInstance', () => {
 });
 
 describe('reviewInstanceSubmission', () => {
-  it('[10] rpc review_action_plan_instance_submission dgn decision & reason, reason null→""', async () => {
+  it('[10] rpc review_task_instance_submission dgn decision & reason, reason null→""', async () => {
     mockRpc.mockResolvedValue({ data: null, error: null });
     await reviewInstanceSubmission({ submissionId: 'sub-1', decision: 'approve', reason: null });
-    expect(mockRpc).toHaveBeenCalledWith('review_action_plan_instance_submission', {
+    expect(mockRpc).toHaveBeenCalledWith('review_task_instance_submission', {
       p_submission_id: 'sub-1',
       p_decision: 'approve',
       p_reason: '',

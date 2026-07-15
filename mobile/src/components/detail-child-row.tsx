@@ -3,8 +3,8 @@ import { Text, View } from 'react-native-css/components';
 import { Badge, SectionCard, type Tone } from '@/components/ui';
 
 /**
- * Baris anak turunan di detail-screen (Goal → KPI Area, KPI Area → Strategy,
- * Strategy → Initiative, Problem Statement → Initiative, Development Area →
+ * Baris anak turunan di detail-screen (Goal → Strategi, Strategi → Inisiatif,
+ * Inisiatif → Rencana Aksi, Problem Statement → Rencana Aksi, Development Area →
  * Problem Statement). Sama untuk kelimanya: nama + status badge di kanan.
  */
 export function DetailChildRow({

@@ -14,7 +14,7 @@ const mockMine = jest.fn();
 const mockReview = jest.fn();
 jest.mock('@/lib/cards', () => ({
   ...jest.requireActual('@/lib/cards'),
-  listMyActionPlans: () => mockMine(),
+  listMyTasks: () => mockMine(),
   listPendingReviews: () => mockReview(),
 }));
 
@@ -84,7 +84,7 @@ describe('ISSUE-002 — instance submitted masuk antrean "Butuh Review"', () => 
       {
         kind: 'instance',
         id: 'inst-702',
-        action_plan_id: 'ap-checkout',
+        task_id: 'ap-checkout',
         name: 'Checkout Harian (Repeat)',
         due: '2026-07-02',
         status: 'submitted',
@@ -107,7 +107,7 @@ describe('ISSUE-002 — instance submitted masuk antrean "Butuh Review"', () => 
       {
         kind: 'instance',
         id: 'inst-702',
-        action_plan_id: 'ap-checkout',
+        task_id: 'ap-checkout',
         name: 'Checkout Harian (Repeat)',
         due: '2026-07-02',
         status: 'submitted',

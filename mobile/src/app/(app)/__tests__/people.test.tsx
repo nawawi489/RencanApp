@@ -171,14 +171,14 @@ describe('PeopleScreen — Fase 7 score states', () => {
       score: {
         auto_calculated_score: 80,
         manual_adjusted_score: null,
-        metric_breakdown: { action_plan_completion: 90, governance_discipline: 70 },
+        metric_breakdown: { task_completion: 90, governance_discipline: 70 },
       },
       isLoading: false,
       isError: false,
     });
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Score 80 · Stabil')).toBeTruthy();
-    expect(screen.getByText('Action Plan Completion')).toBeTruthy();
+    expect(screen.getByText('Tugas Completion')).toBeTruthy();
     expect(screen.getByText('Governance Discipline')).toBeTruthy();
     expect(screen.getByText('90%')).toBeTruthy();
     expect(screen.getByText('70%')).toBeTruthy();
