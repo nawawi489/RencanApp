@@ -33,17 +33,15 @@ begin
     values (v_org, 'G bad', current_date, current_date - 1, v_ceo);
     fails := fails||'period_bad_allowed; ';
   exception when check_violation then null; when others then fails := fails||'period_bad:'||sqlerrm||'; '; end;
-  -- seed counts (missing[8])
-  select count(*) into n from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='omset';
-  if n <> 10 then fails := fails||'omset_items('||n||'); '; end if;
-  select count(*) into n from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='profit';
-  if n <> 9 then fails := fails||'profit_items('||n||'); '; end if;
-  select count(*) into n from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id
-    where t.key='profit' and kt.division='cfo';
-  if n <> 1 then fails := fails||'profit_cfo_count('||n||'); '; end if;
-  if not exists (select 1 from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id
-                 where t.key='profit' and kt.division='cfo' and kt.name='Control Budgeting') then
-    fails := fails||'cfo_name_mismatch; ';
+  -- seed counts (V1.83 §19: strategy_templates kosong secara default — post-rename dari
+  -- kpi_area_templates di 0045, dikosongkan dari seed bawaan omset/profit di 0059).
+  select count(*) into n from public.strategy_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='omset';
+  if n <> 0 then fails := fails||'omset_items_not_empty('||n||'); '; end if;
+  select count(*) into n from public.strategy_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='profit';
+  if n <> 0 then fails := fails||'profit_items_not_empty('||n||'); '; end if;
+  if exists (select 1 from public.strategy_templates kt join public.goal_templates t on t.id=kt.goal_template_id
+             where t.key='profit' and kt.division='cfo' and kt.name='Control Budgeting') then
+    fails := fails||'default_seed_row_survived; ';
   end if;
 
   if fails <> '' then raise exception 'TEST1 schema/seed FAIL: %', fails; end if;

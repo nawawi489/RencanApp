@@ -1,5 +1,5 @@
 -- =====================================================================
--- 0052_v183_empty_strategy_templates.sql
+-- 0059_v183_empty_strategy_templates.sql
 -- =====================================================================
 -- V1.83 §19: "Strategy Template kosong secara default. Sistem tidak
 -- menyediakan template bawaan berbasis industri, divisi, atau jenis
@@ -86,7 +86,7 @@ begin
     from public.strategy_templates st
     join public.goal_templates gt on gt.id = st.goal_template_id
     where gt.key in ('omset', 'profit');
-  raise notice '0052: strategy_templates total rows = %, default (omset/profit) rows = % (should be 0)',
+  raise notice '0059: strategy_templates total rows = %, default (omset/profit) rows = % (should be 0)',
     n, n_default;
 end $$;
 

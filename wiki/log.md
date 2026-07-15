@@ -1626,13 +1626,21 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 
 ## [2026-07-15] update | V1.83 §19: Strategy Template kosong by default (blocker landing)
 
-- **Migrasi `0052_v183_empty_strategy_templates.sql`** — hapus 19 baris seed default (10 Omset per PRD V1.82 §47 + 9 Profit per §48) dari `public.strategy_templates` (post-rename V1.8.3 dari `kpi_area_templates`). WHERE selektif per (goal_template.key, name PRD PASTI) — baris admin custom tidak tersentuh. Idempotent (0 rows kalau sudah kosong). Tanpa cascade destruktif: `strategies.strategy_template_id` tidak eksis; `goals.goal_template_id` ON DELETE SET NULL kalau goal_templates ikut dihapus di masa depan.
+- **Migrasi `0059_v183_empty_strategy_templates.sql`** (renumbered dari draft awal `0052` — 0052-0058 sudah dipakai chat-attachments/reactions branch di `origin/staging`) — hapus 19 baris seed default (10 Omset per PRD V1.82 §47 + 9 Profit per §48) dari `public.strategy_templates` (post-rename V1.8.3 dari `kpi_area_templates`). WHERE selektif per (goal_template.key, name PRD PASTI) — baris admin custom tidak tersentuh. Idempotent (0 rows kalau sudah kosong). Tanpa cascade destruktif: `strategies.strategy_template_id` tidak eksis; `goals.goal_template_id` ON DELETE SET NULL kalau goal_templates ikut dihapus di masa depan.
 - **UI empty state disinkronkan ke V1.83 §19 copy:**
   - `mobile/src/app/(app)/strategy/new.tsx` — modal picker: judul "Belum ada Strategy Template" + deskripsi "Admin dapat membuat template custom nanti. User tetap bisa membuat Strategy manual tanpa template." + tombol "Isi Manual" (`brand-dark` solid + text-white per DESIGN §4 a11y). No-Goal-Template branch juga di-soften copy-nya ("Isi Strategy manual — Goal ini tidak dibuat dari Goal Template").
   - `mobile/src/app/(app)/settings-strategy-templates.tsx` — `EmptyState` deskripsi diganti persis copy PRD; CTA sementara tetap "Buka Goal Template Library" karena admin CRUD Strategy Template belum ada (V1.83 §19 baris 843 requires create/edit/disable/versioning — layar masih read-only V1).
 - **Preserved di migrasi ini:** `goal_templates` (omset/profit) TIDAK dihapus. V1.83 §17 New Goal tidak eksplisit menuntut hapus. Menu → Template → Goal Template masih menampilkan 2 entri, tapi Strategy Template picker di dalamnya akan kosong (arahan ke Isi Manual).
 - **Bug pre-existing ditemukan (out of scope, catatan):** RPC `apply_goal_template` di-DROP di `0046:132` dan tidak di-recreate — `mobile/src/lib/goals.ts:123` calls a dead function. `settings-goal-templates.tsx` CTA "Buat Goal dari Template" broken. Bukan bug V1.83; ekosistem Goal Template sudah rusak sebelum ini. Perlu keputusan owner: hidupkan lagi apply_goal_template atau resmi deprecate.
 - **Follow-up (belum dieksekusi):**
-  - Contract test `supabase/tests/fase4_performance_workspace_contract.sql` TEST 1 (baris 37-46) meng-assert seed 10/9 pakai nama lama `kpi_area_templates` — sudah broken post-0045 rename juga. Invert ke `count(*)=0` + rename tabel.
   - Admin CRUD `strategy_templates` per V1.83 §19 baris 843 (create/edit/disable/versioning).
-  - Verifikasi visual empty state via preview: auth-gated + butuh apply 0052 dulu, diserahkan ke owner.
+  - Verifikasi visual empty state via preview: auth-gated + butuh apply 0059 dulu, diserahkan ke owner.
+
+## [2026-07-15] fix | Renumber migrasi 0052→0059 + perbaiki contract test fase4
+
+- **Migration numbering collision.** Draft migrasi blocker §19 pakai nomor `0052`, tapi `origin/staging` sudah mengklaim `0052`-`0058` untuk chat-attachments/reactions branch (`0052_chat_messages_realtime.sql` s.d. `0058_fix_reaction_table_grants.sql`, dan `origin/staging` sendiri sudah punya dua file `0058` — pre-existing, di luar scope ini). Renumbered ke `0059_v183_empty_strategy_templates.sql` (`git mv` + fix header comment + fix notice string di dalam file). Nomor berikutnya yang aman setelah `origin/staging` HEAD saat ini.
+- **Contract test `fase4_performance_workspace_contract.sql` TEST 1 diperbaiki** (baris 36-45): dua bug ditutup sekaligus —
+  1. Nama tabel `kpi_area_templates` (pre-rename V1.8.3) → `strategy_templates`. Test ini sudah broken sejak migrasi 0045 rename tabel; migrasi 0059 tidak menyebabkannya, tapi menandaskannya.
+  2. Assertion dibalik dari "seed 10 Omset + 9 Profit + CFO 'Control Budgeting' harus ADA" (kontrak V1.82) menjadi "seed default HARUS KOSONG (count=0), row 'Control Budgeting' tidak boleh survive" (kontrak V1.83 §19). Test sekarang membuktikan migrasi 0059 bekerja, bukan hanya tidak crash.
+- Verifikasi tambahan: tidak ada test mobile (`goals.test.ts`) yang menganggap seed default ada — satu match "A/R Collection" di sana adalah fixture key mock RPC, bukan assert terhadap DB.
+- Migrasi 0059 sendiri (safety claims FK) diverifikasi ulang: `strategies` tidak punya FK ke `strategy_templates`; `goals.goal_template_id` = `ON DELETE SET NULL` — DELETE seed aman tanpa cascade destruktif.
