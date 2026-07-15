@@ -44,7 +44,6 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
       <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Rencana Aksi' }} />
 
       {/* Fase 4 — Performance Workspace V1.8.3:
@@ -120,14 +119,13 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'Card Completion Rule' }}
       />
       <Stack.Screen name="settings-card-guidance" options={{ headerShown: true, title: 'Keterangan Card' }} />
-      <Stack.Screen name="settings-status-priority" options={{ headerShown: true, title: 'Status & Prioritas' }} />
       <Stack.Screen name="settings-notifications-rule" options={{ headerShown: true, title: 'Notifications Rule' }} />
       <Stack.Screen name="settings-repeat-rules" options={{ headerShown: true, title: 'Repeat Setting' }} />
       <Stack.Screen name="settings-archive" options={{ headerShown: true, title: 'Arsip' }} />
       <Stack.Screen name="settings-goal-templates" options={{ headerShown: true, title: 'Goal Template' }} />
       <Stack.Screen
         name="settings-mbr"
-        options={{ headerShown: true, title: 'Minimum Breakdown Rule' }}
+        options={{ headerShown: true, title: 'Aturan Pecah Target' }}
       />
       <Stack.Screen
         name="settings-score-formula"
@@ -149,7 +147,6 @@ export default function AppLayout() {
 
       {/* Fase 7 — People & Score (surface) */}
       <Stack.Screen name="people" options={{ headerShown: true, title: 'People' }} />
-      <Stack.Screen name="people-ranking" options={{ headerShown: true, title: 'Ranking' }} />
       <Stack.Screen name="people-profile/[id]" options={{ headerShown: true, title: 'Profil' }} />
       <Stack.Screen
         name="manual-score-override"

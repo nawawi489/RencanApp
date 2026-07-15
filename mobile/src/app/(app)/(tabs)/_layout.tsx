@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { AppHeader } from '@/components/app-header';
+import { useInboxRooms } from '@/hooks/use-inbox';
 import { useThemePreference } from '@/providers/theme-provider';
 
 export default function TabsLayout() {
@@ -9,6 +10,11 @@ export default function TabsLayout() {
   // #93c5fd di gelap (pola app-header/IconTile, DESIGN §12).
   const { effective } = useThemePreference();
   const activeTint = effective === 'dark' ? '#93c5fd' : '#1564b3';
+
+  // Badge unread di ikon Inbox: total pesan belum dibaca lintas room (clamp '99+').
+  const { rooms } = useInboxRooms();
+  const totalUnread = rooms.reduce((sum, r) => sum + (r.unread_count > 0 ? r.unread_count : 0), 0);
+  const inboxBadge = totalUnread > 0 ? (totalUnread > 99 ? '99+' : totalUnread) : undefined;
   return (
     <Tabs
       screenOptions={{
@@ -46,6 +52,7 @@ export default function TabsLayout() {
         options={{
           title: 'Inbox',
           header: () => <AppHeader kicker="Khusus chat Rencana Aksi" />,
+          tabBarBadge: inboxBadge,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" color={color} size={size} />
           ),

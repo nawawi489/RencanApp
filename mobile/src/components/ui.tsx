@@ -593,7 +593,7 @@ export function ProgressBar({
 /**
  * Orb capaian sistemik untuk header detail Goal/KPI/Inisiatif/Rencana Aksi/Tugas.
  * Discrete size 56 (compact) atau 72 (hero). Tone otomatis dari nilai bila tidak diisi:
- *   - 0–34 → danger (merah) "Perlu perhatian"
+ *   - 0–34 → danger (merah) "Perlu dukungan"
  *   - 35–69 → warn  (amber) "Berjalan"
  *   - 70–99 → brand (biru)  "Menuju target"
  *   - 100   → success (hijau) "Selesai"
@@ -613,7 +613,7 @@ const ORB_TONE_LABEL: Record<OrbTone, string> = {
   brand: 'Menuju target',
   success: 'Selesai',
   warn: 'Berjalan',
-  danger: 'Perlu perhatian',
+  danger: 'Perlu dukungan',
 };
 
 export function orbToneFor(value: number): OrbTone {

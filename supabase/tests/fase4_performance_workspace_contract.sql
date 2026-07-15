@@ -33,18 +33,12 @@ begin
     values (v_org, 'G bad', current_date, current_date - 1, v_ceo);
     fails := fails||'period_bad_allowed; ';
   exception when check_violation then null; when others then fails := fails||'period_bad:'||sqlerrm||'; '; end;
-  -- seed counts (missing[8])
-  select count(*) into n from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='omset';
-  if n <> 10 then fails := fails||'omset_items('||n||'); '; end if;
-  select count(*) into n from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='profit';
-  if n <> 9 then fails := fails||'profit_items('||n||'); '; end if;
-  select count(*) into n from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id
-    where t.key='profit' and kt.division='cfo';
-  if n <> 1 then fails := fails||'profit_cfo_count('||n||'); '; end if;
-  if not exists (select 1 from public.kpi_area_templates kt join public.goal_templates t on t.id=kt.goal_template_id
-                 where t.key='profit' and kt.division='cfo' and kt.name='Control Budgeting') then
-    fails := fails||'cfo_name_mismatch; ';
-  end if;
+  -- seed counts (V1.83 §19: strategy_templates kosong secara default — post-rename dari
+  -- kpi_area_templates di 0045, dikosongkan dari seed bawaan omset/profit di 0059).
+  select count(*) into n from public.strategy_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='omset';
+  if n <> 0 then fails := fails||'omset_items_not_empty('||n||'); '; end if;
+  select count(*) into n from public.strategy_templates kt join public.goal_templates t on t.id=kt.goal_template_id where t.key='profit';
+  if n <> 0 then fails := fails||'profit_items_not_empty('||n||'); '; end if;
 
   if fails <> '' then raise exception 'TEST1 schema/seed FAIL: %', fails; end if;
   raise notice 'TEST1 schema/seed PASS';
@@ -175,6 +169,13 @@ end $$;
 rollback;
 
 -- ============================================================ TEST 4: template apply atomik + restore idempoten + audit (A-TPL/A-AUDIT, missing[7][11])
+-- NOTE (post-0059, code review 2026-07-15): tidak bisa dieksekusi — masih referensi
+-- tabel pre-rename `kpi_areas` (dibuang saat rename V1.8.3 ke `strategies`; lihat
+-- specs/rename-workspace-terminology.md) dan RPC `restore_goal_template_items` yang
+-- statusnya belum diverifikasi pasca-rename. Debt terpisah dari migrasi 0059 — TIDAK
+-- dimodernisasi di sini (scope besar: perlu keputusan owner soal taksonomi kolom).
+-- Count assertion di bawah SUDAH diupdate ke nilai V1.83 (0, bukan 10) supaya begitu
+-- kpi_areas/restore_goal_template_items diperbaiki terpisah, angkanya sudah benar.
 begin;
 do $$
 declare
@@ -186,8 +187,10 @@ begin
   -- apply sebagai CEO (punya create_goal)
   perform set_config('request.jwt.claims', json_build_object('sub',v_ceo,'role','authenticated')::text, true);
   goal := public.apply_goal_template(t_omset, v_ceo, current_date, current_date+90);
+  -- V1.83 §19: strategy_templates kosong secara default (0059) → apply_goal_template
+  -- menghasilkan 0 Strategy turunan, bukan 10 (kontrak V1.82 lama).
   select count(*) into n from public.kpi_areas where goal_id=goal;
-  if n <> 10 then fails:=fails||'apply_kpi_count('||n||'); '; end if;
+  if n <> 0 then fails:=fails||'apply_kpi_count_not_empty('||n||'); '; end if;
   -- audit actor_id = caller (missing[11])
   if not exists (select 1 from public.activity_logs where entity_type='goal' and entity_id=goal and action='apply_template' and actor_id=v_ceo) then
     fails:=fails||'apply_audit_missing; ';
@@ -195,15 +198,17 @@ begin
   if not exists (select 1 from public.activity_logs where entity_type='goal' and entity_id=goal and action='create' and actor_id=v_ceo) then
     fails:=fails||'create_audit_missing; ';
   end if;
-  -- restore idempoten (missing[7]): semua sudah ada → 0 ditambah, tetap 10
+  -- restore idempoten (missing[7]): dengan template kosong (V1.83), tidak ada apa pun
+  -- untuk direstore — 0 ditambah, tetap 0 (dulu: "semua sudah ada → 0 ditambah, tetap 10").
   added := public.restore_goal_template_items(goal);
   if added <> 0 then fails:=fails||'restore_added('||added||'); '; end if;
   select count(*) into n from public.kpi_areas where goal_id=goal;
-  if n <> 10 then fails:=fails||'restore_dup('||n||'); '; end if;
-  -- hapus 1 KPI lalu restore → +1
+  if n <> 0 then fails:=fails||'restore_dup_not_empty('||n||'); '; end if;
+  -- V1.83: skenario "hapus 1 KPI lalu restore → +1" tidak lagi berlaku — tidak ada baris
+  -- 'A/R Collection' untuk dihapus (template kosong), jadi restore tetap 0.
   delete from public.kpi_areas where goal_id=goal and name='A/R Collection';
   added := public.restore_goal_template_items(goal);
-  if added <> 1 then fails:=fails||'restore_one('||added||'); '; end if;
+  if added <> 0 then fails:=fails||'restore_one_not_empty('||added||'); '; end if;
 
   if fails <> '' then raise exception 'TEST4 template FAIL: %', fails; end if;
   raise notice 'TEST4 template PASS';
@@ -268,6 +273,9 @@ end $$;
 rollback;
 
 -- ============================================================ TEST 6: apply_goal_template tolak PIC lintas-org (code-review #2/#6)
+-- NOTE (post-0059, code review 2026-07-15): tidak bisa dieksekusi — referensi tabel
+-- pre-rename `kpi_areas` (lihat catatan sama di TEST 4 di atas). Count assertion di
+-- bawah SUDAH diupdate ke nilai V1.83 (0, bukan 10); modernisasi kpi_areas di luar scope.
 begin;
 do $$
 declare
@@ -277,10 +285,11 @@ declare
 begin
   select id into t_omset from public.goal_templates where key='omset';
   perform set_config('request.jwt.claims', json_build_object('sub',v_ceo,'role','authenticated')::text, true);
-  -- positif: PIC se-org (ceo) → 10 KPI Area dari template Omset
+  -- positif: PIC se-org (ceo) → Goal dibuat; V1.83 §19 template kosong → 0 Strategy
+  -- turunan (dulu: "10 KPI Area dari template Omset").
   goal := public.apply_goal_template(t_omset, v_ceo, current_date, current_date+90);
   select count(*) into n from public.kpi_areas where goal_id=goal;
-  if n <> 10 then fails:=fails||'apply_count('||n||'); '; end if;
+  if n <> 0 then fails:=fails||'apply_count_not_empty('||n||'); '; end if;
   -- negatif: PIC dari org lain → ditolak (SECURITY DEFINER tak boleh bypass batas org)
   insert into public.organizations (name) values ('Org B chk') returning id into org_b;
   insert into auth.users (id) values (pic_b);

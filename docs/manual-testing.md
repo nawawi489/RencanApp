@@ -294,7 +294,7 @@ Layar: `(tabs)/inbox`, `inbox/[roomId]`. Inbox khusus Initiative Chat — bukan 
 |---|---|---|---|---|
 | INBOX-01 | P1 | Struktur Inbox | Buka tab Inbox | Header lokal, search, filter **Semua / Belum dibaca**, list chat dengan preview pesan terakhir, unread badge (clamp "99+"), timestamp. Catatan: PRD §29 menyebut filter tambahan (Saya PIC, Review, Deadline) — jika tidak ada, catat sebagai gap [?] |
 | INBOX-02 | P1 | Filter bekerja | Terapkan tiap filter bergantian | List tersaring benar per filter |
-| INBOX-03 | P2 | Search chat | Cari nama Initiative / isi pesan | Hasil relevan |
+| INBOX-03 | P1 | Search chat (FTS V1) | Ketik nama Initiative → muncul di section Initiative. Ketik potongan isi pesan (min 2 karakter) → muncul di section Pesan (sub-group per room + snippet). Tap hit pesan → buka room dengan pesan tersorot (border amber). | Dua section terpisah; empty seragam "Tidak ada pesan yang cocok dengan pencarianmu"; user non-member room tidak mendapat pesan dari room itu; hint "Ketik minimal 2 karakter…" saat 1 char. |
 | CHAT-01 | P1 | Kirim & terima pesan | Buka room → kirim pesan; login user lain → balas | Pesan muncul dua arah; unread dot di Inbox pihak lain |
 | CHAT-02 | P1 | Chat terikat Initiative | Amati semua room | Setiap chat terikat satu Initiative; tidak ada chat lepas (PRD §44.20) |
 | CHAT-03 | P1 | Reply context Action Plan | Dari Action Plan Detail → buka chat | Chat terbuka dengan **banner konteks reply** Action Plan; AP tidak membuat room terpisah (PRD §44.21) |
@@ -363,7 +363,6 @@ Uji dengan akun ceo (atau akun dengan permission terkait). Untuk tiap layar, min
 | ADM-04 | P2 | Repeat Setting (`settings-repeat-rules`) | Kelola aturan repeat; efek ke pembuatan AP Repeat |
 | ADM-05 | P2 | Card Completion Rule (`settings-card-completion-rule`) | Ubah aturan → verifikasi helper Card Completion di alur card |
 | ADM-06 | P2 | Keterangan Card (`settings-card-guidance`) | Ubah teks panduan → tampil di form card terkait |
-| ADM-07 | P2 | Status & Prioritas (`settings-status-priority`) | Kelola status/prioritas (permission `manage_settings`) |
 | ADM-08 | P2 | Notifications Rule (`settings-notifications-rule`) | Ubah rule → verifikasi notifikasi yang tergenerate |
 | ADM-09 | P1 | Score Formula (`settings-score-formula`) | Lihat SCORE-01 |
 | ADM-10 | P1 | Governance Violation (`settings-governance-violation`) | Daftar pelanggaran tampil; detail dan penalty benar |

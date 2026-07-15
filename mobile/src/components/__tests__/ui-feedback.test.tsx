@@ -55,7 +55,7 @@ describe('SkeletonList', () => {
 describe('ScoreBadge', () => {
   it('memasangkan warna dengan label teks (a11y)', async () => {
     await render(<ScoreBadge score={68} />);
-    expect(screen.getByText('Score 68 · Perlu perhatian')).toBeTruthy();
+    expect(screen.getByText('Score 68 · Perlu dukungan')).toBeTruthy();
   });
   it('skor tinggi → On track', async () => {
     await render(<ScoreBadge score={86} />);

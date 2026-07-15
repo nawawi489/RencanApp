@@ -247,13 +247,11 @@ describe('listRanking', () => {
 
 // ============================================================ listScoreFormulaVersions
 // ============================================================ PEOPLE_TAB_COPY (PPL-02 constant lock)
-describe('PEOPLE_TAB_COPY — konstanta label tab People (PPL-02)', () => {
-  it('[TC1] mengunci 4 label tab + placeholder quarterly', () => {
+describe('PEOPLE_TAB_COPY — konstanta label tab People (PPL-02, V1.83 de-scored)', () => {
+  it('[TC1] mengunci 3 label tab + placeholder quarterly (ranking removed V1.83)', () => {
     expect(PEOPLE_TAB_COPY.monthly).toBe('Bulan ini');
     expect(PEOPLE_TAB_COPY.quarterly).toBe('Quarter');
-    expect(PEOPLE_TAB_COPY.ranking).toBe('Ranking');
     expect(PEOPLE_TAB_COPY.admin).toBe('Admin');
-    // OQ-7 diputuskan 2026-07-05: tab Quarter render placeholder sampai data quarterly-rollup ada.
     expect(PEOPLE_TAB_COPY.quarterlyPlaceholder).toMatch(/quarter|kuartal/i);
   });
 });

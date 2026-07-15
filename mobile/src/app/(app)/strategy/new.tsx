@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { Button, EmptyState, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
 import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
@@ -50,9 +50,10 @@ function StrategyTemplatePicker({
   }, [tmplQ.data]);
 
   if (!goalTemplateId) {
+    // V1.83 §18: user "tetap lanjut isi manual" bila library tidak tersedia.
     return (
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-        Template tidak tersedia (Goal ini tidak dibuat dari template).
+        Isi Strategy manual — Goal ini tidak dibuat dari Goal Template.
       </Text>
     );
   }
@@ -88,9 +89,11 @@ function StrategyTemplatePicker({
             {tmplQ.isLoading ? (
               <Text className="text-xs text-neutral-400">Memuat template…</Text>
             ) : grouped.length === 0 ? (
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                Belum ada Strategi Template untuk Goal Template ini.
-              </Text>
+              <EmptyState
+                title="Belum ada Strategy Template"
+                description="Admin dapat membuat template custom nanti. User tetap bisa membuat Strategy manual tanpa template."
+                action={{ label: 'Isi Manual', onPress: () => setOpen(false) }}
+              />
             ) : (
               <ScrollView className="max-h-[60vh]">
                 <View className="gap-3">

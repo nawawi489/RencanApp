@@ -2,7 +2,7 @@
 type: concept
 tags: [scope, guardrails, anti-scope-creep, decision]
 updated: 2026-07-15
-sources: 2
+sources: 3
 ---
 
 # Scope Guardrails
@@ -11,11 +11,35 @@ Batas scope permanen [[overview|Rencanapp V1.83]] (PRD V1.83 §6). Berfungsi seb
 
 ## Masuk V1.83
 
-Auth, User profile, Organization/Department/Position/Team, Role template & permission, dua [[workspace]], Goal & Strategy Template Library (V1.83: kosong by default), semua [[card-model|card]], [[action-plan|Task One Time/Repeat/Instance]], **Period Focus Engine** (periode aktif Bulan/Quarter, Goal tahunan konteks — §7.6), **Strategy Target Breakdown** (target tahunan dipecah ke Quarter/Bulan, total wajib 100% — §12), Kelengkapan Card (backend rule + popup), Keterangan Card, [[minimum-breakdown-rule|MBR / Aturan Pecah Target]] (V1.83: opsional 3 mode), Kelengkapan Perencanaan (backend rule + popup), [[execution-loop|Bukti/Nilai Hasil/Review]], Deadline Change Request, Evaluation (V1.83: dipicu di Action Plan), [[audit-governance|Activity Log & Governance Violation]] (V1.83: Admin Lanjutan), Notifications, Inbox Diskusi Rencana Aksi, People (di dalam [[surfaces#Menu|Menu]], V1.83 de-scoring), [[score-formula|Score Formula]] (V1.83: Admin Lanjutan), Repeat Compliance, basic ranking, Menu, Settings, Archive, Search, Confidential Access (Admin Lanjutan), Manual Score Override (Admin Lanjutan).
+Auth, User profile, Organization/Department/Position/Team, Role template & permission, dua [[workspace]], Goal & Strategy Template Library (V1.83: **Strategy Template** kosong by default per §19; Goal Template tetap 2 opsi dasar Omset/Profit, tidak dihapus), semua [[card-model|card]], [[action-plan|Task One Time/Repeat/Instance]], **Period Focus Engine** (periode aktif Bulan/Quarter, Goal tahunan konteks — §7.6), **Strategy Target Breakdown** (target tahunan dipecah ke Quarter/Bulan, total wajib 100% — §12), Kelengkapan Card (backend rule + popup), Keterangan Card, [[minimum-breakdown-rule|MBR / Aturan Pecah Target]] (V1.83: opsional 3 mode), Kelengkapan Perencanaan (backend rule + popup), [[execution-loop|Bukti/Nilai Hasil/Review]], Deadline Change Request, Evaluation (V1.83: dipicu di Action Plan), [[audit-governance|Activity Log & Governance Violation]] (V1.83: Admin Lanjutan), Notifications, Inbox Diskusi Rencana Aksi, People (di dalam [[surfaces#Menu|Menu]], V1.83 de-scoring), [[score-formula|Score Formula]] (V1.83: Admin Lanjutan), Repeat Compliance, basic ranking, Menu, Settings, Archive, Search, Confidential Access (Admin Lanjutan), Manual Score Override (Admin Lanjutan).
 
 ## Ditolak (jangan bangun)
 
-Feed, Company News, Announcement, CEO Broadcast, SOP Center penuh, Knowledge Center, HRIS penuh, Payroll, Inventory, CRM, **External chat integration** (dulu "WhatsApp integration" — V1.83 rename generik), Google Calendar integration, AI Assistant, AI Review, Native Android/iOS, Routine entity, Checklist Routine, Watcher, **Area Goal layer**, **metric child table di bawah Area Goal** (dulu "KPI child table" — V1.83 istilah "KPI" diganti "metric/indikator"), **Bobot planning card**, Social reaction/Story/Reels.
+Feed, Company News, Announcement, CEO Broadcast, SOP Center penuh, Knowledge Center, HRIS penuh, Payroll, Inventory, CRM, **External chat integration** (dulu "WhatsApp integration" — V1.83 rename generik), Google Calendar integration, AI Assistant, AI Review, Native Android/iOS, Routine entity, Checklist Routine, Watcher, **Area Goal layer**, **metric child table di bawah Area Goal** (dulu "KPI child table" — V1.83 istilah "KPI" diganti "metric/indikator"), **Bobot planning card**, **Social reaction feed / Story / Reels** (pola broadcast + popularitas).
+
+> [!info] Pengecualian sempit — Reaction pill Initiative Chat (owner 2026-07-13)
+> "Reaction pill tingkat-pesan" pada [[surfaces|Initiative Chat]] (PRD §30 komponen 6) **dikecualikan** dari larangan "Social reaction" di atas dan **diizinkan** dibangun, dengan syarat semua invarian berikut terpenuhi:
+> - **Zero bobot governance/skor** — tidak masuk [[score-formula]], ranking People, atau Governance Discipline; tidak dicatat sebagai `governance_violation`/`activity_log`.
+> - **Tanpa feed / leaderboard / agregasi lintas-room** — reaksi hanya tampil di bawah pesannya sendiri di dalam room; tidak ada surface "trending"/"popular".
+> - **Bukan approval** — tidak menyentuh Bukti/Nilai Hasil/Review; tidak ada emoji yang diberi makna "approve" oleh sistem.
+> - **Set emoji tertutup & ack-only** — whitelist server-side dibatasi ke emoji acknowledgment kerja (mis. `👍 ✅ 👀 🙏`); tanpa emoji kustom/upload; ekspresi sosial (`❤️`/`🎉`) tidak diseed di V1.
+> - **Otorisasi = keanggotaan room**, sama dengan pesan (`is_chat_member`); bukan peran governance.
+>
+> Rasional: yang dilarang guardrail adalah *pola medsos* (broadcast, konsumsi pasif, sinyal popularitas). Reaction pill tingkat-pesan yang memenuhi invarian di atas adalah *micro-acknowledgment* antar-anggota room yang sudah saling melihat pesannya — beda kategori. Amandemen ini **memperkuat** guardrail dengan menajamkan garisnya, bukan melonggarkannya.
+>
+> Spec teknis: [inbox-chat-reactions](../../specs/inbox-chat-reactions.md). Milestone build tetap V2 (specs/inbox-chat-ui.md L27).
+
+> [!info] Pengecualian sempit — Lampiran diskusi Initiative Chat (owner 2026-07-15)
+> "Lampiran diskusi (gambar) tingkat-pesan" pada [[surfaces|Initiative Chat]] (PRD §30 komponen 11 pasca-amandemen) **dikecualikan** dari rule "Bukti tetap dikirim melalui Task" (PRD §30 Rule 4) yang **dipersempit** menjadi "Bukti *formal* tetap dikirim melalui Task; lampiran diskusi informal boleh di chat." Fitur ini **diizinkan** dibangun, dengan syarat semua invarian berikut terpenuhi:
+> - **Zero bobot governance/skor** — tidak masuk [[score-formula]], ranking People, atau Governance Discipline; tidak dicatat sebagai `governance_violation`/`activity_log`.
+> - **Tanpa promosi ke Bukti** — tidak ada tombol/RPC/pointer yang mengubah lampiran chat menjadi Bukti Task; whitelist `evidence_files.kind` tidak bertambah.
+> - **Bukan input Review** — lampiran chat tidak pernah muncul di layar Review; Reviewer menilai dari Bukti Task, bukan dari foto di chat.
+> - **Batas ditegakkan struktural di database**, bukan hanya konvensi UI: bucket terpisah (`chat-attachments`), tanpa FK ke `evidence_files`/`task_submissions`, Score Formula buta terhadap kolom lampiran.
+> - **Otorisasi = keanggotaan room + workspace-viewer + confidential-aware** (bukan member-only seperti Reaction pill): CEO/audit yang punya `can_view_workspace` boleh melihat, kecuali action plan confidential — di situ hanya CEO/PIC/grantee yang lolos.
+>
+> Rasional: yang dilarang Rule 4 lama adalah *bukti informal masuk jalur formal dan mencemari Review/Score* (integritas scoring). Larangan tumpul "semua file di chat dilarang" ikut memblokir klarifikasi visual yang sah — dan pihak yang paling mungkin butuh (Reviewer, PIC induk) justru yang paling pasti ditolak alur Bukti Task karena bukan PIC. Amandemen ini **memperkuat** garis formal/informal: memindahkannya dari "aturan yang dihafal" ke "invarian yang ditegakkan Postgres."
+>
+> Spec teknis: [inbox-chat-attachments](../../specs/inbox-chat-attachments.md). Milestone build V2; larangan `specs/inbox-chat-ui.md` L192 tetap berlaku sampai V2 dijadwalkan.
 
 ## Guardrail filosofis
 

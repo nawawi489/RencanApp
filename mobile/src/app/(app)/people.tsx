@@ -7,7 +7,6 @@ import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 import {
   PeopleAdminTab,
   PeopleQuarterlyTab,
-  PeopleRankingTab,
   PeopleTabs,
   type PeopleTabKey,
 } from '@/components/people-tabs';
@@ -16,18 +15,12 @@ import {
   Avatar,
   EmptyState,
   ErrorState,
-  GuidanceNote,
-  ScoreBadge,
-  ScoreBreakdown,
-  ScoreLegend,
-  ScoreSparkline,
   SkeletonList,
   usePlaceholderColor,
 } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import { listOrgProfilesWithRoles, personLabel, type OrgProfileWithRole } from '@/lib/cards';
-import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
-import { useActivePeriod, useLatestClosedPeriod, useMyScore, useMyScoreHistory, useRanking } from '@/hooks/use-people-score';
+import { useLatestClosedPeriod, useRanking } from '@/hooks/use-people-score';
 
 type Person = OrgProfileWithRole & { score?: number | null };
 
@@ -50,18 +43,8 @@ export function LivePeopleScreen() {
     queryKey: ['org-profiles-with-roles'],
     queryFn: listOrgProfilesWithRoles,
   });
-  const { period } = useActivePeriod();
-  const { score: myScore } = useMyScore(period?.id);
-  // Per-user ScoreBadge bersumber dari ranking_snapshots periode tertutup terbaru
-  // (D9: ranking hanya tampil setelah close). RLS otomatis menyaring per visibility.
   const { period: latestClosed } = useLatestClosedPeriod();
   const { ranking } = useRanking(latestClosed?.id ?? '');
-  const { history } = useMyScoreHistory(6);
-  // Sparkline KRONOLOGIS (kiri = terlama). DB urut DESC → reverse.
-  const sparklinePoints = useMemo(
-    () => [...history].reverse().map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0),
-    [history],
-  );
 
   const scoreByUser = useMemo(() => {
     const m = new Map<string, number>();
@@ -100,15 +83,9 @@ export function LivePeopleScreen() {
     });
   }, [people, search]);
 
-  const myEffective = effectiveScore(myScore ?? null);
-  const myBreakdown = useMemo(
-    () => (myScore ? breakdownToMetrics(myScore.metric_breakdown) : []),
-    [myScore],
-  );
-
   if (isLoading) {
     return (
-      <Screen title="People" subtitle="Ranking dan profil pencapaian.">
+      <Screen title="People" subtitle="Anggota organisasi.">
         <SkeletonList count={5} />
       </Screen>
     );
@@ -116,7 +93,7 @@ export function LivePeopleScreen() {
 
   if (isError) {
     return (
-      <Screen title="People" subtitle="Ranking dan profil pencapaian.">
+      <Screen title="People" subtitle="Anggota organisasi.">
         <ErrorState
           title="Gagal memuat People"
           description="Tidak bisa mengambil daftar anggota organisasi."
@@ -128,7 +105,7 @@ export function LivePeopleScreen() {
 
   if (people.length === 0) {
     return (
-      <Screen title="People" subtitle="Ranking dan profil pencapaian.">
+      <Screen title="People" subtitle="Anggota organisasi.">
         <EmptyState
           icon={<Text className="text-2xl">👥</Text>}
           title="Belum ada anggota"
@@ -144,16 +121,6 @@ export function LivePeopleScreen() {
   const tablist = <PeopleTabs activeTab={activeTab} onChange={setActiveTab} canAdmin={canAdmin} />;
 
   if (activeTab === 'quarterly') return <PeopleQuarterlyTab tablist={tablist} />;
-  if (activeTab === 'ranking') {
-    return (
-      <PeopleRankingTab
-        tablist={tablist}
-        latestClosed={latestClosed}
-        ranking={ranking}
-        people={people}
-      />
-    );
-  }
   if (activeTab === 'admin') return <PeopleAdminTab tablist={tablist} />;
 
   // Tab Bulan ini (default) — konten eksisting di bawah tablist.
@@ -163,60 +130,9 @@ export function LivePeopleScreen() {
       <View className="gap-1">
         <Text className="text-2xl font-bold text-black dark:text-white">People</Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
-          Ranking dan profil pencapaian.
+          Anggota organisasi.
         </Text>
       </View>
-
-      <ScoreLegend />
-
-      {/* Skor saya — hanya tampil saat ada periode aktif & skor sudah dihitung. */}
-      {period && myEffective != null ? (
-        <View
-          className="gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800"
-          accessible
-          accessibilityLabel="Skor saya">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
-              Skor saya · {period.period_name}
-            </Text>
-          </View>
-          <ScoreBadge score={myEffective} />
-          {sparklinePoints.length ? (
-            <View className="gap-1.5">
-              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tren</Text>
-              <ScoreSparkline points={sparklinePoints} />
-            </View>
-          ) : null}
-          {myBreakdown.length ? <ScoreBreakdown metrics={myBreakdown} /> : null}
-        </View>
-      ) : period ? (
-        <GuidanceNote
-          title="Skor menyusul"
-          body={`Periode "${period.period_name}" aktif. Skor Anda muncul setelah perhitungan periode berjalan.`}
-        />
-      ) : (
-        <GuidanceNote
-          title="Belum ada periode skoring"
-          body="Achievement Score muncul setelah administrator membuka periode skoring untuk organisasi."
-        />
-      )}
-
-      {/* Papan peringkat lengkap — hanya tampil setelah ada periode tertutup (D9). */}
-      {latestClosed ? (
-        <Pressable
-          className="flex-row items-center justify-between rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
-          accessibilityRole="button"
-          accessibilityLabel="Lihat papan peringkat lengkap"
-          onPress={() => router.push('/people-ranking' as Href)}>
-          <View className="flex-1 gap-0.5">
-            <Text className="text-base font-semibold text-black dark:text-white">Papan peringkat</Text>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Ranking periode {latestClosed.period_name}
-            </Text>
-          </View>
-          <Text className="text-lg text-neutral-400">›</Text>
-        </Pressable>
-      ) : null}
 
       {/* UI-S-PP1 — search */}
       <View className="gap-3">
@@ -240,18 +156,12 @@ export function LivePeopleScreen() {
     </View>
   );
 
-  const renderItem = ({ item: p, index: i }: { item: Person; index: number }) => (
+  const renderItem = ({ item: p }: { item: Person }) => (
     <Pressable
       className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
       accessibilityRole="button"
       accessibilityLabel={`Buka profil ${personLabel(p)}`}
       onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
-      {/* Hanya tampilkan angka rank untuk user yang punya skor; user tanpa skor → em-dash. */}
-      <View className="h-7 w-7 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950">
-        <Text className="text-xs font-bold text-blue-700 dark:text-blue-300">
-          {p.score != null ? i + 1 : '—'}
-        </Text>
-      </View>
       <Avatar name={personLabel(p)} seed={p.id} />
       <View className="flex-1">
         <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
@@ -260,12 +170,6 @@ export function LivePeopleScreen() {
         <Text className="text-xs text-neutral-400" numberOfLines={1}>
           {personSubhead(p)}
         </Text>
-        {/* p.score null vs 0: null → tak ada badge; 0 nyata → band attention */}
-        {p.score != null ? (
-          <View className="mt-1.5">
-            <ScoreBadge score={p.score} />
-          </View>
-        ) : null}
       </View>
       <Text className="text-lg text-neutral-400">›</Text>
     </Pressable>

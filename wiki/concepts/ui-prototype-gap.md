@@ -171,7 +171,7 @@ Sweep menyeluruh `mobile/src/` terhadap [[architecture#a11y|DESIGN.md §2/§3/§
 
 | ID | Item | Severity |
 |---|---|---|
-| UI-S-IN1 | `inbox.tsx`: **search input**, **filter chips** (Semua/Unread/Saya PIC/Review/Deadline), **avatar + preview pesan terakhir** | MAJOR |
+| UI-S-IN1 | `inbox.tsx`: **search input**, **filter chips** (Semua/Unread/Saya PIC/Review/Deadline), **avatar + preview pesan terakhir** | MAJOR ✅ **CLOSED 2026-07-12 (Chat FTS V1)** — search dual-source (nama Initiative client-filter + isi pesan server RPC `search_chat_messages` via pg_trgm), placeholder "Cari Initiative atau pesan", dua section (Initiative + Pesan sub-group per room + snippet ≤240 char), empty state seragam anti-timing-oracle, deep-link `?highlight=` ke [roomId]. Migrasi 0044. Chip PIC/Review/Deadline masih ditunda per scope-lock. |
 | UI-S-IN2 | `inbox/[roomId]`: **chat bubble** kiri/kanan, **sender + avatar**, **date divider** | MAJOR |
 | UI-S-IN3 | `inbox/[roomId]`: **banner konteks** (membalas AP/Initiative), **reaksi**, **read receipt**, **reply-quote**, **system events** | MAJOR |
 | UI-S-IN4 | `inbox/[roomId]`: composer dengan **attach evidence** (paperclip) + circular send button | MAJOR |

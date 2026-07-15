@@ -49,5 +49,10 @@ sources: 1
 | `initiatives`, `strategy_target_breakdowns`, `task_result_values` | `kpi_area_id` | `strategy_id` |
 
 Kolom `goal_id`, `problem_statement_id`, `pic_id`, `reviewer_id`, `submission_id`, `repeat_rule_id` TETAP.
+## Extensions & indeks pendukung fitur
+
+- **`extensions.pg_trgm`** (migrasi 0044) — trigram GIN untuk pencarian isi pesan chat. Install di skema `extensions` (konvensi Supabase). Dipakai RPC `public.search_chat_messages` via `extensions.gin_trgm_ops` + `extensions.similarity`.
+- **`idx_chat_messages_body_trgm`** — GIN `body extensions.gin_trgm_ops` pada `public.chat_messages`; mendukung ILIKE partial murah.
+- **`idx_chat_messages_org_room_created`** — composite `(organization_id, chat_room_id, created_at desc)` pada `public.chat_messages`; push-down org sebelum operator matching + cursor keyset.
 
 Berkaitan dengan: [[tech-stack]], [[permission-model]], [[score-formula]], [[audit-governance]].

@@ -104,22 +104,23 @@ const TEMPLATE_ITEMS: MenuItem[] = [
 
 // Bantuan — spec §13. Belum ada layar (help-center/support); tap → toast (owner decision).
 const BANTUAN_ITEMS: MenuItem[] = [
-  { label: 'Pusat Bantuan', description: 'Panduan EMS', text: '?', tone: 'info', toast: true },
+  { label: 'Pusat Bantuan', description: 'Panduan Rencanapp', text: '?', tone: 'info', toast: true },
   { label: 'Support', description: 'Hubungi admin', text: 'CS', tone: 'success', toast: true },
 ];
 
-// Pengaturan — spec §14 mengunci 5 item pertama. 4 item terakhir DIVERGENSI TERCATAT (owner
+// Pengaturan — spec §14 mengunci 5 item pertama. 3 item terakhir DIVERGENSI TERCATAT (owner
 // decision 2026-07-05): dipertahankan agar layar Card Completion Rule / Keterangan Card /
-// Status & Prioritas / Notifications Rule tetap punya entry point (kalau tidak, jadi orphan).
+// Notifications Rule tetap punya entry point (kalau tidak, jadi orphan).
+// "Status & Prioritas" dihapus (2026-07-14): status_card_labels/priority_card_labels tidak
+// pernah dibaca di mana pun selain layar itu sendiri — fitur mati, bukan divergensi yang perlu entry point.
 const PENGATURAN_ITEMS: MenuItem[] = [
   { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permissionAny: ORG_SETTINGS_PERMISSIONS },
   { label: 'Repeat Setting', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
   { label: 'Score Formula', description: 'Rumus score', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
   { label: 'Permission Settings', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
-  { label: 'Minimum Breakdown Rule', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
+  { label: 'Aturan Pecah Target', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
   { label: 'Card Completion Rule', description: 'Aturan selesai', icon: 'checkbox-outline', tone: 'info', href: '/settings-card-completion-rule' as Href, permission: 'manage_card_completion_rule' },
   { label: 'Keterangan Card', description: 'Panduan isi card', icon: 'information-circle-outline', tone: 'info', href: '/settings-card-guidance' as Href, permission: 'manage_card_completion_rule' },
-  { label: 'Status & Prioritas', description: 'Label kerja', icon: 'flag-outline', tone: 'warn', href: '/settings-status-priority' as Href, permission: 'manage_settings' },
   { label: 'Notifications Rule', description: 'Aturan notifikasi', icon: 'notifications-outline', tone: 'info', href: '/settings-notifications-rule' as Href, permission: 'manage_settings' },
 ];
 
