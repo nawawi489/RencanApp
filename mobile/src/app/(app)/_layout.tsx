@@ -125,7 +125,7 @@ export default function AppLayout() {
       <Stack.Screen name="settings-goal-templates" options={{ headerShown: true, title: 'Goal Template' }} />
       <Stack.Screen
         name="settings-mbr"
-        options={{ headerShown: true, title: 'Minimum Breakdown Rule' }}
+        options={{ headerShown: true, title: 'Aturan Pecah Target' }}
       />
       <Stack.Screen
         name="settings-score-formula"
