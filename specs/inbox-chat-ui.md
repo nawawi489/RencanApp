@@ -101,7 +101,7 @@ Semua story tunduk RLS `is_chat_member()`; otorisasi di Postgres, bukan app laye
 - **FR-IN4.2** Kirim via `send_chat_message` (no-regress): trim body, error inline `accessibilityRole="alert"`, input tidak terhapus saat gagal, invalidate `['chat-messages',roomId]` + `['chat-rooms']`.
 - **FR-IN4.3** Composer gating read-only untuk workspace-viewer non-member — **butuh kontrak `can_send`** (DATA-2); DEFER jika belum diputuskan.
 - **FR-IN4.4** Mention: `mentions=[]` di V1.8.1 (picker DEFER — tidak ada RPC roster room ber-RLS).
-- **FR-IN4.5** Paperclip attach-evidence: **DEFER** (sembunyikan total atau deep-link ke Action Plan submit; tabel `chat_message_attachments` DILARANG — bypass evidence-locking PRD §35).
+- **FR-IN4.5** ~~Paperclip attach-evidence: **DEFER** (sembunyikan total atau deep-link ke Action Plan submit; tabel `chat_message_attachments` DILARANG — bypass evidence-locking PRD §35).~~ **Amandemen owner 2026-07-15 — dibuka bersyarat:** larangan diganti oleh spec baru `specs/inbox-chat-attachments.md` yang membuka *lampiran diskusi (gambar)* dengan batas struktural (bucket terpisah `chat-attachments`, tanpa FK ke evidence, whitelist `evidence_files.kind` tidak bertambah, Score Formula buta terhadap kolom lampiran). Sitasi lama *"bypass evidence-locking PRD §35"* **dikoreksi**: §35 adalah Activity Log; evidence locking yang benar adalah **PRD §24.1** + `prd/02 §E.1`. **Milestone build tetap V2** — larangan L192 di bawah TETAP berlaku sampai V2 dijadwalkan (preseden reactions).
 
 ### E. Governance invariants (mengikat)
 - **FR-GOV.1** RLS sole authority; client tidak menambah/melonggarkan filter otorisasi.

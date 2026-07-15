@@ -1202,13 +1202,14 @@ Komponen:
 8. System event.
 9. Composer.
 10. Task reply context banner.
+11. Attachment bubble — lampiran diskusi (gambar) di dalam message bubble. Bukan galeri, bukan feed, bukan tab file. Milestone V2. Lihat `specs/inbox-chat-attachments.md`.
 
 Rule:
 
 1. Chat selalu terikat Rencana Aksi (level 3 struktural — tabel `action_plans` pasca-rename).
 2. Task dapat membuka chat dengan konteks reply.
 3. Task tidak membuat chat terpisah.
-4. Bukti tetap dikirim melalui Task, bukan sebagai chat biasa.
+4. **Bukti formal** — yang masuk riwayat versi, terkunci saat direview, dan dinilai Reviewer — tetap dikirim melalui Task. **Lampiran diskusi** di chat bersifat informal: tidak pernah menjadi Bukti, tidak masuk riwayat versi, tidak menjadi input Review, dan tidak berbobot dalam Score Formula. Batas ini ditegakkan struktural di database (bucket terpisah, tanpa FK ke evidence, whitelist `evidence_files.kind` utuh) — bukan hanya konvensi UI. Lihat `specs/inbox-chat-attachments.md` (amandemen owner 2026-07-15).
 
 Catatan RWT-04 (default A): membership chat STABIL. Row `chat_rooms` yang sebelumnya
 terikat `initiatives.id` (semantik lama = "program unit") sekarang terikat kolom
