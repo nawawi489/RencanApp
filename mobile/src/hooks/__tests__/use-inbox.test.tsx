@@ -83,7 +83,7 @@ describe('useChatActions', () => {
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
     await result.current.send('Hai', ['u2']);
-    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'Hai', ['u2']));
+    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'Hai', ['u2'], undefined));
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
     expect(keys.some((k) => k.includes('chat-messages'))).toBe(true);
     expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);
@@ -119,6 +119,25 @@ describe('useChatActions', () => {
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
     expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);
     expect(keys.some((k) => k.includes('chat-messages'))).toBe(false);
+  });
+});
+
+// =========================================================== Attachments (0059) ==========================================================
+
+describe('useChatActions — attachments forwarding', () => {
+  it('[ATT-25a] send with opts.attachments → forwarded to sendChatMessage', async () => {
+    const { wrapper } = makeWrapper();
+    const atts = [{ path: 'o/r/uuid-x.jpg', name: 'x.jpg', mime: 'image/jpeg', size: 100, kind: 'photo' as const }];
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.send('lihat', ['u2'], undefined, { attachments: atts });
+    expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'lihat', ['u2'], { attachments: atts });
+  });
+
+  it('[ATT-25b] send without opts → sendChatMessage receives undefined opts (backward compat)', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
+    await result.current.send('plain');
+    expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'plain', [], undefined);
   });
 });
 
@@ -226,7 +245,7 @@ describe('useChatActions — optimistic send', () => {
     const spy = jest.spyOn(qc, 'invalidateQueries');
     const { result } = await renderHook(() => useChatActions('r1'), { wrapper });
     await result.current.send('halo');
-    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'halo', []));
+    await waitFor(() => expect(mockSendChatMessage).toHaveBeenCalledWith('r1', 'halo', [], undefined));
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
     expect(keys.some((k) => k.includes('chat-messages'))).toBe(true);
     expect(keys.some((k) => k.includes('chat-rooms'))).toBe(true);

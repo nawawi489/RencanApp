@@ -26,6 +26,7 @@ import {
   type ChatMessage,
   type ChatRead,
   type ChatRoom,
+  type SendChatMessageOpts,
 } from '@/lib/inbox';
 
 /** Bentuk cache useInfiniteQuery untuk ['chat-messages', roomId]. */
@@ -152,8 +153,8 @@ export function useChatActions(roomId: string) {
   const qc = useQueryClient();
 
   const sendM = useMutation({
-    mutationFn: (vars: { body: string; mentions: string[]; optimistic?: ChatMessage }) =>
-      sendChatMessage(roomId, vars.body, vars.mentions),
+    mutationFn: (vars: { body: string; mentions: string[]; optimistic?: ChatMessage; opts?: SendChatMessageOpts }) =>
+      sendChatMessage(roomId, vars.body, vars.mentions, vars.opts),
     onMutate: async (vars) => {
       if (!vars.optimistic) return { prev: undefined as ChatPages | undefined };
       await qc.cancelQueries({ queryKey: ['chat-messages', roomId] });
@@ -195,8 +196,8 @@ export function useChatActions(roomId: string) {
   });
 
   return {
-    send: (body: string, mentions: string[] = [], optimistic?: ChatMessage) =>
-      sendM.mutateAsync({ body, mentions, optimistic }),
+    send: (body: string, mentions: string[] = [], optimistic?: ChatMessage, opts?: SendChatMessageOpts) =>
+      sendM.mutateAsync({ body, mentions, optimistic, opts }),
     markRead: () => markReadM.mutateAsync(),
     isSending: sendM.isPending,
     toggleReaction: (messageId: string, emoji: string) =>

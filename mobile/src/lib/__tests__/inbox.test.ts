@@ -93,7 +93,7 @@ describe('listChatMessages (keyset)', () => {
     expect(calls.range).toBeUndefined();
     // Page pertama = tidak ada predikat cursor.
     expect(calls.or).toBeUndefined();
-    expect(msgs).toEqual([{ id: 'm1', reactions: [], reply_to: null }]);
+    expect(msgs).toEqual([{ id: 'm1', reactions: [], reply_to: null, attachments: [] }]);
   });
 
   it('[5-rev] page N (cursor terisi) → tambah .or() strict `<` (AC-2/AC-16)', async () => {
@@ -150,7 +150,7 @@ describe('listChatMessages (keyset)', () => {
     const { builder } = makeQueryThenable({ data: batch, error: null });
     mockFrom.mockReturnValue(builder);
     const msgs = await listChatMessages('r1');
-    expect(msgs).toEqual(batch.map((m) => ({ ...m, reactions: [], reply_to: null })));
+    expect(msgs).toEqual(batch.map((m) => ({ ...m, reactions: [], reply_to: null, attachments: [] })));
   });
 
   it('[5f] propagasi error identity (rethrow object apa adanya)', async () => {
@@ -489,5 +489,78 @@ describe('searchChatMessages (Chat FTS V1)', () => {
       message: 'boom',
       code: 'PGRST202',
     });
+  });
+});
+
+// ============================================================
+// Chat Attachments — Fase 3: Data Layer
+// ============================================================
+
+describe('sendChatMessage — attachments (0059)', () => {
+  it('[ATT-16] p_attachments forwarded to RPC when provided', async () => {
+    mockRpc.mockResolvedValue({ data: 'm-att', error: null });
+    const atts = [{ path: 'o/r/uuid-x.jpg', name: 'x.jpg', mime: 'image/jpeg', size: 100, kind: 'photo' as const }];
+    await sendChatMessage('r1', 'lihat ini', [], { attachments: atts });
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', expect.objectContaining({
+      p_attachments: atts,
+    }));
+  });
+
+  it('[ATT-20] send without attachments → p_attachments undefined', async () => {
+    mockRpc.mockResolvedValue({ data: 'm-no', error: null });
+    await sendChatMessage('r1', 'plain text');
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', expect.objectContaining({
+      p_attachments: undefined,
+    }));
+  });
+
+  it('[ATT-21a] send with attachments + context + replyTo → all forwarded', async () => {
+    mockRpc.mockResolvedValue({ data: 'm-combo', error: null });
+    const atts = [{ path: 'o/r/uuid-y.png', name: 'y.png', mime: 'image/png', size: 50, kind: 'photo' as const }];
+    await sendChatMessage('r1', 'konteks + lampiran', ['u2'], {
+      attachments: atts,
+      contextActionPlan: 'ap-1',
+      replyTo: 'm-prev',
+    });
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', {
+      p_room: 'r1',
+      p_body: 'konteks + lampiran',
+      p_mentions: ['u2'],
+      p_attachments: atts,
+      p_context_action_plan: 'ap-1',
+      p_reply_to: 'm-prev',
+    });
+  });
+});
+
+describe('listChatMessages — attachments (0059)', () => {
+  it('[ATT-18] select string contains attachments', async () => {
+    const { builder, calls } = makeQueryThenable({ data: [], error: null });
+    mockFrom.mockReturnValue(builder);
+    await listChatMessages('r1');
+    expect(calls.select[0][0]).toEqual(expect.stringContaining('attachments'));
+  });
+
+  it('[ATT-21c] pre-migration row (attachments null) → normalized to []', async () => {
+    const rows = [{
+      id: 'm1', chat_room_id: 'r1', author_id: 'u1', body: 'old msg', created_at: '2026-01-01T00:00:00Z',
+      reactions: null, reply_to: null, attachments: null,
+    }];
+    const { builder } = makeQueryThenable({ data: rows, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs[0].attachments).toEqual([]);
+  });
+
+  it('[ATT-18b] row with attachments → pass-through', async () => {
+    const atts = [{ path: 'o/r/uuid-z.jpg', name: 'z.jpg', mime: 'image/jpeg', size: 200, kind: 'photo' }];
+    const rows = [{
+      id: 'm2', chat_room_id: 'r1', author_id: 'u1', body: 'with image', created_at: '2026-07-15T00:00:00Z',
+      reactions: [], reply_to: null, attachments: atts,
+    }];
+    const { builder } = makeQueryThenable({ data: rows, error: null });
+    mockFrom.mockReturnValue(builder);
+    const msgs = await listChatMessages('r1');
+    expect(msgs[0].attachments).toEqual(atts);
   });
 });
