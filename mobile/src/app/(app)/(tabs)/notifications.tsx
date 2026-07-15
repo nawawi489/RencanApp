@@ -3,6 +3,7 @@
 // UI-S-N01 — tombol aksi inline per row sesuai (type, entity_type).
 // UI-S-N02 — section "Baru" (≤24 jam) vs "Sebelumnya".
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useMemo, useState } from 'react';
@@ -18,6 +19,7 @@ import {
   SkeletonList,
   TabBar,
 } from '@/components/ui';
+import { usePushRegistration } from '@/hooks/use-push-notifications';
 import { useNotificationActions, useNotifications, useUnreadCount } from '@/hooks/use-notifications';
 import {
   NOTIFICATION_TYPE_LABEL,
@@ -214,6 +216,50 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+// ---------------------------------------------------------------- push permission banner
+
+function PushPermissionBanner({
+  permissionStatus,
+  onActivate,
+}: {
+  permissionStatus: string;
+  onActivate: () => void;
+}) {
+  if (permissionStatus === 'granted') return null;
+
+  if (permissionStatus === 'denied') {
+    return (
+      <View className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+        <Text className="text-sm text-neutral-600 dark:text-neutral-400">
+          Notifikasi diblokir. Buka pengaturan perangkat untuk mengaktifkan.
+        </Text>
+        <Pressable
+          onPress={() => void Linking.openSettings()}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Pengaturan"
+          className="mt-3 min-h-[44px] items-center justify-center self-start rounded-xl bg-brand-dark px-5 active:opacity-80">
+          <Text className="text-sm font-semibold text-white">Buka Pengaturan</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+      <Text className="text-sm text-neutral-600 dark:text-neutral-400">
+        Aktifkan notifikasi push agar tidak terlewat.
+      </Text>
+      <Pressable
+        onPress={onActivate}
+        accessibilityRole="button"
+        accessibilityLabel="Aktifkan Notifikasi"
+        className="mt-3 min-h-[44px] items-center justify-center self-start rounded-xl bg-brand-dark px-5 active:opacity-80">
+        <Text className="text-sm font-semibold text-white">Aktifkan</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------- screen
 
 export function LiveNotificationsScreen() {
@@ -223,6 +269,7 @@ export function LiveNotificationsScreen() {
   const { count } = useUnreadCount();
   const { markRead, markAllRead } = useNotificationActions();
   const { effective } = useThemePreference();
+  const { permissionStatus, register } = usePushRegistration();
   // Pola warna ikon brand theme-aware (app-header/IconTile, DESIGN §12).
   const brandIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
   const mutedIconColor = effective === 'dark' ? '#a3a3a3' : '#667085';
@@ -274,6 +321,10 @@ export function LiveNotificationsScreen() {
           Notifikasi resmi dan respons.
         </Text>
       </View>
+      <PushPermissionBanner
+        permissionStatus={permissionStatus}
+        onActivate={() => void register()}
+      />
       {controls}
     </View>
   );

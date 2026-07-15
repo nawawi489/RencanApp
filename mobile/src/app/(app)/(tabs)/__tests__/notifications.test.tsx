@@ -19,6 +19,15 @@ jest.mock('@/hooks/use-notifications', () => ({
   useNotificationActions: () => ({ markRead: mockMarkRead, markAllRead: mockMarkAllRead }),
 }));
 
+jest.mock('@/hooks/use-push-notifications', () => ({
+  usePushRegistration: () => ({
+    permissionStatus: 'granted',
+    token: null,
+    register: jest.fn(),
+    unregister: jest.fn(),
+  }),
+}));
+
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
