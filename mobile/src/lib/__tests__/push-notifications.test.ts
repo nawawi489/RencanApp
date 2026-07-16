@@ -96,13 +96,13 @@ describe('registerPushToken', () => {
     });
   });
 
-  it('[PN-DATA-8] meneruskan null untuk p_device_id saat deviceId dihilangkan', async () => {
+  it('[PN-DATA-8] meneruskan undefined untuk p_device_id saat deviceId dihilangkan', async () => {
     mockRpc.mockReturnValue({ data: null, error: null });
     await registerPushToken('ExponentPushToken[yyy]', 'android');
     expect(mockRpc).toHaveBeenCalledWith('register_push_token', {
       p_expo_token: 'ExponentPushToken[yyy]',
       p_platform: 'android',
-      p_device_id: null,
+      p_device_id: undefined,
     });
   });
 

@@ -52,18 +52,17 @@ export async function registerPushToken(
   platform: string,
   deviceId?: string,
 ): Promise<void> {
-  // Cast: RPCs ini belum ada di database.types.ts — migrasi push_tokens pending regen.
-  const { error } = await (supabase as any).rpc('register_push_token', {
+  const { error } = await supabase.rpc('register_push_token', {
     p_expo_token: expoToken,
     p_platform: platform,
-    p_device_id: deviceId ?? null,
+    p_device_id: deviceId,
   });
-  if (error) throw new Error((error as { message: string }).message);
+  if (error) throw new Error(error.message);
 }
 
 export async function unregisterPushToken(expoToken: string): Promise<void> {
-  const { error } = await (supabase as any).rpc('unregister_push_token', {
+  const { error } = await supabase.rpc('unregister_push_token', {
     p_expo_token: expoToken,
   });
-  if (error) throw new Error((error as { message: string }).message);
+  if (error) throw new Error(error.message);
 }
