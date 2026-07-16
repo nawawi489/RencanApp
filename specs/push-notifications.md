@@ -48,7 +48,7 @@ Gap teknis dikonfirmasi riset kode:
 
 | Fase | Scope | Alasan |
 |---|---|---|
-| **1 (pilot, spec ini)** | Push tipe eksekusi/review yang **deep-link-nya SUDAH berfungsi**: `review_request`, `approved`, `rejected`, `revision_requested`, `deadline_reminder`, `repeat_due`, `instance_missed` (→ `action_plan`/`action_plan_instance`, ditangani `openRow` 234-241) | Mengapalkan nilai push tanpa prasyarat fitur baru |
+| **1 (pilot, spec ini)** | Push tipe eksekusi/review yang **deep-link-nya SUDAH berfungsi**: `review_request`, `approved`, `rejected`, `deadline_reminder`, `repeat_due`, `instance_missed` (→ `action_plan`/`action_plan_instance`, ditangani `openRow` 234-241). _Catatan: `revision_requested` adalah `NotificationResolution` (kolom resolution), bukan `NotificationType` tersendiri — semantik "perlu revisi" di-cover oleh tipe `rejected` + resolution._ | Mengapalkan nilai push tanpa prasyarat fitur baru |
 | **2 (fast-follow)** | `mention` + `comment` (chat) | Menyeret prasyarat: `openRow` **tidak** punya cabang `chat_message` (tap = no-op, terverifikasi); baris notif tak simpan `room_id`; butuh resolusi `chat_message→room` + rute `/inbox/[roomId]` + rekonsiliasi `openRow`/`openAction` |
 | **3 (fast-follow)** | Quiet-hours + rate-limit push org-level | Belum terbukti butuh; butuh **kolom timezone per-org** (tidak ada — cron hardcode UTC, `org_today()` hanya DATE) |
 

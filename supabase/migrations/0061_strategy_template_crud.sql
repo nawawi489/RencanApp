@@ -4,8 +4,9 @@
 -- Changes:
 --   1. Add is_active boolean column (default true) for soft-disable.
 --   2. Add INSERT/UPDATE/DELETE RLS policies gated on manage_kpi_area_templates
---      (the permission key seeded in 0001; table was renamed from kpi_area_templates
---       to strategy_templates in 0045 but the permission key was kept).
+--      (the permission key seeded in 0001; the table itself was renamed to
+--       strategy_templates in migration 0045, but the permission key text
+--       was kept as-is and was not part of that rename).
 --   3. Rename permission label to match current UI terminology.
 
 -- ---------------------------------------------------------------- schema

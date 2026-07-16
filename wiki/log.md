@@ -1681,16 +1681,17 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 
 ## [2026-07-16] query | Audit kepatuhan PRD V1.83 penuh + tindak lanjut
 
-- Audit sistematik 45 bagian PRD V1.83 terhadap kode + migrasi. Temuan: 3 gap aktif, sisanya sudah ter-implement atau addressed.
-- **Gap §32 People de-scoring CLOSED (PR #74, branch `feat/people-rank-badge-v183`):**
-  - `people.tsx` ditambah `RankBadge` (urutan kontribusi) + teks "Lihat Profil" pada setiap row.
-  - Trust/Achievement/Score dihilangkan dari tampilan per-user.
-  - Wiki `entities/surfaces.md` callout diperbarui (item b di-close).
+- **Audit dilakukan** (subagent, read-only) atas seluruh 45 section H2 `PRD.md` vs kode `mobile/` + migrasi + wiki. Hasil: mayoritas section **DONE**; 2 **PARTIAL** ditemukan:
+  1. **§19 Strategy Template CRUD** — admin panel `settings-strategy-templates.tsx` masih read-only (sudah dicatat di entry [2026-07-15] di atas, belum dieksekusi).
+  2. **§32 People row** — row tidak menampilkan **nomor urut kontribusi (rank)** maupun tombol "Lihat Profil" eksplisit; hanya nama + avatar + subhead.
+- **Push Notifications status dikoreksi**: Fase 1 (PR #71) yang sebelumnya tercatat "OPEN" di memory ternyata sudah **MERGED** ke staging 2026-07-15. Fase 2 (outbox drainer, branch `feat/push-notifications-fase2`, commit 2-A..2-G) sudah code-complete tapi belum di-PR.
+- **Tindakan diambil (2026-07-16):**
+  1. **PR #73** dibuka: `feat/push-notifications-fase2` → `staging` (migrasi `0060_push_infrastructure.sql` + `push-fanout` Edge Function + pg_net/pg_cron drainer + retensi 30h).
+  2. **Gap §32 ditutup** — `mobile/src/app/(app)/people.tsx`: tambah `RankBadge` (lingkaran nomor urut, hanya untuk user dengan data ranking dari periode closed terakhir) + label "Lihat Profil" menggantikan chevron polos. De-scoring tetap dijaga: rank menunjukkan posisi, bukan nilai skor. 3 test baru ditambahkan di `__tests__/people.test.tsx` (17/17 pass), `tsc --noEmit` bersih.
 - **Gap §19 Strategy Template CRUD CLOSED (PR #75, branch `feat/strategy-template-crud-v183`):**
   - Migrasi `0061_strategy_template_crud.sql`: kolom `is_active boolean default true` + 3 RLS policy (INSERT/UPDATE/DELETE) gated `manage_kpi_area_templates` + rename label permission.
   - Data layer: `createStrategyTemplate`, `updateStrategyTemplate`, `deleteStrategyTemplate` di `goals.ts`.
   - UI rewrite `settings-strategy-templates.tsx`: list+search, create/edit modal, toggle active/inactive, delete confirmation.
   - Contract test 7 pgTAP + 8 RNTL test (4-state + create/edit/toggle/badge). Jest 1377/1377, tsc clean.
   - **Gotcha RNTL:** useMutation `onSuccess: invalidateQueries` menghasilkan async leak via React Query global `notifyManager` — meracuni `screen` singleton RNTL utk test berikutnya. Fix: pindahkan create test (satu-satunya yang trigger mutasi) ke describe terakhir.
-- **Push Notifications Fase 2 PR #73 opened** (branch `feat/push-notifications-fase2`, target staging): outbox drainer Edge Function, pg_net + vault + cron, rate-limit 3/24j, backoff 2^attempts cap 6, retensi 30h.
 - **Memory disinkronkan:** `push-notifications-shipped.md` dikoreksi (Fase 1 MERGED bukan OPEN); `prd-v183-source-of-truth.md` + `app-scaffold.md` di-update.
