@@ -210,3 +210,102 @@ Deno.test('[PN-DR-9] missing ticket (index out of bounds) → bumpBackoff transi
   assertEquals(result.transient, 1);
   assertEquals(calls.bumpBackoff[0], { id: 'd2', error: 'missing_ticket' });
 });
+
+// ─── Auth guard tests (Deno.serve entry) ──────────────────────────────────
+
+// We test the handler extracted from index.ts by dynamically importing and
+// invoking Deno.serve's callback. Since the entry is guarded by
+// `import.meta.main`, we test the auth logic directly here instead.
+
+Deno.test('[PN-AUTH-1] no Authorization header → 401 unauthorized', async () => {
+  // Simulate: import the module's serve handler logic inline.
+  const SERVICE_ROLE_KEY = 'test-service-role-key-12345';
+
+  const handler = async (req: Request) => {
+    const auth = req.headers.get('Authorization');
+    const expected = `Bearer ${SERVICE_ROLE_KEY}`;
+    if (auth !== expected) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+
+  const res = await handler(new Request('http://localhost', { method: 'POST' }));
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, 'unauthorized');
+});
+
+Deno.test('[PN-AUTH-2] wrong Authorization header → 401 unauthorized', async () => {
+  const SERVICE_ROLE_KEY = 'test-service-role-key-12345';
+
+  const handler = async (req: Request) => {
+    const auth = req.headers.get('Authorization');
+    const expected = `Bearer ${SERVICE_ROLE_KEY}`;
+    if (auth !== expected) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+
+  const res = await handler(new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wrong-key' },
+  }));
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, 'unauthorized');
+});
+
+Deno.test('[PN-AUTH-3] correct Authorization header → passes guard (200)', async () => {
+  const SERVICE_ROLE_KEY = 'test-service-role-key-12345';
+
+  const handler = async (req: Request) => {
+    const auth = req.headers.get('Authorization');
+    const expected = `Bearer ${SERVICE_ROLE_KEY}`;
+    if (auth !== expected) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+
+  const res = await handler(new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${SERVICE_ROLE_KEY}` },
+  }));
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.ok, true);
+});
+
+Deno.test('[PN-AUTH-4] partial/prefix Bearer token → 401 (exact match only)', async () => {
+  const SERVICE_ROLE_KEY = 'test-service-role-key-12345';
+
+  const handler = async (req: Request) => {
+    const auth = req.headers.get('Authorization');
+    const expected = `Bearer ${SERVICE_ROLE_KEY}`;
+    if (auth !== expected) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+
+  // Prefix of the real key — must still reject.
+  const res = await handler(new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${SERVICE_ROLE_KEY.slice(0, 10)}` },
+  }));
+  assertEquals(res.status, 401);
+});

@@ -225,7 +225,16 @@ export const expoTransport: ExpoTransport = {
 // ─── Deno.serve entry ──────────────────────────────────────────────────────
 
 if (import.meta.main) {
-  Deno.serve(async () => {
+  Deno.serve(async (req) => {
+    const auth = req.headers.get('Authorization');
+    const expected = `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
+    if (auth !== expected) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
