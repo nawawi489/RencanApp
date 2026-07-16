@@ -1,4 +1,4 @@
-# Skenario Manual Testing — Rencanapp (EMS Mobile)
+# Skenario Manual Testing — Rencanapp (Execution Project Management Mobile)
 
 Dokumen ini adalah panduan pengujian manual menyeluruh aplikasi mobile Rencanapp (`mobile/`).
 Basis: PRD V1.8.2 (root `PRD.md`), DESIGN.md (token & aksesibilitas), dan rute yang terimplementasi di `mobile/src/app/`.

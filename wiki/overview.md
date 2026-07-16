@@ -57,7 +57,7 @@ Gap kode V1.82 → V1.83 (audit 2026-07-15, urut prioritas):
 - **Sedang: MBR mode "Nonaktif" absen** dari enum `enforcement_mode`; `blokir_aktivasi` (V1.82) justru surplus. Mode "Peringatan saja" **sudah ada** (`hanya_peringatan`), sama halnya "Blokir Tombol Turunan" (`blokir_akses_turunan`).
 - **Sedang: label UI "Aturan Pecah Target" nihil** — semua copy klien masih "Minimum Breakdown Rule".
 - **Sedang: seed MBR orphan pasca-rename** — `0011:61-66` seed pakai taksonomi lama (`goal→kpi_area`), trigger `0046:2540-2562` cari taksonomi baru. Dampak enforcement nihil (seed bermode `hanya_peringatan`, bukan `blokir_akses_turunan`), tapi 3 baris jadi dead data.
-- **Sedang: positioning "Execution Project Management"** — 0 hit di `mobile/src/`; `menu.tsx:107` masih "Panduan EMS".
+- ~~**Sedang: positioning "Execution Project Management"**~~ — CLOSED 2026-07-16: README.md, mobile/README.md, prd/01, dan seluruh komentar kode "EMS" diperbarui ke "Execution Project Management"/"Rencanapp". `mobile/src/` sudah 0 hit user-facing sejak PR #77.
 - **Rendah: `score.ts:21` "Perlu perhatian"** → V1.83 minta "Perlu dukungan".
 - **Rendah: `evaluation.tsx:143` label "Hasil utama"** → V1.83 §26 minta "Hasil tercapai atau belum".
 - **Rendah (pre-existing, bukan V1.83)**: Card "Fokus Hari Ini" belum ada sama sekali (`grep "fokus hari ini"` → 0 hit); §26 field 3–4 (`success_factors`/`failure_factors`) belum di-collect UI.

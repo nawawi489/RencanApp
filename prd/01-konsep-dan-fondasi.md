@@ -1,12 +1,12 @@
 # Rencanapp V1.82 — 01 · Konsep & Fondasi
 
-> **Untuk AI agent:** File ini adalah north star dan guardrail. Baca pertama. Isinya: apa itu Rencanapp/EMS, batas scope V1.82, aturan bahasa, status card, struktur workspace, dua konsep periode utama (Period Focus Engine & Target Breakdown KPI Area), prinsip card, dan makna tiap jenis card. Untuk spesifikasi field & validasi card → [02-spesifikasi-card-dan-eksekusi.md](02-spesifikasi-card-dan-eksekusi.md). Untuk permission, data, score, governance → [03-sistem-permission-data-governance.md](03-sistem-permission-data-governance.md). Sumber otoritatif: [../PRD.md](../PRD.md).
+> **Untuk AI agent:** File ini adalah north star dan guardrail. Baca pertama. Isinya: apa itu Rencanapp, batas scope V1.82, aturan bahasa, status card, struktur workspace, dua konsep periode utama (Period Focus Engine & Target Breakdown KPI Area), prinsip card, dan makna tiap jenis card. Untuk spesifikasi field & validasi card → [02-spesifikasi-card-dan-eksekusi.md](02-spesifikasi-card-dan-eksekusi.md). Untuk permission, data, score, governance → [03-sistem-permission-data-governance.md](03-sistem-permission-data-governance.md). **Sumber otoritatif untuk positioning V1.83 (Execution Project Management) dan seluruh konten terbaru: [../PRD.md](../PRD.md) — file ini masih breakdown V1.82, belum disinkronkan.**
 
 ---
 
 ## 1. Apa itu Rencanapp
 
-Rencanapp adalah **Execution Management System (EMS)** yang membantu perusahaan mengubah target besar menjadi eksekusi nyata yang bisa dipantau, direview, dibuktikan, dan dipertanggungjawabkan.
+Rencanapp adalah **Execution Project Management** yang membantu perusahaan mengubah target besar menjadi eksekusi nyata yang bisa dipantau, direview, dibuktikan, dan dipertanggungjawabkan. (Catatan: nama sebelumnya "Execution Management System (EMS)"; repositioning V1.83 — lihat `PRD.md` §1.)
 
 Tagline: *Rencanakan. Jalankan. Tuntaskan.*
 
