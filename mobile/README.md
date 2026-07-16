@@ -1,17 +1,23 @@
 # Rencanapp Mobile — Nyantuy Group
 
-Aplikasi mobile **Rencanapp** (**V1.83**, Execution Project Management). Bagian dari repo [RencanApp](../). PRD: [`prd/`](../prd) · Urutan build: [`BUILD-PLAN.md`](../BUILD-PLAN.md).
+Aplikasi mobile **Rencanapp** (**V1.83**, Execution Project Management). Bagian dari repo [RencanApp](../). PRD: [`PRD.md`](../PRD.md) / [`prd/`](../prd) · Urutan build: [`BUILD-PLAN.md`](../BUILD-PLAN.md).
 
 ## Stack
 
-Expo (SDK 56) + Expo Router · TypeScript · NativeWind v5 / Tailwind v4 (`react-native-css`) · Supabase (Auth + Postgres + RLS) · TanStack Query.
+Expo (SDK 56) + Expo Router · TypeScript · NativeWind v5 / Tailwind v4 (`react-native-css`) · Supabase (Auth + Postgres + RLS) · TanStack Query · Sentry (`@sentry/react-native`) · Jest (`jest-expo`).
 
-## Status: Fase 0 — Fondasi & Shell
+## Status: pengembangan aktif, lewat dari fase fondasi
 
-- Auth (masuk/daftar email + kata sandi), sesi persisten via AsyncStorage.
+Implementasi sudah jauh melampaui shell awal. Cakupan saat ini mencakup:
+
+- Auth (masuk/daftar email + kata sandi), sesi persisten via `expo-secure-store`.
 - Route guard: `(auth)` untuk yang belum login, `(app)` untuk yang sudah login.
-- Navigasi 5 surface: **Home · Notifications · Workspace · Inbox · People** (shell), + **Settings** lewat ikon profil.
-- DB Fase 0 + RLS + seed Nyantuy Group (lihat [`../supabase/migrations`](../supabase/migrations)).
+- Navigasi 5 tab: **Home · Notif · Workspace · Inbox · Menu** (Menu memuat People, profil, dan layar admin/pengaturan — lihat [`(tabs)/_layout.tsx`](src/app/(app)/(tabs)/_layout.tsx)).
+- Card execution engine penuh: Goal → KPI Area → Strategy → Initiative → Action Plan (one time & repeat), bukti, review, submission versioning.
+- People & Score (evaluasi, manual score override, close-period), Governance Violation, Activity Log.
+- Inbox/chat per Rencana Aksi: realtime, reaksi, lampiran, reply-quote, system event, unread badge.
+- Push notification (device push via outbox + Edge Function drainer).
+- Migrasi DB berjalan sampai `00xx` (lihat [`../supabase/migrations`](../supabase/migrations) untuk nomor terbaru) + RLS + seed Nyantuy Group.
 
 ## Menjalankan
 
@@ -39,18 +45,25 @@ src/
     _layout.tsx              Provider (QueryClient, Auth, SafeArea, Theme) + gate awal
     (auth)/login.tsx         Layar masuk/daftar
     (app)/
-      (tabs)/                5 surface utama
-      settings.tsx           Profil + keluar + daftar pengaturan (bertahap)
-  lib/        supabase.ts, env.ts, database.types.ts
-  providers/  auth-provider.tsx
-  components/ screen.tsx
+      (tabs)/                index, notifications, workspace, inbox, menu
+      goal/ initiative/ action-plan/ strategy/ task/       Card execution engine
+      development-area/ problem-statement/                 Development workspace
+      people.tsx people-profile/                           People & Score
+      settings-*.tsx                                       Layar admin/pengaturan (per topik)
+      evaluation.tsx manual-score-override.tsx deadline-change-request.tsx search.tsx
+  lib/         supabase.ts, env.ts, database.types.ts
+  providers/   auth-provider.tsx, theme-provider.tsx
+  hooks/       custom hooks (mis. use-inbox.ts)
+  components/  komponen reusable (app-header, screen, dst.)
 ```
 
 ## Perintah
 
-- `npm start` — dev server (Metro)
-- `npm run android` / `npm run ios` / `npm run web`
-- `npx tsc --noEmit` — typecheck
+- `npm start` / `npm run start:staging` / `npm run start:prod` — dev server (Metro), per environment
+- `npm run android` / `npm run ios` / `npm run web` (+ varian `:staging` / `:prod` untuk web)
+- `npm run type-check` — `tsc --noEmit`
+- `npm run lint` — `expo lint` (konfigurasi di [`eslint.config.js`](eslint.config.js))
+- `npm test` / `npm run test:watch` / `npm run test:ci` — Jest (`jest-expo`)
 
 ## Regenerasi tipe DB
 
