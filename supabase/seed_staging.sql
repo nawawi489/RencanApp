@@ -437,9 +437,9 @@ VALUES
    'Lakukan per shift, mulai shift malam', 'a1000000-0000-0000-0000-000000000002',
    '2026-07-01', '2026-09-30', 'active'),
   ('10070000-0000-0000-0000-000000000004', '9054981b-bb2f-492f-a471-d4f053ddcb1b',
-   '10060000-0000-0000-0000-000000000004', 'Reminder Bertahap via WhatsApp',
-   'Customer B2B lupa jatuh tempo', 'WA dianggap spam di luar jam kerja',
-   'Email formal di hari ke-45 jika WA tidak direspons', 'a1000000-0000-0000-0000-000000000003',
+   '10060000-0000-0000-0000-000000000004', 'Reminder Piutang Bertahap',
+   'Customer B2B sering terlambat bayar tanpa pengingat terstruktur', 'Intensitas terlalu tinggi bisa mengganggu',
+   'Eskalasi ke email formal di hari ke-45 jika tidak direspons', 'a1000000-0000-0000-0000-000000000003',
    '2026-07-01', '2026-09-30', 'active')
 ON CONFLICT (id) DO NOTHING;
 
@@ -461,8 +461,8 @@ VALUES
    'Boros bahan turun 8%', 'a1000000-0000-0000-0000-000000000002',
    '2026-07-15', '2026-08-31', 'active', 'a1000000-0000-0000-0000-000000000002'),
   ('10080000-0000-0000-0000-000000000004', '9054981b-bb2f-492f-a471-d4f053ddcb1b',
-   '10070000-0000-0000-0000-000000000004', 'Skrip Reminder WA H+5',
-   '3 template reminder WhatsApp bertahap (H+5, H+15, H+30)',
+   '10070000-0000-0000-0000-000000000004', 'Template Reminder Piutang H+5',
+   '3 template reminder piutang bertahap (H+5, H+15, H+30)',
    'DSO turun ke 28 hari', 'a1000000-0000-0000-0000-000000000003',
    '2026-07-01', '2026-08-15', 'active', 'a1000000-0000-0000-0000-000000000003')
 ON CONFLICT (id) DO NOTHING;
@@ -617,11 +617,11 @@ VALUES
    'high', 'one_time', true, false, true, 'assigned', 'a1000000-0000-0000-0000-000000000002'),
 
   ('10090000-0000-0000-0000-000000000004', '9054981b-bb2f-492f-a471-d4f053ddcb1b',
-   '10080000-0000-0000-0000-000000000004', 'Kirim Reminder WA Harian',
-   'Kirim reminder WhatsApp H+5 ke customer jatuh tempo',
+   '10080000-0000-0000-0000-000000000004', 'Kirim Reminder Piutang Harian',
+   'Kirim reminder piutang H+5 ke customer jatuh tempo',
    'a1000000-0000-0000-0000-000000000003', 'ca8c1471-b870-4f09-a149-25e5eae99d6f',
    '2026-07-05', '2026-08-15', 'Customer diingatkan sebelum jatuh tempo',
-   'WA terkirim ke semua customer B2B di hari kerja',
+   'Reminder terkirim ke semua customer B2B di hari kerja',
    'medium', 'repeat', true, true, true, 'in_progress', 'a1000000-0000-0000-0000-000000000003')
 ON CONFLICT (id) DO NOTHING;
 

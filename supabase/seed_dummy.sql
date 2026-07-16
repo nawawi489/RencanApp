@@ -210,10 +210,10 @@ values
    'Lakukan per shift, mulai shift malam yang lebih sedikit personil',
    '11111111-1111-1111-1111-000000000004', '2026-07-01', '2026-09-30', 'active'),
   ('88888888-8888-8888-8888-000000000004', (select id from public.organizations limit 1),
-   '77777777-7777-7777-7777-000000000004', 'Reminder Bertahap via WhatsApp',
-   'Customer B2B lupa jatuh tempo karena tidak pakai sistem tagihan otomatis',
-   'WA dianggap spam jika dikirim di luar jam kerja',
-   'Kirim via email formal di hari ke-45 jika WA tidak direspons',
+   '77777777-7777-7777-7777-000000000004', 'Reminder Piutang Bertahap',
+   'Customer B2B sering terlambat bayar karena tidak ada pengingat terstruktur',
+   'Customer merasa terganggu jika intensitas terlalu tinggi',
+   'Eskalasi ke email formal di hari ke-45 jika pengingat tidak direspons',
    '11111111-1111-1111-1111-000000000006', '2026-07-01', '2026-09-30', 'active')
 on conflict (id) do nothing;
 
@@ -236,8 +236,8 @@ values
    'Boros bahan turun 8%', '11111111-1111-1111-1111-000000000004',
    '2026-07-15', '2026-08-31', 'active', '11111111-1111-1111-1111-000000000004'),
   ('99999999-9999-9999-9999-000000000004', (select id from public.organizations limit 1),
-   '88888888-8888-8888-8888-000000000004', 'Skrip Reminder WA H+5',
-   'Siapkan 3 template reminder WhatsApp bertahap (H+5, H+15, H+30)',
+   '88888888-8888-8888-8888-000000000004', 'Template Reminder Piutang H+5',
+   'Siapkan 3 template reminder piutang bertahap (H+5, H+15, H+30)',
    'DSO turun ke 28 hari', '11111111-1111-1111-1111-000000000006',
    '2026-07-01', '2026-08-15', 'active', '11111111-1111-1111-1111-000000000006')
 on conflict (id) do nothing;
@@ -298,11 +298,11 @@ values
    'Seluruh tim shift pagi hadir, hasil post-test minimal 70%',
    'high', 'one_time', true, false, true, 'assigned', '11111111-1111-1111-1111-000000000004'),
   ('cccccccc-cccc-cccc-cccc-000000000004', (select id from public.organizations limit 1),
-   '99999999-9999-9999-9999-000000000004', 'Reminder Harian (Repeat)',
-   'Kirim reminder WhatsApp H+5 ke customer yang akan jatuh tempo',
+   '99999999-9999-9999-9999-000000000004', 'Follow-up Piutang Harian (Repeat)',
+   'Kirim reminder piutang H+5 ke customer yang akan jatuh tempo',
    '11111111-1111-1111-1111-000000000006', '11111111-1111-1111-1111-000000000001',
    '2026-07-05', '2026-08-15', 'Customer diingatkan 5 hari sebelum jatuh tempo',
-   'WA terkirim ke semua customer B2B di hari kerja',
+   'Reminder terkirim ke semua customer B2B di hari kerja',
    'medium', 'repeat', true, true, true, 'in_progress', '11111111-1111-1111-1111-000000000006')
 on conflict (id) do nothing;
 
