@@ -39,6 +39,7 @@ import type { LocalFile } from '@/lib/storage';
 import { CHAT_MAX_ATTACHMENTS } from '@/lib/storage';
 import { useProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth-provider';
+import { useThemePreference } from '@/providers/theme-provider';
 
 const log = createLogger('chat-room');
 /** Key AsyncStorage untuk dismiss banner governance (global per-user; sekali tutup = tak muncul lagi). */
@@ -360,6 +361,9 @@ function RoomHeaderActions({
   onOpenMembers: () => void;
   onOpenActionPlan?: () => void;
 }) {
+  const { effective } = useThemePreference();
+  const neutralIcon = effective === 'dark' ? '#d1d5db' : '#1f2937';
+  const brandIcon = effective === 'dark' ? '#93c5fd' : '#1564b3';
   return (
     <View className="flex-row items-center">
       <Pressable
@@ -367,7 +371,7 @@ function RoomHeaderActions({
         accessibilityRole="button"
         accessibilityLabel="Anggota"
         style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name="people-outline" size={22} color="#1f2937" />
+        <Ionicons name="people-outline" size={22} color={neutralIcon} />
       </Pressable>
       {onOpenActionPlan ? (
         <Pressable
@@ -375,7 +379,7 @@ function RoomHeaderActions({
           accessibilityRole="button"
           accessibilityLabel="Rencana Aksi"
           style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="open-outline" size={22} color="#1564b3" />
+          <Ionicons name="open-outline" size={22} color={brandIcon} />
         </Pressable>
       ) : null}
     </View>
@@ -396,19 +400,19 @@ function formatReadAt(iso: string): string {
 
 /** "Dilihat oleh N" di bawah bubble me terakhir yang punya pembaca lain. Tap → ReadsModal. */
 function SeenByPill({ count, onOpen }: { count: number; onOpen: () => void }) {
+  const { effective } = useThemePreference();
+  const mutedIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
       accessibilityLabel={`Dilihat oleh ${count} orang`}
-      hitSlop={6}
-      className="mt-0.5 self-end active:opacity-70">
-      <View className="flex-row items-center gap-1">
-        <Ionicons name="checkmark-done" size={12} color="#6b7280" />
-        <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">
-          Dilihat oleh {count}
-        </Text>
-      </View>
+      style={{ minHeight: 44 }}
+      className="mt-0.5 flex-row items-center justify-end gap-1 self-end active:opacity-70">
+      <Ionicons name="checkmark-done" size={12} color={mutedIcon} />
+      <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">
+        Dilihat oleh {count}
+      </Text>
     </Pressable>
   );
 }
@@ -423,6 +427,8 @@ function ReadsModal({
   reads: ChatRead[];
   onClose: () => void;
 }) {
+  const { effective } = useThemePreference();
+  const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
@@ -434,8 +440,12 @@ function ReadsModal({
             <Text className="text-lg font-bold text-black dark:text-white">
               Dilihat oleh ({reads.length})
             </Text>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Tutup" hitSlop={8}>
-              <Ionicons name="close" size={22} color="#6b7280" />
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Tutup"
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="close" size={22} color={closeIcon} />
             </Pressable>
           </View>
           <ScrollView>
@@ -469,6 +479,8 @@ function MembersModal({
   members: ChatMember[];
   onClose: () => void;
 }) {
+  const { effective } = useThemePreference();
+  const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
@@ -480,8 +492,12 @@ function MembersModal({
             <Text className="text-lg font-bold text-black dark:text-white">
               Anggota ({members.length})
             </Text>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Tutup" hitSlop={8}>
-              <Ionicons name="close" size={22} color="#6b7280" />
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Tutup"
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="close" size={22} color={closeIcon} />
             </Pressable>
           </View>
           <ScrollView>
@@ -525,6 +541,8 @@ function MentionSuggestions({
 }
 
 function ChatAttachButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
+  const { effective } = useThemePreference();
+  const brandIcon = effective === 'dark' ? '#93c5fd' : '#208aef';
   return (
     <Pressable
       onPress={onPress}
@@ -534,7 +552,7 @@ function ChatAttachButton({ disabled, onPress }: { disabled: boolean; onPress: (
       accessibilityState={{ disabled }}
       style={{ width: 44, height: 44 }}
       className={`items-center justify-center rounded-full ${disabled ? 'opacity-40' : 'active:opacity-80'}`}>
-      <Ionicons name="attach" size={22} color="#208aef" />
+      <Ionicons name="attach" size={22} color={brandIcon} />
     </Pressable>
   );
 }
@@ -910,7 +928,7 @@ export default function ChatRoomScreen() {
             {hasMore ? (
               <Pressable
                 onPress={() => loadOlder()}
-                className="mb-2 self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
+                className="mb-2 min-h-[44px] items-center justify-center self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
                 accessibilityRole="button"
                 accessibilityLabel="Muat pesan lama">
                 <Text className="text-sm font-semibold text-black dark:text-white">Muat pesan lama</Text>
