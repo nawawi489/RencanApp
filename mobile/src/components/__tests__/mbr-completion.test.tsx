@@ -41,6 +41,13 @@ describe('MbrCompletionIndicator', () => {
     );
     expect(screen.getByText('Lengkap')).toBeTruthy();
   });
+
+  it('[3b] nonaktif → tidak render (§7.5: rule disabled, no indicator)', async () => {
+    const { toJSON } = await render(
+      <MbrCompletionIndicator compliance={compliance({ enforcement_mode: 'nonaktif' })} />,
+    );
+    expect(toJSON()).toBeNull();
+  });
 });
 
 describe('guardMbrActivation', () => {
@@ -88,5 +95,14 @@ describe('guardMbrActivation', () => {
   it('[7] compliance undefined → blocked=false (fail-open; server otoritatif)', () => {
     const blocked = guardMbrActivation(undefined, { childLabel: 'Inisiatif', onAddChild: jest.fn() });
     expect(blocked).toBe(false);
+  });
+
+  it('[8] nonaktif → blocked=false (§7.5: rule disabled, no gating)', () => {
+    const blocked = guardMbrActivation(
+      compliance({ enforcement_mode: 'nonaktif' }),
+      { childLabel: 'Inisiatif', onAddChild: jest.fn() },
+    );
+    expect(blocked).toBe(false);
+    expect((Alert.alert as jest.Mock).mock.calls).toHaveLength(0);
   });
 });

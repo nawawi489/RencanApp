@@ -85,7 +85,7 @@ describe('SettingsMbrScreen', () => {
     expect(await screen.findByText('Strategi → Inisiatif')).toBeTruthy();
     expect(screen.getByText('Goal → Strategi')).toBeTruthy();
     // mode saat ini terlihat (badge + tombol picker keduanya berlabel sama → >=1)
-    expect(screen.getAllByText('Hanya Peringatan').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Peringatan Saja').length).toBeGreaterThanOrEqual(1);
     // minimum saat ini (2) terlihat
     expect(screen.getByText('2')).toBeTruthy();
   });
@@ -125,7 +125,34 @@ describe('SettingsMbrScreen', () => {
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
     await screen.findByText('Goal → Strategi');
     expect(screen.getByText('Terkunci')).toBeTruthy();
-    // kontrol tambah minimum untuk goal→strategy tidak ada
     expect(screen.queryByLabelText('Tambah minimum Goal → Strategi')).toBeNull();
+  });
+
+  it('[6] mode nonaktif → stepper tersembunyi, pesan "mengikuti permission biasa"', async () => {
+    mockCan.mockReturnValue(true);
+    const rulesWithNonaktif = [
+      RULES[0],
+      { ...RULES[1], enforcement_mode: 'nonaktif' },
+    ];
+    mockUseMbrRules.mockReturnValue({ rules: rulesWithNonaktif, isLoading: false, isError: false, refetch: jest.fn() });
+    await render(<SettingsMbrScreen />, { wrapper: wrapper() });
+    await screen.findByText('Strategi → Inisiatif');
+    expect(screen.queryByLabelText('Tambah minimum Strategi → Inisiatif')).toBeNull();
+    expect(screen.getByText(/mengikuti permission biasa/)).toBeTruthy();
+  });
+
+  it('[7] memilih Nonaktif memanggil setRule dengan mode nonaktif', async () => {
+    mockCan.mockReturnValue(true);
+    await render(<SettingsMbrScreen />, { wrapper: wrapper() });
+    await screen.findByText('Strategi → Inisiatif');
+    fireEvent.press(screen.getByLabelText('Set Nonaktif untuk Strategi → Inisiatif'));
+    await waitFor(() =>
+      expect(mockSetRule).toHaveBeenCalledWith({
+        parentCardType: 'strategy',
+        childCardType: 'initiative',
+        minCount: 2,
+        enforcementMode: 'nonaktif',
+      }),
+    );
   });
 });

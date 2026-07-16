@@ -14,8 +14,9 @@ export type CardType =
   | 'development_area'
   | 'problem_statement';
 
-/** 3 mode enforcement kanonik. Tone & gating UI bergantung mode. */
+/** 4 mode enforcement kanonik (§34.4). Tone & gating UI bergantung mode. */
 export type EnforcementMode =
+  | 'nonaktif'
   | 'hanya_peringatan'
   | 'blokir_aktivasi'
   | 'blokir_akses_turunan';
@@ -45,7 +46,8 @@ export type MbrCompliance = {
 // ---------------------------------------------------------------- label maps
 
 export const ENFORCEMENT_MODE_LABEL: Record<EnforcementMode, string> = {
-  hanya_peringatan: 'Hanya Peringatan',
+  nonaktif: 'Nonaktif',
+  hanya_peringatan: 'Peringatan Saja',
   blokir_aktivasi: 'Blokir Aktivasi',
   blokir_akses_turunan: 'Blokir Akses Turunan',
 };
@@ -61,8 +63,9 @@ export const CARD_TYPE_LABEL: Record<CardType, string> = {
   problem_statement: 'Problem Statement',
 };
 
-/** 3 mode urut untuk picker Settings. */
+/** 4 mode urut untuk picker Settings (§34.4). */
 export const ENFORCEMENT_MODES: EnforcementMode[] = [
+  'nonaktif',
   'hanya_peringatan',
   'blokir_aktivasi',
   'blokir_akses_turunan',
@@ -70,6 +73,7 @@ export const ENFORCEMENT_MODES: EnforcementMode[] = [
 
 /** Tone visual: ikut palet STATUS_TONE Fase 1. */
 export const ENFORCEMENT_MODE_TONE: Record<EnforcementMode, Tone> = {
+  nonaktif: 'neutral',
   hanya_peringatan: 'warn',
   blokir_aktivasi: 'danger',
   blokir_akses_turunan: 'danger',

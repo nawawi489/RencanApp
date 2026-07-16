@@ -42,16 +42,18 @@ beforeEach(() => {
 });
 
 describe('konstanta MBR', () => {
-  it('[1] ENFORCEMENT_MODE_LABEL menutup 3 mode kanonik (id-ID, user-friendly)', () => {
+  it('[1] ENFORCEMENT_MODE_LABEL menutup 4 mode kanonik §34.4 (id-ID, user-friendly)', () => {
     expect(ENFORCEMENT_MODE_LABEL).toEqual({
-      hanya_peringatan: 'Hanya Peringatan',
+      nonaktif: 'Nonaktif',
+      hanya_peringatan: 'Peringatan Saja',
       blokir_aktivasi: 'Blokir Aktivasi',
       blokir_akses_turunan: 'Blokir Akses Turunan',
     });
   });
 
-  it('[2] ENFORCEMENT_MODE_TONE memetakan ke tone STATUS_TONE Fase 1 (warn/danger/danger)', () => {
+  it('[2] ENFORCEMENT_MODE_TONE memetakan ke tone (neutral/warn/danger/danger)', () => {
     expect(ENFORCEMENT_MODE_TONE).toEqual({
+      nonaktif: 'neutral',
       hanya_peringatan: 'warn',
       blokir_aktivasi: 'danger',
       blokir_akses_turunan: 'danger',
