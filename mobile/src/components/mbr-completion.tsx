@@ -7,9 +7,9 @@ import { Text, View } from 'react-native-css/components';
 import { Badge } from './ui';
 import { ENFORCEMENT_MODE_TONE, complianceLabel, type MbrCompliance } from '@/lib/settings-mbr';
 
-/** Kartu indikator rasio turunan vs minimum. Tidak render bila compliance belum tersedia. */
+/** Kartu indikator rasio turunan vs minimum. Tidak render bila compliance belum tersedia atau nonaktif. */
 export function MbrCompletionIndicator({ compliance }: { compliance: MbrCompliance | undefined }) {
-  if (!compliance) return null;
+  if (!compliance || compliance.enforcement_mode === 'nonaktif') return null;
   return (
     <View
       accessibilityLabel="Kelengkapan Perencanaan"

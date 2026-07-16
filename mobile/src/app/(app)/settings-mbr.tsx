@@ -89,32 +89,6 @@ function RuleCard({
         </Text>
       ) : (
         <>
-          <View className="flex-row items-center gap-3">
-            <Text className="flex-1 text-sm text-neutral-600 dark:text-neutral-300">
-              Minimum turunan
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Kurangi minimum ${label}`}
-              className="h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
-              disabled={rule.min_count <= 1}
-              onPress={() => onSet(rule, Math.max(1, rule.min_count - 1), rule.enforcement_mode)}
-            >
-              <Text className="text-lg font-bold text-black dark:text-white">−</Text>
-            </Pressable>
-            <Text className="min-w-[24px] text-center text-base font-bold text-black dark:text-white">
-              {rule.min_count}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Tambah minimum ${label}`}
-              className="h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
-              onPress={() => onSet(rule, rule.min_count + 1, rule.enforcement_mode)}
-            >
-              <Text className="text-lg font-bold text-black dark:text-white">+</Text>
-            </Pressable>
-          </View>
-
           <View className="gap-2">
             <Text className="text-sm text-neutral-600 dark:text-neutral-300">Mode penegakan</Text>
             <View className="flex-row flex-wrap gap-2">
@@ -145,6 +119,38 @@ function RuleCard({
               })}
             </View>
           </View>
+
+          {rule.enforcement_mode !== 'nonaktif' ? (
+            <View className="flex-row items-center gap-3">
+              <Text className="flex-1 text-sm text-neutral-600 dark:text-neutral-300">
+                Minimum turunan
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Kurangi minimum ${label}`}
+                className="h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+                disabled={rule.min_count <= 1}
+                onPress={() => onSet(rule, Math.max(1, rule.min_count - 1), rule.enforcement_mode)}
+              >
+                <Text className="text-lg font-bold text-black dark:text-white">−</Text>
+              </Pressable>
+              <Text className="min-w-[24px] text-center text-base font-bold text-black dark:text-white">
+                {rule.min_count}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Tambah minimum ${label}`}
+                className="h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
+                onPress={() => onSet(rule, rule.min_count + 1, rule.enforcement_mode)}
+              >
+                <Text className="text-lg font-bold text-black dark:text-white">+</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+              Tombol buat turunan mengikuti permission biasa tanpa batasan minimum.
+            </Text>
+          )}
         </>
       )}
     </SectionCard>
