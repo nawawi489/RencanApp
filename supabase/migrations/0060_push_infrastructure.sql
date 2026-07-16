@@ -394,3 +394,80 @@ revoke all on function public.bump_push_delivery_backoff(uuid, text) from public
 
 comment on function public.bump_push_delivery_backoff(uuid, text) is
   'Exponential backoff (owner decision): attempts+1, next_at=now()+1min*pow(2,least(attempts,6)). Max 6 attempts → failed.';
+
+-- ============================================================ INFRASTRUCTURE: pg_net + vault + cron drainer + retention
+-- Owner decision 2026-07-15: pg_net + pg_cron transport, 2 guardrail wajib.
+-- G-1: SERVICE_ROLE di vault (bukan embedded di cron command).
+-- G-2: REVOKE USAGE schema net dari semua role client.
+
+-- pg_net sudah enabled di stack lokal + hosted. Idempoten: CREATE IF NOT EXISTS.
+create extension if not exists pg_net;
+-- pg_cron sudah enabled sejak 0007. Idempoten.
+create extension if not exists pg_cron;
+
+-- Guardrail G-2: blokir akses langsung HTTP egress dari role client.
+-- Pada Supabase HOSTED, postgres = superuser → REVOKE langsung berhasil.
+-- Pada Supabase LOCAL, schema net owned by supabase_admin, postgres bukan superuser →
+-- REVOKE menghasilkan WARNING "no privileges could be revoked". Untuk local:
+--   docker exec supabase_db_supabase psql -U supabase_admin -d postgres \
+--     -c "revoke usage on schema net from public, authenticated, anon;"
+revoke usage on schema net from public, authenticated, anon;
+
+-- Guardrail G-1: secret disimpan di vault, di-resolve runtime oleh cron command.
+-- vault.create_secret() mengenkripsi value — jangan raw INSERT ke vault.secrets.
+-- Nilai '___PLACEHOLDER___' WAJIB diganti post-deploy via Supabase Dashboard > Vault
+-- atau `supabase secrets set` sebelum drainer aktif.
+-- Pada Supabase LOCAL, vault.create_secret() butuh supabase_admin role:
+--   docker exec supabase_db_supabase psql -U supabase_admin -d postgres \
+--     -c "select vault.create_secret('actual_key', 'service_role_key', '...');"
+--     -c "select vault.create_secret('https://xxx.supabase.co', 'project_url', '...');"
+do $$
+begin
+  if not exists (select 1 from vault.secrets where name = 'service_role_key') then
+    perform vault.create_secret(
+      '___PLACEHOLDER___',
+      'service_role_key',
+      'Supabase SERVICE_ROLE key untuk push-fanout Edge Function drainer'
+    );
+  end if;
+  if not exists (select 1 from vault.secrets where name = 'project_url') then
+    perform vault.create_secret(
+      '___PLACEHOLDER___',
+      'project_url',
+      'Supabase project base URL (hosted: https://xxx.supabase.co, lokal: http://kong:8000)'
+    );
+  end if;
+exception when insufficient_privilege then
+  raise notice 'vault.create_secret requires supabase_admin on local — run manually (see migration comments)';
+end $$;
+
+-- Unschedule dulu kalau rerun migration (idempoten pattern dari 0007).
+do $$ begin perform cron.unschedule('push-fanout-drainer'); exception when others then null; end $$;
+do $$ begin perform cron.unschedule('push-deliveries-purge'); exception when others then null; end $$;
+
+-- Cron drainer: tiap 1 menit (owner decision cadence).
+-- Vault lookup at runtime: service_role_key + project_url di-resolve tiap invokasi.
+-- Existing cron: overdue */15, backfill 5 0, deadline 0 6, purge-logs 0 20.
+select cron.schedule(
+  'push-fanout-drainer',
+  '* * * * *',
+  $$select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url' limit 1)
+           || '/functions/v1/push-fanout',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets
+                                     where name = 'service_role_key' limit 1)
+    ),
+    body := '{}'::jsonb
+  )$$
+);
+
+-- Retention: purge push_deliveries > 30 hari (owner decision retensi).
+-- 03:00 UTC = 10:00 WIB, jam sepi, tidak konflik dengan job lain.
+-- Index idx_push_deliveries_created_at (defined above) makes this DELETE cheap.
+select cron.schedule(
+  'push-deliveries-purge',
+  '0 3 * * *',
+  $$delete from public.push_deliveries where created_at < now() - interval '30 days'$$
+);

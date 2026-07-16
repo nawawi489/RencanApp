@@ -980,3 +980,117 @@ begin
   raise notice 'PASS y: bump attempts+1 >= 6 → status=failed final';
 end $$;
 rollback;
+
+-- ============================================================ Fase 2-F: pg_net + vault + cron + retention
+-- Kontrak z1–z6: infrastruktur drainer (extension, guardrail, vault, cron schedule).
+
+-- ============================================================ (z1) pg_net + pg_cron extensions loaded
+do $$
+declare
+  v_net boolean; v_cron boolean; v_vault boolean;
+begin
+  select exists(select 1 from pg_extension where extname = 'pg_net') into v_net;
+  select exists(select 1 from pg_extension where extname = 'pg_cron') into v_cron;
+  select exists(select 1 from pg_extension where extname = 'supabase_vault') into v_vault;
+
+  if not v_net then raise exception 'FAIL z1: pg_net extension not loaded'; end if;
+  if not v_cron then raise exception 'FAIL z1: pg_cron extension not loaded'; end if;
+  if not v_vault then raise exception 'FAIL z1: supabase_vault extension not loaded'; end if;
+
+  raise notice 'PASS z1: pg_net + pg_cron + supabase_vault extensions loaded';
+end $$;
+
+-- ============================================================ (z2) Guardrail G-2: schema net USAGE revoked from client roles
+-- Catatan: pada local dev, REVOKE harus dijalankan sebagai supabase_admin (lihat komentar di migration).
+-- Pada hosted, migration postgres superuser langsung berhasil.
+do $$
+declare
+  v_auth boolean; v_anon boolean; v_pub boolean;
+begin
+  select has_schema_privilege('authenticated', 'net', 'USAGE') into v_auth;
+  select has_schema_privilege('anon', 'net', 'USAGE') into v_anon;
+  -- PUBLIC grant di ACL = entry tanpa rolename prefix: '{=U/' atau ',=U/'.
+  select (nspacl::text ~ '(\{|,)=U/') into v_pub from pg_namespace where nspname = 'net';
+
+  if v_auth then raise exception 'FAIL z2: authenticated masih punya USAGE on schema net'; end if;
+  if v_anon then raise exception 'FAIL z2: anon masih punya USAGE on schema net'; end if;
+  if coalesce(v_pub, false) then raise exception 'FAIL z2: public masih punya USAGE on schema net'; end if;
+
+  raise notice 'PASS z2: guardrail G-2 — USAGE on schema net revoked from authenticated/anon/public';
+end $$;
+
+-- ============================================================ (z3) Guardrail G-1: vault secrets exist (service_role_key + project_url)
+do $$
+declare
+  v_srk boolean; v_url boolean;
+begin
+  select exists(select 1 from vault.secrets where name = 'service_role_key') into v_srk;
+  select exists(select 1 from vault.secrets where name = 'project_url') into v_url;
+
+  if not v_srk then raise exception 'FAIL z3: vault secret "service_role_key" missing'; end if;
+  if not v_url then raise exception 'FAIL z3: vault secret "project_url" missing'; end if;
+
+  raise notice 'PASS z3: guardrail G-1 — vault secrets service_role_key + project_url exist';
+end $$;
+
+-- ============================================================ (z4) cron job push-fanout-drainer exists, schedule * * * * *, command uses vault
+do $$
+declare
+  v_schedule text; v_command text;
+begin
+  select schedule, command into v_schedule, v_command
+  from cron.job where jobname = 'push-fanout-drainer';
+
+  if v_schedule is null then raise exception 'FAIL z4: cron job push-fanout-drainer missing'; end if;
+  if v_schedule <> '* * * * *' then
+    raise exception 'FAIL z4: schedule = %, expected * * * * *', v_schedule;
+  end if;
+  if v_command not ilike '%vault.decrypted_secrets%' then
+    raise exception 'FAIL z4: command tidak menggunakan vault (hardcoded secret?)';
+  end if;
+  if v_command not ilike '%net.http_post%' then
+    raise exception 'FAIL z4: command tidak memanggil net.http_post';
+  end if;
+  if v_command not ilike '%push-fanout%' then
+    raise exception 'FAIL z4: command tidak menargetkan push-fanout Edge Function';
+  end if;
+
+  raise notice 'PASS z4: push-fanout-drainer cron — * * * * * + vault lookup + net.http_post';
+end $$;
+
+-- ============================================================ (z5) cron job push-deliveries-purge exists, schedule 0 3 * * *, command deletes 30 days
+do $$
+declare
+  v_schedule text; v_command text;
+begin
+  select schedule, command into v_schedule, v_command
+  from cron.job where jobname = 'push-deliveries-purge';
+
+  if v_schedule is null then raise exception 'FAIL z5: cron job push-deliveries-purge missing'; end if;
+  if v_schedule <> '0 3 * * *' then
+    raise exception 'FAIL z5: schedule = %, expected 0 3 * * *', v_schedule;
+  end if;
+  if v_command not ilike '%push_deliveries%' then
+    raise exception 'FAIL z5: command tidak menyebut push_deliveries';
+  end if;
+  if v_command not ilike '%30 days%' then
+    raise exception 'FAIL z5: command tidak mengandung interval 30 days';
+  end if;
+
+  raise notice 'PASS z5: push-deliveries-purge cron — 0 3 * * * + 30 days retention';
+end $$;
+
+-- ============================================================ (z6) vault decrypted_secrets view resolves at runtime (smoke test)
+do $$
+declare
+  v_count int;
+begin
+  select count(*) into v_count from vault.decrypted_secrets
+  where name in ('service_role_key', 'project_url');
+
+  if v_count < 2 then
+    raise exception 'FAIL z6: vault.decrypted_secrets hanya resolve % dari 2 secrets', v_count;
+  end if;
+
+  raise notice 'PASS z6: vault.decrypted_secrets resolves service_role_key + project_url';
+end $$;
