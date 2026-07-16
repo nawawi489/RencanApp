@@ -215,6 +215,11 @@ Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line bo
 - Search = kaca pembesar, back = chevron kiri, lebih (`⋯`) = aksi sekunder.
 - **Library ikon: `Ionicons` dari `@expo/vector-icons`** (dipakai `app-header`, tab bar, `IconTile`). Varian `-outline` untuk kartu/baris (stroke, konsisten prototype); filled untuk state aktif nav.
 - **Ikon = penguat, bukan satu-satunya sinyal** (DESIGN §4): setiap `IconTile` selalu ditemani label teks; jangan pernah pakai ikon sendirian untuk membedakan makna/status.
+- **Warna ikon di prop non-className (`Ionicons` `color`)**: pakai hook `useThemedIcon(light, dark)` (`mobile/src/providers/theme-provider.tsx`) — bukan ternary `effective === 'dark' ? ... : ...` inline berulang. Pasangan hex yang sudah dipakai berkali-kali (daftarkan pasangan baru di sini sebelum dipakai di kode baru):
+  - `muted` (ikon sekunder/tutup: `checkmark-done`, tombol tutup modal): `#6b7280` (terang) / `#a3a3a3` (gelap)
+  - `neutral` (ikon aksi header netral, mis. `people-outline`): `#1f2937` (terang) / `#d1d5db` (gelap)
+  - `brand-dark` (ikon aksen di atas latar netral, mis. tombol buka Rencana Aksi di header): `#1564b3` (terang) / `#93c5fd` (gelap)
+  - `brand` (ikon aksen primer, mis. tombol lampirkan gambar): `#208aef` (terang) / `#93c5fd` (gelap)
 
 ---
 

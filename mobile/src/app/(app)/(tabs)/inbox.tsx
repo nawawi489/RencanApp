@@ -124,9 +124,11 @@ function RoomRow({ room, onPress }: { room: ChatRoom; onPress: () => void }) {
             <Text className="flex-1 text-xs text-neutral-500 dark:text-neutral-400" numberOfLines={1}>
               {formatPreview(room)}
             </Text>
-            <Text className="shrink-0 text-[10px] text-neutral-400 dark:text-neutral-500">
-              {formatLast(room.last_message_at)}
-            </Text>
+            {room.last_message_at ? (
+              <Text className="shrink-0 text-[10px] text-neutral-400 dark:text-neutral-500">
+                {formatLast(room.last_message_at)}
+              </Text>
+            ) : null}
           </View>
         </View>
       </View>

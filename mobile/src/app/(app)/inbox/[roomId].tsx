@@ -39,7 +39,7 @@ import type { LocalFile } from '@/lib/storage';
 import { CHAT_MAX_ATTACHMENTS } from '@/lib/storage';
 import { useProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth-provider';
-import { useThemePreference } from '@/providers/theme-provider';
+import { useThemedIcon } from '@/providers/theme-provider';
 
 const log = createLogger('chat-room');
 /** Key AsyncStorage untuk dismiss banner governance (global per-user; sekali tutup = tak muncul lagi). */
@@ -361,9 +361,8 @@ function RoomHeaderActions({
   onOpenMembers: () => void;
   onOpenActionPlan?: () => void;
 }) {
-  const { effective } = useThemePreference();
-  const neutralIcon = effective === 'dark' ? '#d1d5db' : '#1f2937';
-  const brandIcon = effective === 'dark' ? '#93c5fd' : '#1564b3';
+  const neutralIcon = useThemedIcon('#1f2937', '#d1d5db');
+  const brandIcon = useThemedIcon('#1564b3', '#93c5fd');
   return (
     <View className="flex-row items-center">
       <Pressable
@@ -400,8 +399,7 @@ function formatReadAt(iso: string): string {
 
 /** "Dilihat oleh N" di bawah bubble me terakhir yang punya pembaca lain. Tap → ReadsModal. */
 function SeenByPill({ count, onOpen }: { count: number; onOpen: () => void }) {
-  const { effective } = useThemePreference();
-  const mutedIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <Pressable
       onPress={onOpen}
@@ -427,8 +425,7 @@ function ReadsModal({
   reads: ChatRead[];
   onClose: () => void;
 }) {
-  const { effective } = useThemePreference();
-  const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
+  const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 justify-end">
@@ -483,8 +480,7 @@ function MembersModal({
   members: ChatMember[];
   onClose: () => void;
 }) {
-  const { effective } = useThemePreference();
-  const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
+  const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 justify-end">
@@ -551,8 +547,7 @@ function MentionSuggestions({
 }
 
 function ChatAttachButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
-  const { effective } = useThemePreference();
-  const brandIcon = effective === 'dark' ? '#93c5fd' : '#208aef';
+  const brandIcon = useThemedIcon('#208aef', '#93c5fd');
   return (
     <Pressable
       onPress={onPress}

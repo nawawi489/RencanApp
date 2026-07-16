@@ -16,11 +16,21 @@ export default {
     headers.set("x-forwarded-host", incoming.host);
     headers.set("x-forwarded-proto", incoming.protocol.replace(":", ""));
 
-    return fetch(target.toString(), {
+    const response = await fetch(target.toString(), {
       method: request.method,
       headers,
       body: request.body,
       redirect: "manual",
     });
+
+    const secured = new Response(response.body, response);
+    secured.headers.set("X-Frame-Options", "DENY");
+    secured.headers.set("X-Content-Type-Options", "nosniff");
+    secured.headers.set(
+      "Content-Security-Policy",
+      "frame-ancestors 'none'; base-uri 'self'"
+    );
+
+    return secured;
   },
 };
