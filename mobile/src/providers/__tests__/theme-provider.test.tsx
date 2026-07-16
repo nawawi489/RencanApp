@@ -29,6 +29,7 @@ Object.defineProperty(Platform, 'OS', { get: () => 'web', configurable: true });
 // eslint-disable-next-line import/first
 import {
   ThemeProvider,
+  useThemedIcon,
   useThemePreference,
   type ThemeMode,
 } from '../theme-provider';
@@ -197,5 +198,37 @@ describe('ThemeProvider — MENU-03 / THEME-01 regression', () => {
     const classes = [...document.documentElement.classList];
     expect(classes.includes('light') || classes.includes('dark')).toBe(true);
     expect(latest!.mode).toBe('system');
+  });
+});
+
+describe('useThemedIcon', () => {
+  function IconProbe({ onColor }: { onColor: (c: string) => void }) {
+    const color = useThemedIcon('#111111', '#eeeeee');
+    onColor(color);
+    return <Text>{color}</Text>;
+  }
+
+  it('[1] resolves to the light hex when effective="light", dark hex when effective="dark"', async () => {
+    let latest: ReturnType<typeof useThemePreference> | null = null;
+    let color = '';
+    await render(
+      <ThemeProvider>
+        <Probe onReady={(v) => (latest = v)} />
+        <IconProbe onColor={(c) => (color = c)} />
+      </ThemeProvider>,
+    );
+    await flush();
+
+    await act(async () => {
+      latest!.setMode('light');
+      await Promise.resolve();
+    });
+    expect(color).toBe('#111111');
+
+    await act(async () => {
+      latest!.setMode('dark');
+      await Promise.resolve();
+    });
+    expect(color).toBe('#eeeeee');
   });
 });

@@ -141,6 +141,15 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
     expect(screen.getByText(/Jun/)).toBeTruthy();
   });
 
+  it('[c2] Room baru tanpa pesan (body+at NULL) → "Belum ada pesan" tampil sekali, bukan dua kali', async () => {
+    mockUseInboxRooms.mockReturnValue({
+      rooms: [room({ id: 'r1', body: null, author: null, at: null })],
+      isLoading: false, isError: false, refetch: jest.fn(),
+    });
+    await render(<InboxScreen />, { wrapper: wrapper() });
+    expect(await screen.findAllByText('Belum ada pesan')).toHaveLength(1);
+  });
+
   it('[d] Preview hanya {body} saat author_name NULL (author terhapus / sistem)', async () => {
     mockUseInboxRooms.mockReturnValue({
       rooms: [room({ id: 'r1', body: 'sistem update', author: null })],

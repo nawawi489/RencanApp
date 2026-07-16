@@ -97,3 +97,13 @@ export function useThemePreference(): ThemeContextValue {
   if (!ctx) return { mode: 'system', effective: 'light', setMode: () => {} };
   return ctx;
 }
+
+/**
+ * Resolve a light/dark hex pair for props that can't take a NativeWind className
+ * (e.g. `Ionicons`' `color` prop). Wraps the `effective === 'dark' ? dark : light`
+ * ternary repeated across icon-heavy screens (DESIGN.md §10 Iconography).
+ */
+export function useThemedIcon(light: string, dark: string): string {
+  const { effective } = useThemePreference();
+  return effective === 'dark' ? dark : light;
+}

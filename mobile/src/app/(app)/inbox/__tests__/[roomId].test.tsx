@@ -555,6 +555,22 @@ describe('ChatRoomScreen — konteks room & @mention', () => {
     expect(screen.getByText('Sari')).toBeTruthy();
   });
 
+  it('[IN5b] MembersModal: tap backdrop → tertutup; tap tombol "Tutup" → tertutup (regresi restrukturisasi Pressable-in-Pressable → View+backdrop terpisah)', async () => {
+    mockUseChatRoomMembers.mockReturnValue({ members });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+
+    fireEvent.press(await screen.findByLabelText('Anggota'));
+    expect(await screen.findByText('Anggota (3)')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Tutup daftar anggota'));
+    await waitFor(() => expect(screen.queryByText('Anggota (3)')).toBeNull());
+
+    // Reopen → close via explicit 'Tutup' icon button instead of backdrop.
+    fireEvent.press(await screen.findByLabelText('Anggota'));
+    expect(await screen.findByText('Anggota (3)')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Tutup'));
+    await waitFor(() => expect(screen.queryByText('Anggota (3)')).toBeNull());
+  });
+
   it('[IN6] tombol "Rencana Aksi" di header → router.push ke /action-plan/{action_plan_id}', async () => {
     mockUseChatRoom.mockReturnValue({ room: { id: 'r1', name: 'Kampanye Q3', action_plan_id: 'ap9' } });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
@@ -666,6 +682,32 @@ describe('ChatRoomScreen — konteks room & @mention', () => {
     expect(screen.getByText('Budi')).toBeTruthy();
     // Nama diri sendiri TIDAK ada di daftar.
     expect(screen.queryByText('Saya')).toBeNull();
+  });
+
+  it('[IN12b] ReadsModal: tap backdrop → tertutup; tap tombol "Tutup" → tertutup (regresi restrukturisasi Pressable-in-Pressable → View+backdrop terpisah)', async () => {
+    mockUseChatMessages.mockReturnValue({
+      messages: [
+        { id: 'mm', chat_room_id: 'r1', author_id: 'me', body: 'x', created_at: '2026-06-24T01:00:00Z' },
+      ],
+      isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
+    });
+    mockUseChatReads.mockReturnValue({
+      readsByMessage: new Map([
+        ['mm', [{ chat_message_id: 'mm', reader_id: 'u2', read_at: '2026-06-24T02:00:00Z', reader: { id: 'u2', full_name: 'Budi', email: null } }]],
+      ]),
+    });
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+
+    fireEvent.press(await screen.findByLabelText(/Dilihat oleh 1 orang/));
+    expect(await screen.findByText('Dilihat oleh (1)')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Tutup daftar pembaca'));
+    await waitFor(() => expect(screen.queryByText('Dilihat oleh (1)')).toBeNull());
+
+    // Reopen → close via explicit 'Tutup' icon button instead of backdrop.
+    fireEvent.press(await screen.findByLabelText(/Dilihat oleh 1 orang/));
+    expect(await screen.findByText('Dilihat oleh (1)')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Tutup'));
+    await waitFor(() => expect(screen.queryByText('Dilihat oleh (1)')).toBeNull());
   });
 
   it('[IN13] highlight @Nama di dalam bubble: teks mention tampil sbg elemen terpisah', async () => {
