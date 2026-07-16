@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { GreetingHero } from '@/components/greeting-hero';
 import {
@@ -13,10 +13,9 @@ import {
   ProgressBar,
   SectionCard,
   SkeletonList,
-  StatPill,
+  type Tone,
 } from '@/components/ui';
 import { computeTaskProgress } from '@/lib/progress';
-import { formatRemaining } from '@/lib/strategy-gap';
 import { getProfileAgeInDays, useProfile } from '@/hooks/use-profile';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -37,13 +36,15 @@ import {
 import { INSTANCE_STATUS_LABEL, INSTANCE_STATUS_TONE } from '@/lib/repeat';
 
 const ONBOARDING_DAYS = 7;
+const MAX_TASK_ROWS = 5;
+const MAX_UPDATE_ROWS = 3;
 
 function TypeBadge({ repeat }: { repeat: boolean }) {
   return (
     <View
       className={`h-9 w-9 items-center justify-center rounded-xl ${repeat ? 'bg-green-700' : 'bg-brand-dark'}`}
       importantForAccessibility="no-hide-descendants">
-      <Text className="text-xs font-bold text-white">{repeat ? 'RP' : 'AP'}</Text>
+      <Text className="text-xs font-bold text-white">{repeat ? 'RT' : 'T'}</Text>
     </View>
   );
 }
@@ -144,14 +145,103 @@ function Section({
   );
 }
 
+type FokusItem = {
+  id: string;
+  taskId: string;
+  name: string;
+  statusLabel: string;
+  statusTone: Tone;
+  due: string | null;
+  repeat: boolean;
+  kind: 'task' | 'instance';
+};
+
+function pickFokus(
+  revisi: TaskWithPeople[],
+  overdue: HomeItem[],
+  todayRepeat: HomeItem[],
+  todo: TaskWithPeople[],
+): FokusItem | null {
+  if (revisi.length > 0) {
+    const r = revisi[0];
+    return {
+      id: r.id, taskId: r.id, name: r.name,
+      statusLabel: ACTION_PLAN_STATUS_LABEL[r.status] ?? r.status,
+      statusTone: STATUS_TONE[r.status] ?? 'neutral',
+      due: r.deadline ?? null,
+      repeat: r.repeat_setting === 'repeat',
+      kind: 'task',
+    };
+  }
+  if (overdue.length > 0) {
+    const o = overdue[0];
+    return {
+      id: o.id, taskId: o.task_id, name: o.name ?? 'Tanpa nama',
+      statusLabel: INSTANCE_STATUS_LABEL[o.status] ?? o.status,
+      statusTone: INSTANCE_STATUS_TONE[o.status] ?? 'neutral',
+      due: o.due, repeat: o.kind === 'instance', kind: o.kind,
+    };
+  }
+  if (todayRepeat.length > 0) {
+    const t = todayRepeat[0];
+    return {
+      id: t.id, taskId: t.task_id, name: t.name ?? 'Tanpa nama',
+      statusLabel: INSTANCE_STATUS_LABEL[t.status] ?? t.status,
+      statusTone: INSTANCE_STATUS_TONE[t.status] ?? 'neutral',
+      due: t.due, repeat: true, kind: 'instance',
+    };
+  }
+  if (todo.length > 0) {
+    const t = todo[0];
+    return {
+      id: t.id, taskId: t.id, name: t.name,
+      statusLabel: ACTION_PLAN_STATUS_LABEL[t.status] ?? t.status,
+      statusTone: STATUS_TONE[t.status] ?? 'neutral',
+      due: t.deadline ?? null,
+      repeat: t.repeat_setting === 'repeat',
+      kind: 'task',
+    };
+  }
+  return null;
+}
+
+function FokusCard({ fokus, onPress }: { fokus: FokusItem; onPress: () => void }) {
+  return (
+    <View className="gap-3">
+      <Text className="text-lg font-bold text-black dark:text-white">Fokus Hari Ini</Text>
+      <Pressable
+        onPress={onPress}
+        className="gap-3 rounded-2xl border-2 border-brand bg-blue-50 p-4 active:opacity-70 dark:bg-blue-950"
+        accessibilityRole="button"
+        accessibilityLabel={`Fokus: ${fokus.name}. Ketuk untuk detail.`}>
+        <View className="flex-row items-start gap-3">
+          <TypeBadge repeat={fokus.repeat} />
+          <View className="flex-1 gap-1.5">
+            <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>
+              {fokus.name}
+            </Text>
+            <View className="flex-row items-center gap-2">
+              <Badge label={fokus.statusLabel} tone={fokus.statusTone} />
+              {fokus.due ? (
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">⏰ {fokus.due}</Text>
+              ) : null}
+            </View>
+          </View>
+        </View>
+        <View className="items-end">
+          <View className="rounded-lg bg-brand-dark px-4 py-2.5">
+            <Text className="text-sm font-semibold text-white">Detail</Text>
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function LiveHomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const openTask = (id: string) => router.push(`/task/${id}` as Href);
-  const openStrategy = (id: string) => router.push(`/strategy/${id}` as Href);
-  // WS-3a (AP-03) — baris section campuran (Repeat/Terlewat/Deadline) memuat one-time AP
-  // DAN Repeat Instance. Instance harus membuka layar instance-nya sendiri; one-time AP
-  // membuka parent AP. Satu helper dipakai ketiga section agar routing konsisten.
   const openHomeItem = (item: HomeItem) =>
     router.push(
       (item.kind === 'instance'
@@ -190,13 +280,59 @@ export default function LiveHomeScreen() {
   const mine = mineQ.data ?? [];
   const todo = mine.filter((p) => p.status === 'assigned' || p.status === 'in_progress');
   const revisi = mine.filter((p) => p.status === 'revision');
+  const overdue = overdueQ.data ?? [];
+  const todayRepeat = todayRepeatQ.data ?? [];
+  const near = nearQ.data ?? [];
 
-  const overdueCount = overdueQ.isError ? '—' : String(overdueQ.data?.length ?? 0);
-  // Antrean review = one-time AP submitted + instance repeat submitted (dua sumber).
+  const overdueCount = overdueQ.isError ? '—' : String(overdue.length);
   const reviewError = reviewQ.isError || reviewInstQ.isError;
   const reviewTotal = (reviewQ.data?.length ?? 0) + (reviewInstQ.data?.length ?? 0);
   const reviewCount = reviewError ? '—' : String(reviewTotal);
-  const numericPriority = (overdueQ.data?.length ?? 0) + reviewTotal;
+  const numericPriority = overdue.length + reviewTotal;
+
+  const fokus = pickFokus(revisi, overdue, todayRepeat, todo);
+  const fokusId = fokus?.id ?? null;
+  const fokusPress = fokus
+    ? () => {
+        if (fokus.kind === 'instance') {
+          router.push(`/task/instance/${fokus.id}` as Href);
+        } else {
+          router.push(`/task/${fokus.taskId}` as Href);
+        }
+      }
+    : undefined;
+
+  const taskNodes: React.ReactNode[] = [];
+  for (const item of revisi) {
+    if (taskNodes.length >= MAX_TASK_ROWS) break;
+    if (item.id === fokusId) continue;
+    taskNodes.push(<TaskRow key={`rev-${item.id}`} item={item} onPress={() => openTask(item.id)} />);
+  }
+  for (const item of todayRepeat) {
+    if (taskNodes.length >= MAX_TASK_ROWS) break;
+    if (item.id === fokusId) continue;
+    taskNodes.push(<HomeItemRow key={`rep-${item.id}`} item={item} onPress={() => openHomeItem(item)} />);
+  }
+  for (const item of todo) {
+    if (taskNodes.length >= MAX_TASK_ROWS) break;
+    if (item.id === fokusId) continue;
+    taskNodes.push(<TaskRow key={`todo-${item.id}`} item={item} onPress={() => openTask(item.id)} />);
+  }
+  const taskLoading = mineQ.isLoading || todayRepeatQ.isLoading;
+  const taskAllError = mineQ.isError && todayRepeatQ.isError;
+
+  const updateNodes: React.ReactNode[] = [];
+  for (const item of overdue) {
+    if (updateNodes.length >= MAX_UPDATE_ROWS) break;
+    if (item.id === fokusId) continue;
+    updateNodes.push(<HomeItemRow key={`upd-o-${item.id}`} item={item} onPress={() => openHomeItem(item)} />);
+  }
+  for (const item of near) {
+    if (updateNodes.length >= MAX_UPDATE_ROWS) break;
+    updateNodes.push(<HomeItemRow key={`upd-n-${item.id}`} item={item} onPress={() => openHomeItem(item)} />);
+  }
+  const updateLoading = overdueQ.isLoading || nearQ.isLoading;
+  const updateAllError = overdueQ.isError && nearQ.isError;
 
   const name = profile?.full_name?.trim()?.split(' ')[0] || 'Rekan';
   const dateLabel = todayQ.data
@@ -222,9 +358,11 @@ export default function LiveHomeScreen() {
         {isNewUser ? (
           <GuidanceNote
             title="Selamat datang di Rencanapp"
-            body="Home adalah pusat fokus harian Anda: tugas hari ini, yang butuh review, terlewat, dan deadline mendekat tampil di sini. Buka tiap kartu untuk mulai mengeksekusi."
+            body="Home adalah pusat kendali hari ini — Task yang perlu perhatian, review, dan update terbaru tampil di sini. Buka tiap kartu untuk mulai mengeksekusi."
           />
         ) : null}
+
+        {fokus ? <FokusCard fokus={fokus} onPress={fokusPress!} /> : null}
 
         <View className="gap-3">
           <Text className="text-lg font-bold text-black dark:text-white">Prioritas</Text>
@@ -235,7 +373,7 @@ export default function LiveHomeScreen() {
               subtitle={
                 overdueQ.isError
                   ? 'Gagal memuat.'
-                  : (overdueQ.data?.length ?? 0) > 0
+                  : overdue.length > 0
                     ? `${overdueCount} item lewat deadline.`
                     : 'Tidak ada yang telat.'
               }
@@ -268,88 +406,22 @@ export default function LiveHomeScreen() {
           </View>
         </View>
 
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-bold text-black dark:text-white">Snapshot Tim</Text>
-            {!kpiAttnQ.isLoading && !kpiAttnQ.isError && (kpiAttnQ.data?.length ?? 0) > 0 ? (
-              <Badge label="Perlu dipantau" tone="warn" />
-            ) : null}
-          </View>
-          {kpiAttnQ.isLoading ? (
-            <SkeletonList count={1} />
-          ) : kpiAttnQ.isError ? (
-            <ErrorState onRetry={() => kpiAttnQ.refetch()} />
-          ) : (kpiAttnQ.data?.length ?? 0) === 0 ? (
-            <EmptyState
-              tone="success"
-              title="Semua Strategi terpantau"
-              description="Strategi aktif sudah punya progres tercatat."
-            />
-          ) : (
-            <View className="gap-3">
-              <View className="flex-row gap-2">
-                <StatPill label="KPI perlu progres" value={String(kpiAttnQ.data!.length)} tone="warn" />
-              </View>
-              {kpiAttnQ.data!.slice(0, 3).map((k) => (
-                <SectionCard key={k.id} onPress={() => openStrategy(k.id)}>
-                  <View className="gap-1.5">
-                    <View className="flex-row items-center justify-between gap-3">
-                      <Text
-                        className="flex-1 text-base font-semibold text-black dark:text-white"
-                        numberOfLines={1}>
-                        {k.name}
-                      </Text>
-                      {k.percent != null ? (
-                        <Badge label={`${k.percent}%`} tone={k.percent >= 70 ? 'info' : 'warn'} />
-                      ) : (
-                        <Badge label="Belum ada progres" tone="warn" />
-                      )}
-                    </View>
-                    {k.percent != null ? (
-                      <>
-                        <ProgressBar value={k.percent} tone="brand" />
-                        {k.remaining != null && k.remaining > 0 ? (
-                          <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                            {formatRemaining(k.remaining, k.unit)}
-                          </Text>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </View>
-                </SectionCard>
-              ))}
-            </View>
-          )}
-        </View>
-
         <Section
-          title="Perlu dikerjakan"
-          isLoading={mineQ.isLoading}
-          isError={mineQ.isError}
-          onRetry={() => mineQ.refetch()}
-          isEmpty={todo.length === 0}
-          emptyTitle="Tidak ada tugas aktif"
-          emptyDesc="Tugas yang Anda jadi PIC-nya akan muncul di sini.">
-          {todo.map((item) => (
-            <TaskRow key={item.id} item={item} onPress={() => openTask(item.id)} />
-          ))}
+          title="Task Hari Ini"
+          isLoading={taskLoading}
+          isError={taskAllError}
+          onRetry={() => {
+            mineQ.refetch();
+            todayRepeatQ.refetch();
+          }}
+          isEmpty={taskNodes.length === 0 && !fokus}
+          emptyTitle="Tidak ada task hari ini"
+          emptyDesc="Task yang perlu dikerjakan hari ini akan muncul di sini.">
+          {taskNodes}
         </Section>
 
         <Section
-          title="Repeat hari ini"
-          isLoading={todayRepeatQ.isLoading}
-          isError={todayRepeatQ.isError}
-          onRetry={() => todayRepeatQ.refetch()}
-          isEmpty={(todayRepeatQ.data?.length ?? 0) === 0}
-          emptyTitle="Tidak ada tugas rutin hari ini"
-          emptyDesc="Instance Tugas Repeat yang jatuh tempo hari ini akan muncul di sini.">
-          {(todayRepeatQ.data ?? []).map((item) => (
-            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
-          ))}
-        </Section>
-
-        <Section
-          title="Butuh review Anda"
+          title="Butuh Review Anda"
           isLoading={reviewQ.isLoading || reviewInstQ.isLoading}
           isError={reviewError}
           onRetry={() => {
@@ -368,42 +440,17 @@ export default function LiveHomeScreen() {
         </Section>
 
         <Section
-          title="Terlewat"
-          isLoading={overdueQ.isLoading}
-          isError={overdueQ.isError}
-          onRetry={() => overdueQ.refetch()}
-          isEmpty={(overdueQ.data?.length ?? 0) === 0}
-          emptyTitle="Tidak ada yang terlewat"
-          emptyDesc="Tugas & instance yang lewat deadline akan muncul di sini.">
-          {(overdueQ.data ?? []).map((item) => (
-            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
-          ))}
-        </Section>
-
-        <Section
-          title="Deadline mendekat"
-          isLoading={nearQ.isLoading}
-          isError={nearQ.isError}
-          onRetry={() => nearQ.refetch()}
-          isEmpty={(nearQ.data?.length ?? 0) === 0}
-          emptyTitle="Tidak ada deadline mendekat"
-          emptyDesc="Item dengan deadline dalam 3 hari ke depan akan muncul di sini.">
-          {(nearQ.data ?? []).map((item) => (
-            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
-          ))}
-        </Section>
-
-        <Section
-          title="Revisi diperlukan"
-          isLoading={mineQ.isLoading}
-          isError={mineQ.isError}
-          onRetry={() => mineQ.refetch()}
-          isEmpty={revisi.length === 0}
-          emptyTitle="Tidak ada revisi"
-          emptyDesc="Pekerjaan yang ditolak reviewer dan perlu diperbaiki akan muncul di sini.">
-          {revisi.map((item) => (
-            <TaskRow key={item.id} item={item} onPress={() => openTask(item.id)} />
-          ))}
+          title="Update Terbaru"
+          isLoading={updateLoading}
+          isError={updateAllError}
+          onRetry={() => {
+            overdueQ.refetch();
+            nearQ.refetch();
+          }}
+          isEmpty={updateNodes.length === 0}
+          emptyTitle="Semua berjalan tepat waktu"
+          emptyDesc="Item yang lewat deadline atau mendekati deadline akan muncul di sini.">
+          {updateNodes}
         </Section>
       </View>
     </ScrollView>
