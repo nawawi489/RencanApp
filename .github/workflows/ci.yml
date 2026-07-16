@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, staging]
 
+permissions:
+  contents: read
+
 # Batalkan run lama untuk ref yang sama saat ada push baru.
 concurrency:
   group: ci-${{ github.ref }}
