@@ -1678,3 +1678,14 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
   - `strategy/new.tsx` empty-state + button hand-rolled → diganti `EmptyState` component (reuse `action` prop → `Button variant="secondary"` otomatis).
   - Migrasi 0059 sanity DO-block: hapus redundant `count(*)` full-table scan (total rows informational saja); sisakan hanya `n_default` (omset/profit rows = 0) yang relevan.
   - Contract test TEST 1: hapus EXISTS check spesifik (`'Control Budgeting'`) yang sudah logically-implied oleh count=0 profit di atasnya.
+
+## [2026-07-16] query | Audit kepatuhan PRD V1.83 penuh + tindak lanjut
+
+- **Audit dilakukan** (subagent, read-only) atas seluruh 45 section H2 `PRD.md` vs kode `mobile/` + migrasi + wiki. Hasil: mayoritas section **DONE**; 2 **PARTIAL** ditemukan:
+  1. **§19 Strategy Template CRUD** — admin panel `settings-strategy-templates.tsx` masih read-only (sudah dicatat di entry [2026-07-15] di atas, belum dieksekusi).
+  2. **§32 People row** — row tidak menampilkan **nomor urut kontribusi (rank)** maupun tombol "Lihat Profil" eksplisit; hanya nama + avatar + subhead.
+- **Push Notifications status dikoreksi**: Fase 1 (PR #71) yang sebelumnya tercatat "OPEN" di memory ternyata sudah **MERGED** ke staging 2026-07-15. Fase 2 (outbox drainer, branch `feat/push-notifications-fase2`, commit 2-A..2-G) sudah code-complete tapi belum di-PR.
+- **Tindakan diambil (2026-07-16):**
+  1. **PR #73** dibuka: `feat/push-notifications-fase2` → `staging` (migrasi `0060_push_infrastructure.sql` + `push-fanout` Edge Function + pg_net/pg_cron drainer + retensi 30h).
+  2. **Gap §32 ditutup** — `mobile/src/app/(app)/people.tsx`: tambah `RankBadge` (lingkaran nomor urut, hanya untuk user dengan data ranking dari periode closed terakhir) + label "Lihat Profil" menggantikan chevron polos. De-scoring tetap dijaga: rank menunjukkan posisi, bukan nilai skor. 3 test baru ditambahkan di `__tests__/people.test.tsx` (17/17 pass), `tsc --noEmit` bersih.
+- **Sisa follow-up (belum dieksekusi):** §19 admin CRUD Strategy Template (create/edit/disable/versioning) — scope besar, kandidat `/sdd-plan`.
