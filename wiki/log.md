@@ -1678,3 +1678,19 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
   - `strategy/new.tsx` empty-state + button hand-rolled → diganti `EmptyState` component (reuse `action` prop → `Button variant="secondary"` otomatis).
   - Migrasi 0059 sanity DO-block: hapus redundant `count(*)` full-table scan (total rows informational saja); sisakan hanya `n_default` (omset/profit rows = 0) yang relevan.
   - Contract test TEST 1: hapus EXISTS check spesifik (`'Control Budgeting'`) yang sudah logically-implied oleh count=0 profit di atasnya.
+
+## [2026-07-16] query | Audit kepatuhan PRD V1.83 penuh + tindak lanjut
+
+- Audit sistematik 45 bagian PRD V1.83 terhadap kode + migrasi. Temuan: 3 gap aktif, sisanya sudah ter-implement atau addressed.
+- **Gap §32 People de-scoring CLOSED (PR #74, branch `feat/people-rank-badge-v183`):**
+  - `people.tsx` ditambah `RankBadge` (urutan kontribusi) + teks "Lihat Profil" pada setiap row.
+  - Trust/Achievement/Score dihilangkan dari tampilan per-user.
+  - Wiki `entities/surfaces.md` callout diperbarui (item b di-close).
+- **Gap §19 Strategy Template CRUD CLOSED (PR #75, branch `feat/strategy-template-crud-v183`):**
+  - Migrasi `0061_strategy_template_crud.sql`: kolom `is_active boolean default true` + 3 RLS policy (INSERT/UPDATE/DELETE) gated `manage_kpi_area_templates` + rename label permission.
+  - Data layer: `createStrategyTemplate`, `updateStrategyTemplate`, `deleteStrategyTemplate` di `goals.ts`.
+  - UI rewrite `settings-strategy-templates.tsx`: list+search, create/edit modal, toggle active/inactive, delete confirmation.
+  - Contract test 7 pgTAP + 8 RNTL test (4-state + create/edit/toggle/badge). Jest 1377/1377, tsc clean.
+  - **Gotcha RNTL:** useMutation `onSuccess: invalidateQueries` menghasilkan async leak via React Query global `notifyManager` — meracuni `screen` singleton RNTL utk test berikutnya. Fix: pindahkan create test (satu-satunya yang trigger mutasi) ke describe terakhir.
+- **Push Notifications Fase 2 PR #73 opened** (branch `feat/push-notifications-fase2`, target staging): outbox drainer Edge Function, pg_net + vault + cron, rate-limit 3/24j, backoff 2^attempts cap 6, retensi 30h.
+- **Memory disinkronkan:** `push-notifications-shipped.md` dikoreksi (Fase 1 MERGED bukan OPEN); `prd-v183-source-of-truth.md` + `app-scaffold.md` di-update.
