@@ -1688,4 +1688,10 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
 - **Tindakan diambil (2026-07-16):**
   1. **PR #73** dibuka: `feat/push-notifications-fase2` → `staging` (migrasi `0060_push_infrastructure.sql` + `push-fanout` Edge Function + pg_net/pg_cron drainer + retensi 30h).
   2. **Gap §32 ditutup** — `mobile/src/app/(app)/people.tsx`: tambah `RankBadge` (lingkaran nomor urut, hanya untuk user dengan data ranking dari periode closed terakhir) + label "Lihat Profil" menggantikan chevron polos. De-scoring tetap dijaga: rank menunjukkan posisi, bukan nilai skor. 3 test baru ditambahkan di `__tests__/people.test.tsx` (17/17 pass), `tsc --noEmit` bersih.
-- **Sisa follow-up (belum dieksekusi):** §19 admin CRUD Strategy Template (create/edit/disable/versioning) — scope besar, kandidat `/sdd-plan`.
+- **Gap §19 Strategy Template CRUD CLOSED (PR #75, branch `feat/strategy-template-crud-v183`):**
+  - Migrasi `0061_strategy_template_crud.sql`: kolom `is_active boolean default true` + 3 RLS policy (INSERT/UPDATE/DELETE) gated `manage_kpi_area_templates` + rename label permission.
+  - Data layer: `createStrategyTemplate`, `updateStrategyTemplate`, `deleteStrategyTemplate` di `goals.ts`.
+  - UI rewrite `settings-strategy-templates.tsx`: list+search, create/edit modal, toggle active/inactive, delete confirmation.
+  - Contract test 7 pgTAP + 8 RNTL test (4-state + create/edit/toggle/badge). Jest 1377/1377, tsc clean.
+  - **Gotcha RNTL:** useMutation `onSuccess: invalidateQueries` menghasilkan async leak via React Query global `notifyManager` — meracuni `screen` singleton RNTL utk test berikutnya. Fix: pindahkan create test (satu-satunya yang trigger mutasi) ke describe terakhir.
+- **Memory disinkronkan:** `push-notifications-shipped.md` dikoreksi (Fase 1 MERGED bukan OPEN); `prd-v183-source-of-truth.md` + `app-scaffold.md` di-update.
