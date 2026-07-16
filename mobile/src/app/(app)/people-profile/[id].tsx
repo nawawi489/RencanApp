@@ -105,6 +105,7 @@ export function LivePeopleProfileScreen() {
 
   const isSelf = profile?.id === id;
   const canManage = can('manage_score_formula');
+  const canViewScore = isSelf || canManage;
 
   // PPL-06 Kontribusi bulan ini (OQ-6 diputuskan 2026-07-05): count AP done PIC pada periode aktif.
   // Semantik pakai `updated_at` sbg approksimasi `completed_at` (schema tak punya kolom itu; §NG-5
@@ -233,28 +234,30 @@ export function LivePeopleProfileScreen() {
           </SectionCard>
         ) : null}
 
-        {/* Achievement Score */}
-        <SectionCard>
-          <Text className="text-base font-semibold text-black dark:text-white">Achievement Score</Text>
-          {scoreLoading ? (
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat skor…</Text>
-          ) : displayedScore != null ? (
-            <View className="gap-3">
-              <View className="flex-row items-center gap-2">
-                <ScoreBadge score={displayedScore} />
-                {scoreSourceLabel ? (
-                  <Text className="text-xs text-neutral-400">· {scoreSourceLabel}</Text>
-                ) : null}
+        {/* Achievement Score — §33 komponen 9: hanya self atau admin/management. */}
+        {canViewScore ? (
+          <SectionCard>
+            <Text className="text-base font-semibold text-black dark:text-white">Achievement Score</Text>
+            {scoreLoading ? (
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat skor…</Text>
+            ) : displayedScore != null ? (
+              <View className="gap-3">
+                <View className="flex-row items-center gap-2">
+                  <ScoreBadge score={displayedScore} />
+                  {scoreSourceLabel ? (
+                    <Text className="text-xs text-neutral-400">· {scoreSourceLabel}</Text>
+                  ) : null}
+                </View>
+                <TrendSection points={sparkPoints} />
               </View>
-              <TrendSection points={sparkPoints} />
-            </View>
-          ) : (
-            <GuidanceNote
-              title="Skor menyusul"
-              body="Achievement Score muncul setelah perhitungan periode berjalan atau periode pertama ditutup."
-            />
-          )}
-        </SectionCard>
+            ) : (
+              <GuidanceNote
+                title="Skor menyusul"
+                body="Achievement Score muncul setelah perhitungan periode berjalan atau periode pertama ditutup."
+              />
+            )}
+          </SectionCard>
+        ) : null}
 
         {/* PPL-06 Kontribusi bulan ini (OQ-6). Sembunyikan bila !isSelf && count=0. */}
         <ContributionSection
@@ -263,8 +266,8 @@ export function LivePeopleProfileScreen() {
           count={contributionCount}
         />
 
-        {/* Breakdown metrik */}
-        {breakdown.length ? (
+        {/* Breakdown metrik — §33: gated bersama score detail. */}
+        {canViewScore && breakdown.length ? (
           <SectionCard>
             <Text className="text-base font-semibold text-black dark:text-white">Breakdown Metrik</Text>
             <ScoreBreakdown metrics={breakdown} />
