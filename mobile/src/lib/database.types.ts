@@ -2452,6 +2452,7 @@ export type Database = {
           expected_outcome_hint: string | null
           goal_template_id: string
           id: string
+          is_active: boolean
           name: string
           sort_order: number
           target_hint: string | null
@@ -2463,6 +2464,7 @@ export type Database = {
           expected_outcome_hint?: string | null
           goal_template_id: string
           id?: string
+          is_active?: boolean
           name: string
           sort_order?: number
           target_hint?: string | null
@@ -2474,6 +2476,7 @@ export type Database = {
           expected_outcome_hint?: string | null
           goal_template_id?: string
           id?: string
+          is_active?: boolean
           name?: string
           sort_order?: number
           target_hint?: string | null

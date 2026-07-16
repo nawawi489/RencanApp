@@ -81,6 +81,51 @@ export async function listAllStrategyTemplates(): Promise<StrategyTemplateWithPa
   return (data ?? []) as unknown as StrategyTemplateWithParent[];
 }
 
+// ---------------------------------------------------------------- strategy template CRUD (§19)
+
+export type NewStrategyTemplate = {
+  goal_template_id: string;
+  name: string;
+  division: string;
+  division_label: string;
+  target_hint?: string | null;
+  expected_outcome_hint?: string | null;
+  sort_order?: number;
+};
+
+export async function createStrategyTemplate(input: NewStrategyTemplate): Promise<StrategyTemplate> {
+  const { data, error } = await supabase
+    .from('strategy_templates')
+    .insert(input)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export type UpdateStrategyTemplate = Partial<
+  Pick<StrategyTemplate, 'name' | 'division' | 'division_label' | 'target_hint' | 'expected_outcome_hint' | 'sort_order'>
+> & { is_active?: boolean };
+
+export async function updateStrategyTemplate(id: string, patch: UpdateStrategyTemplate): Promise<StrategyTemplate> {
+  const { data, error } = await supabase
+    .from('strategy_templates')
+    .update(patch)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteStrategyTemplate(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('strategy_templates')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------- mutations (INSTANT ber-RLS)
 
 export type NewGoal = {
