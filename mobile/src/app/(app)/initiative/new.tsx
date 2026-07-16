@@ -66,7 +66,7 @@ export function LiveNewInitiativeScreen() {
         period_end: periodEnd || null,
         contribution_pct: contribution,
       });
-      router.replace(`/action-plan/${created.id}` as Href);
+      router.replace(`/initiative/${created.id}` as Href);
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
