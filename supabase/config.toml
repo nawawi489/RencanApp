@@ -7,6 +7,12 @@ project_id = "supabase"
 [functions.create-user]
 verify_jwt = true
 
+# push-fanout drainer dipanggil pg_cron via net.http_post dengan SERVICE_ROLE key —
+# tidak ada JWT user context, jadi gateway verify_jwt harus off. Otorisasi via
+# SUPABASE_SERVICE_ROLE_KEY di header Authorization.
+[functions.push-fanout]
+verify_jwt = false
+
 # Analytics (Logflare) butuh Docker daemon TCP di :2375 (Windows-specific).
 # Untuk dev lokal disable — app tidak butuh analytics, dan enabling TCP daemon
 # adalah security risk yang tidak sepadan untuk local-only setup.

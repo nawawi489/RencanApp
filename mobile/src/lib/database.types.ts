@@ -1862,6 +1862,114 @@ export type Database = {
           },
         ]
       }
+      push_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          id: string
+          next_attempt_at: string
+          notification_id: string
+          provider_receipt_id: string | null
+          provider_ticket_id: string | null
+          push_token_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          next_attempt_at?: string
+          notification_id: string
+          provider_receipt_id?: string | null
+          provider_ticket_id?: string | null
+          push_token_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          next_attempt_at?: string
+          notification_id?: string
+          provider_receipt_id?: string | null
+          provider_ticket_id?: string | null
+          push_token_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_deliveries_push_token_id_fkey"
+            columns: ["push_token_id"]
+            isOneToOne: false
+            referencedRelation: "push_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          expo_token: string
+          id: string
+          organization_id: string
+          platform: string
+          revoked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          expo_token: string
+          id?: string
+          organization_id: string
+          platform: string
+          revoked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          expo_token?: string
+          id?: string
+          organization_id?: string
+          platform?: string
+          revoked_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ranking_snapshots: {
         Row: {
           created_at: string
@@ -3326,6 +3434,10 @@ export type Database = {
         Returns: string
       }
       backfill_resolve_stale_notifications: { Args: never; Returns: undefined }
+      bump_push_delivery_backoff: {
+        Args: { p_error?: string; p_id: string }
+        Returns: undefined
+      }
       calculate_period_scores: {
         Args: { p_period_id: string }
         Returns: number
@@ -3369,6 +3481,22 @@ export type Database = {
           enforcement_mode: string
           meets_requirement: boolean
           required_count: number
+        }[]
+      }
+      claim_push_deliveries: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          body: string
+          delivery_id: string
+          entity_id: string
+          entity_type: string
+          expo_token: string
+          notification_id: string
+          platform: string
+          push_token_id: string
+          title: string
+          type: string
         }[]
       }
       cleanup_orphan_chat_upload: {
@@ -3592,6 +3720,10 @@ export type Database = {
       }
       is_goal_pic: { Args: { p_goal: string }; Returns: boolean }
       is_problem_statement_pic: { Args: { p_ps: string }; Returns: boolean }
+      is_push_worthy: {
+        Args: { p_org?: string; p_type: string }
+        Returns: boolean
+      }
       is_strategy_pic: { Args: { p_strategy: string }; Returns: boolean }
       is_supervisor_of: { Args: { p_user: string }; Returns: boolean }
       list_strategy_candidates_for_task: {
@@ -3672,6 +3804,10 @@ export type Database = {
           p_target_achieved: string
         }
         Returns: string
+      }
+      register_push_token: {
+        Args: { p_device_id?: string; p_expo_token: string; p_platform: string }
+        Returns: undefined
       }
       resolve_governance_violation: {
         Args: {
@@ -3848,6 +3984,10 @@ export type Database = {
       toggle_chat_reaction: {
         Args: { p_emoji: string; p_message: string }
         Returns: boolean
+      }
+      unregister_push_token: {
+        Args: { p_expo_token: string }
+        Returns: undefined
       }
       update_score_formula_version_weights: {
         Args: {
