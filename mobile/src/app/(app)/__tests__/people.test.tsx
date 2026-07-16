@@ -124,7 +124,7 @@ describe('PeopleScreen — V1.83 de-scored', () => {
     expect(screen.queryByLabelText('Lihat papan peringkat lengkap')).toBeNull();
   });
 
-  it('no rank number circles on roster items', async () => {
+  it('no score value badges on roster items', async () => {
     mockUseLatestClosedPeriod.mockReturnValue({
       period: { id: 'p-closed', period_name: 'Q1', status: 'closed' },
       isLoading: false,
@@ -144,6 +144,51 @@ describe('PeopleScreen — V1.83 de-scored', () => {
   it('subtitle says "Anggota organisasi." (not ranking)', async () => {
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Anggota organisasi.')).toBeTruthy();
+  });
+});
+
+describe('PeopleScreen — §32 rank + Lihat Profil', () => {
+  it('rank badge shown for users with ranking data', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+      { id: 'u2', full_name: 'Arman', email: 'a@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Q1', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [
+        { user_id: 'u1', rank_number: 1, score: 90 },
+        { user_id: 'u2', rank_number: 2, score: 75 },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText('Peringkat 1')).toBeTruthy();
+    expect(screen.getByLabelText('Peringkat 2')).toBeTruthy();
+  });
+
+  it('no rank badge when no closed period', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+    ]);
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(screen.queryByLabelText(/Peringkat/)).toBeNull();
+  });
+
+  it('"Lihat Profil" label on each row', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+      { id: 'u2', full_name: 'Arman', email: 'a@n.id' },
+    ]);
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(screen.getAllByText('Lihat Profil')).toHaveLength(2);
   });
 });
 

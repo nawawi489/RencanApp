@@ -1,7 +1,7 @@
 ---
 type: entity
 tags: [ui, navigation, surface]
-updated: 2026-07-15
+updated: 2026-07-16
 sources: 2
 ---
 
@@ -11,8 +11,8 @@ Lima surface utama [[overview|Rencanapp]] di bottom nav (PRD V1.83 §7.1). Setti
 
 `Home · Notifications · Workspace · Inbox · Menu`
 
-> [!warning] Kode `mobile/` masih lag di beberapa titik
-> Bottom nav sudah 5-tab (Home/Notif/Workspace/Inbox/Menu). Namun perubahan V1.83 tambahan **belum landing**: (a) Home Fokus Hari Ini masih nyorot Action Plan, seharusnya Task; (b) People row masih tampilkan Trust/Achievement/Score, seharusnya urutan kontribusi + status ringan; (c) Menu Akses Cepat & Admin Lanjutan gating belum diverifikasi. Lihat [[ui-prototype-gap]].
+> [!warning] Kode `mobile/` — sisa gap V1.83 (per audit 2026-07-16)
+> Bottom nav sudah 5-tab (Home/Notif/Workspace/Inbox/Menu). Home Fokus Hari Ini, People de-scoring, dan Menu gating sudah landing. Sisa gap: (a) People row belum tampilkan **Status ringan** (rank + tombol Lihat Profil sudah landing 2026-07-16); (b) §19 admin CRUD Strategy Template (create/edit/disable/versioning) masih read-only. Lihat [[ui-prototype-gap]].
 
 ## Home — Today Command Center
 

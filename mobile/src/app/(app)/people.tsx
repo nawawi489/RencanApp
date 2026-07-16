@@ -24,13 +24,22 @@ import { useLatestClosedPeriod, useRanking } from '@/hooks/use-people-score';
 
 type Person = OrgProfileWithRole & { score?: number | null };
 
-// UI-S-PP2 — subhead: position + role bila ada, fallback email.
 function personSubhead(p: Person): string {
   const parts: string[] = [];
   if (p.position_title) parts.push(p.position_title);
   if (p.role_name) parts.push(p.role_name);
   if (parts.length === 0 && p.email) return p.email;
   return parts.join(' · ');
+}
+
+function RankBadge({ rank }: { rank: number }) {
+  return (
+    <View
+      className="h-7 w-7 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
+      accessibilityLabel={`Peringkat ${rank}`}>
+      <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{rank}</Text>
+    </View>
+  );
 }
 
 export function LivePeopleScreen() {
@@ -69,7 +78,18 @@ export function LivePeopleScreen() {
     return mapped;
   }, [data, scoreByUser]);
 
-  // UI-S-PP1 — filter case-insensitive di name/email/position/role.
+  const rankByUser = useMemo(() => {
+    const m = new Map<string, number>();
+    let rank = 0;
+    for (const p of people) {
+      if (p.score != null) {
+        rank += 1;
+        m.set(p.id, rank);
+      }
+    }
+    return m;
+  }, [people]);
+
   const filtered: Person[] = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return people;
@@ -156,24 +176,30 @@ export function LivePeopleScreen() {
     </View>
   );
 
-  const renderItem = ({ item: p }: { item: Person }) => (
-    <Pressable
-      className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
-      accessibilityRole="button"
-      accessibilityLabel={`Buka profil ${personLabel(p)}`}
-      onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
-      <Avatar name={personLabel(p)} seed={p.id} />
-      <View className="flex-1">
-        <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
-          {personLabel(p)}
+  const renderItem = ({ item: p }: { item: Person }) => {
+    const rank = rankByUser.get(p.id);
+    return (
+      <Pressable
+        className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
+        accessibilityRole="button"
+        accessibilityLabel={`Buka profil ${personLabel(p)}`}
+        onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
+        {rank != null ? <RankBadge rank={rank} /> : <View className="w-7" />}
+        <Avatar name={personLabel(p)} seed={p.id} />
+        <View className="flex-1">
+          <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
+            {personLabel(p)}
+          </Text>
+          <Text className="text-xs text-neutral-400" numberOfLines={1}>
+            {personSubhead(p)}
+          </Text>
+        </View>
+        <Text className="text-xs font-semibold text-brand dark:text-brand-light">
+          Lihat Profil
         </Text>
-        <Text className="text-xs text-neutral-400" numberOfLines={1}>
-          {personSubhead(p)}
-        </Text>
-      </View>
-      <Text className="text-lg text-neutral-400">›</Text>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
