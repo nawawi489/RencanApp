@@ -299,6 +299,16 @@ export function LiveTaskSubmitScreen() {
 
   const isSubmitting = instanceId ? instanceMutation.isPending : submissionFlow.isSubmitting;
 
+  if (!id && !instanceId) {
+    return (
+      <View className="flex-1 items-center justify-center bg-neutral-50 p-6 dark:bg-black">
+        <Text accessibilityRole="alert" className="text-center text-base text-neutral-600 dark:text-neutral-300">
+          Data tidak lengkap. Buka submit dari halaman detail Tugas.
+        </Text>
+      </View>
+    );
+  }
+
   if (apQ.isLoading || !ap) {
     return (
       <View className="flex-1 items-center justify-center bg-neutral-50 dark:bg-black">

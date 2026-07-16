@@ -360,7 +360,7 @@ export function LiveStrategyDetailScreen() {
                     name={item.name}
                     statusLabel={PLANNING_STATUS_LABEL[item.status] ?? item.status}
                     statusTone={STATUS_TONE[item.status]}
-                    onPress={() => router.push(`/action-plan/${item.id}` as Href)}
+                    onPress={() => router.push(`/initiative/${item.id}` as Href)}
                   />
                 ))
               ) : (

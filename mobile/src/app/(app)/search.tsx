@@ -1,15 +1,17 @@
 // Fase 8 — Search global (RLS-scoped via search_cards RPC). Empty state saat query kosong.
-import { Stack } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { FlatList } from 'react-native';
 import { Text, TextInput, View } from 'react-native-css/components';
 
 import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
-import type { SearchResult } from '@/lib/governance-admin';
+import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
+import type { CardEntityType, SearchResult } from '@/lib/governance-admin';
 import { CARD_TYPE_LABEL, type CardType } from '@/lib/settings-mbr';
 
 export function LiveSearchScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const { results, isLoading, enabled } = useSearchCards({ query });
   const placeholderColor = usePlaceholderColor();
@@ -50,14 +52,19 @@ export function LiveSearchScreen() {
     );
   }
 
-  const renderItem = ({ item: r }: { item: SearchResult }) => (
-    <SectionCard>
-      <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
-      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-        {CARD_TYPE_LABEL[r.entity_type as CardType] ?? r.entity_type}
-      </Text>
-    </SectionCard>
-  );
+  const renderItem = ({ item: r }: { item: SearchResult }) => {
+    const segment = ENTITY_ROUTE_SEGMENT[r.entity_type as CardEntityType];
+    return (
+      <SectionCard
+        onPress={segment ? () => router.push(`/${segment}/${r.id}` as Href) : undefined}
+      >
+        <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+          {CARD_TYPE_LABEL[r.entity_type as CardType] ?? r.entity_type}
+        </Text>
+      </SectionCard>
+    );
+  };
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-black">

@@ -521,7 +521,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/action-plan/${initiative.id}` as Href),
+    () => router.push(`/initiative/${initiative.id}` as Href),
     [router, initiative.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
