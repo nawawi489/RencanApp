@@ -431,11 +431,15 @@ function ReadsModal({
   const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1 justify-end bg-black/40"
-        accessibilityLabel="Tutup daftar pembaca"
-        onPress={onClose}>
-        <Pressable className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900" onPress={() => {}}>
+      <View className="flex-1 justify-end">
+        {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
+        <Pressable
+          className="absolute inset-0 bg-black/40"
+          accessibilityLabel="Tutup daftar pembaca"
+          accessibilityRole="button"
+          onPress={onClose}
+        />
+        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Dilihat oleh ({reads.length})
@@ -463,8 +467,8 @@ function ReadsModal({
               </View>
             ))}
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -483,11 +487,15 @@ function MembersModal({
   const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1 justify-end bg-black/40"
-        accessibilityLabel="Tutup daftar anggota"
-        onPress={onClose}>
-        <Pressable className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900" onPress={() => {}}>
+      <View className="flex-1 justify-end">
+        {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
+        <Pressable
+          className="absolute inset-0 bg-black/40"
+          accessibilityLabel="Tutup daftar anggota"
+          accessibilityRole="button"
+          onPress={onClose}
+        />
+        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Anggota ({members.length})
@@ -508,8 +516,8 @@ function MembersModal({
               </View>
             ))}
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

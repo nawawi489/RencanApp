@@ -17,7 +17,7 @@ import { Screen } from '@/components/screen';
 import {
   Avatar,
   Badge,
-  Button,
+  Banner,
   EmptyState,
   ErrorState,
   SectionCard,
@@ -158,7 +158,7 @@ function MessageHitRow({ hit, onPress }: { hit: ChatMessageHit; onPress: () => v
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <Text className="mt-2 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
+    <Text className="mt-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
       {title}
     </Text>
   );
@@ -167,35 +167,6 @@ function SectionHeader({ title }: { title: string }) {
 function SubHeader({ label }: { label: string }) {
   return (
     <Text className="mt-1 text-sm font-semibold text-black dark:text-white">{label}</Text>
-  );
-}
-
-function Banner({
-  tone,
-  message,
-  action,
-}: {
-  tone: 'warn' | 'error';
-  message: string;
-  action?: { label: string; onPress: () => void };
-}) {
-  const bg =
-    tone === 'error'
-      ? 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-900'
-      : 'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-900';
-  const text =
-    tone === 'error'
-      ? 'text-red-800 dark:text-red-200'
-      : 'text-amber-800 dark:text-amber-200';
-  return (
-    <View className={`gap-2 rounded-xl border p-3 ${bg}`}>
-      <Text className={`text-sm ${text}`}>{message}</Text>
-      {action ? (
-        <View className="self-start">
-          <Button label={action.label} onPress={action.onPress} variant="secondary" />
-        </View>
-      ) : null}
-    </View>
   );
 }
 
