@@ -514,7 +514,7 @@ function MembersModal({
   );
 }
 
-/** Overlay saran @mention di atas composer. */
+/** Overlay saran @mention di atas composer. Max 3 visible rows; scroll if more. */
 function MentionSuggestions({
   members,
   onPick,
@@ -524,18 +524,20 @@ function MentionSuggestions({
 }) {
   if (members.length === 0) return null;
   return (
-    <View className="mb-2 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
-      {members.map((m) => (
-        <Pressable
-          key={m.id}
-          onPress={() => onPick(m)}
-          accessibilityRole="button"
-          accessibilityLabel={`Sebut ${personLabel(m, '?')}`}
-          className="flex-row items-center gap-2 border-b border-neutral-100 bg-white px-3 py-2 last:border-b-0 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-900">
-          <Avatar name={personLabel(m, '?')} seed={m.id} size={24} />
-          <Text className="flex-1 text-sm text-black dark:text-white">{personLabel(m, '?')}</Text>
-        </Pressable>
-      ))}
+    <View className="mb-2 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700" style={{ maxHeight: 132 }}>
+      <ScrollView nestedScrollEnabled>
+        {members.map((m) => (
+          <Pressable
+            key={m.id}
+            onPress={() => onPick(m)}
+            accessibilityRole="button"
+            accessibilityLabel={`Sebut ${personLabel(m, '?')}`}
+            className="flex-row items-center gap-2 border-b border-neutral-100 bg-white px-3 py-2 last:border-b-0 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-900">
+            <Avatar name={personLabel(m, '?')} seed={m.id} size={24} />
+            <Text className="flex-1 text-sm text-black dark:text-white">{personLabel(m, '?')}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -582,29 +584,31 @@ function AttachmentPreviewRow({
 }) {
   if (files.length === 0) return null;
   return (
-    <View className="flex-row gap-2 px-1 pb-1">
-      {files.map((f, i) => (
-        <View
-          key={`${f.name}-${i}`}
-          className="flex-row items-center gap-1 rounded-lg bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
-          <Image
-            source={{ uri: f.uri }}
-            style={{ width: 32, height: 32, borderRadius: 4 }}
-            accessibilityLabel={`Pratinjau ${f.name}`}
-          />
-          <Text className="max-w-[80px] text-xs text-black dark:text-white" numberOfLines={1}>
-            {f.name}
-          </Text>
-          <Pressable
-            onPress={() => onRemove(i)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Hapus ${f.name}`}>
-            <Ionicons name="close-circle" size={18} color="#ef4444" />
-          </Pressable>
-        </View>
-      ))}
-    </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 4, paddingBottom: 4 }}>
+      <View className="flex-row gap-2">
+        {files.map((f, i) => (
+          <View
+            key={`${f.name}-${i}`}
+            className="flex-row items-center gap-1 rounded-lg bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
+            <Image
+              source={{ uri: f.uri }}
+              style={{ width: 32, height: 32, borderRadius: 4 }}
+              accessibilityLabel={`Pratinjau ${f.name}`}
+            />
+            <Text className="max-w-[80px] text-xs text-black dark:text-white" numberOfLines={1}>
+              {f.name}
+            </Text>
+            <Pressable
+              onPress={() => onRemove(i)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Hapus ${f.name}`}>
+              <Ionicons name="close-circle" size={18} color="#ef4444" />
+            </Pressable>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -615,7 +619,7 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
       accessibilityLabel={`Lampiran ${attachment.name}`}>
       <Image
         source={{ uri: `placeholder://${attachment.path}` }}
-        style={{ width: 200, height: 150, borderRadius: 8 }}
+        style={{ width: '100%', maxWidth: 240, aspectRatio: 4 / 3, borderRadius: 8 }}
         resizeMode="cover"
       />
     </View>
@@ -974,11 +978,12 @@ export default function ChatRoomScreen() {
               onRemove={(i) => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
             />
             {pendingFiles.length > 0 && text.trim().length === 0 ? (
-              <Text
-                className="text-xs text-neutral-500 dark:text-neutral-400"
-                accessibilityLiveRegion="polite">
-                Tambahkan keterangan singkat untuk gambar ini.
-              </Text>
+              <View className="flex-row items-center gap-1.5" accessibilityLiveRegion="polite">
+                <Ionicons name="camera-outline" size={14} color="#6b7280" />
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Tambahkan keterangan singkat untuk gambar ini.
+                </Text>
+              </View>
             ) : null}
             <View className="flex-row items-end gap-2">
               <ChatAttachButton disabled={isSending} onPress={handleAttach} />
