@@ -39,6 +39,7 @@ import type { LocalFile } from '@/lib/storage';
 import { CHAT_MAX_ATTACHMENTS } from '@/lib/storage';
 import { useProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth-provider';
+import { useThemePreference } from '@/providers/theme-provider';
 
 const log = createLogger('chat-room');
 /** Key AsyncStorage untuk dismiss banner governance (global per-user; sekali tutup = tak muncul lagi). */
@@ -360,6 +361,9 @@ function RoomHeaderActions({
   onOpenMembers: () => void;
   onOpenActionPlan?: () => void;
 }) {
+  const { effective } = useThemePreference();
+  const neutralIcon = effective === 'dark' ? '#d1d5db' : '#1f2937';
+  const brandIcon = effective === 'dark' ? '#93c5fd' : '#1564b3';
   return (
     <View className="flex-row items-center">
       <Pressable
@@ -367,7 +371,7 @@ function RoomHeaderActions({
         accessibilityRole="button"
         accessibilityLabel="Anggota"
         style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name="people-outline" size={22} color="#1f2937" />
+        <Ionicons name="people-outline" size={22} color={neutralIcon} />
       </Pressable>
       {onOpenActionPlan ? (
         <Pressable
@@ -375,7 +379,7 @@ function RoomHeaderActions({
           accessibilityRole="button"
           accessibilityLabel="Rencana Aksi"
           style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="open-outline" size={22} color="#1564b3" />
+          <Ionicons name="open-outline" size={22} color={brandIcon} />
         </Pressable>
       ) : null}
     </View>
@@ -396,19 +400,19 @@ function formatReadAt(iso: string): string {
 
 /** "Dilihat oleh N" di bawah bubble me terakhir yang punya pembaca lain. Tap → ReadsModal. */
 function SeenByPill({ count, onOpen }: { count: number; onOpen: () => void }) {
+  const { effective } = useThemePreference();
+  const mutedIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
       accessibilityLabel={`Dilihat oleh ${count} orang`}
-      hitSlop={6}
-      className="mt-0.5 self-end active:opacity-70">
-      <View className="flex-row items-center gap-1">
-        <Ionicons name="checkmark-done" size={12} color="#6b7280" />
-        <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">
-          Dilihat oleh {count}
-        </Text>
-      </View>
+      style={{ minHeight: 44 }}
+      className="mt-0.5 flex-row items-center justify-end gap-1 self-end active:opacity-70">
+      <Ionicons name="checkmark-done" size={12} color={mutedIcon} />
+      <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">
+        Dilihat oleh {count}
+      </Text>
     </Pressable>
   );
 }
@@ -423,19 +427,29 @@ function ReadsModal({
   reads: ChatRead[];
   onClose: () => void;
 }) {
+  const { effective } = useThemePreference();
+  const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1 justify-end bg-black/40"
-        accessibilityLabel="Tutup daftar pembaca"
-        onPress={onClose}>
-        <Pressable className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900" onPress={() => {}}>
+      <View className="flex-1 justify-end">
+        {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
+        <Pressable
+          className="absolute inset-0 bg-black/40"
+          accessibilityLabel="Tutup daftar pembaca"
+          accessibilityRole="button"
+          onPress={onClose}
+        />
+        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Dilihat oleh ({reads.length})
             </Text>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Tutup" hitSlop={8}>
-              <Ionicons name="close" size={22} color="#6b7280" />
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Tutup"
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="close" size={22} color={closeIcon} />
             </Pressable>
           </View>
           <ScrollView>
@@ -453,8 +467,8 @@ function ReadsModal({
               </View>
             ))}
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -469,19 +483,29 @@ function MembersModal({
   members: ChatMember[];
   onClose: () => void;
 }) {
+  const { effective } = useThemePreference();
+  const closeIcon = effective === 'dark' ? '#a3a3a3' : '#6b7280';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1 justify-end bg-black/40"
-        accessibilityLabel="Tutup daftar anggota"
-        onPress={onClose}>
-        <Pressable className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900" onPress={() => {}}>
+      <View className="flex-1 justify-end">
+        {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
+        <Pressable
+          className="absolute inset-0 bg-black/40"
+          accessibilityLabel="Tutup daftar anggota"
+          accessibilityRole="button"
+          onPress={onClose}
+        />
+        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Anggota ({members.length})
             </Text>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Tutup" hitSlop={8}>
-              <Ionicons name="close" size={22} color="#6b7280" />
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Tutup"
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="close" size={22} color={closeIcon} />
             </Pressable>
           </View>
           <ScrollView>
@@ -492,13 +516,13 @@ function MembersModal({
               </View>
             ))}
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
 
-/** Overlay saran @mention di atas composer. */
+/** Overlay saran @mention di atas composer. Max 3 visible rows; scroll if more. */
 function MentionSuggestions({
   members,
   onPick,
@@ -508,23 +532,27 @@ function MentionSuggestions({
 }) {
   if (members.length === 0) return null;
   return (
-    <View className="mb-2 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
-      {members.map((m) => (
-        <Pressable
-          key={m.id}
-          onPress={() => onPick(m)}
-          accessibilityRole="button"
-          accessibilityLabel={`Sebut ${personLabel(m, '?')}`}
-          className="flex-row items-center gap-2 border-b border-neutral-100 bg-white px-3 py-2 last:border-b-0 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-900">
-          <Avatar name={personLabel(m, '?')} seed={m.id} size={24} />
-          <Text className="flex-1 text-sm text-black dark:text-white">{personLabel(m, '?')}</Text>
-        </Pressable>
-      ))}
+    <View className="mb-2 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700" style={{ maxHeight: 132 }}>
+      <ScrollView nestedScrollEnabled>
+        {members.map((m) => (
+          <Pressable
+            key={m.id}
+            onPress={() => onPick(m)}
+            accessibilityRole="button"
+            accessibilityLabel={`Sebut ${personLabel(m, '?')}`}
+            className="flex-row items-center gap-2 border-b border-neutral-100 bg-white px-3 py-2 last:border-b-0 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-900">
+            <Avatar name={personLabel(m, '?')} seed={m.id} size={24} />
+            <Text className="flex-1 text-sm text-black dark:text-white">{personLabel(m, '?')}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
 function ChatAttachButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
+  const { effective } = useThemePreference();
+  const brandIcon = effective === 'dark' ? '#93c5fd' : '#208aef';
   return (
     <Pressable
       onPress={onPress}
@@ -534,7 +562,7 @@ function ChatAttachButton({ disabled, onPress }: { disabled: boolean; onPress: (
       accessibilityState={{ disabled }}
       style={{ width: 44, height: 44 }}
       className={`items-center justify-center rounded-full ${disabled ? 'opacity-40' : 'active:opacity-80'}`}>
-      <Ionicons name="attach" size={22} color="#208aef" />
+      <Ionicons name="attach" size={22} color={brandIcon} />
     </Pressable>
   );
 }
@@ -564,29 +592,31 @@ function AttachmentPreviewRow({
 }) {
   if (files.length === 0) return null;
   return (
-    <View className="flex-row gap-2 px-1 pb-1">
-      {files.map((f, i) => (
-        <View
-          key={`${f.name}-${i}`}
-          className="flex-row items-center gap-1 rounded-lg bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
-          <Image
-            source={{ uri: f.uri }}
-            style={{ width: 32, height: 32, borderRadius: 4 }}
-            accessibilityLabel={`Pratinjau ${f.name}`}
-          />
-          <Text className="max-w-[80px] text-xs text-black dark:text-white" numberOfLines={1}>
-            {f.name}
-          </Text>
-          <Pressable
-            onPress={() => onRemove(i)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Hapus ${f.name}`}>
-            <Ionicons name="close-circle" size={18} color="#ef4444" />
-          </Pressable>
-        </View>
-      ))}
-    </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 4, paddingBottom: 4 }}>
+      <View className="flex-row gap-2">
+        {files.map((f, i) => (
+          <View
+            key={`${f.name}-${i}`}
+            className="flex-row items-center gap-1 rounded-lg bg-neutral-100 px-2 py-1 dark:bg-neutral-800">
+            <Image
+              source={{ uri: f.uri }}
+              style={{ width: 32, height: 32, borderRadius: 4 }}
+              accessibilityLabel={`Pratinjau ${f.name}`}
+            />
+            <Text className="max-w-[80px] text-xs text-black dark:text-white" numberOfLines={1}>
+              {f.name}
+            </Text>
+            <Pressable
+              onPress={() => onRemove(i)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Hapus ${f.name}`}>
+              <Ionicons name="close-circle" size={18} color="#ef4444" />
+            </Pressable>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -597,7 +627,7 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
       accessibilityLabel={`Lampiran ${attachment.name}`}>
       <Image
         source={{ uri: `placeholder://${attachment.path}` }}
-        style={{ width: 200, height: 150, borderRadius: 8 }}
+        style={{ width: '100%', maxWidth: 240, aspectRatio: 4 / 3, borderRadius: 8 }}
         resizeMode="cover"
       />
     </View>
@@ -910,7 +940,7 @@ export default function ChatRoomScreen() {
             {hasMore ? (
               <Pressable
                 onPress={() => loadOlder()}
-                className="mb-2 self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
+                className="mb-2 min-h-[44px] items-center justify-center self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
                 accessibilityRole="button"
                 accessibilityLabel="Muat pesan lama">
                 <Text className="text-sm font-semibold text-black dark:text-white">Muat pesan lama</Text>
@@ -956,11 +986,12 @@ export default function ChatRoomScreen() {
               onRemove={(i) => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
             />
             {pendingFiles.length > 0 && text.trim().length === 0 ? (
-              <Text
-                className="text-xs text-neutral-500 dark:text-neutral-400"
-                accessibilityLiveRegion="polite">
-                Tambahkan keterangan singkat untuk gambar ini.
-              </Text>
+              <View className="flex-row items-center gap-1.5" accessibilityLiveRegion="polite">
+                <Ionicons name="camera-outline" size={14} color="#6b7280" />
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Tambahkan keterangan singkat untuk gambar ini.
+                </Text>
+              </View>
             ) : null}
             <View className="flex-row items-end gap-2">
               <ChatAttachButton disabled={isSending} onPress={handleAttach} />

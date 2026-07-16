@@ -134,10 +134,11 @@ describe('InboxScreen — UI-S-IN1 enrichments', () => {
       isLoading: false, isError: false, refetch: jest.fn(),
     });
     await render(<InboxScreen />, { wrapper: wrapper() });
-    // Render tidak boleh ada "null: ..." (anti-regresi); harus timestamp.
+    // Render tidak boleh ada "null: ..." (anti-regresi).
     expect(screen.queryByText(/^null: /)).toBeNull();
-    // Format dasar mengandung 'Jun' (id-ID locale month short).
-    expect(await screen.findByText(/Jun/)).toBeTruthy();
+    // Preview shows placeholder; timestamp rendered separately containing 'Jun'.
+    expect(await screen.findByText('Belum ada pesan')).toBeTruthy();
+    expect(screen.getByText(/Jun/)).toBeTruthy();
   });
 
   it('[d] Preview hanya {body} saat author_name NULL (author terhapus / sistem)', async () => {

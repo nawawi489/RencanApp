@@ -1111,3 +1111,36 @@ export function StatPill({ label, value, tone = 'neutral' }: { label: string; va
     </View>
   );
 }
+
+// ---------------------------------------------------------------- Banner
+
+export type BannerTone = 'warn' | 'error';
+
+export function Banner({
+  tone,
+  message,
+  action,
+}: {
+  tone: BannerTone;
+  message: string;
+  action?: { label: string; onPress: () => void };
+}) {
+  const bg =
+    tone === 'error'
+      ? 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-900'
+      : 'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-900';
+  const textCls =
+    tone === 'error'
+      ? 'text-red-800 dark:text-red-200'
+      : 'text-amber-800 dark:text-amber-200';
+  return (
+    <View className={`gap-2 rounded-xl border p-3 ${bg}`}>
+      <Text className={`text-sm ${textCls}`}>{message}</Text>
+      {action ? (
+        <View className="self-start">
+          <Button label={action.label} onPress={action.onPress} variant="secondary" />
+        </View>
+      ) : null}
+    </View>
+  );
+}
