@@ -334,7 +334,7 @@ describe('sanitize', () => {
 });
 
 // ---------------------------------------------------------------------------
-// PII karyawan (aplikasi EMS)
+// PII karyawan (aplikasi Rencanapp)
 // ---------------------------------------------------------------------------
 
 describe('sanitize — PII karyawan (Indonesia)', () => {

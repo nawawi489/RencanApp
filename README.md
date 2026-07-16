@@ -1,8 +1,8 @@
 # RencanApp
 
-**RencanApp** adalah repositori implementasi produk **Rencanapp**, sebuah **EMS (Execution Management System) V1.82** untuk membantu perusahaan mengubah arah strategis menjadi pekerjaan nyata yang bisa dipantau, direview, dan dipertanggungjawabkan.
+**RencanApp** adalah repositori implementasi produk **Rencanapp**, sebuah **Execution Project Management V1.83** untuk membantu perusahaan memecah target besar menjadi aksi nyata yang bisa dijalankan, dipantau, direview, dibuktikan, dan dituntaskan.
 
-EMS dirancang untuk menggantikan pola follow-up manual yang tersebar di chat dengan alur kerja yang memiliki konteks, delegasi yang jelas, bukti kerja, hasil terukur, dan audit trail yang rapi.
+Rencanapp dirancang untuk menggantikan pola follow-up manual yang tersebar di chat dengan alur kerja yang memiliki konteks, delegasi yang jelas, bukti kerja, hasil terukur, dan audit trail yang rapi.
 
 ## Daftar Isi
 
@@ -30,7 +30,7 @@ EMS dirancang untuk menggantikan pola follow-up manual yang tersebar di chat den
 
 ### Tujuan Utama
 
-EMS membantu organisasi memastikan pekerjaan tidak berjalan tanpa arah. Sistem ini menghubungkan tujuan bisnis dan pekerjaan harian melalui struktur card berikut:
+Rencanapp membantu organisasi memastikan pekerjaan tidak berjalan tanpa arah. Sistem ini menghubungkan tujuan bisnis dan pekerjaan harian melalui struktur card berikut:
 
 - **Performance Workspace:** `Goal -> KPI Area -> Strategy -> Initiative -> Action Plan`
 - **Development Workspace:** `Development Area -> Problem Statement / Development Goal -> Initiative -> Action Plan`
@@ -47,7 +47,7 @@ Proyek ini ditujukan untuk mengatasi beberapa masalah umum dalam eksekusi kerja:
 
 ### Fitur Inti Produk
 
-Secara produk, EMS V1.82 mencakup:
+Secara produk, Rencanapp V1.83 mencakup:
 
 - manajemen card berbasis hirarki untuk performance dan development workspace,
 - Action Plan `one time` dan `repeat`,
@@ -276,7 +276,7 @@ RencanApp/
 ├── prd/                    # PRD yang sudah dipecah per topik
 ├── wiki/                   # Knowledge base proyek berbasis Markdown/Obsidian
 ├── BUILD-PLAN.md           # Rencana build terfase
-├── PRD.md                  # PRD utama produk EMS V1.82
+├── PRD.md                  # PRD utama produk Rencanapp V1.83
 └── CLAUDE.md               # Aturan pemeliharaan wiki proyek
 ```
 

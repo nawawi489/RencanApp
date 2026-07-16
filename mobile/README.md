@@ -1,6 +1,6 @@
-# EMS Mobile — Nyantuy Group
+# Rencanapp Mobile — Nyantuy Group
 
-Aplikasi mobile **Rencanapp** (**EMS V1.8.1**, Execution Management System). Bagian dari repo [RencanApp](../). PRD: [`prd/`](../prd) · Urutan build: [`BUILD-PLAN.md`](../BUILD-PLAN.md).
+Aplikasi mobile **Rencanapp** (**V1.83**, Execution Project Management). Bagian dari repo [RencanApp](../). PRD: [`prd/`](../prd) · Urutan build: [`BUILD-PLAN.md`](../BUILD-PLAN.md).
 
 ## Stack
 

@@ -21,7 +21,7 @@ if (!feature || !String(feature).trim()) {
 }
 const hintPaths = (typeof args === 'object' && Array.isArray(args?.paths)) ? args.paths : []
 
-const CONTEXT = `Project: RencanApp — aplikasi EMS mobile.
+const CONTEXT = `Project: RencanApp — aplikasi Rencanapp (Execution Project Management) mobile.
 SUMBER SPEC yang sudah ada (jadikan dasar, JANGAN bertentangan dengannya — tandai jika kontradiksi):
 - Produk: PRD.md, prd/01-konsep-dan-fondasi.md, prd/02-spesifikasi-card-dan-eksekusi.md, prd/03-sistem-permission-data-governance.md.
 - Wiki: wiki/overview.md, wiki/index.md, wiki/concepts/* (architecture, execution-loop, permission-model, scope-guardrails, audit-governance, minimum-breakdown-rule, tech-stack), wiki/entities/* (card-model, action-plan, database-blueprint, score-formula, surfaces, workspace).
