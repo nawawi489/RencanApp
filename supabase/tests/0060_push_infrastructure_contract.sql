@@ -690,3 +690,293 @@ begin
   raise notice 'PASS r: drainer context (p_org explicit) + org override honored';
 end $$;
 rollback;
+
+-- ============================================================ (s) claim_push_deliveries + bump signatures
+do $$
+declare
+  v_claim_args text; v_bump_args text; v_claim_secdef boolean; v_bump_secdef boolean;
+begin
+  select pg_get_function_identity_arguments(oid), prosecdef
+    into v_claim_args, v_claim_secdef
+  from pg_proc where proname='claim_push_deliveries' and pronamespace='public'::regnamespace;
+  if v_claim_args is null then raise exception 'FAIL s: claim_push_deliveries missing'; end if;
+  if not v_claim_secdef then raise exception 'FAIL s: claim_push_deliveries bukan SECURITY DEFINER'; end if;
+
+  select pg_get_function_identity_arguments(oid), prosecdef
+    into v_bump_args, v_bump_secdef
+  from pg_proc where proname='bump_push_delivery_backoff' and pronamespace='public'::regnamespace;
+  if v_bump_args is null then raise exception 'FAIL s: bump_push_delivery_backoff missing'; end if;
+  if not v_bump_secdef then raise exception 'FAIL s: bump_push_delivery_backoff bukan SECURITY DEFINER'; end if;
+
+  raise notice 'PASS s: claim_push_deliveries + bump_push_delivery_backoff signatures + SECURITY DEFINER';
+end $$;
+
+-- ============================================================ (t) claim materializes new pending row for push-worthy notif
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000030';
+  v_actor uuid := '99999999-2222-0000-0000-aaaa00000031';
+  v_claim_count int;
+  v_notif_id uuid;
+  v_expo_token text;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active) values
+    (v_userA, v_org, 'User A t', true),
+    (v_actor, v_org, 'Actor t', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+  perform public.register_push_token('ExponentPushToken[t-claim]', 'ios', 'devT');
+
+  execute 'reset role';
+  perform set_config('request.jwt.claims', null, true);
+
+  perform public.emit_notification(
+    v_org, v_userA, v_actor,
+    'review_request', 'action_plan',
+    '99999999-2222-0000-0000-cccc00000010'::uuid,
+    'Title t', 'body t', current_date
+  );
+
+  -- Claim materialize + return row. Query terpisah untuk hindari max(uuid) unsupported.
+  select count(*) into v_claim_count from public.claim_push_deliveries(100);
+  if v_claim_count < 1 then raise exception 'FAIL t: claim tidak materialize row'; end if;
+
+  select expo_token into v_expo_token from public.push_deliveries pd
+    join public.push_tokens pt on pt.id = pd.push_token_id
+    join public.notifications n on n.id = pd.notification_id
+    where n.recipient_id = v_userA
+    order by pd.created_at desc limit 1;
+  if v_expo_token <> 'ExponentPushToken[t-claim]' then
+    raise exception 'FAIL t: expo_token wrong (got %)', v_expo_token;
+  end if;
+
+  raise notice 'PASS t: claim_push_deliveries materialize + return joined view';
+end $$;
+rollback;
+
+-- ============================================================ (u) claim honors backoff (next_attempt_at > now() skipped)
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000032';
+  v_actor uuid := '99999999-2222-0000-0000-aaaa00000033';
+  v_delivery_id uuid;
+  v_claim_count int;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active) values
+    (v_userA, v_org, 'User A u', true),
+    (v_actor, v_org, 'Actor u', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+  perform public.register_push_token('ExponentPushToken[u-backoff]', 'ios', 'devU');
+
+  execute 'reset role';
+  perform set_config('request.jwt.claims', null, true);
+
+  perform public.emit_notification(
+    v_org, v_userA, v_actor,
+    'review_request', 'action_plan',
+    '99999999-2222-0000-0000-cccc00000011'::uuid,
+    'Title u', 'body u', current_date
+  );
+
+  -- Materialize dulu.
+  perform public.claim_push_deliveries(100);
+
+  -- Set next_attempt_at ke future untuk baris ini.
+  update public.push_deliveries
+    set next_attempt_at = now() + interval '10 minutes',
+        status = 'pending'
+  where public.push_deliveries.notification_id in (
+    select n.id from public.notifications n
+    where n.organization_id = v_org and n.recipient_id = v_userA
+  );
+
+  -- Claim ulang — TIDAK boleh return baris karena backoff.
+  select count(*) into v_claim_count from public.claim_push_deliveries(100);
+  if v_claim_count > 0 then
+    raise exception 'FAIL u: claim mengembalikan % baris padahal next_attempt_at > now()', v_claim_count;
+  end if;
+
+  raise notice 'PASS u: claim honors backoff (next_attempt_at > now() skipped)';
+end $$;
+rollback;
+
+-- ============================================================ (v) claim honors attempts cap (attempts >= 6 skipped)
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000034';
+  v_actor uuid := '99999999-2222-0000-0000-aaaa00000035';
+  v_claim_count int;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active) values
+    (v_userA, v_org, 'User A v', true),
+    (v_actor, v_org, 'Actor v', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+  perform public.register_push_token('ExponentPushToken[v-cap]', 'ios', 'devV');
+
+  execute 'reset role';
+  perform set_config('request.jwt.claims', null, true);
+
+  perform public.emit_notification(
+    v_org, v_userA, v_actor,
+    'review_request', 'action_plan',
+    '99999999-2222-0000-0000-cccc00000012'::uuid,
+    'Title v', 'body v', current_date
+  );
+
+  perform public.claim_push_deliveries(100);
+
+  -- Set attempts=6 (exhausted).
+  update public.push_deliveries pd
+    set attempts = 6, status = 'pending', next_attempt_at = now()
+  where pd.notification_id in (
+    select n.id from public.notifications n
+    where n.organization_id = v_org and n.recipient_id = v_userA
+  );
+
+  -- Claim TIDAK boleh pick attempts >= 6.
+  select count(*) into v_claim_count from public.claim_push_deliveries(100);
+  if v_claim_count > 0 then
+    raise exception 'FAIL v: claim mengembalikan % baris padahal attempts >= 6', v_claim_count;
+  end if;
+
+  raise notice 'PASS v: claim honors attempts cap (>= 6 skipped)';
+end $$;
+rollback;
+
+-- ============================================================ (x) bump_push_delivery_backoff — exponential + attempts increment
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000036';
+  v_actor uuid := '99999999-2222-0000-0000-aaaa00000037';
+  v_delivery_id uuid;
+  v_attempts_after int;
+  v_next_after timestamptz;
+  v_gap_min numeric;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active) values
+    (v_userA, v_org, 'User A x', true),
+    (v_actor, v_org, 'Actor x', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+  perform public.register_push_token('ExponentPushToken[x-bump]', 'ios', 'devX');
+
+  execute 'reset role';
+  perform set_config('request.jwt.claims', null, true);
+
+  perform public.emit_notification(
+    v_org, v_userA, v_actor,
+    'review_request', 'action_plan',
+    '99999999-2222-0000-0000-cccc00000013'::uuid,
+    'Title x', 'body x', current_date
+  );
+
+  perform public.claim_push_deliveries(100);
+
+  select pd.id into v_delivery_id from public.push_deliveries pd
+  join public.notifications n on n.id = pd.notification_id
+  where n.recipient_id = v_userA order by pd.created_at desc limit 1;
+
+  -- Bump pertama: attempts 0→1, next ~ +2 menit (pow(2,1)=2).
+  perform public.bump_push_delivery_backoff(v_delivery_id, 'transient err 1');
+  select attempts, next_attempt_at into v_attempts_after, v_next_after
+    from public.push_deliveries where id = v_delivery_id;
+  if v_attempts_after <> 1 then raise exception 'FAIL x: attempts setelah bump-1 = %, expected 1', v_attempts_after; end if;
+  v_gap_min := extract(epoch from (v_next_after - now())) / 60.0;
+  if v_gap_min < 1.5 or v_gap_min > 2.5 then
+    raise exception 'FAIL x: gap bump-1 = % menit, expected ~2', round(v_gap_min, 2);
+  end if;
+
+  -- Bump kedua: attempts 1→2, next ~ +4 menit (pow(2,2)=4).
+  perform public.bump_push_delivery_backoff(v_delivery_id, 'transient err 2');
+  select attempts, next_attempt_at into v_attempts_after, v_next_after
+    from public.push_deliveries where id = v_delivery_id;
+  if v_attempts_after <> 2 then raise exception 'FAIL x: attempts setelah bump-2 = %, expected 2', v_attempts_after; end if;
+  v_gap_min := extract(epoch from (v_next_after - now())) / 60.0;
+  if v_gap_min < 3.5 or v_gap_min > 4.5 then
+    raise exception 'FAIL x: gap bump-2 = % menit, expected ~4', round(v_gap_min, 2);
+  end if;
+
+  raise notice 'PASS x: bump exponential — attempts increment + backoff 2/4 min';
+end $$;
+rollback;
+
+-- ============================================================ (y) bump at attempts+1 >= 6 → status='failed'
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000038';
+  v_actor uuid := '99999999-2222-0000-0000-aaaa00000039';
+  v_delivery_id uuid;
+  v_status text;
+  v_attempts int;
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active) values
+    (v_userA, v_org, 'User A y', true),
+    (v_actor, v_org, 'Actor y', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+  perform public.register_push_token('ExponentPushToken[y-fail]', 'ios', 'devY');
+
+  execute 'reset role';
+  perform set_config('request.jwt.claims', null, true);
+
+  perform public.emit_notification(
+    v_org, v_userA, v_actor,
+    'review_request', 'action_plan',
+    '99999999-2222-0000-0000-cccc00000014'::uuid,
+    'Title y', 'body y', current_date
+  );
+  perform public.claim_push_deliveries(100);
+
+  select pd.id into v_delivery_id from public.push_deliveries pd
+  join public.notifications n on n.id = pd.notification_id
+  where n.recipient_id = v_userA order by pd.created_at desc limit 1;
+
+  -- Set attempts=5 (dekat cap). Bump → attempts=6 → status='failed'.
+  update public.push_deliveries set attempts = 5 where id = v_delivery_id;
+  perform public.bump_push_delivery_backoff(v_delivery_id, 'transient err 6');
+
+  select attempts, status into v_attempts, v_status
+    from public.push_deliveries where id = v_delivery_id;
+  if v_attempts <> 6 then raise exception 'FAIL y: attempts = %, expected 6', v_attempts; end if;
+  if v_status <> 'failed' then raise exception 'FAIL y: status = %, expected failed', v_status; end if;
+
+  raise notice 'PASS y: bump attempts+1 >= 6 → status=failed final';
+end $$;
+rollback;

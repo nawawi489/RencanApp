@@ -63,8 +63,11 @@ create table if not exists public.push_deliveries (
 );
 
 -- Idempotency: satu baris notifikasi → maks satu push per token.
-create unique index if not exists uq_push_deliveries_once
-  on public.push_deliveries (notification_id, push_token_id);
+-- CONSTRAINT (bukan hanya INDEX) supaya bisa dipakai di ON CONFLICT ON CONSTRAINT — hindari
+-- shadowing kolom vs RETURNS TABLE OUT params di claim_push_deliveries.
+alter table public.push_deliveries
+  drop constraint if exists uq_push_deliveries_once,
+  add constraint uq_push_deliveries_once unique (notification_id, push_token_id);
 
 -- Drainer scan predikat utama: status='pending' + next_attempt_at <= now().
 create index if not exists idx_push_deliveries_pending_ready
@@ -259,3 +262,135 @@ grant execute on function public.is_push_worthy(text, uuid) to authenticated;
 
 comment on function public.is_push_worthy(text, uuid) is
   'Push-worthy filter. Org override via settings key notification_rule_push_types (jsonb array). Fail-closed ke whitelist Fase 1 terkode saat key absent/invalid.';
+
+-- ============================================================ claim_push_deliveries — atomic FOR UPDATE SKIP LOCKED
+-- Two-phase: (1) materialize baris push_deliveries baru untuk notifikasi yang belum di-fanout,
+-- (2) claim batch pending secara atomic dengan lease 5 menit (jaga-jaga drainer crash).
+-- Canonical drainer query — WAJIB match AC-FAN-6 kontrak.
+create or replace function public.claim_push_deliveries(p_limit int default 100)
+returns table(
+  delivery_id     uuid,
+  notification_id uuid,
+  push_token_id   uuid,
+  expo_token      text,
+  platform        text,
+  title           text,
+  body            text,
+  type            text,
+  entity_type     text,
+  entity_id       uuid,
+  attempts        int
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_claimed uuid[];
+begin
+  -- Step 1: materialize new deliveries for unhandled push-worthy notifications (dedupe via unique).
+  insert into public.push_deliveries (notification_id, push_token_id, status, attempts, next_attempt_at)
+  select n.id, pt.id, 'pending', 0, now()
+  from public.notifications n
+  join public.push_tokens pt
+    on pt.organization_id = n.organization_id
+   and pt.user_id = n.recipient_id
+   and pt.revoked_at is null
+  where n.is_read = false
+    and n.resolved_at is null
+    and n.created_at > now() - interval '1 hour'
+    and public.is_push_worthy(n.type, n.organization_id)
+  on conflict on constraint uq_push_deliveries_once do nothing;
+
+  -- Step 2: claim batch atomic. FOR UPDATE SKIP LOCKED cegah dua drainer klaim baris sama.
+  -- Lease 5 menit: kalau drainer crash pre-update, baris di-retry setelah 5 menit.
+  with locked as (
+    select pd.id
+    from public.push_deliveries pd
+    where pd.status = 'pending'
+      and pd.next_attempt_at <= now()
+      and pd.attempts < 6
+    order by pd.next_attempt_at
+    limit p_limit
+    for update skip locked
+  ),
+  leased as (
+    update public.push_deliveries pd
+      set next_attempt_at = now() + interval '5 minutes',
+          updated_at = now()
+      from locked
+      where pd.id = locked.id
+      returning pd.id
+  )
+  select array_agg(id) into v_claimed from leased;
+
+  if v_claimed is null then return; end if;
+
+  -- Step 3: return joined view. coalesce title/body = fail-closed defensive (FR-PN-22).
+  return query
+  select
+    pd.id,
+    pd.notification_id,
+    pd.push_token_id,
+    pt.expo_token,
+    pt.platform,
+    coalesce(n.title, 'Pembaruan baru')::text,
+    coalesce(n.body,  'Ada pembaruan yang perlu ditinjau.')::text,
+    n.type,
+    n.entity_type,
+    n.entity_id,
+    pd.attempts
+  from public.push_deliveries pd
+  join public.notifications n on n.id = pd.notification_id
+  join public.push_tokens   pt on pt.id = pd.push_token_id
+  where pd.id = any(v_claimed);
+end;
+$$;
+
+-- Hanya SERVICE_ROLE (postgres) yang execute — verify_jwt=false + secret key di Edge Function.
+revoke all on function public.claim_push_deliveries(int) from public, anon, authenticated;
+
+comment on function public.claim_push_deliveries(int) is
+  'Drainer atomic claim: materialize + FOR UPDATE SKIP LOCKED + 5-min lease. SERVICE_ROLE only.';
+
+-- ============================================================ bump_push_delivery_backoff — exponential backoff
+-- Formula owner decision: next = now() + interval ''1 min'' * pow(2, least(attempts_after, 6)).
+-- Max 6 attempts total; setelah bump ke-6 → status=''failed'' (tidak dipoll lagi).
+create or replace function public.bump_push_delivery_backoff(p_id uuid, p_error text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_attempts int;
+  v_next int;
+begin
+  select attempts into v_attempts
+  from public.push_deliveries where id = p_id;
+  if v_attempts is null then return; end if;
+
+  v_next := v_attempts + 1;
+
+  if v_next >= 6 then
+    update public.push_deliveries
+      set attempts = v_next,
+          status   = 'failed',
+          error    = p_error,
+          updated_at = now()
+      where id = p_id;
+  else
+    update public.push_deliveries
+      set attempts = v_next,
+          next_attempt_at = now() + (interval '1 minute' * pow(2, least(v_next, 6))::int),
+          error = p_error,
+          updated_at = now()
+      where id = p_id;
+  end if;
+end;
+$$;
+
+revoke all on function public.bump_push_delivery_backoff(uuid, text) from public, anon, authenticated;
+
+comment on function public.bump_push_delivery_backoff(uuid, text) is
+  'Exponential backoff (owner decision): attempts+1, next_at=now()+1min*pow(2,least(attempts,6)). Max 6 attempts → failed.';
