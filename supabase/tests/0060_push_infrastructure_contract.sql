@@ -563,3 +563,130 @@ begin
   raise notice 'PASS n: platform format validation';
 end $$;
 rollback;
+
+-- ============================================================ (o) is_push_worthy(p_type, p_org) signature + security
+do $$
+declare
+  v_args text; v_secdef boolean; v_stable char; v_path text;
+begin
+  select pg_get_function_identity_arguments(oid), prosecdef, provolatile,
+         coalesce(array_to_string(proconfig, ','), '')
+    into v_args, v_secdef, v_stable, v_path
+  from pg_proc where proname='is_push_worthy' and pronamespace='public'::regnamespace;
+  if v_args is null then raise exception 'FAIL o: is_push_worthy missing'; end if;
+  if v_args not ilike '%p_type text%' then
+    raise exception 'FAIL o: is_push_worthy args = %, expected (p_type text[, p_org uuid])', v_args;
+  end if;
+  if not v_secdef then raise exception 'FAIL o: is_push_worthy bukan SECURITY DEFINER'; end if;
+  if v_stable <> 's' then raise exception 'FAIL o: is_push_worthy volatilitas = %, expected STABLE (s)', v_stable; end if;
+  if v_path not ilike '%search_path=%' then
+    raise exception 'FAIL o: is_push_worthy tidak set search_path (proconfig=%)', v_path;
+  end if;
+  raise notice 'PASS o: is_push_worthy signature + STABLE + SECURITY DEFINER + search_path';
+end $$;
+
+-- ============================================================ (p) Fail-closed default (no settings key) — whitelist Fase 1
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000008';
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active)
+    values (v_userA, v_org, 'User-A p', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+  -- Bersihkan settings key kalau ada residu dari test lain.
+  delete from public.settings where organization_id = v_org and key = 'notification_rule_push_types';
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+
+  -- 6 tipe Fase 1 wajib TRUE.
+  if not public.is_push_worthy('review_request') then raise exception 'FAIL p: review_request seharusnya TRUE (fail-closed default)'; end if;
+  if not public.is_push_worthy('approved') then raise exception 'FAIL p: approved seharusnya TRUE'; end if;
+  if not public.is_push_worthy('rejected') then raise exception 'FAIL p: rejected seharusnya TRUE'; end if;
+  if not public.is_push_worthy('deadline_reminder') then raise exception 'FAIL p: deadline_reminder seharusnya TRUE'; end if;
+  if not public.is_push_worthy('repeat_due') then raise exception 'FAIL p: repeat_due seharusnya TRUE'; end if;
+  if not public.is_push_worthy('instance_missed') then raise exception 'FAIL p: instance_missed seharusnya TRUE'; end if;
+
+  -- Non-Fase-1 tipe wajib FALSE (fail-closed).
+  if public.is_push_worthy('comment') then raise exception 'FAIL p: comment seharusnya FALSE'; end if;
+  if public.is_push_worthy('mention') then raise exception 'FAIL p: mention seharusnya FALSE'; end if;
+  if public.is_push_worthy('governance_warning') then raise exception 'FAIL p: governance_warning seharusnya FALSE'; end if;
+  if public.is_push_worthy('deadline_change_requested') then raise exception 'FAIL p: deadline_change_requested seharusnya FALSE'; end if;
+  if public.is_push_worthy('deadline_change_revision_requested') then raise exception 'FAIL p: DCR-revision seharusnya FALSE (Fase 2 fitur)'; end if;
+  if public.is_push_worthy('unknown_random_type') then raise exception 'FAIL p: unknown type seharusnya FALSE'; end if;
+  if public.is_push_worthy('') then raise exception 'FAIL p: empty string seharusnya FALSE'; end if;
+
+  raise notice 'PASS p: fail-closed default whitelist (6 tipe Fase 1 TRUE, sisanya FALSE)';
+end $$;
+rollback;
+
+-- ============================================================ (q) Org override via settings key — hanya subset yang di-config yang TRUE
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+  v_userA uuid := '99999999-2222-0000-0000-aaaa00000009';
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  insert into public.profiles(id, organization_id, full_name, is_active)
+    values (v_userA, v_org, 'User-A q', true)
+    on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
+
+  -- Set org key ke SUBSET (hanya review_request).
+  insert into public.settings (organization_id, key, value, updated_at)
+    values (v_org, 'notification_rule_push_types', '["review_request"]'::jsonb, now())
+    on conflict (organization_id, key) do update set value = excluded.value, updated_at = now();
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_userA::text, 'role','authenticated')::text, true);
+
+  -- Hanya review_request TRUE; approved yang tadi TRUE di (p) sekarang FALSE karena org override subset.
+  if not public.is_push_worthy('review_request') then raise exception 'FAIL q: review_request seharusnya TRUE (in override list)'; end if;
+  if public.is_push_worthy('approved') then raise exception 'FAIL q: approved seharusnya FALSE (di luar override list)'; end if;
+  if public.is_push_worthy('deadline_reminder') then raise exception 'FAIL q: deadline_reminder seharusnya FALSE (di luar override list)'; end if;
+
+  raise notice 'PASS q: org override subset — hanya tipe di key yang TRUE';
+end $$;
+rollback;
+
+-- ============================================================ (r) Drainer context (p_org explicit) — SERVICE_ROLE tanpa auth.uid
+begin;
+do $$
+declare
+  v_org uuid := '99999999-2222-0000-0000-9999aa000060';
+begin
+  insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
+  -- Bersih dari residu.
+  delete from public.settings where organization_id = v_org and key = 'notification_rule_push_types';
+
+  -- Simulasi drainer: postgres role (bypass RLS), tanpa jwt.claims — auth.uid()=null.
+  -- p_org explicit dipakai untuk resolve whitelist.
+  if not public.is_push_worthy('review_request', v_org) then
+    raise exception 'FAIL r: review_request seharusnya TRUE via p_org explicit (default whitelist)';
+  end if;
+  if public.is_push_worthy('comment', v_org) then
+    raise exception 'FAIL r: comment seharusnya FALSE via p_org explicit';
+  end if;
+
+  -- Set org key ke daftar kustom, verifikasi p_org explicit pakai daftar kustom.
+  insert into public.settings (organization_id, key, value, updated_at)
+    values (v_org, 'notification_rule_push_types', '["comment"]'::jsonb, now())
+    on conflict (organization_id, key) do update set value = excluded.value, updated_at = now();
+
+  if public.is_push_worthy('review_request', v_org) then
+    raise exception 'FAIL r: review_request seharusnya FALSE karena override ["comment"]';
+  end if;
+  if not public.is_push_worthy('comment', v_org) then
+    raise exception 'FAIL r: comment seharusnya TRUE via p_org+override';
+  end if;
+
+  raise notice 'PASS r: drainer context (p_org explicit) + org override honored';
+end $$;
+rollback;

@@ -211,3 +211,51 @@ $$;
 
 revoke all on function public.unregister_push_token(text) from public, anon;
 grant execute on function public.unregister_push_token(text) to authenticated;
+
+-- ============================================================ is_push_worthy(p_type, p_org) — fail-closed
+-- Whitelist push-worthy ORTOGONAL terhadap notifications.type (spec FR-PN-12). Dua context caller:
+--   1. Client (authenticated): pass p_type saja → resolve org dari current_user_org().
+--   2. Drainer (SERVICE_ROLE, no auth.uid): pass (p_type, p_org) explicit.
+-- Kalau settings key 'notification_rule_push_types' belum diset admin → fail-closed ke whitelist Fase 1
+-- (6 tipe: review_request, approved, rejected, deadline_reminder, repeat_due, instance_missed).
+-- Query WAJIB filter (organization_id, key) — unique key adalah pasangan (0014).
+create or replace function public.is_push_worthy(p_type text, p_org uuid default null)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_org uuid := coalesce(p_org, public.current_user_org());
+  v_types jsonb;
+begin
+  if v_org is not null then
+    select value into v_types
+    from public.settings
+    where organization_id = v_org and key = 'notification_rule_push_types';
+
+    -- Kalau key ada DAN valid array — pakai override org.
+    if v_types is not null and jsonb_typeof(v_types) = 'array' then
+      return exists (select 1 from jsonb_array_elements_text(v_types) as t where t = p_type);
+    end if;
+  end if;
+
+  -- Fail-closed: whitelist Fase 1 terkode (revision_requested BUKAN NotificationType — copy
+  -- semantik "perlu revisi" di-cover oleh tipe 'rejected' + kolom resolution='revision_requested').
+  return p_type = any (array[
+    'review_request',
+    'approved',
+    'rejected',
+    'deadline_reminder',
+    'repeat_due',
+    'instance_missed'
+  ]);
+end;
+$$;
+
+revoke all on function public.is_push_worthy(text, uuid) from public, anon;
+grant execute on function public.is_push_worthy(text, uuid) to authenticated;
+
+comment on function public.is_push_worthy(text, uuid) is
+  'Push-worthy filter. Org override via settings key notification_rule_push_types (jsonb array). Fail-closed ke whitelist Fase 1 terkode saat key absent/invalid.';
