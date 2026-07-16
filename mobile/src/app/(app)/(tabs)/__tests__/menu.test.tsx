@@ -1,6 +1,6 @@
-// Tab Menu (MENU_UI_LOCK_SPEC_V1.82) — pusat akses sekunder. Menu kini layar mandiri (bukan
-// adapter ke /settings). Validasi perilaku publik: profile card, Akses Cepat (tepat 3 fitur),
-// accordion collapsed-by-default, Bantuan → toast, Admin Lanjutan permission-gated, logout "Keluar".
+// Tab Menu (PRD V1.83 §31) — pusat akses sekunder. Validasi perilaku publik: profile card,
+// Akses Cepat (People/Archive/Pusat Bantuan), Template conditional, Admin Lanjutan permission-gated
+// (Score Formula/MBR/Log Aktivitas pindah sini), logout "Keluar".
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -63,7 +63,7 @@ beforeEach(() => {
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
-describe('Menu V1.82 — profile card', () => {
+describe('Menu §31 — profile card', () => {
   it('menampilkan profile card; tap → people-profile diri sendiri', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Buka profil saya'));
@@ -71,12 +71,12 @@ describe('Menu V1.82 — profile card', () => {
   });
 });
 
-describe('Menu V1.82 — Akses Cepat', () => {
-  it('berisi tepat 3 fitur: People, Log Aktivitas, Archive', async () => {
+describe('Menu §31 — Akses Cepat', () => {
+  it('berisi tepat 3 fitur: People, Archive, Pusat Bantuan', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('People')).toBeTruthy();
-    expect(screen.getByLabelText('Log Aktivitas')).toBeTruthy();
     expect(screen.getByLabelText('Archive')).toBeTruthy();
+    expect(screen.getByLabelText('Pusat Bantuan')).toBeTruthy();
     expect(screen.getByText('3 fitur')).toBeTruthy();
   });
 
@@ -86,19 +86,29 @@ describe('Menu V1.82 — Akses Cepat', () => {
     expect(mockPush).toHaveBeenCalledWith('/people');
   });
 
-  it('tidak memuat Workspace, Home, People Ranking, atau Cari', async () => {
+  it('Pusat Bantuan → toast "Segera hadir", bukan navigasi', async () => {
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByLabelText('Pusat Bantuan'));
+    expect(Alert.alert).toHaveBeenCalledWith('Segera hadir', expect.any(String));
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('Log Aktivitas TIDAK ada di Akses Cepat (pindah ke Admin Lanjutan)', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     await screen.findByLabelText('People');
-    expect(screen.queryByText('Workspace')).toBeNull();
-    expect(screen.queryByText('Home')).toBeNull();
-    expect(screen.queryByText('People Ranking')).toBeNull();
-    expect(screen.queryByText('Cari')).toBeNull();
-    expect(screen.queryByLabelText('Cari')).toBeNull();
+    expect(screen.queryByLabelText('Log Aktivitas')).toBeNull();
   });
 });
 
-describe('Menu V1.82 — accordion collapsed by default', () => {
-  it('Template collapsed: item tersembunyi sampai header ditekan', async () => {
+describe('Menu §31 — Template conditional accordion', () => {
+  it('Template accordion TIDAK tampil tanpa manage_strategy_templates', async () => {
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    await screen.findByLabelText('People');
+    expect(screen.queryByLabelText('Template')).toBeNull();
+  });
+
+  it('Template accordion tampil + collapsed saat user punya manage_strategy_templates', async () => {
+    mockCan.mockImplementation((k: string) => k === 'manage_strategy_templates');
     await render(<MenuScreen />, { wrapper: wrapper() });
     await screen.findByLabelText('People');
     expect(screen.queryByText('Goal Template')).toBeNull();
@@ -106,7 +116,8 @@ describe('Menu V1.82 — accordion collapsed by default', () => {
     expect(await screen.findByText('Goal Template')).toBeTruthy();
   });
 
-  it('Goal Template (ungated) → push /settings-goal-templates', async () => {
+  it('Goal Template → push /settings-goal-templates', async () => {
+    mockCan.mockImplementation((k: string) => k === 'manage_strategy_templates');
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Template'));
     fireEvent.press(await screen.findByLabelText('Goal Template'));
@@ -114,34 +125,36 @@ describe('Menu V1.82 — accordion collapsed by default', () => {
   });
 });
 
-describe('Menu V1.82 — Bantuan', () => {
-  it('Pusat Bantuan → toast "Segera hadir", bukan navigasi', async () => {
+describe('Menu §31 — Bantuan', () => {
+  it('Support → toast "Segera hadir", bukan navigasi', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Bantuan'));
-    fireEvent.press(await screen.findByLabelText('Pusat Bantuan'));
+    fireEvent.press(await screen.findByLabelText('Support'));
     expect(Alert.alert).toHaveBeenCalledWith('Segera hadir', expect.any(String));
     expect(mockPush).not.toHaveBeenCalled();
   });
 });
 
-describe('Menu V1.82 — Pengaturan gating', () => {
-  it('tanpa manage_score_formula → Score Formula tampil sbg teks tapi non-pressable', async () => {
-    await render(<MenuScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByLabelText('Pengaturan'));
-    expect(await screen.findByText('Score Formula')).toBeTruthy();
-    expect(screen.queryByLabelText('Score Formula')).toBeNull();
-  });
-
-  it('dengan permission → Score Formula → push /settings-score-formula', async () => {
+describe('Menu §31 — Pengaturan', () => {
+  it('Score Formula TIDAK ada di Pengaturan (pindah ke Admin Lanjutan)', async () => {
     mockCan.mockReturnValue(true);
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Pengaturan'));
-    fireEvent.press(await screen.findByLabelText('Score Formula'));
-    expect(mockPush).toHaveBeenCalledWith('/settings-score-formula');
+    const items = await screen.findAllByText(/./);
+    const pengaturanLabels = items.map((el) => el.props?.children).filter(Boolean);
+    expect(pengaturanLabels).not.toContain('Score Formula');
+    expect(pengaturanLabels).not.toContain('Aturan Pecah Target');
+  });
+
+  it('Repeat Setting (ungated) → push /settings-repeat-rules', async () => {
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByLabelText('Pengaturan'));
+    fireEvent.press(await screen.findByLabelText('Repeat Setting'));
+    expect(mockPush).toHaveBeenCalledWith('/settings-repeat-rules');
   });
 });
 
-describe('Menu V1.82 — Admin Lanjutan (permission-based)', () => {
+describe('Menu §31 — Admin Lanjutan (permission-based)', () => {
   it('disembunyikan saat user tak punya permission admin apapun', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     await screen.findByLabelText('People');
@@ -155,9 +168,33 @@ describe('Menu V1.82 — Admin Lanjutan (permission-based)', () => {
     fireEvent.press(await screen.findByLabelText('Governance'));
     expect(mockPush).toHaveBeenCalledWith('/settings-governance-violation');
   });
+
+  it('Score Formula di Admin Lanjutan → push /settings-score-formula', async () => {
+    mockCan.mockImplementation((k: string) => k === 'manage_score_formula');
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByLabelText('Admin Lanjutan'));
+    fireEvent.press(await screen.findByLabelText('Score Formula'));
+    expect(mockPush).toHaveBeenCalledWith('/settings-score-formula');
+  });
+
+  it('Aturan Pecah Target di Admin Lanjutan → push /settings-mbr', async () => {
+    mockCan.mockImplementation((k: string) => k === 'manage_minimum_breakdown_rule');
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByLabelText('Admin Lanjutan'));
+    fireEvent.press(await screen.findByLabelText('Aturan Pecah Target'));
+    expect(mockPush).toHaveBeenCalledWith('/settings-mbr');
+  });
+
+  it('Log Aktivitas di Admin Lanjutan → push /settings-activity-log', async () => {
+    mockCan.mockImplementation((k: string) => k === 'view_activity_log');
+    await render(<MenuScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByLabelText('Admin Lanjutan'));
+    fireEvent.press(await screen.findByLabelText('Log Aktivitas'));
+    expect(mockPush).toHaveBeenCalledWith('/settings-activity-log');
+  });
 });
 
-describe('Menu V1.82 — header & logout', () => {
+describe('Menu §31 — header & logout', () => {
   it('gear TIDAK tampil untuk user tanpa create_department (hindari dead-end akses-ditolak)', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     await screen.findByLabelText('People');
@@ -187,7 +224,7 @@ describe('Menu V1.82 — header & logout', () => {
   });
 });
 
-describe('Menu V1.82 — Tampilan (ThemeSwitch pindah dari settings.tsx)', () => {
+describe('Menu §31 — Tampilan (ThemeSwitch)', () => {
   it('radiogroup Mode tampilan tampil; pilih "Gelap" → setMode("dark")', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Mode tampilan')).toBeTruthy();
