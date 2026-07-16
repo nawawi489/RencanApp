@@ -14,6 +14,10 @@ jest.setTimeout(30000);
 const mockUpdateUser = jest.fn();
 const mockSignOut = jest.fn();
 const mockReplace = jest.fn();
+const mockSession = { user: { id: 'u1', email: 'ceo@example.com' } } as {
+  user: { id: string; email: string };
+} | null;
+const mockUseAuth = jest.fn(() => ({ session: mockSession }));
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -26,6 +30,10 @@ jest.mock('@/lib/supabase', () => ({
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
+}));
+
+jest.mock('@/providers/auth-provider', () => ({
+  useAuth: () => mockUseAuth(),
 }));
 
 jest.mock('@/providers/theme-provider', () => ({
@@ -165,5 +173,30 @@ describe('ResetPasswordScreen', () => {
     ).toBeTruthy();
     expect(screen.queryByText('Failed to fetch')).toBeNull();
     expect(mockSignOut).not.toHaveBeenCalled();
+  });
+});
+
+describe('ResetPasswordScreen — login-CSRF mitigation (Group B)', () => {
+  it('[SEC-B-1] recovery email ditampilkan saat session tersedia', async () => {
+    await setup();
+    expect(screen.getByText('ceo@example.com')).toBeTruthy();
+    expect(screen.getByText(/Anda mengatur ulang kata sandi untuk/)).toBeTruthy();
+    expect(screen.getByText(/bukan akun Anda/)).toBeTruthy();
+  });
+
+  it('[SEC-B-2] email banner tidak muncul jika session null (edge case)', async () => {
+    mockUseAuth.mockReturnValueOnce({ session: null as typeof mockSession });
+    await setup();
+    expect(screen.queryByText('ceo@example.com')).toBeNull();
+    expect(screen.queryByText(/Anda mengatur ulang kata sandi untuk/)).toBeNull();
+  });
+
+  it('[SEC-B-3] "Kembali ke Masuk" memanggil signOut untuk menghapus sesi recovery asing', async () => {
+    mockSignOut.mockResolvedValueOnce({ error: null });
+    await setup();
+    const cancelBtn = screen.getByLabelText('Batal, kembali ke halaman masuk');
+    await press(cancelBtn);
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
   });
 });
