@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
@@ -111,7 +111,7 @@ export function LiveNewActionPlanScreen() {
     mutationFn: createActionPlan,
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['action_plans'] });
-      router.replace(`/action_plan/${created.id}` as Href);
+      router.replace(`/action-plan/${created.id}`);
     },
     onError: (e) => alertFriendlyError('Gagal', e, 'Terjadi kesalahan.'),
   });

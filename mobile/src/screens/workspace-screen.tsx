@@ -658,7 +658,7 @@ const StrategySubRow = memo(function StrategySubRow({
     [router, kpi.id],
   );
   const addInitiative = useCallback(
-    () => router.push(`/action-plan/new?strategyId=${kpi.id}` as Href),
+    () => router.push(`/initiative/new?strategyId=${kpi.id}`),
     [router, kpi.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -959,7 +959,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/action_plan/${item.id}` as Href),
+    () => router.push(`/action-plan/${item.id}`),
     [router, item.id],
   );
   const addPlan = useCallback(
