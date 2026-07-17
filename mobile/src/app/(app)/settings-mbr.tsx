@@ -6,17 +6,26 @@ import { Badge, SectionCard, SkeletonList } from '@/components/ui';
 import { useMbrRuleActions, useMbrRules } from '@/hooks/use-mbr';
 import { useProfile } from '@/hooks/use-profile';
 import {
-  CARD_TYPE_LABEL,
+  cardTypeLabel,
   ENFORCEMENT_MODES,
+  ENFORCEMENT_MODE_DESC,
   ENFORCEMENT_MODE_LABEL,
   ENFORCEMENT_MODE_TONE,
+  MBR_MIN_COUNT_MAX,
+  MBR_MIN_COUNT_MIN,
   type EnforcementMode,
   type MbrRule,
 } from '@/lib/settings-mbr';
 
-/** Aturan Goal → Strategi dikunci: konsisten dgn gerbang aktivasi Goal (≥1 Strategi) Fase 4. */
+/**
+ * Aturan Goal → Strategi dikunci: konsisten dgn gerbang aktivasi Goal (≥1 Strategi) Fase 4.
+ * Cocokkan juga alias legacy `kpi_area` dari seed DB 0011 (rename V1.8.3).
+ */
 function isLocked(rule: MbrRule): boolean {
-  return rule.parent_card_type === 'goal' && rule.child_card_type === 'strategy';
+  return (
+    rule.parent_card_type === 'goal' &&
+    (rule.child_card_type === 'strategy' || rule.child_card_type === 'kpi_area')
+  );
 }
 
 /**
@@ -66,12 +75,14 @@ function RuleCard({
   rule: MbrRule;
   onSet: (rule: MbrRule, minCount: number, mode: EnforcementMode) => void;
 }) {
-  const label = `${CARD_TYPE_LABEL[rule.parent_card_type]} → ${CARD_TYPE_LABEL[rule.child_card_type]}`;
+  const label = `${cardTypeLabel(rule.parent_card_type)} → ${cardTypeLabel(rule.child_card_type)}`;
   const locked = isLocked(rule);
+  const atMin = rule.min_count <= MBR_MIN_COUNT_MIN;
+  const atMax = rule.min_count >= MBR_MIN_COUNT_MAX;
 
   return (
     <SectionCard>
-      <View className="flex-row items-center justify-between gap-3">
+      <View className="flex-row items-start justify-between gap-3">
         <Text className="flex-1 text-base font-semibold text-black dark:text-white">{label}</Text>
         {locked ? (
           <Badge label="Terkunci" tone="neutral" />
@@ -91,6 +102,7 @@ function RuleCard({
         <>
           <View className="gap-2">
             <Text className="text-sm text-neutral-600 dark:text-neutral-300">Mode penegakan</Text>
+            {/* 2×2 grid — 4 mode dalam satu baris membuat teks wrapping tak konsisten (UX audit). */}
             <View className="flex-row flex-wrap gap-2">
               {ENFORCEMENT_MODES.map((m) => {
                 const active = m === rule.enforcement_mode;
@@ -100,7 +112,7 @@ function RuleCard({
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
                     accessibilityLabel={`Set ${ENFORCEMENT_MODE_LABEL[m]} untuk ${label}`}
-                    className={`min-h-[44px] justify-center rounded-xl border px-3 py-2 active:opacity-70 ${
+                    className={`min-h-[44px] w-[48%] items-center justify-center rounded-xl border px-3 py-2 active:opacity-70 ${
                       active
                         ? 'border-brand-dark bg-brand-dark'
                         : 'border-neutral-300 dark:border-neutral-700'
@@ -108,7 +120,7 @@ function RuleCard({
                     onPress={() => onSet(rule, rule.min_count, m)}
                   >
                     <Text
-                      className={`text-sm font-semibold ${
+                      className={`text-center text-sm font-semibold ${
                         active ? 'text-white' : 'text-black dark:text-white'
                       }`}
                     >
@@ -118,39 +130,55 @@ function RuleCard({
                 );
               })}
             </View>
+            {/* Helper text per mode — sebelumnya hanya `nonaktif` yg punya, sekarang keempatnya. */}
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+              {ENFORCEMENT_MODE_DESC[rule.enforcement_mode]}
+            </Text>
           </View>
 
           {rule.enforcement_mode !== 'nonaktif' ? (
-            <View className="flex-row items-center gap-3">
-              <Text className="flex-1 text-sm text-neutral-600 dark:text-neutral-300">
-                Minimum turunan
+            <View className="gap-1">
+              <View className="flex-row items-center gap-3">
+                <Text className="flex-1 text-sm text-neutral-600 dark:text-neutral-300">
+                  Minimum turunan
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Kurangi minimum ${label}`}
+                  accessibilityState={{ disabled: atMin }}
+                  className={`h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 dark:border-neutral-700 ${
+                    atMin ? 'opacity-40' : 'active:opacity-70'
+                  }`}
+                  disabled={atMin}
+                  onPress={() =>
+                    onSet(rule, Math.max(MBR_MIN_COUNT_MIN, rule.min_count - 1), rule.enforcement_mode)
+                  }
+                >
+                  <Text className="text-lg font-bold text-black dark:text-white">−</Text>
+                </Pressable>
+                <Text className="min-w-[24px] text-center text-base font-bold text-black dark:text-white">
+                  {rule.min_count}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Tambah minimum ${label}`}
+                  accessibilityState={{ disabled: atMax }}
+                  className={`h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 dark:border-neutral-700 ${
+                    atMax ? 'opacity-40' : 'active:opacity-70'
+                  }`}
+                  disabled={atMax}
+                  onPress={() =>
+                    onSet(rule, Math.min(MBR_MIN_COUNT_MAX, rule.min_count + 1), rule.enforcement_mode)
+                  }
+                >
+                  <Text className="text-lg font-bold text-black dark:text-white">+</Text>
+                </Pressable>
+              </View>
+              <Text className="text-xs text-neutral-400 dark:text-neutral-500">
+                Rentang {MBR_MIN_COUNT_MIN}–{MBR_MIN_COUNT_MAX}
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Kurangi minimum ${label}`}
-                className="h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
-                disabled={rule.min_count <= 1}
-                onPress={() => onSet(rule, Math.max(1, rule.min_count - 1), rule.enforcement_mode)}
-              >
-                <Text className="text-lg font-bold text-black dark:text-white">−</Text>
-              </Pressable>
-              <Text className="min-w-[24px] text-center text-base font-bold text-black dark:text-white">
-                {rule.min_count}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Tambah minimum ${label}`}
-                className="h-11 w-11 items-center justify-center rounded-xl border border-neutral-300 active:opacity-70 dark:border-neutral-700"
-                onPress={() => onSet(rule, rule.min_count + 1, rule.enforcement_mode)}
-              >
-                <Text className="text-lg font-bold text-black dark:text-white">+</Text>
-              </Pressable>
             </View>
-          ) : (
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Tombol buat turunan mengikuti permission biasa tanpa batasan minimum.
-            </Text>
-          )}
+          ) : null}
         </>
       )}
     </SectionCard>

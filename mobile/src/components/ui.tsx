@@ -847,13 +847,17 @@ export function TabBar<T extends string>({
   tabs,
   active,
   onChange,
+  showsScrollIndicator = false,
 }: {
   tabs: { key: T; label: string; badge?: number }[];
   active: T;
   onChange: (key: T) => void;
+  /** Tampilkan indikator scroll horizontal — pakai bila jumlah tab > yang muat di layar,
+   *  agar user tahu ada opsi tersembunyi (mis. Log Aktivitas dgn 7 filter). */
+  showsScrollIndicator?: boolean;
 }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={showsScrollIndicator}>
       <View className="flex-row gap-2 px-0.5 py-0.5">
         {tabs.map((t) => {
           const on = t.key === active;

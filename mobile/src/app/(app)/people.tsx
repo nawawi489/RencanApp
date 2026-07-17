@@ -42,6 +42,19 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
+function UnrankedPlaceholder({ roleLevel }: { roleLevel: string | null | undefined }) {
+  // Cause-aware copy: level di luar Staff belum masuk cakupan penilaian V1
+  // (D7 owner 2026-06-25 — formula Management/C-Level/CEO masih draft).
+  // Staff yang tak punya rank berarti belum sempat masuk hitungan periode itu.
+  const outOfScope = roleLevel != null && roleLevel !== 'staff';
+  const label = outOfScope ? 'Belum masuk cakupan penilaian' : 'Tidak dinilai periode ini';
+  return (
+    <View className="h-7 w-7 items-center justify-center" accessibilityLabel={label}>
+      <Text className="text-xs font-semibold text-neutral-300 dark:text-neutral-600">—</Text>
+    </View>
+  );
+}
+
 export function LivePeopleScreen() {
   const router = useRouter();
   const placeholderColor = usePlaceholderColor();
@@ -167,11 +180,24 @@ export function LivePeopleScreen() {
         />
       </View>
 
-      <View className="flex-row items-center justify-between">
-        <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
-          Anggota Organisasi
-        </Text>
-        <Text className="text-xs font-semibold text-neutral-400">{filtered.length}/{people.length} user</Text>
+      <View className="gap-1">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
+            Anggota Organisasi
+          </Text>
+          <Text className="text-xs font-semibold text-neutral-400">
+            {filtered.length}/{people.length} anggota
+          </Text>
+        </View>
+        {latestClosed == null ? (
+          <Text className="text-xs text-neutral-400">
+            Peringkat tampil setelah periode score ditutup.
+          </Text>
+        ) : latestClosed.period_name ? (
+          <Text className="text-xs text-neutral-400">
+            Peringkat periode {latestClosed.period_name}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -184,18 +210,27 @@ export function LivePeopleScreen() {
         accessibilityRole="button"
         accessibilityLabel={`Buka profil ${personLabel(p)}`}
         onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
-        {rank != null ? <RankBadge rank={rank} /> : <View className="w-7" />}
+        {rank != null ? (
+          <RankBadge rank={rank} />
+        ) : latestClosed != null ? (
+          <UnrankedPlaceholder roleLevel={p.role_level} />
+        ) : (
+          <View className="w-7" />
+        )}
         <Avatar name={personLabel(p)} seed={p.id} />
         <View className="flex-1">
           <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
             {personLabel(p)}
           </Text>
-          <Text className="text-xs text-neutral-400" numberOfLines={1}>
+          <Text className="text-xs text-neutral-400" numberOfLines={2}>
             {personSubhead(p)}
           </Text>
         </View>
-        <Text className="text-xs font-semibold text-brand dark:text-brand-light">
-          Lihat Profil
+        <Text
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          className="text-xl text-neutral-400">
+          ›
         </Text>
       </Pressable>
     );

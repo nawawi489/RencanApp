@@ -12,7 +12,9 @@ export type CardType =
   | 'action_plan'
   | 'task'
   | 'development_area'
-  | 'problem_statement';
+  | 'problem_statement'
+  // Alias legacy dari seed DB 0011: `kpi_area` = level Strategi (rename V1.8.3, DESIGN.md §2).
+  | 'kpi_area';
 
 /** 4 mode enforcement kanonik (§34.4). Tone & gating UI bergantung mode. */
 export type EnforcementMode =
@@ -52,6 +54,20 @@ export const ENFORCEMENT_MODE_LABEL: Record<EnforcementMode, string> = {
   blokir_akses_turunan: 'Blokir Akses Turunan',
 };
 
+/**
+ * Helper text per mode — muncul di kartu Settings agar user paham dampak setiap pilihan.
+ * Copy pendek, verb-first, jelaskan APA yang terjadi ke pengguna kartu (bukan istilah teknis).
+ */
+export const ENFORCEMENT_MODE_DESC: Record<EnforcementMode, string> = {
+  nonaktif: 'Tombol buat turunan mengikuti permission biasa tanpa batasan minimum.',
+  hanya_peringatan:
+    'Kartu induk boleh aktif walau turunan kurang; tampil peringatan "Belum lengkap".',
+  blokir_aktivasi:
+    'Kartu induk tidak bisa diaktifkan sebelum jumlah minimum turunan terpenuhi.',
+  blokir_akses_turunan:
+    'Selain memblokir aktivasi, kartu induk juga terkunci: turunan tak bisa diedit sampai minimum terpenuhi.',
+};
+
 /** Label jenis kartu untuk tampilan Settings ("Parent → Child"). */
 export const CARD_TYPE_LABEL: Record<CardType, string> = {
   goal: 'Goal',
@@ -61,7 +77,27 @@ export const CARD_TYPE_LABEL: Record<CardType, string> = {
   task: 'Tugas',
   development_area: 'Development Area',
   problem_statement: 'Problem Statement',
+  // Legacy DB value; UI menampilkan sebagai "Strategi" (rename V1.8.3).
+  kpi_area: 'Strategi',
 };
+
+/**
+ * Label aman untuk jenis kartu apapun — jika enum belum dimapping (mis. tipe baru dari DB),
+ * fallback ke Title Case dari raw string agar tidak pernah tampil "undefined".
+ */
+export function cardTypeLabel(type: string | null | undefined): string {
+  if (!type) return '—';
+  const mapped = (CARD_TYPE_LABEL as Record<string, string>)[type];
+  if (mapped) return mapped;
+  return type
+    .split('_')
+    .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ');
+}
+
+/** Batas atas minimum turunan yang bisa di-set via stepper Settings (guardrail UX). */
+export const MBR_MIN_COUNT_MIN = 1;
+export const MBR_MIN_COUNT_MAX = 20;
 
 /** 4 mode urut untuk picker Settings (§34.4). */
 export const ENFORCEMENT_MODES: EnforcementMode[] = [
