@@ -1,26 +1,54 @@
 // Hooks Fase 8 — Activity Log & Governance Violation pages (read-only).
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import {
+  ACTIVITY_LOG_PAGE_SIZE,
   listActivityLog,
   listEntityActivityLog,
   listGovernanceViolations,
   type ActivityLog,
+  type ActivityLogChipKey,
   type GovernanceViolation,
 } from '@/lib/activity-governance';
 
-export function useActivityLog(opts?: { action?: string; page?: number }) {
-  const page = opts?.page ?? 0;
-  const q = useQuery({
-    queryKey: ['activity_log', 'page', page, opts?.action ?? null],
-    queryFn: () => listActivityLog({ action: opts?.action, page }),
+/**
+ * Infinite-scroll Activity Log hook (UI-S-AL1).
+ *
+ * Halaman berukuran `ACTIVITY_LOG_PAGE_SIZE` (30). Filter chip & search di-push ke
+ * server via `listActivityLog` — hasil filter TIDAK terbatas pada halaman yang
+ * sudah dimuat.
+ *
+ * `getNextPageParam` mengembalikan `undefined` bila halaman terakhir < PAGE_SIZE
+ * (heuristik akhir data — offset paging tanpa count query).
+ *
+ * `placeholderData: keepPreviousData` menahan data lama saat filter berubah
+ * agar list tidak flicker ke skeleton.
+ */
+export function useActivityLog(opts?: { q?: string; chip?: ActivityLogChipKey }) {
+  const chip = opts?.chip ?? 'semua';
+  const q = opts?.q ?? '';
+  const query = useInfiniteQuery({
+    queryKey: ['activity_log', 'inf', chip, q],
+    initialPageParam: 0,
+    queryFn: ({ pageParam = 0 }) =>
+      listActivityLog({ chip, q, page: pageParam as number, limit: ACTIVITY_LOG_PAGE_SIZE }),
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < ACTIVITY_LOG_PAGE_SIZE ? undefined : allPages.length,
+    placeholderData: keepPreviousData,
   });
-  // Read-only: TIDAK mengekspos mutation apapun (append-only di DB).
+  const logs = useMemo(
+    () => (query.data?.pages ?? []).flat() as ActivityLog[],
+    [query.data],
+  );
   return {
-    logs: (q.data ?? []) as ActivityLog[],
-    isLoading: q.isLoading,
-    isError: q.isError,
-    refetch: q.refetch,
+    logs,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    hasNextPage: !!query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    fetchNextPage: query.fetchNextPage,
+    refetch: query.refetch,
   };
 }
 

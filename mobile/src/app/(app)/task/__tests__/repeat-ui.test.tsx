@@ -164,8 +164,9 @@ describe('[id].tsx — detail repeat', () => {
     mockGetTask.mockResolvedValue(REPEAT_AP);
     mockListInstances.mockResolvedValue([makeInstance({ status: 'done' })]);
     await wrap(<TaskDetailScreen />);
-    const metric = await screen.findByTestId('compliance-metric');
-    expect(metric).toHaveTextContent('On-time: 28/30 (93%)');
+    await waitFor(() => {
+      expect(screen.getByTestId('compliance-metric')).toHaveTextContent('On-time: 28/30 (93%)');
+    });
   });
 
   it('[7] compliance menampilkan "—" bukan "0%" saat expected_count = 0', async () => {

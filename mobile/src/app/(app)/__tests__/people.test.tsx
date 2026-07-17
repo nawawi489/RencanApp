@@ -74,7 +74,7 @@ describe('PeopleScreen — 4 state fondasi', () => {
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina Jaya')).toBeTruthy();
     expect(screen.getByLabelText('Arman Malik')).toBeTruthy();
-    expect(screen.getByText('2/2 user')).toBeTruthy();
+    expect(screen.getByText('2/2 anggota')).toBeTruthy();
   });
 
   it('kosong → EmptyState', async () => {
@@ -172,23 +172,126 @@ describe('PeopleScreen — §32 rank + Lihat Profil', () => {
     expect(screen.getByLabelText('Peringkat 2')).toBeTruthy();
   });
 
-  it('no rank badge when no closed period', async () => {
+  it('no rank badge when no closed period; keterangan tampil', async () => {
     mockListOrgProfiles.mockResolvedValue([
       { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
     ]);
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina')).toBeTruthy();
     expect(screen.queryByLabelText(/Peringkat/)).toBeNull();
+    expect(screen.getByText('Peringkat tampil setelah periode score ditutup.')).toBeTruthy();
   });
 
-  it('"Lihat Profil" label on each row', async () => {
+  it('keterangan HILANG saat sudah ada periode closed', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Q1', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(
+      screen.queryByText('Peringkat tampil setelah periode score ditutup.')
+    ).toBeNull();
+  });
+
+  it('Staff tanpa rank di periode closed → placeholder "Tidak dinilai periode ini"', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id', role_level: 'staff' },
+      // Bayu = Staff yang belum sempat masuk hitungan (mis. data belum lengkap).
+      { id: 'u2', full_name: 'Bayu', email: 'b@n.id', role_level: 'staff' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Juni 2026', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Bayu')).toBeTruthy();
+    expect(screen.getByLabelText('Tidak dinilai periode ini')).toBeTruthy();
+  });
+
+  it('non-Staff (mis. C-Level) unranked → placeholder "Belum masuk cakupan penilaian"', async () => {
+    // Formula level atas belum diaktifkan V1 (D7 owner 2026-06-25). Copy harus
+    // membedakan "belum di-scope" (level di luar Staff) dari "tidak dinilai
+    // periode ini" (Staff yang belum sempat masuk hitungan periode itu).
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id', role_level: 'staff' },
+      { id: 'u2', full_name: 'Citra', email: 'c@n.id', role_level: 'ceo' },
+      { id: 'u3', full_name: 'Bayu', email: 'b@n.id', role_level: 'c_level' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Juni 2026', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Citra')).toBeTruthy();
+    // Dua non-Staff (Citra, Bayu) → dua placeholder "belum masuk cakupan".
+    expect(screen.getAllByLabelText('Belum masuk cakupan penilaian')).toHaveLength(2);
+    // Staff Rina sudah ada di ranking → tidak ada "Tidak dinilai periode ini".
+    expect(screen.queryByLabelText('Tidak dinilai periode ini')).toBeNull();
+  });
+
+  it('tanpa periode closed → placeholder "Tidak dinilai …" TIDAK muncul', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+    ]);
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(screen.queryByLabelText('Tidak dinilai periode ini')).toBeNull();
+  });
+
+  it('caption periode aktual tampil saat ada periode closed', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Juni 2026', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(screen.getByText('Peringkat periode Juni 2026')).toBeTruthy();
+  });
+
+  it('setiap baris dapat dibuka via label "Buka profil …"', async () => {
     mockListOrgProfiles.mockResolvedValue([
       { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
       { id: 'u2', full_name: 'Arman', email: 'a@n.id' },
     ]);
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina')).toBeTruthy();
-    expect(screen.getAllByText('Lihat Profil')).toHaveLength(2);
+    expect(screen.getByLabelText('Buka profil Rina')).toBeTruthy();
+    expect(screen.getByLabelText('Buka profil Arman')).toBeTruthy();
   });
 });
 
