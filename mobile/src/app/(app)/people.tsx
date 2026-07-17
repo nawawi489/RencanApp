@@ -42,11 +42,14 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function UnrankedPlaceholder() {
+function UnrankedPlaceholder({ roleLevel }: { roleLevel: string | null | undefined }) {
+  // Cause-aware copy: level di luar Staff belum masuk cakupan penilaian V1
+  // (D7 owner 2026-06-25 — formula Management/C-Level/CEO masih draft).
+  // Staff yang tak punya rank berarti belum sempat masuk hitungan periode itu.
+  const outOfScope = roleLevel != null && roleLevel !== 'staff';
+  const label = outOfScope ? 'Belum masuk cakupan penilaian' : 'Tidak dinilai periode ini';
   return (
-    <View
-      className="h-7 w-7 items-center justify-center"
-      accessibilityLabel="Tidak dinilai periode ini">
+    <View className="h-7 w-7 items-center justify-center" accessibilityLabel={label}>
       <Text className="text-xs font-semibold text-neutral-300 dark:text-neutral-600">—</Text>
     </View>
   );
@@ -210,7 +213,7 @@ export function LivePeopleScreen() {
         {rank != null ? (
           <RankBadge rank={rank} />
         ) : latestClosed != null ? (
-          <UnrankedPlaceholder />
+          <UnrankedPlaceholder roleLevel={p.role_level} />
         ) : (
           <View className="w-7" />
         )}

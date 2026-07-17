@@ -204,10 +204,11 @@ describe('PeopleScreen — §32 rank + Lihat Profil', () => {
     ).toBeNull();
   });
 
-  it('user tanpa rank di periode closed → placeholder "Tidak dinilai periode ini"', async () => {
+  it('Staff tanpa rank di periode closed → placeholder "Tidak dinilai periode ini"', async () => {
     mockListOrgProfiles.mockResolvedValue([
-      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
-      { id: 'u2', full_name: 'Bayu', email: 'b@n.id' },
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id', role_level: 'staff' },
+      // Bayu = Staff yang belum sempat masuk hitungan (mis. data belum lengkap).
+      { id: 'u2', full_name: 'Bayu', email: 'b@n.id', role_level: 'staff' },
     ]);
     mockUseLatestClosedPeriod.mockReturnValue({
       period: { id: 'p-closed', period_name: 'Juni 2026', status: 'closed' },
@@ -215,7 +216,6 @@ describe('PeopleScreen — §32 rank + Lihat Profil', () => {
       isError: false,
     });
     mockUseRanking.mockReturnValue({
-      // Hanya Rina yang punya score; Bayu (mis. C-Level) dikecualikan periode ini.
       ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
       isLoading: false,
       isError: false,
@@ -224,6 +224,34 @@ describe('PeopleScreen — §32 rank + Lihat Profil', () => {
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Bayu')).toBeTruthy();
     expect(screen.getByLabelText('Tidak dinilai periode ini')).toBeTruthy();
+  });
+
+  it('non-Staff (mis. C-Level) unranked → placeholder "Belum masuk cakupan penilaian"', async () => {
+    // Formula level atas belum diaktifkan V1 (D7 owner 2026-06-25). Copy harus
+    // membedakan "belum di-scope" (level di luar Staff) dari "tidak dinilai
+    // periode ini" (Staff yang belum sempat masuk hitungan periode itu).
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id', role_level: 'staff' },
+      { id: 'u2', full_name: 'Citra', email: 'c@n.id', role_level: 'ceo' },
+      { id: 'u3', full_name: 'Bayu', email: 'b@n.id', role_level: 'c_level' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Juni 2026', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Citra')).toBeTruthy();
+    // Dua non-Staff (Citra, Bayu) → dua placeholder "belum masuk cakupan".
+    expect(screen.getAllByLabelText('Belum masuk cakupan penilaian')).toHaveLength(2);
+    // Staff Rina sudah ada di ranking → tidak ada "Tidak dinilai periode ini".
+    expect(screen.queryByLabelText('Tidak dinilai periode ini')).toBeNull();
   });
 
   it('tanpa periode closed → placeholder "Tidak dinilai …" TIDAK muncul', async () => {
