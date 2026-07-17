@@ -56,7 +56,7 @@ function formatTime(iso: string): string {
 function GovernanceBanner({ onClose }: { onClose: () => void }) {
   return (
     <View
-      className="mb-2 flex-row items-start gap-2 rounded-2xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/40"
+      className="mb-2 flex-row items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/40"
       accessible
       accessibilityLabel={GOVERNANCE_BANNER}>
       <Text className="text-base">ℹ</Text>
@@ -65,8 +65,8 @@ function GovernanceBanner({ onClose }: { onClose: () => void }) {
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="Tutup banner"
-        hitSlop={8}>
-        <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Tutup</Text>
+        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="close" size={18} color="#1d4ed8" />
       </Pressable>
     </View>
   );
@@ -288,7 +288,7 @@ function MessageBubble({
             ))}
           </View>
         ) : null}
-        <Text className={`mt-1 text-[10px] ${isMe ? 'text-white/80' : 'text-neutral-400'}`}>
+        <Text className={`mt-1 text-[10px] ${isMe ? 'text-white' : 'text-neutral-500 dark:text-neutral-400'}`}>
           {formatTime(m.created_at)}
         </Text>
       </View>
@@ -378,7 +378,7 @@ function RoomHeaderActions({
           accessibilityRole="button"
           accessibilityLabel="Rencana Aksi"
           style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="open-outline" size={22} color={brandIcon} />
+          <Ionicons name="clipboard-outline" size={22} color={brandIcon} />
         </Pressable>
       ) : null}
     </View>
@@ -399,18 +399,20 @@ function formatReadAt(iso: string): string {
 
 /** "Dilihat oleh N" di bawah bubble me terakhir yang punya pembaca lain. Tap → ReadsModal. */
 function SeenByPill({ count, onOpen }: { count: number; onOpen: () => void }) {
-  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
+  const brandIcon = useThemedIcon('#1564b3', '#93c5fd');
   return (
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
       accessibilityLabel={`Dilihat oleh ${count} orang`}
+      accessibilityHint="Ketuk untuk melihat daftar pembaca"
       style={{ minHeight: 44 }}
       className="mt-0.5 flex-row items-center justify-end gap-1 self-end active:opacity-70">
-      <Ionicons name="checkmark-done" size={12} color={mutedIcon} />
-      <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">
+      <Ionicons name="checkmark-done" size={14} color={brandIcon} />
+      <Text className="text-[11px] font-medium text-brand-dark dark:text-blue-300">
         Dilihat oleh {count}
       </Text>
+      <Ionicons name="chevron-forward" size={12} color={brandIcon} />
     </Pressable>
   );
 }
@@ -925,7 +927,7 @@ export default function ChatRoomScreen() {
           <ScrollView
             ref={scrollRef}
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 20, gap: 0 }}
+            contentContainerStyle={{ padding: 20, gap: 0, flexGrow: 1, justifyContent: 'flex-end' }}
             onContentSizeChange={() => {
               if (stickToEnd.current) {
                 stickToEnd.current = false;
@@ -988,7 +990,7 @@ export default function ChatRoomScreen() {
                 </Text>
               </View>
             ) : null}
-            <View className="flex-row items-end gap-2">
+            <View className="flex-row items-center gap-2">
               <ChatAttachButton disabled={isSending} onPress={handleAttach} />
               <TextInput
                 className="max-h-32 flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
