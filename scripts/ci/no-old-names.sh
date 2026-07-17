@@ -80,6 +80,9 @@ EXCLUDES=(
   # 0059 comments document the pre-rename table name `kpi_area_templates`
   # (renamed to `strategy_templates` in 0045) for historical context.
   'supabase/migrations/0059_'
+  # 0061_fix_strategy_current_values comments reference the original view name
+  # `kpi_area_current_values` to explain the security_invoker regression from 0045.
+  'supabase/migrations/0061_fix_strategy_current_values'
   # Historical SQL contract tests (fase-N_*_contract.sql, 00NN_*_contract.sql).
   # These document DDL against the schema of their time and are not rewritten.
   'supabase/tests/'
