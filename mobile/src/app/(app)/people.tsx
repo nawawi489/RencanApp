@@ -167,11 +167,20 @@ export function LivePeopleScreen() {
         />
       </View>
 
-      <View className="flex-row items-center justify-between">
-        <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
-          Anggota Organisasi
-        </Text>
-        <Text className="text-xs font-semibold text-neutral-400">{filtered.length}/{people.length} user</Text>
+      <View className="gap-1">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
+            Anggota Organisasi
+          </Text>
+          <Text className="text-xs font-semibold text-neutral-400">
+            {filtered.length}/{people.length} anggota
+          </Text>
+        </View>
+        {latestClosed == null ? (
+          <Text className="text-xs text-neutral-400">
+            Peringkat tampil setelah periode score ditutup.
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -190,12 +199,15 @@ export function LivePeopleScreen() {
           <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
             {personLabel(p)}
           </Text>
-          <Text className="text-xs text-neutral-400" numberOfLines={1}>
+          <Text className="text-xs text-neutral-400" numberOfLines={2}>
             {personSubhead(p)}
           </Text>
         </View>
-        <Text className="text-xs font-semibold text-brand dark:text-brand-light">
-          Lihat Profil
+        <Text
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          className="text-xl text-neutral-400">
+          ›
         </Text>
       </Pressable>
     );

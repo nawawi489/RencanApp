@@ -74,7 +74,7 @@ describe('PeopleScreen — 4 state fondasi', () => {
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina Jaya')).toBeTruthy();
     expect(screen.getByLabelText('Arman Malik')).toBeTruthy();
-    expect(screen.getByText('2/2 user')).toBeTruthy();
+    expect(screen.getByText('2/2 anggota')).toBeTruthy();
   });
 
   it('kosong → EmptyState', async () => {
@@ -172,23 +172,47 @@ describe('PeopleScreen — §32 rank + Lihat Profil', () => {
     expect(screen.getByLabelText('Peringkat 2')).toBeTruthy();
   });
 
-  it('no rank badge when no closed period', async () => {
+  it('no rank badge when no closed period; keterangan tampil', async () => {
     mockListOrgProfiles.mockResolvedValue([
       { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
     ]);
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina')).toBeTruthy();
     expect(screen.queryByLabelText(/Peringkat/)).toBeNull();
+    expect(screen.getByText('Peringkat tampil setelah periode score ditutup.')).toBeTruthy();
   });
 
-  it('"Lihat Profil" label on each row', async () => {
+  it('keterangan HILANG saat sudah ada periode closed', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Q1', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(
+      screen.queryByText('Peringkat tampil setelah periode score ditutup.')
+    ).toBeNull();
+  });
+
+  it('setiap baris dapat dibuka via label "Buka profil …"', async () => {
     mockListOrgProfiles.mockResolvedValue([
       { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
       { id: 'u2', full_name: 'Arman', email: 'a@n.id' },
     ]);
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina')).toBeTruthy();
-    expect(screen.getAllByText('Lihat Profil')).toHaveLength(2);
+    expect(screen.getByLabelText('Buka profil Rina')).toBeTruthy();
+    expect(screen.getByLabelText('Buka profil Arman')).toBeTruthy();
   });
 });
 

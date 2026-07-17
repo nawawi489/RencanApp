@@ -24,14 +24,17 @@ export type PeopleTabsProps = {
 };
 
 export function PeopleTabs({ activeTab, onChange, canAdmin }: PeopleTabsProps) {
-  const tabs: Array<{ key: PeopleTabKey; label: string }> = [
+  // Segmented control HANYA untuk filter waktu (Bulan ini / Quarter). Admin
+  // dipisah sebagai tombol tersendiri di kanan agar tidak dibaca sebagai opsi
+  // filter yang saling meng-eksklusifkan.
+  const timeTabs: Array<{ key: PeopleTabKey; label: string }> = [
     { key: 'monthly', label: PEOPLE_TAB_COPY.monthly },
     { key: 'quarterly', label: PEOPLE_TAB_COPY.quarterly },
-    ...(canAdmin ? [{ key: 'admin' as const, label: PEOPLE_TAB_COPY.admin }] : []),
   ];
+  const adminSelected = activeTab === 'admin';
   return (
-    <View className="flex-row gap-2 pb-3">
-      {tabs.map((t) => {
+    <View className="flex-row items-center gap-2 pb-3">
+      {timeTabs.map((t) => {
         const selected = activeTab === t.key;
         return (
           <Pressable
@@ -56,6 +59,28 @@ export function PeopleTabs({ activeTab, onChange, canAdmin }: PeopleTabsProps) {
           </Pressable>
         );
       })}
+      {canAdmin ? (
+        <Pressable
+          key="admin"
+          accessibilityRole="button"
+          accessibilityLabel={PEOPLE_TAB_COPY.admin}
+          accessibilityState={{ selected: adminSelected }}
+          onPress={() => onChange('admin')}
+          className={
+            'min-h-[44px] min-w-[44px] flex-row items-center justify-center rounded-xl border px-3 py-2 ' +
+            (adminSelected
+              ? 'border-brand-dark bg-brand-dark'
+              : 'border-neutral-300 bg-white dark:border-neutral-700 dark:bg-black')
+          }>
+          <Text
+            className={
+              'text-sm font-semibold ' +
+              (adminSelected ? 'text-white' : 'text-brand-dark dark:text-brand-light')
+            }>
+            ⚙ {PEOPLE_TAB_COPY.admin}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
