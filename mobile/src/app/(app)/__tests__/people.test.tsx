@@ -204,6 +204,57 @@ describe('PeopleScreen — §32 rank + Lihat Profil', () => {
     ).toBeNull();
   });
 
+  it('user tanpa rank di periode closed → placeholder "Tidak dinilai periode ini"', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+      { id: 'u2', full_name: 'Bayu', email: 'b@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Juni 2026', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      // Hanya Rina yang punya score; Bayu (mis. C-Level) dikecualikan periode ini.
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Bayu')).toBeTruthy();
+    expect(screen.getByLabelText('Tidak dinilai periode ini')).toBeTruthy();
+  });
+
+  it('tanpa periode closed → placeholder "Tidak dinilai …" TIDAK muncul', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+    ]);
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(screen.queryByLabelText('Tidak dinilai periode ini')).toBeNull();
+  });
+
+  it('caption periode aktual tampil saat ada periode closed', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Juni 2026', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u1', rank_number: 1, score: 88 }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(screen.getByText('Peringkat periode Juni 2026')).toBeTruthy();
+  });
+
   it('setiap baris dapat dibuka via label "Buka profil …"', async () => {
     mockListOrgProfiles.mockResolvedValue([
       { id: 'u1', full_name: 'Rina', email: 'r@n.id' },

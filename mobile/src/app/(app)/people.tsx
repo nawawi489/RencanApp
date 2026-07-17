@@ -42,6 +42,16 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
+function UnrankedPlaceholder() {
+  return (
+    <View
+      className="h-7 w-7 items-center justify-center"
+      accessibilityLabel="Tidak dinilai periode ini">
+      <Text className="text-xs font-semibold text-neutral-300 dark:text-neutral-600">—</Text>
+    </View>
+  );
+}
+
 export function LivePeopleScreen() {
   const router = useRouter();
   const placeholderColor = usePlaceholderColor();
@@ -180,6 +190,10 @@ export function LivePeopleScreen() {
           <Text className="text-xs text-neutral-400">
             Peringkat tampil setelah periode score ditutup.
           </Text>
+        ) : latestClosed.period_name ? (
+          <Text className="text-xs text-neutral-400">
+            Peringkat periode {latestClosed.period_name}
+          </Text>
         ) : null}
       </View>
     </View>
@@ -193,7 +207,13 @@ export function LivePeopleScreen() {
         accessibilityRole="button"
         accessibilityLabel={`Buka profil ${personLabel(p)}`}
         onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
-        {rank != null ? <RankBadge rank={rank} /> : <View className="w-7" />}
+        {rank != null ? (
+          <RankBadge rank={rank} />
+        ) : latestClosed != null ? (
+          <UnrankedPlaceholder />
+        ) : (
+          <View className="w-7" />
+        )}
         <Avatar name={personLabel(p)} seed={p.id} />
         <View className="flex-1">
           <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
