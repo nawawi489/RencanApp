@@ -145,7 +145,7 @@ describe('evaluation', () => {
   it('[22] recordEvaluation meneruskan 9 params return uuid', async () => {
     mockRpc.mockResolvedValue({ data: 'e1', error: null });
     const id = await recordEvaluation({
-      initiativeId: 'i1',
+      actionPlanId: 'i1',
       targetAchieved: 'sebagian',
       results: 'hasil',
       successFactors: ['a'],
@@ -156,7 +156,7 @@ describe('evaluation', () => {
       rolloutNotes: 'n',
     });
     expect(mockRpc).toHaveBeenCalledWith('record_evaluation', {
-      p_initiative_id: 'i1',
+      p_action_plan_id: 'i1',
       p_target_achieved: 'sebagian',
       p_results: 'hasil',
       p_success_factors: ['a'],
@@ -171,17 +171,17 @@ describe('evaluation', () => {
 
   it('[23] recordEvaluation propagasi error anti-self', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'PIC tidak dapat mengevaluasi' } });
-    await expect(recordEvaluation({ initiativeId: 'i1' })).rejects.toEqual({
+    await expect(recordEvaluation({ actionPlanId: 'i1' })).rejects.toEqual({
       message: 'PIC tidak dapat mengevaluasi',
     });
   });
 
-  it('[23b] getEvaluation query evaluations eq initiative_id maybeSingle', async () => {
+  it('[23b] getEvaluation query evaluations eq action_plan_id maybeSingle', async () => {
     const { builder, calls } = makeSingleBuilder({ data: { id: 'e1' }, error: null });
     mockFrom.mockReturnValue(builder);
     const ev = await getEvaluation('i1');
     expect(mockFrom).toHaveBeenCalledWith('evaluations');
-    expect(someCall(calls, 'eq', (a) => a[0] === 'initiative_id' && a[1] === 'i1')).toBe(true);
+    expect(someCall(calls, 'eq', (a) => a[0] === 'action_plan_id' && a[1] === 'i1')).toBe(true);
     expect(builder.maybeSingle).toHaveBeenCalled();
     expect(ev).toEqual({ id: 'e1' });
   });
@@ -190,8 +190,8 @@ describe('evaluation', () => {
 describe('archive + search + settings', () => {
   it('[24] archiveCard memanggil rpc archive_card', async () => {
     mockRpc.mockResolvedValue({ data: null, error: null });
-    await archiveCard('action_plan', 'ap1');
-    expect(mockRpc).toHaveBeenCalledWith('archive_card', { p_entity_type: 'action_plan', p_entity_id: 'ap1' });
+    await archiveCard('task', 'ap1');
+    expect(mockRpc).toHaveBeenCalledWith('archive_card', { p_entity_type: 'task', p_entity_id: 'ap1' });
   });
 
   it('[31] searchCards memanggil rpc search_cards return array', async () => {

@@ -1,5 +1,5 @@
 // UI Fase 5 — layar Settings Minimum Breakdown Rule. Gated permission manage_minimum_breakdown_rule.
-// Daftar rule (label "Parent → Child"), edit mode + min_count via setRule; goal→kpi_area terkunci.
+// Daftar rule (label "Parent → Child"), edit mode + min_count via setRule; goal→strategy terkunci.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -43,7 +43,7 @@ const RULES = [
     id: 'sys-goal',
     organization_id: null,
     parent_card_type: 'goal',
-    child_card_type: 'kpi_area',
+    child_card_type: 'strategy',
     min_count: 1,
     enforcement_mode: 'blokir_aktivasi',
     created_at: null,
@@ -53,8 +53,8 @@ const RULES = [
   {
     id: 'sys-kpi',
     organization_id: null,
-    parent_card_type: 'kpi_area',
-    child_card_type: 'strategy',
+    parent_card_type: 'strategy',
+    child_card_type: 'initiative',
     min_count: 2,
     enforcement_mode: 'hanya_peringatan',
     created_at: null,
@@ -76,16 +76,16 @@ describe('SettingsMbrScreen', () => {
     mockCan.mockReturnValue(false);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
     expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
-    expect(screen.queryByText('KPI Area → Strategy')).toBeNull();
+    expect(screen.queryByText('Strategi → Inisiatif')).toBeNull();
   });
 
   it('[2] dengan permission → menampilkan rule sebagai "Parent → Child" + mode + minimum', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('KPI Area → Strategy')).toBeTruthy();
-    expect(screen.getByText('Goal → KPI Area')).toBeTruthy();
+    expect(await screen.findByText('Strategi → Inisiatif')).toBeTruthy();
+    expect(screen.getByText('Goal → Strategi')).toBeTruthy();
     // mode saat ini terlihat (badge + tombol picker keduanya berlabel sama → >=1)
-    expect(screen.getAllByText('Hanya Peringatan').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Peringatan Saja').length).toBeGreaterThanOrEqual(1);
     // minimum saat ini (2) terlihat
     expect(screen.getByText('2')).toBeTruthy();
   });
@@ -93,12 +93,12 @@ describe('SettingsMbrScreen', () => {
   it('[3] menaikkan minimum memanggil setRule dengan min_count+1 & mode saat ini', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    await screen.findByText('KPI Area → Strategy');
-    fireEvent.press(screen.getByLabelText('Tambah minimum KPI Area → Strategy'));
+    await screen.findByText('Strategi → Inisiatif');
+    fireEvent.press(screen.getByLabelText('Tambah minimum Strategi → Inisiatif'));
     await waitFor(() =>
       expect(mockSetRule).toHaveBeenCalledWith({
-        parentCardType: 'kpi_area',
-        childCardType: 'strategy',
+        parentCardType: 'strategy',
+        childCardType: 'initiative',
         minCount: 3,
         enforcementMode: 'hanya_peringatan',
       }),
@@ -108,24 +108,51 @@ describe('SettingsMbrScreen', () => {
   it('[4] memilih mode Blokir Aktivasi memanggil setRule dengan mode baru & min saat ini', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    await screen.findByText('KPI Area → Strategy');
-    fireEvent.press(screen.getByLabelText('Set Blokir Aktivasi untuk KPI Area → Strategy'));
+    await screen.findByText('Strategi → Inisiatif');
+    fireEvent.press(screen.getByLabelText('Set Blokir Aktivasi untuk Strategi → Inisiatif'));
     await waitFor(() =>
       expect(mockSetRule).toHaveBeenCalledWith({
-        parentCardType: 'kpi_area',
-        childCardType: 'strategy',
+        parentCardType: 'strategy',
+        childCardType: 'initiative',
         minCount: 2,
         enforcementMode: 'blokir_aktivasi',
       }),
     );
   });
 
-  it('[5] rule goal→kpi_area terkunci: kontrol edit tidak tersedia (tampil indikator Terkunci)', async () => {
+  it('[5] rule goal→strategy terkunci: kontrol edit tidak tersedia (tampil indikator Terkunci)', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsMbrScreen />, { wrapper: wrapper() });
-    await screen.findByText('Goal → KPI Area');
+    await screen.findByText('Goal → Strategi');
     expect(screen.getByText('Terkunci')).toBeTruthy();
-    // kontrol tambah minimum untuk goal→kpi_area tidak ada
-    expect(screen.queryByLabelText('Tambah minimum Goal → KPI Area')).toBeNull();
+    expect(screen.queryByLabelText('Tambah minimum Goal → Strategi')).toBeNull();
+  });
+
+  it('[6] mode nonaktif → stepper tersembunyi, pesan "mengikuti permission biasa"', async () => {
+    mockCan.mockReturnValue(true);
+    const rulesWithNonaktif = [
+      RULES[0],
+      { ...RULES[1], enforcement_mode: 'nonaktif' },
+    ];
+    mockUseMbrRules.mockReturnValue({ rules: rulesWithNonaktif, isLoading: false, isError: false, refetch: jest.fn() });
+    await render(<SettingsMbrScreen />, { wrapper: wrapper() });
+    await screen.findByText('Strategi → Inisiatif');
+    expect(screen.queryByLabelText('Tambah minimum Strategi → Inisiatif')).toBeNull();
+    expect(screen.getByText(/mengikuti permission biasa/)).toBeTruthy();
+  });
+
+  it('[7] memilih Nonaktif memanggil setRule dengan mode nonaktif', async () => {
+    mockCan.mockReturnValue(true);
+    await render(<SettingsMbrScreen />, { wrapper: wrapper() });
+    await screen.findByText('Strategi → Inisiatif');
+    fireEvent.press(screen.getByLabelText('Set Nonaktif untuk Strategi → Inisiatif'));
+    await waitFor(() =>
+      expect(mockSetRule).toHaveBeenCalledWith({
+        parentCardType: 'strategy',
+        childCardType: 'initiative',
+        minCount: 2,
+        enforcementMode: 'nonaktif',
+      }),
+    );
   });
 });

@@ -106,9 +106,10 @@ const SENSITIVE_FRAGMENTS = [
   'bearer',
   'servicekey',
   'supabase',
+  'storagepath',
 ];
 
-// PII karyawan (aplikasi EMS) — dicocokkan pada key SETELAH normalisasi. Whole-key
+// PII karyawan (aplikasi Rencanapp) — dicocokkan pada key SETELAH normalisasi. Whole-key
 // EQUALITY (bukan substring) karena fragmen pendek seperti `nik`/`hp` beresiko
 // false-positive di kata biasa (`piknik`, `alamatnya`). Nama TIDAK disensor —
 // konteks debug penting; sensitivitas jauh di bawah data auth.

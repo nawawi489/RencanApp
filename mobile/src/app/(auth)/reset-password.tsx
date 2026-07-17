@@ -8,6 +8,7 @@ import { BRAND_TAGLINE, BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui';
 import { AUTH_COPY } from '@/lib/auth-copy';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/providers/auth-provider';
 import { useThemePreference } from '@/providers/theme-provider';
 
 // Sejajar dengan AUTH-02b di login: Supabase default minimal 6 karakter.
@@ -39,6 +40,8 @@ export default function ResetPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
   const router = useRouter();
+  const { session } = useAuth();
+  const recoveryEmail = session?.user?.email;
 
   async function submit() {
     setFeedback(null);
@@ -88,6 +91,24 @@ export default function ResetPasswordScreen() {
           <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">
             Buat kata sandi baru untuk akun Anda.
           </Text>
+          {recoveryEmail ? (
+            <View
+              className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/40"
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite">
+              <Text className="text-center text-sm font-semibold text-amber-800 dark:text-amber-200">
+                Anda mengatur ulang kata sandi untuk:
+              </Text>
+              <Text
+                className="mt-1 text-center text-sm font-bold text-amber-900 dark:text-amber-100"
+                accessibilityLabel={`Akun ${recoveryEmail}`}>
+                {recoveryEmail}
+              </Text>
+              <Text className="mt-1 text-center text-xs text-amber-700 dark:text-amber-300">
+                Jika ini bukan akun Anda, tekan Batal di bawah.
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View className="mt-8 gap-3 rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
@@ -149,7 +170,10 @@ export default function ResetPasswordScreen() {
 
           <Pressable
             className="min-h-[44px] items-center justify-center py-1 active:opacity-60"
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={async () => {
+              await supabase.auth.signOut();
+              router.replace('/(auth)/login');
+            }}
             accessibilityRole="button"
             accessibilityLabel="Batal, kembali ke halaman masuk">
             <Text className="text-sm font-semibold text-brand-dark dark:text-brand">Kembali ke Masuk</Text>

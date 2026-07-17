@@ -1,9 +1,8 @@
-// Tab Menu — MENU_UI_LOCK_SPEC_V1.82.
+// Tab Menu — PRD V1.83 §31.
 // Menu = pusat akses sekunder (profil, People, tools admin), BUKAN halaman kerja harian.
-// Layar mandiri (bukan lagi adapter ke /settings). Struktur terkunci spec: local header +
-// profile card + Akses Cepat (grid, tepat 3) + accordion Template/Bantuan/Pengaturan/Admin
-// Lanjutan (collapsed by default) + tombol Keluar. Radius kartu memakai token app (rounded-2xl,
-// DESIGN.md) alih-alih 8px prototype HTML — konsistensi design-system (divergensi tercatat).
+// §31 restructure: Score Formula/MBR/Log Aktivitas pindah ke Admin Lanjutan (staff biasa
+// tidak melihat sebagai shortcut utama); Akses Cepat = People/Archive/Pusat Bantuan;
+// Template accordion conditional (hanya jika user punya akses template).
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
@@ -90,45 +89,44 @@ const ORG_SETTINGS_PERMISSIONS = [
   'create_department', 'manage_positions', 'manage_teams', 'manage_settings',
 ] as const;
 
-// Akses Cepat — spec §7/§10: TEPAT 3, tak ber-permission (visible untuk semua user, §18).
+// Akses Cepat — §31: People / Archive / Pusat Bantuan (Log Aktivitas pindah Admin Lanjutan).
 const AKSES_CEPAT: MenuItem[] = [
   { label: 'People', description: 'Ranking & profil', icon: 'people-outline', tone: 'info', href: '/people' as Href },
-  { label: 'Log Aktivitas', description: 'Riwayat sistem', icon: 'time-outline', tone: 'success', href: '/settings-activity-log' as Href },
   { label: 'Archive', description: 'Card selesai', icon: 'archive-outline', tone: 'danger', href: '/settings-archive' as Href },
+  { label: 'Pusat Bantuan', description: 'Panduan Rencanapp', text: '?', tone: 'success', toast: true },
 ];
 
 const TEMPLATE_ITEMS: MenuItem[] = [
   { label: 'Goal Template', description: 'Library Goal', icon: 'document-text-outline', tone: 'success', href: '/settings-goal-templates' as Href },
-  { label: 'KPI Area Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-kpi-area-templates' as Href, permission: 'manage_kpi_area_templates' },
+  { label: 'Strategi Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-strategy-templates' as Href, permission: 'manage_strategy_templates' },
 ];
 
-// Bantuan — spec §13. Belum ada layar (help-center/support); tap → toast (owner decision).
+// Bantuan — §31: Pusat Bantuan pindah ke Akses Cepat; sisa hanya Support.
 const BANTUAN_ITEMS: MenuItem[] = [
-  { label: 'Pusat Bantuan', description: 'Panduan EMS', text: '?', tone: 'info', toast: true },
   { label: 'Support', description: 'Hubungi admin', text: 'CS', tone: 'success', toast: true },
 ];
 
-// Pengaturan — spec §14 mengunci 5 item pertama. 4 item terakhir DIVERGENSI TERCATAT (owner
-// decision 2026-07-05): dipertahankan agar layar Card Completion Rule / Keterangan Card /
-// Status & Prioritas / Notifications Rule tetap punya entry point (kalau tidak, jadi orphan).
+// Pengaturan — §31: Score Formula + Aturan Pecah Target pindah ke Admin Lanjutan.
+// 3 item terakhir DIVERGENSI TERCATAT (owner decision 2026-07-05): dipertahankan agar layar
+// Card Completion Rule / Keterangan Card / Notifications Rule tetap punya entry point.
 const PENGATURAN_ITEMS: MenuItem[] = [
   { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permissionAny: ORG_SETTINGS_PERMISSIONS },
-  { label: 'Repeat Setting', description: 'Jadwal Action Plan', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
-  { label: 'Score Formula', description: 'Rumus score', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
+  { label: 'Repeat Setting', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
   { label: 'Permission Settings', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
-  { label: 'Minimum Breakdown Rule', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
   { label: 'Card Completion Rule', description: 'Aturan selesai', icon: 'checkbox-outline', tone: 'info', href: '/settings-card-completion-rule' as Href, permission: 'manage_card_completion_rule' },
   { label: 'Keterangan Card', description: 'Panduan isi card', icon: 'information-circle-outline', tone: 'info', href: '/settings-card-guidance' as Href, permission: 'manage_card_completion_rule' },
-  { label: 'Status & Prioritas', description: 'Label kerja', icon: 'flag-outline', tone: 'warn', href: '/settings-status-priority' as Href, permission: 'manage_settings' },
   { label: 'Notifications Rule', description: 'Aturan notifikasi', icon: 'notifications-outline', tone: 'info', href: '/settings-notifications-rule' as Href, permission: 'manage_settings' },
 ];
 
-// Admin Lanjutan — spec §15. Override Score → manual-score-override; layar itu menuntut
-// userId+periodId, tanpa param menampilkan guard "buka dari profil" (bukan layar kosong).
+// Admin Lanjutan — §31: Score Formula/MBR/Log Aktivitas masuk sini (staff tak melihat
+// sebagai shortcut utama). Semua item WAJIB punya `permission` agar adminVisible gating benar.
 const ADMIN_ITEMS: MenuItem[] = [
+  { label: 'Aturan Pecah Target', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
+  { label: 'Score Formula', description: 'Rumus score', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
   { label: 'Governance', description: 'Guard violation', icon: 'warning-outline', tone: 'danger', href: '/settings-governance-violation' as Href, permission: 'view_governance_violation' },
   { label: 'Confidential', description: 'Akses khusus', icon: 'lock-closed-outline', tone: 'warn', href: '/settings-confidential-access' as Href, permission: 'manage_confidential_access' },
   { label: 'Override Score', description: 'Akses berwenang', icon: 'ribbon-outline', tone: 'violet', href: '/manual-score-override' as Href, permission: 'manage_score_formula' },
+  { label: 'Log Aktivitas', description: 'Riwayat sistem', icon: 'time-outline', tone: 'success', href: '/settings-activity-log' as Href, permission: 'view_activity_log' },
 ];
 
 type ProfileRow = {
@@ -306,8 +304,10 @@ export default function MenuScreen() {
           <MenuGrid items={AKSES_CEPAT} onPress={onItemPress} />
         </View>
 
-        {/* Accordion (collapsed by default). */}
-        <MenuAccordion title="Template" items={TEMPLATE_ITEMS} onPress={onItemPress} />
+        {/* Accordion (collapsed by default). Template conditional §31. */}
+        {can('manage_strategy_templates') ? (
+          <MenuAccordion title="Template" items={TEMPLATE_ITEMS} onPress={onItemPress} />
+        ) : null}
         <MenuAccordion title="Bantuan" items={BANTUAN_ITEMS} onPress={onItemPress} />
         <MenuAccordion title="Pengaturan" items={PENGATURAN_ITEMS} onPress={onItemPress} />
         {adminVisible ? <MenuAccordion title="Admin Lanjutan" items={ADMIN_ITEMS} onPress={onItemPress} /> : null}

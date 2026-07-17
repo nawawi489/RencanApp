@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-07-06
+updated: 2026-07-16
 ---
 
 # Rencanapp Wiki — Index
@@ -11,15 +11,15 @@ Master index of all wiki pages. Updated on every ingest.
 
 ## Overview
 
-- [[overview]] — Ringkasan EMS V1.8.1: konsep card, dua workspace, fitur, dan tech stack
+- [[overview]] — Ringkasan Execution Project Management V1.83: konsep card, dua workspace, fitur, tech stack, de-scoring People, Admin Lanjutan gating
 
 ## Entities
 
 - [[action-plan]] — Unit eksekusi konkret; One Time vs Repeat, Instance, Progress/Capaian/Compliance
 - [[card-model]] — Hierarki card dua workspace, makna & field wajib tiap card, Kelengkapan Card
 - [[database-blueprint]] — 53 tabel Postgres, tabel yang dibuang, relationship rules
-- [[score-formula]] — Penilaian performa berbobot per level (Staff/Management/C-Level/CEO)
-- [[surfaces]] — Bottom nav V1.8.2: Home, Notifications, Workspace, Inbox, **Menu** (People + Settings di dalam Menu)
+- [[score-formula]] — Penilaian performa berbobot per level (Staff/Management/C-Level/CEO); V1.83 Admin Lanjutan only, tidak tampil di UI utama staff
+- [[surfaces]] — Bottom nav V1.83: Home (Fokus Task), Notifications, Workspace, Inbox (Diskusi Rencana Aksi), **Menu** (People de-scoring + Admin Lanjutan gated)
 - [[workspace]] — Performance vs Development workspace dan hierarki card masing-masing
 
 ## Concepts
@@ -31,10 +31,10 @@ Master index of all wiki pages. Updated on every ingest.
 - [[execution-loop]] — Bukti → Nilai Hasil → Review; submission versioning & evidence locking
 - [[fase6-spec]] — Spec eksekutabel Fase 6 Development Workspace (AC, data contract, non-goals, TDD handoff)
 - [[fase6-tdd-plan]] — Rencana TDD red→green→refactor Fase 6 + addendum kritik (missing cases & concerns)
-- [[minimum-breakdown-rule]] — Jumlah minimal card turunan; tiga mode penerapan & default
+- [[minimum-breakdown-rule]] — Jumlah minimal card turunan (label UI "Aturan Pecah Target"); V1.83 opsional 3 mode (Nonaktif/Peringatan/Blokir), angka konfigurabel admin
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[prototype-prd-conformance]] — Prototype `design.html` vs PRD V1.82: 46/46 screen + 28 AC terpenuhi; penyimpangan kecil (header notif, tab People Q3)
-- [[scope-guardrails]] — Batas scope V1.8.1: fitur masuk vs ditolak (anti-scope-creep)
+- [[scope-guardrails]] — Batas scope V1.83: fitur masuk vs ditolak (anti-scope-creep); §18 Satuan opsional TETAP diizinkan
 - [[tech-stack]] — Expo + Supabase + RLS; alasan tiap pilihan diturunkan dari PRD
 - [[ui-prototype-gap]] — Backlog UI ber-ID dari perbandingan `design.html` (46 layar) vs implementasi `mobile/`. Spec turunan pertama: `specs/inbox-chat-ui.md` (UI-S-IN1/IN2, dari sdd-plan 2026-06-26)
 - [[workspace-lock-audit]] — Audit `mobile/` vs prototype final Workspace (spec lock V1.82 kini dihapus): 20 PASS · 7 PARTIAL · 8 FAIL dari 35 AC; temuan ber-ID WSA-01..20

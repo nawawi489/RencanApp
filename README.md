@@ -1,8 +1,8 @@
 # RencanApp
 
-**RencanApp** adalah repositori implementasi produk **Rencanapp**, sebuah **EMS (Execution Management System) V1.82** untuk membantu perusahaan mengubah arah strategis menjadi pekerjaan nyata yang bisa dipantau, direview, dan dipertanggungjawabkan.
+**RencanApp** adalah repositori implementasi produk **Rencanapp**, sebuah **Execution Project Management V1.83** untuk membantu perusahaan memecah target besar menjadi aksi nyata yang bisa dijalankan, dipantau, direview, dibuktikan, dan dituntaskan.
 
-EMS dirancang untuk menggantikan pola follow-up manual yang tersebar di chat dengan alur kerja yang memiliki konteks, delegasi yang jelas, bukti kerja, hasil terukur, dan audit trail yang rapi.
+Rencanapp dirancang untuk menggantikan pola follow-up manual yang tersebar di chat dengan alur kerja yang memiliki konteks, delegasi yang jelas, bukti kerja, hasil terukur, dan audit trail yang rapi.
 
 ## Daftar Isi
 
@@ -24,13 +24,13 @@ EMS dirancang untuk menggantikan pola follow-up manual yang tersebar di chat den
 - **Nama repositori:** `RencanApp`
 - **Nama produk:** `Rencanapp`
 - **Aturan penamaan:** pakai `Rencanapp` untuk nama produk pada UI, dokumen produk, dan desain; pakai `RencanApp` hanya saat merujuk repo, path, atau identifier teknis yang sudah baku.
-- **Versi produk acuan:** `V1.82`
+- **Versi produk acuan:** `V1.83`
 - **Versi paket aplikasi mobile saat ini:** `1.0.0` (`mobile/package.json`)
-- **Status pengembangan:** `Aktif` dengan implementasi kode saat ini berada di **Fase 0 - Fondasi & Shell**
+- **Status pengembangan:** `Aktif`. Implementasi sudah melewati fase fondasi — card execution engine (Goal/KPI Area/Strategy/Initiative/Action Plan, one time & repeat), People & Score, chat/Inbox (realtime, reaksi, lampiran), dan push notification sudah berjalan. Rujuk [`BUILD-PLAN.md`](./BUILD-PLAN.md) untuk definisi tiap fase dan [`supabase/migrations/`](./supabase/migrations/) untuk migrasi terbaru sebagai penanda progres paling akurat.
 
 ### Tujuan Utama
 
-EMS membantu organisasi memastikan pekerjaan tidak berjalan tanpa arah. Sistem ini menghubungkan tujuan bisnis dan pekerjaan harian melalui struktur card berikut:
+Rencanapp membantu organisasi memastikan pekerjaan tidak berjalan tanpa arah. Sistem ini menghubungkan tujuan bisnis dan pekerjaan harian melalui struktur card berikut:
 
 - **Performance Workspace:** `Goal -> KPI Area -> Strategy -> Initiative -> Action Plan`
 - **Development Workspace:** `Development Area -> Problem Statement / Development Goal -> Initiative -> Action Plan`
@@ -47,7 +47,7 @@ Proyek ini ditujukan untuk mengatasi beberapa masalah umum dalam eksekusi kerja:
 
 ### Fitur Inti Produk
 
-Secara produk, EMS V1.82 mencakup:
+Secara produk, Rencanapp V1.83 mencakup:
 
 - manajemen card berbasis hirarki untuk performance dan development workspace,
 - Action Plan `one time` dan `repeat`,
@@ -60,12 +60,15 @@ Secara produk, EMS V1.82 mencakup:
 
 Berdasarkan implementasi repo saat ini, fitur yang sudah tersedia adalah:
 
-- autentikasi email/password menggunakan Supabase Auth,
-- sesi persisten di aplikasi mobile menggunakan AsyncStorage,
+- autentikasi email/password menggunakan Supabase Auth, sesi persisten via `expo-secure-store`,
 - route guard antara area `(auth)` dan `(app)`,
-- shell navigasi untuk lima surface utama,
-- halaman `Settings` awal dengan data profil pengguna,
-- migrasi database Supabase Fase 0 dengan RLS dan seed data awal `Nyantuy Group`.
+- navigasi 5 tab (`Home`, `Notif`, `Workspace`, `Inbox`, `Menu` — `People` dan pengaturan digabung ke tab `Menu`),
+- card execution engine penuh: hierarki Goal → KPI Area → Strategy → Initiative → Action Plan (one time & repeat), bukti kerja, review, submission versioning,
+- People & Score: evaluasi, manual score override, close-period,
+- Governance Violation dan Activity Log,
+- Inbox/chat per Rencana Aksi: realtime, reaksi, lampiran, reply-quote, system event, unread badge,
+- push notification (outbox + Edge Function drainer ke device),
+- puluhan migrasi database Supabase (lihat [`supabase/migrations/`](./supabase/migrations/)) dengan RLS dan seed data awal `Nyantuy Group`.
 
 ## Prasyarat Sistem
 
@@ -119,7 +122,7 @@ Catatan penting:
 
 - gunakan **publishable/anon key**, bukan `service_role`,
 - nilai `EXPO_PUBLIC_*` akan dibundel ke klien,
-- saat ini repo **belum menyediakan** file `.env.example`, sehingga file `.env` perlu dibuat manual.
+- repo sudah menyediakan template `mobile/.env.example` (serta `.env.staging.example` dan `.env.production.example` untuk environment lain) — tinggal disalin dan diisi.
 
 ## Panduan Instalasi Langkah-demi-Langkah
 
@@ -150,7 +153,11 @@ npm.cmd install
 
 ### 4. Buat File Environment
 
-Buat file `mobile/.env`, lalu isi dengan kredensial Supabase:
+Salin template yang sudah ada, lalu isi dengan kredensial Supabase:
+
+```bash
+cp mobile/.env.example mobile/.env
+```
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
@@ -177,16 +184,9 @@ Jika Anda membuat environment baru, lakukan langkah berikut:
 2. jalankan file migrasi SQL pada folder `supabase/migrations/` secara berurutan,
 3. pastikan seluruh tabel awal, RLS, dan seed data dasar berhasil dibuat.
 
-Urutan file migrasi:
+Migrasi diberi nomor urut (`0001_...` sampai nomor tertinggi saat ini, puluhan file) dan harus diterapkan **berurutan sesuai nomor** — lihat daftar lengkapnya langsung di [`supabase/migrations/`](./supabase/migrations/), jangan berpatokan pada daftar statis karena migrasi baru ditambahkan seiring fitur berjalan.
 
-```text
-supabase/migrations/0001_fase0_foundation.sql
-supabase/migrations/0002_fase0_harden_functions.sql
-supabase/migrations/0003_fase0_revoke_rpc.sql
-supabase/migrations/0004_harden_rls_auto_enable.sql
-```
-
-Repositori ini belum menyertakan konfigurasi Supabase lokal penuh seperti `supabase/config.toml`, sehingga cara paling aman saat ini adalah menerapkan migrasi ke project Supabase Anda melalui SQL Editor atau workflow internal tim.
+Repo sudah menyertakan `supabase/config.toml` minimal (untuk Edge Functions). Untuk pengembangan lokal penuh gunakan Supabase CLI (`supabase start`); untuk menerapkan ke project remote, jalankan migrasi lewat SQL Editor atau workflow internal tim.
 
 ### 6. Jalankan Aplikasi di Lingkungan Lokal
 
@@ -222,19 +222,20 @@ Jika environment sudah benar, aplikasi akan:
 1. jalankan aplikasi dengan `npm start`,
 2. daftar akun baru atau masuk dengan email dan kata sandi,
 3. setelah login, aplikasi mengarahkan pengguna ke area utama,
-4. telusuri surface `Home`, `Notifications`, `Workspace`, `Inbox`, `People`,
-5. buka `Settings` untuk melihat profil singkat dan status role organisasi.
+4. telusuri tab `Home`, `Notif`, `Workspace`, `Inbox`, `Menu` (People, profil, dan pengaturan admin ada di dalam `Menu`),
+5. buka `Menu` untuk melihat profil, People, dan layar pengaturan bertahap sesuai permission.
 
 ### Perintah Utama
 
 | Perintah | Fungsi |
 | --- | --- |
-| `npm start` | Menjalankan Expo development server |
+| `npm start` | Menjalankan Expo development server (varian `start:staging` / `start:prod` untuk environment lain) |
 | `npm run android` | Menjalankan aplikasi untuk Android |
 | `npm run ios` | Menjalankan aplikasi untuk iOS |
-| `npm run web` | Menjalankan aplikasi di browser |
-| `npx tsc --noEmit` | Menjalankan type-check TypeScript |
+| `npm run web` | Menjalankan aplikasi di browser (varian `web:staging` / `web:prod`) |
+| `npm run type-check` | Menjalankan type-check TypeScript (`tsc --noEmit`) |
 | `npm run lint` | Menjalankan lint melalui Expo CLI |
+| `npm test` | Menjalankan test suite Jest (`test:watch` / `test:ci` untuk mode lain) |
 
 ### Contoh Penggunaan Internal Supabase Client
 
@@ -274,9 +275,13 @@ RencanApp/
 ├── mobile/                 # Aplikasi mobile Expo / React Native
 ├── supabase/               # SQL migrations untuk database dan security hardening
 ├── prd/                    # PRD yang sudah dipecah per topik
+├── docs/                   # Catatan spec/TDD/testing per topik
 ├── wiki/                   # Knowledge base proyek berbasis Markdown/Obsidian
+├── scripts/                # Script operasional (mis. apply migrasi ke staging)
+├── workers/                # Cloudflare Worker (proxy staging)
 ├── BUILD-PLAN.md           # Rencana build terfase
-├── PRD.md                  # PRD utama produk EMS V1.82
+├── DESIGN.md               # Sumber kebenaran token desain (binding untuk mobile/src)
+├── PRD.md                  # PRD utama produk Rencanapp V1.83
 └── CLAUDE.md               # Aturan pemeliharaan wiki proyek
 ```
 
@@ -285,26 +290,31 @@ Struktur penting di dalam `mobile/`:
 ```text
 mobile/
 ├── assets/                 # Ikon, gambar, dan aset visual
-├── scripts/                # Utility script proyek
 ├── src/
 │   ├── app/                # Routing aplikasi berbasis Expo Router
 │   │   ├── (auth)/         # Flow autentikasi
-│   │   └── (app)/          # Area aplikasi setelah login
+│   │   └── (app)/          # Area aplikasi setelah login: (tabs), goal/, initiative/,
+│   │                       # action-plan/, strategy/, task/, development-area/,
+│   │                       # problem-statement/, people.tsx, settings-*.tsx, dll.
 │   ├── components/         # Komponen UI reusable
 │   ├── constants/          # Konstanta aplikasi
 │   ├── hooks/              # Custom hooks
 │   ├── lib/                # Integrasi environment, Supabase, dan database types
-│   └── providers/          # Context/provider aplikasi
+│   └── providers/          # Context/provider aplikasi (auth, theme)
 ├── app.json                # Konfigurasi Expo
+├── eas.json                # Profil build/submit EAS
+├── eslint.config.js        # Konfigurasi ESLint (Expo flat config)
 ├── metro.config.js         # Konfigurasi Metro + NativeWind
-└── package.json            # Dependensi dan skrip aplikasi
+└── package.json            # Dependensi dan skrip aplikasi (termasuk Jest)
 ```
 
 Penjelasan singkat folder lain:
 
-- `supabase/migrations/` menyimpan migrasi SQL berurutan untuk foundation dan hardening,
+- `supabase/migrations/` menyimpan migrasi SQL berurutan (puluhan file per commit terakhir) untuk foundation, fitur, dan hardening,
 - `prd/` berisi dokumen kebutuhan sistem yang menjadi acuan produk,
-- `wiki/` berisi rangkuman konsep, entitas, dan log pengembangan untuk kebutuhan knowledge management.
+- `docs/` berisi catatan spec, TDD plan, dan laporan testing manual per topik,
+- `wiki/` berisi rangkuman konsep, entitas, dan log pengembangan untuk kebutuhan knowledge management,
+- `workers/staging-proxy/` adalah Cloudflare Worker yang meneruskan `staging.rencanapp.com` ke EAS Hosting.
 
 ## Panduan Kontribusi
 
@@ -378,56 +388,57 @@ Jika Anda membutuhkan bantuan teknis, gunakan issue tracker untuk bug, permintaa
 
 ### Status Testing Saat Ini
 
-Pengecekan yang tersedia dan relevan pada kondisi repo saat ini:
+Pengecekan yang tersedia di `mobile/package.json`:
 
-- `npx tsc --noEmit` berhasil dijalankan dan cocok digunakan sebagai verifikasi type-safety,
-- `npm run lint` tersedia di `package.json`, tetapi pada kondisi repo sekarang masih memicu prompt inisialisasi ESLint dari Expo karena konfigurasi ESLint belum dibuat,
-- belum ada konfigurasi test runner unit/integration yang eksplisit di repository root maupun `mobile/package.json`.
+- `npm run type-check` (`tsc --noEmit`) untuk verifikasi type-safety,
+- `npm run lint` (`expo lint`) dengan konfigurasi ESLint yang sudah ada di [`mobile/eslint.config.js`](./mobile/eslint.config.js),
+- `npm test` / `npm run test:ci` menjalankan test suite Jest (`jest-expo` + `@testing-library/react-native`) mencakup unit test komponen, hooks, dan util di seluruh `src/`.
 
 ### Cara Menjalankan Verifikasi
 
 Dari folder `mobile/`:
 
 ```bash
-npx tsc --noEmit
+npm run type-check
+npm run lint
+npm test
 ```
 
-Untuk lint:
+Untuk CI (non-interaktif, satu proses):
 
 ```bash
-npm run lint
+npm run test:ci
 ```
-
-Jika ini pertama kali dijalankan, Expo kemungkinan akan meminta Anda menginisialisasi konfigurasi ESLint terlebih dahulu.
 
 ### Status Deployment Saat Ini
 
 Status deployment yang dapat disimpulkan dari repository:
 
-- backend menggunakan Supabase sebagai managed service,
-- migrasi database disimpan di `supabase/migrations/`,
+- backend menggunakan Supabase sebagai managed service, migrasi database disimpan di `supabase/migrations/`,
 - aplikasi web dikonfigurasi sebagai SPA melalui `mobile/app.json` dengan `web.output: "single"`,
-- repository **belum** menyertakan konfigurasi deployment produksi lengkap seperti `eas.json`, pipeline CI/CD, atau manifest hosting web.
+- profil build/submit native sudah dikonfigurasi di [`mobile/eas.json`](./mobile/eas.json) (EAS Build/Submit),
+- environment `staging` sudah live di `staging.rencanapp.com` lewat Cloudflare Worker proxy ([`workers/staging-proxy/`](./workers/staging-proxy/)) yang meneruskan ke EAS Hosting,
+- error tracking terpasang lewat `@sentry/react-native` di sisi mobile,
+- belum ada pipeline CI/CD terpusat (mis. GitHub Actions) yang menjalankan test/lint/build otomatis di repository ini — verifikasi masih dijalankan manual sebelum PR.
 
 ### Langkah Deployment yang Saat Ini Realistis
 
 #### Backend / Database
 
 1. siapkan project Supabase target,
-2. terapkan migrasi SQL secara berurutan,
+2. terapkan migrasi SQL secara berurutan dari `supabase/migrations/`,
 3. pastikan seed data dan policy RLS berhasil dibuat.
 
 #### Aplikasi Mobile
 
-1. pastikan environment produksi telah disiapkan,
+1. pastikan environment produksi telah disiapkan (`.env.production` dari `mobile/.env.production.example`),
 2. pastikan kredensial Supabase produksi benar,
-3. tambahkan workflow rilis seperti EAS Build sebelum deployment native production.
+3. jalankan build/submit lewat EAS sesuai profil di `mobile/eas.json` (`eas build`, `eas submit`).
 
 #### Aplikasi Web
 
-1. jalankan `npm run web` untuk validasi lokal,
-2. siapkan pipeline build dan hosting statis sesuai kebutuhan tim,
-3. tambahkan konfigurasi deployment resmi sebelum mengklaim dukungan produksi.
+1. jalankan `npm run web` (atau `npm run web:staging` / `web:prod`) untuk validasi lokal per environment,
+2. deploy ke EAS Hosting; untuk staging, domain publik diarahkan lewat Cloudflare Worker di `workers/staging-proxy/`.
 
 ## Dokumentasi Tambahan
 
@@ -435,6 +446,7 @@ Dokumen berikut direferensikan langsung di README ini dan telah diverifikasi keb
 
 - [`PRD.md`](./PRD.md)
 - [`BUILD-PLAN.md`](./BUILD-PLAN.md)
+- [`DESIGN.md`](./DESIGN.md) — sumber kebenaran token desain, binding untuk `mobile/src`
 - [`prd/01-konsep-dan-fondasi.md`](./prd/01-konsep-dan-fondasi.md)
 - [`prd/02-spesifikasi-card-dan-eksekusi.md`](./prd/02-spesifikasi-card-dan-eksekusi.md)
 - [`prd/03-sistem-permission-data-governance.md`](./prd/03-sistem-permission-data-governance.md)

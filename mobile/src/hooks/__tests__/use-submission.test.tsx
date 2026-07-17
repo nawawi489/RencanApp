@@ -15,8 +15,8 @@ const mockCleanup = jest.fn();
 jest.mock('@/lib/cards', () => ({
   createSubmissionDraft: (...a: unknown[]) => mockCreateDraft(...a),
   finalizeSubmission: (...a: unknown[]) => mockFinalize(...a),
-  listKpiAreaCandidates: (...a: unknown[]) => mockListCandidates(...a),
-  getKpiAreaCurrentValue: (...a: unknown[]) => mockGetCurrentValue(...a),
+  listStrategyCandidates: (...a: unknown[]) => mockListCandidates(...a),
+  getStrategyCurrentValue: (...a: unknown[]) => mockGetCurrentValue(...a),
 }));
 
 jest.mock('@/lib/storage', () => ({
@@ -50,14 +50,14 @@ beforeEach(() => {
 });
 
 describe('useKpiCandidates', () => {
-  it('[H1] memanggil listKpiAreaCandidates(id) saat actionPlanId terisi', async () => {
+  it('[H1] memanggil listStrategyCandidates(id) saat taskId terisi', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useKpiCandidates('ap-1'), { wrapper });
     await waitFor(() => expect(result.current.candidates).toHaveLength(1));
     expect(mockListCandidates).toHaveBeenCalledWith('ap-1');
   });
 
-  it('[H2] disabled saat actionPlanId undefined → tidak panggil RPC', async () => {
+  it('[H2] disabled saat taskId undefined → tidak panggil RPC', async () => {
     const { wrapper } = makeWrapper();
     await renderHook(() => useKpiCandidates(undefined), { wrapper });
     expect(mockListCandidates).not.toHaveBeenCalled();
@@ -73,14 +73,14 @@ describe('useKpiCandidates', () => {
 });
 
 describe('useKpiCurrentValue', () => {
-  it('[H4] memanggil getKpiAreaCurrentValue(id) saat kpiAreaId terisi', async () => {
+  it('[H4] memanggil getStrategyCurrentValue(id) saat strategyId terisi', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useKpiCurrentValue('k1'), { wrapper });
     await waitFor(() => expect(result.current.value?.numeric_total).toBe(120));
     expect(mockGetCurrentValue).toHaveBeenCalledWith('k1');
   });
 
-  it('[H5] disabled saat kpiAreaId null/undefined → tidak panggil RPC', async () => {
+  it('[H5] disabled saat strategyId null/undefined → tidak panggil RPC', async () => {
     const { wrapper } = makeWrapper();
     await renderHook(() => useKpiCurrentValue(null), { wrapper });
     expect(mockGetCurrentValue).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ describe('useSubmissionFlow — 2-phase commit', () => {
       { uri: 'file:///b.png', name: 'b.png', size: 200, mimeType: 'image/png' },
     ],
     staticEvidence: [{ kind: 'text_note', text_content: 'catatan' }],
-    resultValues: [{ kpi_area_id: 'k1', label: 'r', value_type: 'number', value_text: '145', value_numeric: 145 }],
+    resultValues: [{ strategy_id: 'k1', label: 'r', value_type: 'number', value_text: '145', value_numeric: 145 }],
     note: 'oke',
   };
 
@@ -130,10 +130,10 @@ describe('useSubmissionFlow — 2-phase commit', () => {
     expect(mockCreateDraft).toHaveBeenCalledTimes(1);
   });
 
-  it('[H8] actionPlanId undefined → reject tanpa panggil RPC', async () => {
+  it('[H8] taskId undefined → reject tanpa panggil RPC', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useSubmissionFlow(undefined), { wrapper });
-    await expect(result.current.runSubmission(baseInput)).rejects.toThrow(/Action Plan ID/);
+    await expect(result.current.runSubmission(baseInput)).rejects.toThrow(/Tugas ID/);
     expect(mockCreateDraft).not.toHaveBeenCalled();
   });
 

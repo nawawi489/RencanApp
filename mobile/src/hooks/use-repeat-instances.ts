@@ -4,19 +4,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getRepeatCompliance, listInstances, type InstanceWithSubmissions } from '@/lib/repeat';
 
-export function useRepeatInstances(actionPlanId: string, options?: { enabled?: boolean }) {
+export function useRepeatInstances(taskId: string, options?: { enabled?: boolean }) {
   const qc = useQueryClient();
-  const enabled = !!actionPlanId && options?.enabled !== false;
+  const enabled = !!taskId && options?.enabled !== false;
 
   const instancesQ = useQuery({
-    queryKey: ['repeat-instances', actionPlanId],
-    queryFn: () => listInstances(actionPlanId),
+    queryKey: ['repeat-instances', taskId],
+    queryFn: () => listInstances(taskId),
     enabled,
   });
 
   const complianceQ = useQuery({
-    queryKey: ['repeat-compliance', actionPlanId],
-    queryFn: () => getRepeatCompliance(actionPlanId),
+    queryKey: ['repeat-compliance', taskId],
+    queryFn: () => getRepeatCompliance(taskId),
     enabled,
   });
 
@@ -28,8 +28,8 @@ export function useRepeatInstances(actionPlanId: string, options?: { enabled?: b
       : null;
 
   function refresh() {
-    qc.invalidateQueries({ queryKey: ['repeat-instances', actionPlanId] });
-    qc.invalidateQueries({ queryKey: ['repeat-compliance', actionPlanId] });
+    qc.invalidateQueries({ queryKey: ['repeat-instances', taskId] });
+    qc.invalidateQueries({ queryKey: ['repeat-compliance', taskId] });
   }
 
   return {

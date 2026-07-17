@@ -11,20 +11,20 @@ jest.mock('../supabase', () => ({
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import { fetchCardProgress } from '../workspace-progress';
 // eslint-disable-next-line import/first
-import { treeOrbLabel, actionPlanTreeProgress } from '../progress';
+import { treeOrbLabel, taskTreeProgress } from '../progress';
 
 beforeEach(() => {
   mockRpc.mockReset();
 });
 
 describe('treeOrbLabel (spec §10)', () => {
-  it("Goal & KPI Area → 'Capaian'", () => {
+  it("Goal & Strategi → 'Capaian'", () => {
     expect(treeOrbLabel('goal')).toBe('Capaian');
-    expect(treeOrbLabel('kpi_area')).toBe('Capaian');
+    expect(treeOrbLabel('strategy')).toBe('Capaian');
   });
 
-  it("Strategy/Initiative/Action Plan/Development Area/Problem Statement → 'Progress'", () => {
-    for (const k of ['strategy', 'initiative', 'action_plan', 'development_area', 'problem_statement']) {
+  it("Inisiatif/Rencana Aksi/Tugas/Development Area/Problem Statement → 'Progress'", () => {
+    for (const k of ['initiative', 'action_plan', 'task', 'development_area', 'problem_statement']) {
       expect(treeOrbLabel(k)).toBe('Progress');
     }
   });
@@ -34,22 +34,22 @@ describe('treeOrbLabel (spec §10)', () => {
   });
 });
 
-describe('actionPlanTreeProgress (leaf AP, reuse computeActionPlanProgress)', () => {
+describe('taskTreeProgress (leaf AP, reuse computeTaskProgress)', () => {
   it('one_time submitted → 80 (status heuristik)', () => {
-    expect(actionPlanTreeProgress({ status: 'submitted', repeatSetting: 'one_time' })).toBe(80);
+    expect(taskTreeProgress({ status: 'submitted', repeatSetting: 'one_time' })).toBe(80);
   });
 
   it('one_time done → 100', () => {
-    expect(actionPlanTreeProgress({ status: 'done', repeatSetting: 'one_time' })).toBe(100);
+    expect(taskTreeProgress({ status: 'done', repeatSetting: 'one_time' })).toBe(100);
   });
 
   it('repeat dgn compliancePercent → pakai compliance', () => {
-    expect(actionPlanTreeProgress({ status: 'active', repeatSetting: 'repeat', compliancePercent: 64 })).toBe(64);
+    expect(taskTreeProgress({ status: 'active', repeatSetting: 'repeat', compliancePercent: 64 })).toBe(64);
   });
 
   it('repeat TANPA compliance → null (render —, bukan 0% menyesatkan)', () => {
-    expect(actionPlanTreeProgress({ status: 'active', repeatSetting: 'repeat' })).toBeNull();
-    expect(actionPlanTreeProgress({ status: 'active', repeatSetting: 'repeat', compliancePercent: null })).toBeNull();
+    expect(taskTreeProgress({ status: 'active', repeatSetting: 'repeat' })).toBeNull();
+    expect(taskTreeProgress({ status: 'active', repeatSetting: 'repeat', compliancePercent: null })).toBeNull();
   });
 });
 

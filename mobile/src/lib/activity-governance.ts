@@ -4,7 +4,9 @@ import type { Tables } from './database.types';
 import { supabase } from './supabase';
 import type { Tone } from '@/components/ui';
 
-export type ActivityLog = Tables<'activity_logs'>;
+export type ActivityLog = Tables<'activity_logs'> & {
+  actor?: { id: string; full_name: string | null; email: string | null } | null;
+};
 export type GovernanceViolation = Tables<'governance_violations'>;
 
 /** Severity 4-tier → tone semantik Badge. */
@@ -22,7 +24,37 @@ export const GOVERNANCE_VIOLATION_SEVERITY_LABEL: Record<string, string> = {
   critical: 'Kritis',
 };
 
+export const ACTIVITY_LOG_PAGE_SIZE = 30;
 const PAGE_SIZE = 50;
+
+/** Kunci filter chip UI-S-AL1 — dipetakan ke ekspresi PostgREST oleh `CHIP_FILTER`.
+ *  Server-side agar hasil filter tidak terbatas pada halaman yg sudah dimuat. */
+export type ActivityLogChipKey =
+  | 'semua'
+  | 'create'
+  | 'update'
+  | 'archive_cancel'
+  | 'review'
+  | 'periode'
+  | 'permission';
+
+/** Peta chip → filter server. `in` = whitelist action; `or` = ekspresi PostgREST `.or()`.
+ *  Nilai `null` = tanpa filter (chip "Semua"). */
+const CHIP_FILTER: Record<ActivityLogChipKey, { in?: string[]; or?: string } | null> = {
+  semua: null,
+  create: { in: ['create', 'activate'] },
+  update: { in: ['update', 'setting_updated'] },
+  archive_cancel: { or: 'action.ilike.%archive%,action.ilike.%cancell%' },
+  review: { or: 'action.ilike.%deadline_change%,action.eq.evaluation_recorded' },
+  periode: { or: 'action.ilike.period_%,action.ilike.%score%' },
+  permission: { or: 'action.ilike.user_permission_%,action.eq.confidential_access_granted' },
+};
+
+/** Sanitasi teks pencarian: buang karakter yg konflik dgn sintaks PostgREST
+ *  (`,` `(` `)` `%` `*` `.`) — kita tetap wildcard sendiri via `%...%`. */
+function sanitizeSearch(q: string): string {
+  return q.replace(/[,()%*.:]/g, '').trim();
+}
 
 /**
  * UI-S-AR1 — metadata arsip (kapan & oleh siapa) dari activity_logs.
@@ -59,7 +91,7 @@ export async function listEntityActivityLog(
 ): Promise<ActivityLog[]> {
   const { data, error } = await supabase
     .from('activity_logs')
-    .select('*')
+    .select('*, actor:actor_id(id, full_name, email)')
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
     .order('created_at', { ascending: false })
@@ -69,19 +101,33 @@ export async function listEntityActivityLog(
 }
 
 export async function listActivityLog(opts?: {
+  /** Legacy — filter action exact match. Baru: pakai `chip`. */
   action?: string;
+  /** Kunci filter chip UI (server-side). */
+  chip?: ActivityLogChipKey;
+  /** Free-text search: cocokkan `action ILIKE %q%` OR `entity_type ILIKE %q%` (server-side). */
+  q?: string;
   limit?: number;
   page?: number;
 }): Promise<ActivityLog[]> {
   const limit = opts?.limit ?? PAGE_SIZE;
   const page = opts?.page ?? 0;
-  let q = supabase
+  let query = supabase
     .from('activity_logs')
-    .select('*')
+    .select('*, actor:actor_id(id, full_name, email)')
     .order('created_at', { ascending: false })
     .range(page * limit, page * limit + limit - 1);
-  if (opts?.action) q = q.eq('action', opts.action);
-  const { data, error } = await q;
+  if (opts?.action) query = query.eq('action', opts.action);
+  const chipDef = opts?.chip ? CHIP_FILTER[opts.chip] : null;
+  if (chipDef?.in) query = query.in('action', chipDef.in);
+  if (chipDef?.or) query = query.or(chipDef.or);
+  if (opts?.q) {
+    const needle = sanitizeSearch(opts.q);
+    if (needle.length > 0) {
+      query = query.or(`action.ilike.%${needle}%,entity_type.ilike.%${needle}%`);
+    }
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as ActivityLog[];
 }

@@ -2,15 +2,12 @@
 // Kontrak a11y & routing tetap sama; test PPL-02-1..8 mengunci behavior.
 import { useRouter, type Href } from 'expo-router';
 import type { ReactNode } from 'react';
-import { FlatList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
-import { Avatar, GuidanceNote, ScoreBadge } from '@/components/ui';
-import { personLabel, type OrgProfileWithRole } from '@/lib/cards';
-import { PEOPLE_TAB_COPY, type PeriodSnapshot, type RankingSnapshot } from '@/lib/people-score';
+import { GuidanceNote } from '@/components/ui';
+import { PEOPLE_TAB_COPY } from '@/lib/people-score';
 
-export type PeopleTabKey = 'monthly' | 'quarterly' | 'ranking' | 'admin';
-type Person = OrgProfileWithRole & { score?: number | null };
+export type PeopleTabKey = 'monthly' | 'quarterly' | 'admin';
 
 // OQ-9 diputuskan 2026-07-05: tab Admin = entry-point ke layar admin eksisting,
 // gate `manage_score_formula`; tidak menambah surface admin baru.
@@ -26,21 +23,18 @@ export type PeopleTabsProps = {
   canAdmin: boolean;
 };
 
-/**
- * Tablist header. Fallback `getByLabelText` untuk identifikasi tab
- * (accessibilityRole='tab' fickle di react-native + react-native-css).
- * Admin tab dirender bersyarat `canAdmin`.
- */
 export function PeopleTabs({ activeTab, onChange, canAdmin }: PeopleTabsProps) {
-  const tabs: Array<{ key: PeopleTabKey; label: string }> = [
+  // Segmented control HANYA untuk filter waktu (Bulan ini / Quarter). Admin
+  // dipisah sebagai tombol tersendiri di kanan agar tidak dibaca sebagai opsi
+  // filter yang saling meng-eksklusifkan.
+  const timeTabs: Array<{ key: PeopleTabKey; label: string }> = [
     { key: 'monthly', label: PEOPLE_TAB_COPY.monthly },
     { key: 'quarterly', label: PEOPLE_TAB_COPY.quarterly },
-    { key: 'ranking', label: PEOPLE_TAB_COPY.ranking },
-    ...(canAdmin ? [{ key: 'admin' as const, label: PEOPLE_TAB_COPY.admin }] : []),
   ];
+  const adminSelected = activeTab === 'admin';
   return (
-    <View className="flex-row gap-2 pb-3">
-      {tabs.map((t) => {
+    <View className="flex-row items-center gap-2 pb-3">
+      {timeTabs.map((t) => {
         const selected = activeTab === t.key;
         return (
           <Pressable
@@ -65,6 +59,28 @@ export function PeopleTabs({ activeTab, onChange, canAdmin }: PeopleTabsProps) {
           </Pressable>
         );
       })}
+      {canAdmin ? (
+        <Pressable
+          key="admin"
+          accessibilityRole="button"
+          accessibilityLabel={PEOPLE_TAB_COPY.admin}
+          accessibilityState={{ selected: adminSelected }}
+          onPress={() => onChange('admin')}
+          className={
+            'min-h-[44px] min-w-[44px] flex-row items-center justify-center rounded-xl border px-3 py-2 ' +
+            (adminSelected
+              ? 'border-brand-dark bg-brand-dark'
+              : 'border-neutral-300 bg-white dark:border-neutral-700 dark:bg-black')
+          }>
+          <Text
+            className={
+              'text-sm font-semibold ' +
+              (adminSelected ? 'text-white' : 'text-brand-dark dark:text-brand-light')
+            }>
+            ⚙ {PEOPLE_TAB_COPY.admin}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -75,72 +91,6 @@ export function PeopleQuarterlyTab({ tablist }: { tablist: ReactNode }) {
     <View className="flex-1 gap-4 bg-white p-5 dark:bg-black">
       {tablist}
       <GuidanceNote title="Quarter" body={PEOPLE_TAB_COPY.quarterlyPlaceholder} />
-    </View>
-  );
-}
-
-export type PeopleRankingTabProps = {
-  tablist: ReactNode;
-  latestClosed: PeriodSnapshot | null | undefined;
-  ranking: RankingSnapshot[];
-  people: Person[];
-};
-
-/** Tab Ranking — hanya periode closed (D9). Fallback GuidanceNote saat `latestClosed` null. */
-export function PeopleRankingTab({ tablist, latestClosed, ranking, people }: PeopleRankingTabProps) {
-  const router = useRouter();
-  if (!latestClosed) {
-    return (
-      <View className="flex-1 gap-4 bg-white p-5 dark:bg-black">
-        {tablist}
-        <GuidanceNote
-          title="Belum ada periode tertutup"
-          body="Papan peringkat muncul setelah administrator menutup periode skoring pertama."
-        />
-      </View>
-    );
-  }
-  return (
-    <View className="flex-1 bg-white dark:bg-black">
-      <FlatList
-        contentContainerStyle={{ gap: 12, padding: 20 }}
-        data={ranking}
-        keyExtractor={(r) => String(r.user_id)}
-        ListHeaderComponent={
-          <View className="gap-3 pb-3">
-            {tablist}
-            <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
-              Ranking periode {latestClosed.period_name}
-            </Text>
-          </View>
-        }
-        renderItem={({ item, index }) => {
-          const person = people.find((p) => p.id === item.user_id) ?? null;
-          const label = person ? personLabel(person) : item.user_id;
-          return (
-            <Pressable
-              className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
-              accessibilityRole="button"
-              accessibilityLabel={`Buka profil ${label}`}
-              onPress={() => router.push(`/people-profile/${item.user_id}` as Href)}>
-              <View className="h-7 w-7 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950">
-                <Text className="text-xs font-bold text-blue-700 dark:text-blue-300">
-                  {item.rank_number ?? index + 1}
-                </Text>
-              </View>
-              <Avatar name={label} seed={item.user_id} />
-              <View className="flex-1">
-                <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
-                  {label}
-                </Text>
-                <View className="mt-1.5">
-                  <ScoreBadge score={item.score} />
-                </View>
-              </View>
-            </Pressable>
-          );
-        }}
-      />
     </View>
   );
 }

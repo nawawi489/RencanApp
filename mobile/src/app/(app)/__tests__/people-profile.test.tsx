@@ -8,11 +8,11 @@ jest.setTimeout(30000);
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 const mockListOrgProfiles = jest.fn();
-const mockCountCompletedActionPlansInPeriod = jest.fn();
+const mockCountCompletedTasksInPeriod = jest.fn();
 jest.mock('@/lib/cards', () => ({
   __esModule: true,
   listOrgProfiles: () => mockListOrgProfiles(),
-  countCompletedActionPlansInPeriod: (...a: unknown[]) => mockCountCompletedActionPlansInPeriod(...a),
+  countCompletedTasksInPeriod: (...a: unknown[]) => mockCountCompletedTasksInPeriod(...a),
   personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
     p?.full_name?.trim() || p?.email || fallback,
 }));
@@ -85,8 +85,8 @@ beforeEach(() => {
   mockUseRanking.mockReturnValue({ ranking: [], isLoading: false, isError: false, refetch: jest.fn() });
   mockUseMyScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
   mockUseUserScoreHistory.mockReturnValue({ history: [], isLoading: false, isError: false });
-  mockCountCompletedActionPlansInPeriod.mockReset();
-  mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+  mockCountCompletedTasksInPeriod.mockReset();
+  mockCountCompletedTasksInPeriod.mockResolvedValue(0);
   mockCan.mockReturnValue(false);
 });
 
@@ -97,12 +97,14 @@ describe('PeopleProfileScreen', () => {
     expect(screen.getByText('rina@n.id')).toBeTruthy();
   });
 
-  it('[2] skor null → GuidanceNote "Skor menyusul" (AC-7.23)', async () => {
+  it('[2] skor null + self → GuidanceNote "Skor menyusul" (AC-7.23)', async () => {
+    mockParams.id = 'me';
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Skor menyusul')).toBeTruthy();
   });
 
-  it('[3] skor aktif + breakdown → ScoreBadge + label metrik', async () => {
+  it('[3] skor aktif + breakdown + admin → ScoreBadge + label metrik', async () => {
+    mockCan.mockReturnValue(true);
     mockUseActivePeriod.mockReturnValue({
       period: { id: 'p1', period_name: 'Q1', status: 'active' },
       isLoading: false,
@@ -112,14 +114,14 @@ describe('PeopleProfileScreen', () => {
       score: {
         auto_calculated_score: 88,
         manual_adjusted_score: null,
-        metric_breakdown: { action_plan_completion: 90, governance_discipline: 70 },
+        metric_breakdown: { task_completion: 90, governance_discipline: 70 },
       },
       isLoading: false,
       isError: false,
     });
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Score 88 · On track')).toBeTruthy();
-    expect(screen.getByText('Action Plan Completion')).toBeTruthy();
+    expect(screen.getByText('Tugas Completion')).toBeTruthy();
     expect(screen.getByText('Governance Discipline')).toBeTruthy();
   });
 
@@ -159,6 +161,68 @@ describe('PeopleProfileScreen', () => {
     expect(screen.queryByLabelText('Override Skor')).toBeNull();
   });
 
+  // ================================================================ §33 score detail gating
+  it('[§33-1] staff viewing others → Achievement Score + Breakdown HIDDEN', async () => {
+    mockParams.id = 'u-rina';
+    mockCan.mockReturnValue(false);
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseUserScore.mockReturnValue({
+      score: {
+        auto_calculated_score: 88,
+        manual_adjusted_score: null,
+        metric_breakdown: { task_completion: 90 },
+      },
+      isLoading: false,
+      isError: false,
+    });
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    await screen.findByText('Rina Jaya');
+    expect(screen.queryByText('Achievement Score')).toBeNull();
+    expect(screen.queryByText('Breakdown Metrik')).toBeNull();
+  });
+
+  it('[§33-2] staff viewing self → Achievement Score visible', async () => {
+    mockParams.id = 'me';
+    mockCan.mockReturnValue(false);
+    mockUseActivePeriod.mockReturnValue({
+      period: { id: 'p1', period_name: 'Q1', status: 'active' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseUserScore.mockReturnValue({
+      score: { auto_calculated_score: 75, manual_adjusted_score: null, metric_breakdown: {} },
+      isLoading: false,
+      isError: false,
+    });
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    await screen.findByText('Aku');
+    expect(screen.getByText('Achievement Score')).toBeTruthy();
+  });
+
+  it('[§33-3] staff viewing others → Ranking ringan still visible (komponen 4)', async () => {
+    mockParams.id = 'u-rina';
+    mockCan.mockReturnValue(false);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'cp1', period_name: 'Q4', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [{ user_id: 'u-rina', rank_number: 3, score: 80, metric_breakdown: {} }],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleProfileScreen />, { wrapper: wrapper() });
+    await screen.findByText('Rina Jaya');
+    expect(screen.getByText('#3')).toBeTruthy();
+    expect(screen.getByText('Ranking')).toBeTruthy();
+  });
+
   // ================================================================ PPL-06 Fase D subset (OQ-5)
   it('[PPL-06-Q1] id tidak match anggota org → GuidanceNote "Anggota tidak ditemukan" (not blank)', async () => {
     mockParams.id = 'unknown-id';
@@ -169,9 +233,10 @@ describe('PeopleProfileScreen', () => {
     expect(screen.queryByLabelText('Override Skor')).toBeNull();
   });
 
-  it('[PPL-06-Q2] profil orang lain + useUserScoreHistory berisi 3 titik → seksi Tren + sparkline render', async () => {
-    // viewer = 'me', profil = 'u-rina' (bukan self)
+  it('[PPL-06-Q2] profil orang lain + admin + useUserScoreHistory berisi 3 titik → seksi Tren + sparkline render', async () => {
+    // viewer = 'me', profil = 'u-rina' (bukan self); admin sees score detail (§33).
     mockParams.id = 'u-rina';
+    mockCan.mockReturnValue(true);
     mockUseActivePeriod.mockReturnValue({
       period: { id: 'p1', period_name: 'Q1', status: 'active' },
       isLoading: false,
@@ -201,8 +266,9 @@ describe('PeopleProfileScreen', () => {
     ).toBeTruthy();
   });
 
-  it('[PPL-06-Q3] profil orang lain + useUserScoreHistory kosong → seksi Tren HIDDEN (graceful)', async () => {
+  it('[PPL-06-Q3] profil orang lain + admin + useUserScoreHistory kosong → seksi Tren HIDDEN (graceful)', async () => {
     mockParams.id = 'u-rina';
+    mockCan.mockReturnValue(true);
     mockUseActivePeriod.mockReturnValue({
       period: { id: 'p1', period_name: 'Q1', status: 'active' },
       isLoading: false,
@@ -240,7 +306,7 @@ describe('PeopleProfileScreen', () => {
       isLoading: false,
       isError: false,
     });
-    mockCountCompletedActionPlansInPeriod.mockResolvedValue(5);
+    mockCountCompletedTasksInPeriod.mockResolvedValue(5);
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     // Header 'Kontribusi bulan ini' + jumlah 5 tampil.
     expect(await screen.findByText('Kontribusi bulan ini')).toBeTruthy();
@@ -254,7 +320,7 @@ describe('PeopleProfileScreen', () => {
       isLoading: false,
       isError: false,
     });
-    mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+    mockCountCompletedTasksInPeriod.mockResolvedValue(0);
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     // Seksi tetap render untuk isSelf, tapi copy = 'Belum ada AP selesai bulan ini' (disambiguasi 0-nyata).
     expect(await screen.findByText('Kontribusi bulan ini')).toBeTruthy();
@@ -268,7 +334,7 @@ describe('PeopleProfileScreen', () => {
       isLoading: false,
       isError: false,
     });
-    mockCountCompletedActionPlansInPeriod.mockResolvedValue(0);
+    mockCountCompletedTasksInPeriod.mockResolvedValue(0);
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     await screen.findByText('Rina Jaya');
     // Untuk profil orang lain + count=0: seksi TIDAK render (ambigu 0 nyata vs RLS-hidden).

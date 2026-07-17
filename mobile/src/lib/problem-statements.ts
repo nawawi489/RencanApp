@@ -1,5 +1,5 @@
 // Data layer Fase 6 — Problem Statement (turunan Development Area). Pemanggil tipis: INSERT ber-RLS,
-// lifecycle lewat RPC SECURITY DEFINER. Mirror pola strategies.ts (Strategy) byte-for-byte.
+// lifecycle lewat RPC SECURITY DEFINER. Mirror pola initiatives.ts (Inisiatif) byte-for-byte.
 import { STATUS_TONE } from './cards';
 import type { Tables } from './database.types';
 import { getOrgContext } from './org-context';

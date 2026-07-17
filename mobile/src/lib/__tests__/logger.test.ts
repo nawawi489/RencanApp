@@ -320,10 +320,21 @@ describe('sanitize', () => {
     expect(result).not.toContain('opaqueTokenXyzAbc');
     expect(result).toContain('[REDACTED_TOKEN]');
   });
+
+  it('[FR-ATT-SEC.3] meredaksi storage_path keys (chat attachment paths)', () => {
+    const result = sanitize({
+      storage_path: 'org/room/uuid-foto.jpg',
+      storagePath: 'org/room/uuid-x.png',
+      user: 'ali',
+    }) as Record<string, unknown>;
+    expect(result.storage_path).toBe('[REDACTED]');
+    expect(result.storagePath).toBe('[REDACTED]');
+    expect(result.user).toBe('ali');
+  });
 });
 
 // ---------------------------------------------------------------------------
-// PII karyawan (aplikasi EMS)
+// PII karyawan (aplikasi Rencanapp)
 // ---------------------------------------------------------------------------
 
 describe('sanitize — PII karyawan (Indonesia)', () => {

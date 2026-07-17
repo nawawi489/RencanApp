@@ -1,5 +1,5 @@
 // Komponen bersama Fase 5: MbrCompletionIndicator (visual) + guardMbrActivation (gating popup).
-// Dipakai ulang di KPI Area / Strategy / Initiative detail. Otoritas akhir tetap server.
+// Dipakai ulang di Strategi / Inisiatif / Rencana Aksi detail. Otoritas akhir tetap server.
 import { render, screen } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -14,7 +14,7 @@ jest.setTimeout(30000);
 
 function compliance(over: Partial<MbrCompliance>): MbrCompliance {
   return {
-    child_card_type: 'strategy',
+    child_card_type: 'initiative',
     child_count: 2,
     min_count: 3,
     enforcement_mode: 'hanya_peringatan',
@@ -41,6 +41,13 @@ describe('MbrCompletionIndicator', () => {
     );
     expect(screen.getByText('Lengkap')).toBeTruthy();
   });
+
+  it('[3b] nonaktif → tidak render (§7.5: rule disabled, no indicator)', async () => {
+    const { toJSON } = await render(
+      <MbrCompletionIndicator compliance={compliance({ enforcement_mode: 'nonaktif' })} />,
+    );
+    expect(toJSON()).toBeNull();
+  });
 });
 
 describe('guardMbrActivation', () => {
@@ -51,18 +58,18 @@ describe('guardMbrActivation', () => {
     (Alert.alert as jest.Mock).mockRestore?.();
   });
 
-  it('[4] blokir_aktivasi + non-compliant → blocked=true + Alert "Tidak Dapat Melanjutkan" + tombol "+ Tambah Strategy"', () => {
+  it('[4] blokir_aktivasi + non-compliant → blocked=true + Alert "Tidak Dapat Melanjutkan" + tombol "+ Tambah Inisiatif"', () => {
     const onAddChild = jest.fn();
     const blocked = guardMbrActivation(
       compliance({ enforcement_mode: 'blokir_aktivasi' }),
-      { childLabel: 'Strategy', onAddChild },
+      { childLabel: 'Inisiatif', onAddChild },
     );
     expect(blocked).toBe(true);
     const calls = (Alert.alert as jest.Mock).mock.calls;
     expect(calls[0][0]).toBe('Tidak Dapat Melanjutkan');
     // tombol kedua memicu onAddChild
     const buttons = calls[0][2] as { text: string; onPress?: () => void }[];
-    const addBtn = buttons.find((b) => b.text.includes('Tambah Strategy'));
+    const addBtn = buttons.find((b) => b.text.includes('Tambah Inisiatif'));
     expect(addBtn).toBeTruthy();
     addBtn!.onPress?.();
     expect(onAddChild).toHaveBeenCalled();
@@ -71,7 +78,7 @@ describe('guardMbrActivation', () => {
   it('[5] blokir_aktivasi + compliant → blocked=false, tanpa popup', () => {
     const blocked = guardMbrActivation(
       compliance({ enforcement_mode: 'blokir_aktivasi', child_count: 3, is_compliant: true }),
-      { childLabel: 'Strategy', onAddChild: jest.fn() },
+      { childLabel: 'Inisiatif', onAddChild: jest.fn() },
     );
     expect(blocked).toBe(false);
     expect((Alert.alert as jest.Mock).mock.calls).toHaveLength(0);
@@ -80,13 +87,22 @@ describe('guardMbrActivation', () => {
   it('[6] hanya_peringatan non-compliant → blocked=false (mode bukan blokir aktivasi)', () => {
     const blocked = guardMbrActivation(
       compliance({ enforcement_mode: 'hanya_peringatan' }),
-      { childLabel: 'Strategy', onAddChild: jest.fn() },
+      { childLabel: 'Inisiatif', onAddChild: jest.fn() },
     );
     expect(blocked).toBe(false);
   });
 
   it('[7] compliance undefined → blocked=false (fail-open; server otoritatif)', () => {
-    const blocked = guardMbrActivation(undefined, { childLabel: 'Strategy', onAddChild: jest.fn() });
+    const blocked = guardMbrActivation(undefined, { childLabel: 'Inisiatif', onAddChild: jest.fn() });
     expect(blocked).toBe(false);
+  });
+
+  it('[8] nonaktif → blocked=false (§7.5: rule disabled, no gating)', () => {
+    const blocked = guardMbrActivation(
+      compliance({ enforcement_mode: 'nonaktif' }),
+      { childLabel: 'Inisiatif', onAddChild: jest.fn() },
+    );
+    expect(blocked).toBe(false);
+    expect((Alert.alert as jest.Mock).mock.calls).toHaveLength(0);
   });
 });

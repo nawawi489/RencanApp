@@ -82,7 +82,7 @@ describe('section queries per-section (AC-H11)', () => {
 describe('listKpiNeedsAttention (gap-aware, 0032 override PRD §18)', () => {
   it('[8] KPI kualitatif (tanpa target numerik): saring yang sudah ada progres', async () => {
     mockFrom.mockImplementation((table: string) => {
-      if (table === 'kpi_areas')
+      if (table === 'strategies')
         return thenable({
           data: [
             { id: 'k1', name: 'Sudah ada progres', target_numeric: null, target_unit: null },
@@ -90,8 +90,8 @@ describe('listKpiNeedsAttention (gap-aware, 0032 override PRD §18)', () => {
           ],
           error: null,
         });
-      if (table === 'kpi_area_current_values')
-        return thenable({ data: [{ kpi_area_id: 'k1', numeric_total: 5 }], error: null });
+      if (table === 'strategy_current_values')
+        return thenable({ data: [{ strategy_id: 'k1', numeric_total: 5 }], error: null });
       throw new Error(`unexpected table ${table}`);
     });
     // k1 punya nilai approved → tersaring; k2 belum → perlu dipantau (percent null = kualitatif).
@@ -100,9 +100,9 @@ describe('listKpiNeedsAttention (gap-aware, 0032 override PRD §18)', () => {
     ]);
   });
 
-  it('[9] error kpi_areas dipropagasi (tanpa masking partial)', async () => {
+  it('[9] error strategies dipropagasi (tanpa masking partial)', async () => {
     mockFrom.mockImplementation((table: string) => {
-      if (table === 'kpi_areas') return thenable({ data: null, error: { message: 'rls' } });
+      if (table === 'strategies') return thenable({ data: null, error: { message: 'rls' } });
       return thenable({ data: [], error: null });
     });
     await expect(listKpiNeedsAttention()).rejects.toEqual({ message: 'rls' });
@@ -110,7 +110,7 @@ describe('listKpiNeedsAttention (gap-aware, 0032 override PRD §18)', () => {
 
   it('[10] KPI bertarget numerik: di bawah target bawa % + sisa; tercapai disaring', async () => {
     mockFrom.mockImplementation((table: string) => {
-      if (table === 'kpi_areas')
+      if (table === 'strategies')
         return thenable({
           data: [
             { id: 'k3', name: 'Customer Baru', target_numeric: 5000, target_unit: 'customer' },
@@ -118,12 +118,12 @@ describe('listKpiNeedsAttention (gap-aware, 0032 override PRD §18)', () => {
           ],
           error: null,
         });
-      if (table === 'kpi_area_current_values')
+      if (table === 'strategy_current_values')
         return thenable({
           // supabase-js mengembalikan numeric sebagai string → uji koersi.
           data: [
-            { kpi_area_id: 'k3', numeric_total: '3940' },
-            { kpi_area_id: 'k4', numeric_total: '120' },
+            { strategy_id: 'k3', numeric_total: '3940' },
+            { strategy_id: 'k4', numeric_total: '120' },
           ],
           error: null,
         });

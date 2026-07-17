@@ -1,14 +1,14 @@
 // Data layer Fase 3 — Home (Today Command Center). Per-section (retry granular AC-H11), tanggal
 // "hari ini" dihitung di SERVER (org timezone) via RPC; klien tak pernah menghitung tanggal (CF-3).
 // getOrgToday() hanya untuk label/orkestrasi UI — nilainya TIDAK dikirim balik ke RPC.
-import { computeKpiGap } from './kpi-gap';
+import { computeKpiGap } from './strategy-gap';
 import { supabase } from './supabase';
 
-/** Baris seragam section Home (one-time Action Plan + Repeat Instance disatukan). */
+/** Baris seragam section Home (one-time Tugas + Repeat Instance disatukan). */
 export type HomeItem = {
-  kind: 'action_plan' | 'instance';
+  kind: 'task' | 'instance';
   id: string;
-  action_plan_id: string;
+  task_id: string;
   name: string | null;
   due: string | null;
   status: string;
@@ -49,7 +49,7 @@ export function listNearDeadline(): Promise<HomeItem[]> {
 
 /**
  * Instance Repeat yang menunggu review user (status 'submitted', reviewer = user).
- * Pelengkap listPendingReviews (cards.ts) yang hanya melihat one-time action_plans —
+ * Pelengkap listPendingReviews (cards.ts) yang hanya melihat one-time tasks —
  * tanpa ini kartu "Butuh Review" Home menampilkan 0 padahal ada submission instance.
  */
 export async function listPendingInstanceReviews(): Promise<HomeItem[]> {
@@ -57,8 +57,8 @@ export async function listPendingInstanceReviews(): Promise<HomeItem[]> {
   const uid = auth.user?.id;
   if (!uid) return [];
   const { data, error } = await supabase
-    .from('action_plan_instances')
-    .select('id, action_plan_id, instance_date, status, action_plans(name)')
+    .from('task_instances')
+    .select('id, task_id, instance_date, status, tasks(name)')
     .eq('reviewer_id', uid)
     .eq('status', 'submitted')
     .order('instance_date', { ascending: true });
@@ -66,23 +66,23 @@ export async function listPendingInstanceReviews(): Promise<HomeItem[]> {
   return (data ?? []).map((r) => {
     const row = r as unknown as {
       id: string;
-      action_plan_id: string;
+      task_id: string;
       instance_date: string;
       status: string;
-      action_plans: { name: string | null } | null;
+      tasks: { name: string | null } | null;
     };
     return {
       kind: 'instance' as const,
       id: row.id,
-      action_plan_id: row.action_plan_id,
-      name: row.action_plans?.name ?? null,
+      task_id: row.task_id,
+      name: row.tasks?.name ?? null,
       due: row.instance_date,
       status: row.status,
     };
   });
 }
 
-/** KPI Area aktif yang perlu dipantau di Home (snapshot tim). */
+/** Strategi aktif yang perlu dipantau di Home (snapshot tim). */
 export type KpiAttentionItem = {
   id: string;
   name: string;
@@ -95,9 +95,9 @@ export type KpiAttentionItem = {
 };
 
 /**
- * KPI Area aktif yang perlu dipantau (0032, override PRD §18):
+ * Strategi aktif yang perlu dipantau (0032, override PRD §18):
  *   - Bertarget numerik (`target_numeric > 0`): masuk bila capaian < target (current/target via
- *     VIEW kpi_area_current_values.numeric_total). Membawa percent + remaining untuk "% gap" prototype.
+ *     VIEW strategy_current_values.numeric_total). Membawa percent + remaining untuk "% gap" prototype.
  *   - Kualitatif (tanpa target numerik): masuk bila BELUM ada progres approved (absen dari view) —
  *     sinyal state-based lama, tanpa klasifikasi tanggal (CF-3).
  * RLS men-scope kedua query (org + visibility). supabase-js mengembalikan `numeric` sebagai string →
@@ -105,14 +105,14 @@ export type KpiAttentionItem = {
  */
 export async function listKpiNeedsAttention(): Promise<KpiAttentionItem[]> {
   const [areas, values] = await Promise.all([
-    supabase.from('kpi_areas').select('id, name, target_numeric, target_unit').eq('status', 'active'),
-    supabase.from('kpi_area_current_values').select('kpi_area_id, numeric_total'),
+    supabase.from('strategies').select('id, name, target_numeric, target_unit').eq('status', 'active'),
+    supabase.from('strategy_current_values').select('strategy_id, numeric_total'),
   ]);
   if (areas.error) throw areas.error;
   if (values.error) throw values.error;
   const currentById = new Map<string, number>();
   for (const v of values.data ?? []) {
-    if (v.kpi_area_id) currentById.set(v.kpi_area_id, Number(v.numeric_total) || 0);
+    if (v.strategy_id) currentById.set(v.strategy_id, Number(v.numeric_total) || 0);
   }
 
   const out: KpiAttentionItem[] = [];

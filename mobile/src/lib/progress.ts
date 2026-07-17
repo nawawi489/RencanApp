@@ -1,6 +1,6 @@
-// UI-G-001 — derivasi capaian (0–100) untuk header detail Goal/KPI/Strategy/Initiative/Action Plan.
+// UI-G-001 — derivasi capaian (0–100) untuk header detail Goal/KPI/Inisiatif/Rencana Aksi/Tugas.
 // Murni di klien: angka indikatif berdasarkan status anak dan tidak menggantikan metrik server
-// (Repeat Compliance untuk AP repeat tetap dipakai apa adanya — lihat `computeActionPlanProgress`).
+// (Repeat Compliance untuk AP repeat tetap dipakai apa adanya — lihat `computeTaskProgress`).
 
 type StatusItem = { status: string };
 
@@ -12,7 +12,7 @@ export function ratioDoneOfChildren(children: StatusItem[]): number {
   return Math.round((done / active.length) * 100);
 }
 
-/** Action Plan one-time: status-based heuristik (PRD eksekusi-loop). */
+/** Tugas one-time: status-based heuristik (PRD eksekusi-loop). */
 const ACTION_PLAN_STATUS_PROGRESS: Record<string, number> = {
   draft: 0,
   assigned: 10,
@@ -23,7 +23,7 @@ const ACTION_PLAN_STATUS_PROGRESS: Record<string, number> = {
   archived: 0,
 };
 
-export function computeActionPlanProgress(args: {
+export function computeTaskProgress(args: {
   status: string;
   repeat: boolean;
   compliancePercent: number | null;
@@ -47,27 +47,27 @@ export function ratioActiveOfChildren(children: StatusItem[]): number {
 }
 
 /**
- * Label bawah orb tree (spec §10 / WSA-15): Goal & KPI Area = 'Capaian' (hasil KPI/Goal),
+ * Label bawah orb tree (spec §10 / WSA-15): Goal & Strategi = 'Capaian' (hasil KPI/Goal),
  * card lainnya = 'Progress'. Satu sumber kebenaran agar 7 row tree tak punya definisi berbeda.
  * Kind tak dikenal → default 'Progress' (fail-safe; 'Capaian' punya makna khusus hasil).
  */
 export function treeOrbLabel(kind: string): 'Capaian' | 'Progress' {
-  return kind === 'goal' || kind === 'kpi_area' ? 'Capaian' : 'Progress';
+  return kind === 'goal' || kind === 'strategy' ? 'Capaian' : 'Progress';
 }
 
 /**
- * Nilai orb Action Plan leaf di tree. Reuse `computeActionPlanProgress` (satu sumber kebenaran).
+ * Nilai orb Tugas leaf di tree. Reuse `computeTaskProgress` (satu sumber kebenaran).
  * Repeat AP butuh Repeat Compliance real; bila compliance belum ter-fetch (undefined/null) →
  * kembalikan null agar UI render '—' (prinsip no-misleading-numbers), BUKAN 0%.
  */
-export function actionPlanTreeProgress(args: {
+export function taskTreeProgress(args: {
   status: string;
   repeatSetting: string;
   compliancePercent?: number | null;
 }): number | null {
   const repeat = args.repeatSetting === 'repeat';
   if (repeat && args.compliancePercent == null) return null;
-  return computeActionPlanProgress({
+  return computeTaskProgress({
     status: args.status,
     repeat,
     compliancePercent: args.compliancePercent ?? null,

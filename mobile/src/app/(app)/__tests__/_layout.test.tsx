@@ -6,6 +6,10 @@ jest.mock('@/providers/auth-provider', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
+jest.mock('@/hooks/use-push-notifications', () => ({
+  usePushHandler: jest.fn(),
+}));
+
 jest.mock('expo-router', () => {
   const React = jest.requireActual('react');
   const RN = jest.requireActual('react-native');
@@ -58,7 +62,7 @@ describe('AppLayout', () => {
     await render(<AppLayout />);
 
     expect(String(screen.getByTestId('screen:settings-mbr').props.children)).toContain(
-      JSON.stringify({ headerShown: true, title: 'Minimum Breakdown Rule' }),
+      JSON.stringify({ headerShown: true, title: 'Aturan Pecah Target' }),
     );
     expect(String(screen.getByTestId('screen:settings-score-formula').props.children)).toContain(
       JSON.stringify({ headerShown: true, title: 'Score Formula' }),

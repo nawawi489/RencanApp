@@ -24,12 +24,12 @@ import {
 import {
   ACTION_PLAN_STATUS_LABEL,
   STATUS_TONE,
-  countCompletedActionPlansInPeriod,
+  countCompletedTasksInPeriod,
   getOrgProfileDetail,
-  listActionPlansByPic,
+  listTasksByPic,
   listOrgProfiles,
   personLabel,
-  type ActionPlanWithPeople,
+  type TaskWithPeople,
   type PersonRef,
 } from '@/lib/cards';
 import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
@@ -94,17 +94,18 @@ export function LivePeopleProfileScreen() {
   const { ranking } = useRanking(closed?.id ?? '');
   const closedEntry = useMemo(() => ranking.find((r) => r.user_id === id), [ranking, id]);
 
-  // UI-S-PR4 — Tugas (Action Plan) yang user ini jadi PIC-nya. Collapsible.
+  // UI-S-PR4 — Tugas (Tugas) yang user ini jadi PIC-nya. Collapsible.
   const [tasksOpen, setTasksOpen] = useState(false);
   const tasksQ = useQuery({
     queryKey: ['person-tasks', id],
-    queryFn: () => listActionPlansByPic(id ?? ''),
+    queryFn: () => listTasksByPic(id ?? ''),
     enabled: !!id && tasksOpen,
   });
-  const tasks = (tasksQ.data ?? []) as ActionPlanWithPeople[];
+  const tasks = (tasksQ.data ?? []) as TaskWithPeople[];
 
   const isSelf = profile?.id === id;
   const canManage = can('manage_score_formula');
+  const canViewScore = isSelf || canManage;
 
   // PPL-06 Kontribusi bulan ini (OQ-6 diputuskan 2026-07-05): count AP done PIC pada periode aktif.
   // Semantik pakai `updated_at` sbg approksimasi `completed_at` (schema tak punya kolom itu; §NG-5
@@ -112,7 +113,7 @@ export function LivePeopleProfileScreen() {
   // bila count=0 untuk menghindari ambiguitas 0-nyata vs RLS-hidden.
   const contributionQ = useQuery({
     queryKey: ['contribution', id, active?.id ?? 'none'],
-    queryFn: () => countCompletedActionPlansInPeriod(id ?? '', active ?? null),
+    queryFn: () => countCompletedTasksInPeriod(id ?? '', active ?? null),
     enabled: !!id && !!active,
   });
   const contributionCount = contributionQ.data ?? 0;
@@ -233,28 +234,30 @@ export function LivePeopleProfileScreen() {
           </SectionCard>
         ) : null}
 
-        {/* Achievement Score */}
-        <SectionCard>
-          <Text className="text-base font-semibold text-black dark:text-white">Achievement Score</Text>
-          {scoreLoading ? (
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat skor…</Text>
-          ) : displayedScore != null ? (
-            <View className="gap-3">
-              <View className="flex-row items-center gap-2">
-                <ScoreBadge score={displayedScore} />
-                {scoreSourceLabel ? (
-                  <Text className="text-xs text-neutral-400">· {scoreSourceLabel}</Text>
-                ) : null}
+        {/* Achievement Score — §33 komponen 9: hanya self atau admin/management. */}
+        {canViewScore ? (
+          <SectionCard>
+            <Text className="text-base font-semibold text-black dark:text-white">Achievement Score</Text>
+            {scoreLoading ? (
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat skor…</Text>
+            ) : displayedScore != null ? (
+              <View className="gap-3">
+                <View className="flex-row items-center gap-2">
+                  <ScoreBadge score={displayedScore} />
+                  {scoreSourceLabel ? (
+                    <Text className="text-xs text-neutral-400">· {scoreSourceLabel}</Text>
+                  ) : null}
+                </View>
+                <TrendSection points={sparkPoints} />
               </View>
-              <TrendSection points={sparkPoints} />
-            </View>
-          ) : (
-            <GuidanceNote
-              title="Skor menyusul"
-              body="Achievement Score muncul setelah perhitungan periode berjalan atau periode pertama ditutup."
-            />
-          )}
-        </SectionCard>
+            ) : (
+              <GuidanceNote
+                title="Skor menyusul"
+                body="Achievement Score muncul setelah perhitungan periode berjalan atau periode pertama ditutup."
+              />
+            )}
+          </SectionCard>
+        ) : null}
 
         {/* PPL-06 Kontribusi bulan ini (OQ-6). Sembunyikan bila !isSelf && count=0. */}
         <ContributionSection
@@ -263,8 +266,8 @@ export function LivePeopleProfileScreen() {
           count={contributionCount}
         />
 
-        {/* Breakdown metrik */}
-        {breakdown.length ? (
+        {/* Breakdown metrik — §33: gated bersama score detail. */}
+        {canViewScore && breakdown.length ? (
           <SectionCard>
             <Text className="text-base font-semibold text-black dark:text-white">Breakdown Metrik</Text>
             <ScoreBreakdown metrics={breakdown} />
@@ -310,7 +313,7 @@ export function LivePeopleProfileScreen() {
           </SectionCard>
         ) : null}
 
-        {/* UI-S-PR4 — Tugas (Action Plan aktif yang user ini PIC-nya). Lazy fetch saat expand. */}
+        {/* UI-S-PR4 — Tugas (Tugas aktif yang user ini PIC-nya). Lazy fetch saat expand. */}
         <SectionCard>
           <Pressable
             accessibilityRole="button"
@@ -330,7 +333,7 @@ export function LivePeopleProfileScreen() {
               </Text>
             ) : tasks.length === 0 ? (
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                Tidak ada Action Plan aktif untuk anggota ini.
+                Tidak ada Tugas aktif untuk anggota ini.
               </Text>
             ) : (
               <View className="gap-2">
@@ -339,7 +342,7 @@ export function LivePeopleProfileScreen() {
                     key={t.id}
                     accessibilityRole="button"
                     accessibilityLabel={`Buka ${t.name}`}
-                    onPress={() => router.push(`/action-plan/${t.id}` as Href)}
+                    onPress={() => router.push(`/task/${t.id}` as Href)}
                     className="gap-1 rounded-xl bg-neutral-50 p-3 active:opacity-70 dark:bg-neutral-900">
                     <View className="flex-row items-start justify-between gap-2">
                       <Text className="flex-1 text-sm font-medium text-black dark:text-white">

@@ -32,8 +32,13 @@ wiki/.obsidian/graph.json
 # UI/UX screenshots & mockups — artefak lokal, tidak perlu di-repo (root only; jangan match mobile/src/components/ui/)
 /ui/
 .gstack/
+docs/screenshots/
 
 # Session scratch (brainstorm output, throwaway uploads, layout variant sandboxes)
 .superpowers/
 .uploads/
 performance-layout-variants/
+
+# Supabase CLI transient state (per-machine, not source-tracked)
+supabase/.branches/
+supabase/.temp/

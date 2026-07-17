@@ -22,7 +22,7 @@ if (!feature || !String(feature).trim()) {
 const hintPaths = (typeof args === 'object' && Array.isArray(args?.paths)) ? args.paths : []
 
 // Konteks project yang dibagikan ke semua agent supaya rencana akurat.
-const CONTEXT = `Project: RencanApp — aplikasi EMS mobile.
+const CONTEXT = `Project: RencanApp — aplikasi Rencanapp (Execution Project Management) mobile.
 - Kode app ada di mobile/ (Expo SDK 56 + expo-router, React Native 0.85, React 19).
 - Data layer: mobile/src/lib/cards.ts — pemanggil tipis ke Supabase (RLS + RPC menegakkan otorisasi di server).
 - Supabase client: mobile/src/lib/supabase.ts; tipe DB: mobile/src/lib/database.types.ts.

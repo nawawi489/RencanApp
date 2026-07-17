@@ -105,7 +105,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
           status: 'active',
           level: 'staff',
           categories: [
-            { code: 'action_plan_completion', weight: 60, source_metric: 'a' },
+            { code: 'task_completion', weight: 60, source_metric: 'a' },
             { code: 'repeat_compliance', weight: 40, source_metric: 'r' },
           ],
         },
@@ -115,7 +115,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     });
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Staff Default')).toBeTruthy();
-    expect(screen.getByText('Action Plan Completion')).toBeTruthy();
+    expect(screen.getByText('Tugas Completion')).toBeTruthy();
     expect(screen.getByText('Repeat Compliance')).toBeTruthy();
     expect(screen.getByText('60%')).toBeTruthy();
     expect(screen.getByText('40%')).toBeTruthy();
@@ -249,7 +249,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
       versions: [{
         id: 'v-draft', version_number: 4, status: 'draft', level: 'staff',
         categories: [
-          { code: 'action_plan_completion', weight: 60, source_metric: 'm1' },
+          { code: 'task_completion', weight: 60, source_metric: 'm1' },
           { code: 'repeat_compliance', weight: 40, source_metric: 'm2' },
         ],
       }],
@@ -259,7 +259,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     const activateBtn = await screen.findByLabelText('Aktifkan v4');
     expect(activateBtn.props.accessibilityState?.disabled).toBe(false); // initial: clean + sum=100
     // Ubah bobot 60→70 (sum jadi 110 → invalid + dirty).
-    const apInput = screen.getByLabelText('Bobot Action Plan Completion');
+    const apInput = screen.getByLabelText('Bobot Tugas Completion');
     await act(async () => {
       fireEvent.changeText(apInput, '70');
     });

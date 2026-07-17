@@ -1,8 +1,9 @@
 // Notifications (Fase 3) — segmentasi 8 tab + 4 state per tab. Baris menandai dibaca saat ditekan;
-// notifikasi action_plan membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
+// notifikasi task membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
 // UI-S-N01 — tombol aksi inline per row sesuai (type, entity_type).
 // UI-S-N02 — section "Baru" (≤24 jam) vs "Sebelumnya".
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useMemo, useState } from 'react';
@@ -18,6 +19,7 @@ import {
   SkeletonList,
   TabBar,
 } from '@/components/ui';
+import { usePushRegistration } from '@/hooks/use-push-notifications';
 import { useNotificationActions, useNotifications, useUnreadCount } from '@/hooks/use-notifications';
 import {
   NOTIFICATION_TYPE_LABEL,
@@ -79,14 +81,14 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
 function inlineAction(item: Notification): { label: string; href: Href | null } | null {
   const t: NotificationType = item.type;
   const et = item.entity_type;
-  const detail: Href = (et === 'action_plan_instance'
-    ? `/action-plan/instance/${item.entity_id}`
-    : `/action-plan/${item.entity_id}`) as Href;
+  const detail: Href = (et === 'task_instance'
+    ? `/task/instance/${item.entity_id}`
+    : `/task/${item.entity_id}`) as Href;
   if (item.resolved_at) return { label: 'Lihat Detail', href: detail };
-  if (et === 'action_plan_instance') {
+  if (et === 'task_instance') {
     return { label: 'Buka Instance', href: detail };
   }
-  if (et === 'action_plan') {
+  if (et === 'task') {
     if (t === 'review_request') return { label: 'Review Sekarang', href: detail };
     if (t === 'rejected') return { label: 'Lihat Revisi', href: detail };
     if (t === 'approved') return { label: 'Lihat Bukti', href: detail };
@@ -214,6 +216,50 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+// ---------------------------------------------------------------- push permission banner
+
+function PushPermissionBanner({
+  permissionStatus,
+  onActivate,
+}: {
+  permissionStatus: string;
+  onActivate: () => void;
+}) {
+  if (permissionStatus === 'granted') return null;
+
+  if (permissionStatus === 'denied') {
+    return (
+      <View className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+        <Text className="text-sm text-neutral-600 dark:text-neutral-400">
+          Notifikasi diblokir. Buka pengaturan perangkat untuk mengaktifkan.
+        </Text>
+        <Pressable
+          onPress={() => void Linking.openSettings()}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Pengaturan"
+          className="mt-3 min-h-[44px] items-center justify-center self-start rounded-xl bg-brand-dark px-5 active:opacity-80">
+          <Text className="text-sm font-semibold text-white">Buka Pengaturan</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+      <Text className="text-sm text-neutral-600 dark:text-neutral-400">
+        Aktifkan notifikasi push agar tidak terlewat.
+      </Text>
+      <Pressable
+        onPress={onActivate}
+        accessibilityRole="button"
+        accessibilityLabel="Aktifkan Notifikasi"
+        className="mt-3 min-h-[44px] items-center justify-center self-start rounded-xl bg-brand-dark px-5 active:opacity-80">
+        <Text className="text-sm font-semibold text-white">Aktifkan</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------- screen
 
 export function LiveNotificationsScreen() {
@@ -223,6 +269,7 @@ export function LiveNotificationsScreen() {
   const { count } = useUnreadCount();
   const { markRead, markAllRead } = useNotificationActions();
   const { effective } = useThemePreference();
+  const { permissionStatus, register } = usePushRegistration();
   // Pola warna ikon brand theme-aware (app-header/IconTile, DESIGN §12).
   const brandIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
   const mutedIconColor = effective === 'dark' ? '#a3a3a3' : '#667085';
@@ -233,10 +280,10 @@ export function LiveNotificationsScreen() {
 
   function openRow(item: Notification) {
     markRead(item.id);
-    if (item.entity_type === 'action_plan') {
-      router.push(`/action-plan/${item.entity_id}` as Href);
-    } else if (item.entity_type === 'action_plan_instance') {
-      router.push(`/action-plan/instance/${item.entity_id}` as Href);
+    if (item.entity_type === 'task') {
+      router.push(`/task/${item.entity_id}` as Href);
+    } else if (item.entity_type === 'task_instance') {
+      router.push(`/task/instance/${item.entity_id}` as Href);
     }
   }
 
@@ -274,6 +321,10 @@ export function LiveNotificationsScreen() {
           Notifikasi resmi dan respons.
         </Text>
       </View>
+      <PushPermissionBanner
+        permissionStatus={permissionStatus}
+        onActivate={() => void register()}
+      />
       {controls}
     </View>
   );

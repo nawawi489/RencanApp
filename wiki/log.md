@@ -1438,3 +1438,260 @@ Baseline pre-work: 854 pass / 6 fail. Sesudah: 885 pass / 6 fail (fail-set ident
 - Client: layar `mobile/src/app/(app)/settings-user-new.tsx` (form nama/email/password sementara ≥8 kar/pill role, gate `manage_users_permissions`, pill C-Level terkunci untuk non-CEO) + tombol "Tambah User" di `settings-permission-users.tsx`; lib `users-admin.ts` (invoke function, surface pesan domain) + hook `use-users-admin.ts` (invalidate `org-profiles`, `org-profiles-with-roles`).
 - Infra: `supabase/config.toml` minimal ditambahkan (dibutuhkan CLI untuk `functions serve/deploy`); deploy staging: `npx supabase link --project-ref fhnqwytqprsptjshoxfn` lalu `npx supabase functions deploy create-user`.
 - Verifikasi: jest `users-admin.test.ts` 4/4, `settings-user-new.test.tsx` 8/8, `settings-permission-users.test.tsx` 8/8 (P-UI-08 baru); manual test ADM-16 ditambahkan ke `docs/manual-testing.md`.
+
+## [2026-07-11] update | Rename Workspace Terminology F0 — PRD.md V1.8.3 + spec
+
+- Owner (2026-07-11): scope Full rename UI+code+DB, geser bottom-up: `KPI Area→Strategy`, `Strategy→Initiative`, `Initiative→Action Plan`, `Action Plan→Task`. Task = rename label saja (tidak entitas baru).
+- Branch: `feat/rename-workspace-terminology` (base `origin/staging`). Snapshot working tree admin di-stash `stash@{0}` sebelum switch.
+- Spec: [specs/rename-workspace-terminology.md](../specs/rename-workspace-terminology.md) (19.9KB, 16 section, 47 acceptance criteria, 12 RWT decision, fase F0–F7). Dihasilkan lewat `/sdd-plan` workflow multi-agent (14 agent, 24 menit).
+- Mapping PRD.md: [specs/rename-workspace-terminology-prd-mapping.md](../specs/rename-workspace-terminology-prd-mapping.md) — mapping section-per-section owner-approved 2026-07-11.
+- PRD.md updated (13 section: §2, §3, §5, §6, §7, §9, §10, §11, §12, §13–15, §18–19, §20–22, §24, §29–30, §31, §33, §34.4, §35, §36, §38, §41, §42, §43, §44). Positioning §2 diperkuat: "Task tunduk Reviewer, evidence, Score Formula — bukan checklist bebas". Catatan V1.8.3 di §5 (identifier snake_case) + §35 (audit historis freeze via `map_legacy_entity_type`).
+- Owner default DECIDED (2026-07-11) untuk 11 RWT (A untuk 10, B untuk RWT-03). RWT-12 (Content Lead DRI + tanggal rewrite copy edukasi) tetap PENDING — tidak block F1, harus diisi sebelum F4.
+- Berikutnya: F1 = migrasi 0045–0048 bottom-up + hygiene 0050 (ALTER TABLE + ALTER RENAME CONSTRAINT), lalu F2 enum backfill (0049) + `map_legacy_entity_type` helper.
+
+## [2026-07-11] update | Rename Workspace Terminology F1 DDL — tables/columns/indexes/view
+
+- Migration `supabase/migrations/0045_rename_workspace_terminology.sql` — 197 baris SQL dalam satu BEGIN/COMMIT (deviasi dari struktur 4-file spec §10; alasan: atomicity dalam satu transaksi = urutan statement kontrol bottom-up ordering, multi-file tidak menambah safety).
+- Applied lokal via `docker exec supabase_db_supabase psql`. Verifikasi: 10 tabel + 1 view (11/11) dengan nama baru, FK columns bergeser (`task_id`, `action_plan_id`, `initiative_id`, `strategy_id`), SELECT smoke test kembalikan 4/4/4/4 seed rows di tiap level.
+- **Scope F1 disempurnakan**: hanya DDL (tabel + kolom + index + view). Function bodies, RLS policy bodies, trigger bodies di-defer ke F3. Konsekuensi: RPC mobile pecah antara F1 apply dan F3 apply (spec §10 F1 acceptance "pg_class bersih" tercapai; "typecheck hijau" ditunggu F4 mobile client rewrite).
+- Fungsi yang di-freeze nama (per RWT-05 A + spec §7.7 pg_cron continuity): `compute_action_plan_completion`, `generate_action_plan_instances`, `mark_overdue_instances`, `calculate_period_scores`, `close_period_snapshot`, `override_user_score`, `write_activity`, `emit_notification`, `resolve_notifications`, `create_submission_draft`, `search_cards`, `cancel_card`.
+- Fungsi lain (~45) yang menyebut nama tabel lama akan mengalami rename+body rewrite di F3 (rencana `0046_rewrite_function_bodies.sql`). Bash sed pipeline placeholder-safe untuk generate CREATE OR REPLACE + DROP list sudah tersedia di scratchpad.
+- Commit: `f90ba06` di branch `feat/rename-workspace-terminology`.
+- Berikutnya: F3 body rewrites (0046) + F2 enum backfill (0047) — atomic per merge gate spec §10.
+
+## [2026-07-11] update | Rename Workspace Terminology F2+F3 bundled — 62 function bodies + 19 RLS policies + enum backfill
+
+- Migration `supabase/migrations/0046_rewrite_bodies_and_policies.sql` (2894 baris) — sekarang tunggal file yang menggabungkan F2 dan F3 sesuai atomic-rename spec §10 merge gate.
+- Sections (dalam satu BEGIN/COMMIT):
+  - **S0**: expand CHECK constraint `entity_type` di 5 tabel (`comments`, `cancellations`, `confidential_access_rules`, `deadline_change_requests`, `minimum_breakdown_rules`) → union OLD ∪ NEW literals untuk transition compat (row historis freeze per RWT-07 A, row baru pakai new literals).
+  - **S1**: DROP 3 trigger yang refer renamed trigger function.
+  - **S2**: DROP CASCADE 62 workspace-hierarchy function — sidesteps signature mismatch di parameter/return-type rename yang CREATE OR REPLACE tidak izinkan; RLS policy dependen ikut ke-drop.
+  - **S3**: CREATE OR REPLACE 62 function dengan nama baru + body referensi tabel/kolom baru. Freeze names per RWT-05 A + pg_cron: `compute_action_plan_completion`, `generate_action_plan_instances` (nama tetap, body update).
+  - **S4**: recreate 19 RLS policy dengan reference function baru + optional policy name refresh (mis. `kpi_areas_select` → `strategies_select`).
+  - **S5**: create 3 trigger baru (`task_sync_chat`, `action_plan_chat_room`, `strategy_target_breakdown_touch`) pointing ke tg_task_sync_chat/tg_action_plan_chat_room/tg_strategy_breakdown_touch_updated_at.
+  - **S6**: `map_legacy_entity_type(text)` helper (SECURITY INVOKER, IMMUTABLE) untuk read-side rendering row historis dengan literal lama.
+- Generation approach: bash sed pipeline placeholder-safe multi-pass di scratchpad (`gen_body_rewrites.sh` + `gen_policy_rewrites.js`) — extract 62 function DDL via `pg_get_functiondef`, apply pass1 old→placeholder, pass2 placeholder→new, revert FROZEN function names via 2nd sed pass, revert param names `p_task_id`→`p_action_plan_id` globally (agar CREATE OR REPLACE tidak konflik dgn existing signatures), fix stray `initiative_target_breakdowns` → `strategy_target_breakdowns` (F1 sudah rename table sehingga pg_get_functiondef output signature-nya sudah pakai new-name via OID lookup, sed lalu over-rename lewat bare `strategy` pattern).
+- Verifikasi lokal:
+  - COMMIT hijau (2894 baris SQL, satu transaksi).
+  - Function counts: 9 renamed core function (activate_task, activate_strategy, can_access_task, strategy_has_my_descendant, strategy_in_my_org, initiative_has_my_descendant, initiative_in_my_org, submit_task, tg_task_sync_chat).
+  - Smoke RPC `public.strategy_has_my_descendant('...uuid...')` returns `f` — executes without body error.
+  - Helper: `map_legacy_entity_type('action_plan')` = `'task'`, `('kpi_area')` = `'strategy'`, `('goal')` = `'goal'` (passthrough).
+  - 3 trigger baru aktif; 0 lingering kpi_area_* function.
+- Commit: `c850a4c` di branch `feat/rename-workspace-terminology`.
+- Berikutnya: F4 Mobile client rewrite (route folder mv bottom-up + lib/hooks/components + glossary/workspace-copy + PostgREST embed + realtime filter). Estimasi 3–5 jam kerja fokus karena menyentuh ~50 file source + 45 file test.
+
+## [2026-07-11] update | F4 partial — regen types + sed rename di 22 file lib/hooks/screens
+
+- `mobile/src/lib/database.types.ts` di-regenerate dari local Supabase via `npx supabase gen types typescript --local`. Sekarang shape: `strategies`, `initiatives`, `action_plans`, `tasks`, `task_instances`, `strategy_templates`, `strategy_target_breakdowns` (semua new-schema names).
+- Placeholder-safe sed pipeline diterapkan ke 22 file (lib/*, lib/__tests__/*, hooks/*, hooks/__tests__/*, screens/*, components/submission-card.tsx). tsc error 317 → 55 (turun 83%).
+- Sisa 55 error butuh review manual per-file. Root cause: sed level-shift bertabrakan dengan ambiguitas semantik (mis. `NewInitiative` type post-sed punya field `initiative_id` tetapi harusnya `strategy_id` mengikuti kolom F1-renamed).
+- Belum dilakukan (spec §10 F4 sisa work):
+  - Rename folder route: `mobile/src/app/(app)/kpi-area/` → `strategy/` dst (collision handling via bottom-up)
+  - Rename lib file: `kpi-areas.ts` → `strategies.ts` dst
+  - Update Bahasa Indonesia labels di `glossary.ts` + `workspace-copy.ts` + ~400 literal string di 60+ file layar
+  - Rename 45 file test
+- Commit: `5b4dede` di branch `feat/rename-workspace-terminology`.
+
+## [2026-07-11] update | Rename Workspace Terminology F4 FULL symbol rename — tsc 0 + jest 1163/1163 hijau
+
+- Owner (2026-07-11): pilih **full symbol rename** (bukan DB-identifier-only) — rename semua snake_case + camelCase + PascalCase code symbol agar konsisten dgn skema DB baru.
+- Sed lama (commit 5b4dede) mengorupsi camelCase (`initiativeId` → `action_planId` broken). 22 file di-reset ke baseline bersih (commit 4384654), `database.types.ts` dipertahankan (regenerated benar).
+- **Comprehensive renamer** (Node, `scratchpad/comprehensive_rename.js`): placeholder-safe two-pass, case-context-aware (Pascal plural irregular `KpiAreas`→`Strategies`; camelCase `strategy(?=[A-Z])` vs snake `strategy`). Di-apply ke 257 file src (kecuali database.types.ts) → 134 file berubah. tsc error 317 → 0 lewat beberapa pass.
+- **Lib file rename** (git mv bottom-up): `strategies.ts`→`initiatives.ts`, `kpi-areas.ts`→`strategies.ts`, `kpi-area-breakdown.ts`→`strategy-breakdown.ts`, `kpi-gap.ts`→`strategy-gap.ts`, `components/kpi-area-breakdown-panel.tsx`→`strategy-breakdown-panel.tsx`. Import path (alias `@/lib` + relative) di-fix; koreksi collision sub-path (`/strategy` match `/strategy-breakdown`).
+- **Route folder rename** (git mv via temp bottom-up): `action-plan/`→`task/`, `initiative/`→`action-plan/`, `strategy/`→`initiative/`, `kpi-area/`→`strategy/`. Router `push()/href()` path string di-shift placeholder-safe.
+- **RPC param alignment**: client param KEY `p_task_id`→`p_action_plan_id` (8 call sites) agar match F3 frozen DB param. **Debt**: task-level function tetap `p_action_plan_id` param (efek F3 global revert) — cosmetic, non-functional, follow-up.
+- **Verifikasi**: `npm run type-check` = 0 error; `npm run test:ci` = **104 suite / 1163 test PASS** (0 fail).
+- Commit: `b90ff87` di branch `feat/rename-workspace-terminology`.
+- **DEFERRED ke RWT-12 (Content Lead DRI, PENDING)**: copy-localization — `glossary.ts` VALUES (keys benar, display title/body ter-mangle: key `strategy` → title "KPI Area"); label UI 2-kata English "KPI Area"→"Strategy" & "Action Plan"→"Task" masih stale; rewrite body help-popup. KEYS/identifier sudah benar; hanya display copy → Indonesian (Strategi/Inisiatif/Rencana Aksi/Tugas) per PRD V1.8.3 §5.
+- **DEFERRED F5 cosmetic**: nama file/folder test masih lama (`kpi-area-breakdown-panel.test.tsx`, route `__tests__/` dir) — test hijau, rename kosmetik.
+- Berikutnya: F5 smoke/integration + grep-guard, F6 rollback drill, F7 docs sync. RN-Web e2e happy-path verification (butuh Supabase+env) belum dijalankan.
+
+## [2026-07-11] update | F4 copy — shift label UI ke hierarki baru (English), tsc 0 + jest 1163/1163
+
+- Owner (2026-07-11): pilih **shifted-English** untuk label UI (bukan Indonesian localization sekarang). Display label konsisten dgn level baru: L1 "KPI Area"→"Strategy", L2 "Strategy"→"Initiative" (sudah via symbol rename), L3 "Initiative"→"Action Plan", L4 "Action Plan"→"Task".
+- Perubahan copy: "KPI Area" (2-kata)→"Strategy" (135×); "Action Plan" (2-kata stale L4)→"Task"; "ActionPlan" corruption (Pascal, dari symbol rename kata "Initiative" di copy)→"Action Plan" via standalone-word replacement dgn tsc sbg safety-net; leak type-identifier (`type ActionPlan`, `: ActionPlan`, `Promise<ActionPlan>`, `as ActionPlan[]`) di-revert presisi.
+- `glossary.ts` titles benar (`strategy`→"Strategy", `action_plan`→"Action Plan"); body coherent. `workspace-copy.ts` subtitle: "Goal, Strategy, Initiative, Action Plan & Task".
+- Applied ke source + test uniform → assertion tetap align. Verifikasi: tsc 0, jest 104 suite / 1163 test PASS.
+- Commit: `d53a41a` (85 file, 451+/451−) di branch `feat/rename-workspace-terminology`.
+- **RWT-12 (Content Lead DRI, PENDING) tetap deferred**: Indonesian localization (Strategi/Inisiatif/Rencana Aksi/Tugas per PRD V1.8.3 §5) + rewrite body help-popup edukatif. English labels sekarang = interim; glossary body = placeholder coherent.
+- **Status branch**: F0–F4 SELESAI & hijau (DB migrasi 0045+0046 applied lokal; mobile tsc 0 + jest 1163/1163). Sisa: F5 (grep-guard + DB smoke SQL + rename file test kosmetik), F6 (rollback drill 0045R/0046R), F7 (DESIGN.md + wiki entities/concepts + specs sync), RWT-12 (copy Indonesian, blocked owner DRI), RN-Web e2e verify.
+
+## [2026-07-11] update | F7 docs sync — DESIGN.md pill V1.8.3 + wiki entities/concepts
+
+- **DESIGN.md**: workspace pill table di-update per RWT-03 default B (palet warna terikat POSISI hierarki, bukan nama). Level 1..4 sekarang: Strategy `S` (orange), Initiative `I` (purple), Action Plan `AP` (green), Task `T` (blue). Test `workspace-kind-pill.test.tsx` diselaraskan (huruf G/S/I/AP/T). Row `KpiLinkageCard` / `ImpactApprovalCard` di-rename + route submit path di-update.
+- **workspace-kind-pill.tsx** (implementasi): huruf `letter` di-shift ke `S/I/AP/T` sesuai posisi + label baru; `circleFontSize: 8` pindah dari `task` ke `action_plan` (huruf 2-karakter "AP").
+- **wiki/overview.md**: hierarki V1.8.3 (Goal→Strategy→Initiative→Action Plan→Task), Development chain ikut geser, catatan Diskusi Rencana Aksi (dulu Initiative Chat) di §7.1 nav, "Task One Time & Repeat", `updated: 2026-07-11`.
+- **wiki/entities/workspace.md**: full rewrite bagian hierarki + section "Rename V1.8.3 (kontext historis)" untuk map_legacy_entity_type + RWT-07 A audit freeze.
+- **wiki/entities/action-plan.md**: rewrite penuh sbg "Action Plan & Task" (rename mengubah semantik file: sekarang menjelaskan LEVEL 3 program-unit + LEVEL 4 task terkecil). Tabel mapping identifier post-rename (tabel DB, FK kolom, TS type, route folder, chat surface).
+- **wiki/entities/card-model.md**: tabel makna & field wajib di-rewrite (Strategy sebagai area hasil, Task sebagai unit eksekusi terkecil), catatan chat "Diskusi Rencana Aksi" ke Action Plan (RWT-04 A).
+- **wiki/entities/database-blueprint.md**: Kelompok tabel V1.8.3, Relationship Rules bergeser, section "V1.8.3 rename kolom FK" (bottom-up mapping).
+- **wiki/concepts/minimum-breakdown-rule.md**: default table 3/3/3/3 (RWT-09 A), Task ditambahkan sbg child level; contoh copy "Initiative: 2/3, Belum Lengkap".
+- **wiki/concepts/**{execution-loop,permission-model,scope-guardrails,audit-governance}**.md**: shift 2-kata "Action Plan"→"Task", "KPI Area"→"Strategy" via placeholder-safe sed batch.
+- **Historicals TIDAK disentuh** (refleksi keputusan waktu itu): `fase5-tdd-plan.md`, `fase6-spec.md`, `fase6-tdd-plan.md`, `fase7-spec.md`, `fase7-tdd-plan.md`, `fase8-*`, `bugfix-*`, source pages di `wiki/sources/`.
+- Sisa nanti (F7-continue): specs/ (10 file) mendokumentasikan bagian yang stale — sebagian dari mereka adalah historical (fase-N-spec.md), sebagian aktif (mis. status-priority-descope). Yang aktif akan disentuh; historicals skip.
+
+## [2026-07-11] update | F5 grep-guard + F6 rollback drill — semua fase SELESAI
+
+- **F5 grep-guard**: `scripts/ci/no-old-names.sh` (ripgrep) memindai `mobile/src`, `supabase/migrations|tests`, `wiki/`, `specs/`, `DESIGN.md`, `PRD.md` untuk identifier legacy (`kpi_area_id`, `kpi_areas`, `KpiArea`, `action_plan_instances`, dll). Allowlist: migrasi historis (0000..0044), migrasi rename (0045/0045R/0046), fase historicals (fase-*-spec/tdd-plan), wiki/sources, wiki/test-reports, entities mapping section, generated types file. Di-wire ke `.github/workflows/ci.yml` sbg job `no-old-names` yang jalan sebelum quality (lint/type/test).
+- Sisa leak wiki: `tech-stack.md` (`action_plan_submissions`→`task_submissions` + "Diskusi Rencana Aksi"), `scope-guardrails.md` (`kpi_area_id`→`strategy_id` di contoh key), `specs/inbox-chat-ui.md` (`action_plan_submissions`→`task_submissions`, `can_access_action_plan`→`can_access_task`).
+- **F6 rollback drill**:
+  - `supabase/migrations/0045R_revert_workspace_terminology.sql` — DDL revert simetris bottom-up (drop view → revert FK top-down → revert tabel top-down → revert index mirror → recreate view legacy) dalam satu BEGIN/COMMIT.
+  - Drill lokal terungkap: constraint `initiatives_single_parent` di-rename `0046` S0 tapi tidak di-revert `0045R` awal → di-fix (0045R §0R + 0046 S0 wrapped DO block idempotent).
+  - Drill exposed policy-replay collision saat `0046` forward di-re-run setelah revert (tidak-realistis di produksi tapi umum di dev). Dokumentasikan sbg F6a follow-up (tambah `DROP POLICY IF EXISTS <new-name>` di generator). Tidak block produksi karena flow produksi = forward-satu-arah + snapshot restore.
+  - `specs/rollback-plan.md` — runbook R0..R5 lengkap: pre-check → 0045R DDL revert → function/policy restore (Option A pg_dump snapshot / Option B re-run migrations 0005..0044) → mobile revert → verifikasi → post-mortem. Owner sign-off required (Super Admin + CTO).
+- **Verifikasi drill**: 0045R applied clean, 10 legacy tabel restored + 4 rows tiap level (seed intact), 0 new-name lingering, view `kpi_area_current_values` recreated. Post-drill re-apply mengembalikan lokal ke state V1.8.3 penuh (`map_legacy_entity_type('kpi_area')` = `'strategy'`). Grep-guard clean (10 patterns × 6 roots). jest hijau.
+- Commit: `4678d60` di branch `feat/rename-workspace-terminology`.
+
+## [2026-07-11] milestone | Rename V1.8.3 semua fase SELESAI di branch feat/rename-workspace-terminology
+
+Status akhir:
+- **F0** (owner gate + PRD.md V1.8.3 + spec + mapping): ✅
+- **F1** (DB rename tabel/kolom/index/view via 0045): ✅
+- **F2** (enum backfill + map_legacy_entity_type helper, bundled di 0046): ✅
+- **F3** (62 function + 19 policy + 3 trigger rewrite via 0046): ✅
+- **F4** (mobile client full symbol rename + copy shifted-English + lib/route mv): ✅ **tsc 0 + jest 1163/1163**
+- **F5** (grep-guard `no-old-names.sh` + wire ke CI): ✅
+- **F6** (rollback drill + 0045R + rollback-plan.md): ✅ (F6a policy-replay follow-up documented)
+- **F7** (DESIGN.md + wiki overview/entities/concepts + specs sync section-scoped): ✅
+
+Sisa BLOCKED owner action:
+- **RWT-12** (Content Lead DRI + tanggal deliverable copy edukasi Indonesian: Strategi/Inisiatif/Rencana Aksi/Tugas + rewrite body help-popup) — masih PENDING. Label UI sekarang = shifted-English (interim per keputusan owner 2026-07-11).
+- **RN-Web e2e verify** (happy-path di browser preview dgn Supabase env aktif) — belum dijalankan.
+- **F6a policy replay idempotency** — dokumentasi cukup, produksi tidak block.
+
+PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berubah, 60+ RPC + 19 RLS + 3 trigger + 10 tabel + 14 FK + view + 4 route folder + 5 lib file + 1 komponen file semua rename konsisten dgn tsc+jest+grep-guard hijau.
+
+## [2026-07-11] update | RWT-12 DECIDED — copy shifted ke Indonesian labels + glossary bodies rewrite
+
+- Owner (2026-07-11) menutup RWT-12: DRI = owner (self), tanggal deliverable = 2026-07-11.
+- Script `scratchpad/english_to_indonesian.js` (Node, placeholder-safe two-pass dgn 8+ char sentinel `__ID_PH_RA__/STGI/INSF/TGS` untuk hindari kolusi substring seperti "RA" di PENGATURAN) diterapkan ke 257 file src/ (kecuali `database.types.ts`) → 88 file berubah.
+- Mapping label (per PRD V1.8.3 §5): `Strategy`→`Strategi`, `Initiative`→`Inisiatif`, `Action Plan`→`Rencana Aksi`, `Task`→`Tugas`. Plural Indonesian tidak beda dari singular.
+- **Type identifier tetap Indonesian juga** (konsekuensi consistent-rename): `type Strategi`, `type Inisiatif`, `type Tugas` di DB-alias file. Unusual di TS ecosystem tapi konsisten dgn full-Indonesian codebase philosophy. tsc pass.
+- `glossary.ts` body di-rewrite dgn voice PRD §7.8 (tenang, praktis, non-menghakimi): 13 entry (goal, strategy, initiative, action_plan, task, development_area, problem_statement, mbr, score_formula, achievement_score, activity_log, evaluation, target_breakdown). Body `action_plan` sekarang tidak ambigu (dulu pakai kata "Inisiatif" yang jadi entitas level 2 pasca-rename).
+- `workspace-copy.ts` subtitle: "Performance — Goal, Strategi, Inisiatif, Rencana Aksi & Tugas."
+- PRD.md §5 update: catatan RWT-12 DECIDED + note bahwa `card_guidance_contents` seed (Keterangan Card in-DB) tetap PENDING follow-up karena butuh review SME per topik — iteratif, tidak block release.
+- Verifikasi: tsc 0 error, grep-guard clean (10 patterns × 6 roots), jest terakhir sebelum rework: 1163/1163 (final post-rework masih running saat log ditulis).
+- Follow-up (non-blocking):
+  - `card_guidance_contents` seed migration — SME review body edukasi per topik lalu apply
+  - Cosmetic: type identifier Indonesian → English kalau tim TS convention menuntut (require careful revert)
+
+## [2026-07-11] update | Post-RWT-12 hardening — 0047 guidance reseed + F6a replay-safety
+
+- **0047_reseed_card_guidance_v183.sql** (RWT-12 follow-up, sekarang DIKERJAKAN bukan defer): `card_guidance_contents.card_type` masih pakai nama lama dgn makna ter-shift → client `CARD_TYPES` (`goal/strategy/initiative/action_plan/task`) minta `strategy` (L1 baru) dapat konten L2 lama. **Gap korektif, bukan kosmetik.** Migrasi shift card_type bottom-up + rewrite title/body 7 topik ke Indonesian (voice PRD §7.8, mirror glossary.ts). **Idempotent**: default rows (org-NULL) via DELETE+INSERT; org-specific shift via DO-block guarded (hanya fire kalau org masih punya row legacy `kpi_area`). Terbukti apply 2× = tetap 7 row tanpa duplikat.
+- **F6a replay-safety (0046)**: forward re-apply `0046` setelah rollback drill dulu gagal (policy + trigger collision). Fix: S2 tambah `DROP POLICY IF EXISTS <new-name>` sebelum 19 CREATE POLICY; S5 tambah `DROP TRIGGER IF EXISTS <new-name>` sebelum 3 CREATE TRIGGER. Kombinasi CREATE OR REPLACE (function) + DO-block (constraint) + DROP-IF-EXISTS (policy/trigger) = `0046` fully replay-safe.
+- **Full drill lolos**: `forward(0045+0046+0047) → 0045R → forward(0045+0046+0047)` semua COMMIT tanpa error. Post-drill: 4 tabel new-name, 7 guidance row, helper `map_legacy_entity_type('kpi_area')` = `'strategy'`.
+- Verifikasi: tsc 0, grep-guard clean, guidance test (fase8-settings) tetap hijau (pakai mocked body, tidak assert DB seed).
+- Yang tidak dikerjakan (sesuai penilaian): type-identifier Indonesian→English revert (owner tandai optional/berisiko); pg_dump snapshot (langkah operasional owner sebelum merge).
+
+## [2026-07-11] verify | RN-Web e2e boot + copy check (partial — auth-gated)
+
+- Web preview `ems-web` (Expo web, port 8091) di-start terhadap Supabase local (skema V1.8.3 sudah applied). Metro bundle sukses, server 200.
+- **Boot bersih**: 0 console error, 0 runtime warning terkait rename. Aplikasi compile + boot penuh di skema baru (tabel/RPC/policy rename).
+- **Copy Indonesian render benar**: login screen menampilkan tagline "Masuk ke pusat eksekusi target, **Tugas**, dan review kerja tim" — kata "Tugas" (label level-4 baru RWT-12) render benar (dulu "Action Plan"). Field: "Email perusahaan", "Kata sandi", "Masuk".
+- **Auth-gated (tidak diverifikasi)**: layar Workspace (tempat pill Strategi/Inisiatif/Rencana Aksi/Tugas + tree muncul) ada di balik login. Aturan operasi agent melarang memasukkan password untuk autentikasi → owner perlu login sendiri di localhost:8091 untuk cek authenticated flow (Workspace pill huruf S/I/AP/T, glossary help-popup, MBR modal).
+- Kesimpulan: stack terbukti boot + render Indonesian copy end-to-end sampai lapis login; verifikasi Workspace authenticated diserahkan ke owner.
+
+## [2026-07-11] verify | RN-Web audit lengkap (login screen non-auth) — full green
+
+- Owner minta cek manual via browser. Login authenticated tidak bisa saya lakukan (agent rule melarang input password/auth), tapi audit menyeluruh area non-auth dilakukan.
+- **DOM audit** (mobile viewport 375×812, dark mode aktif `<html class="dark">`, 67 element, 16 text node, `document.readyState = complete`, all images loaded):
+  - Legacy identifiers rendered: **0** (`KPI Area: 0`, `kpi_area: 0`, `Action Plan: 0`, `ActionPlan: 0`, `Initiative: 0`, `Strategy: 0`, `Task: 0`).
+  - Indonesian identifiers rendered: `Tugas: 1` (di tagline; `Strategi/Inisiatif/Rencana Aksi` di layar authenticated).
+- **DESIGN.md compliance** (login primary button "Masuk"): background `rgb(21,100,179)` = `#1564b3` = `brand-dark` (workspace-lock a11y §Rekonsiliasi 2026-07-03 doktrin #1). `min-height: 44px` (touch target §4 rule 1).
+- **Environment**: Supabase URL bundle-config = `http://localhost:54321` (local dev correct). Metro bundle sukses. 0 console error.
+- **Yang saya tidak lakukan** (dengan alasan): screenshot binary capture (browser MCP screenshot API stuck di React Native Web renderer — bukan issue app), auth-gated flow (agent rule prohibits password entry — owner login sendiri), anon-key materialization ke transcript (auto-mode classifier denied — kredensial hygiene).
+- **Yang tersisa untuk owner** cek di [localhost:8091](http://localhost:8091) setelah login: (a) Workspace pill huruf S/I/AP/T dengan palet posisi hierarki tetap (DESIGN.md §Workspace V1.8.3), (b) glossary help-popup 5 topik Indonesian body voice PRD §7.8, (c) MBR modal "Tidak Dapat Melanjutkan" copy "Strategi 2/3, Belum Lengkap" dsb.
+
+## [2026-07-12] update | Search Pesan Inbox (Chat FTS V1)
+
+- Menutup PRD §29 komponen 2 ("Search Initiative atau pesan") + AC-27 V1.8.2 khusus jalur search pesan. Un-DEFER `specs/inbox-chat-ui.md` L26/L32 ("search isi pesan DEFER" diangkat menjadi in-scope).
+- Backend: migrasi `supabase/migrations/0044_search_chat_messages.sql` menambah extension `pg_trgm` ke skema `extensions` (konvensi Supabase, bukan `public`), index GIN `idx_chat_messages_body_trgm` (`body extensions.gin_trgm_ops`), composite index `idx_chat_messages_org_room_created` (`organization_id, chat_room_id, created_at desc`), dan RPC `public.search_chat_messages(text, uuid, int, timestamptz, uuid)` — SECURITY DEFINER STABLE `search_path=''`. Gate: `is_chat_member(room) OR (can_view_workspace() AND (ap.initiative_id IS NULL OR can_access_initiative(ap.initiative_id)))` — `view_all_workspace` TIDAK by-pass confidential (§34.9). Push-down `organization_id = current_user_org()` sebelum operator ILIKE. LIKE-escape `%`/`_`/`\`, `substring(q, 1, 200)` sabuk pengaman, len<2 early-return, snippet ±80/240 char, `p_limit` clamp 1..30 (default 20), keyset cursor `(created_at, id) < (p_before, p_before_id)` dengan handling NULL eksplisit. REVOKE `public, anon`; GRANT `authenticated`.
+- Client (mobile/): wrapper `searchChatMessages` di `src/lib/inbox.ts` (thin caller, tipe `ChatMessageHit` camelCase — `initiativeId: string | null` mengakomodasi orphan action_plan), hook `useSearchMessages` di `src/hooks/use-search-messages.ts` (debounce 250 ms + enabled len>=2 + staleTime 15 s + realtime invalidate saat `DELETE chat_room_members WHERE member_id = <userId>`; deteksi `PGRST202 → isRpcMissing`). UI Inbox `src/app/(app)/(tabs)/inbox.tsx` di-refactor jadi dua section (Initiative client-filter + Pesan server RPC dengan sub-group per room), placeholder `Cari Initiative atau pesan`, empty state IDENTIK utk no-match & silent-filter (AC-15), banner degrade utk PGRST202 (belum aktif) & network (Coba lagi). Deep-link `/inbox/{roomId}?highlight={messageId}` ditangani di `src/app/(app)/inbox/[roomId].tsx` — bubble `accessibilityLabel="Pesan yang dicari: {body}"` + border amber; tampered id silently ignored (RLS + list scope mencegah pesan lintas-room ter-fetch).
+- Verifikasi: `supabase/tests/0044_search_chat_messages_contract.sql` 10/10 (DB-1..10: extension+schema, 2 indeks, signature, SECURITY DEFINER+STABLE+search_path, GRANT authenticated/REVOKE public+anon, len<2 early-return, LIKE-escape %/_/\, limit clamp 30/1, append-only preserved, ordering created_at DESC). Jest 1189/1189 (35 baru: 7 wrapper + 7 hook + 10 UI Inbox + 2 deep-link + 9 regresi update). `tsc --noEmit` bersih.
+- Types: manual entry `Functions['search_chat_messages']` ditambahkan ke `mobile/src/lib/database.types.ts` (regen `supabase gen types typescript` akan idempoten). Cast `as never` di wrapper dihapus.
+- Governance & log: no Activity Log per query, no raw query di-log (mencegah rainbow-table domain kecil seperti nama karyawan); logger seam ranah masa depan bila diperlukan.
+- Referensi: spec penuh `specs/search-pesan-inbox.md` (11 bagian, 30 AC, semua OQ resolved 2026-07-12); rencana TDD `specs/search-pesan-inbox-tdd-plan.md`; handoff `specs/search-pesan-inbox-tdd-handoff.json`. Koreksi nomor migrasi (0053 → 0044) & path test (co-located `src/*/__tests__/`) dilakukan sebelum eksekusi. Realtime membership column adalah `member_id` (bukan `user_id`) — dikoreksi di hook + test.
+
+## [2026-07-15] update | PRD V1.83 rekonsiliasi + promosi ke source of truth
+
+- Owner drop draft `PRD_EMS_V1.83_Rencanaapp.md` sebagai usulan pengganti V1.82. Analisis: draft hasil regenerasi wholesale (bukan supersession per-keputusan) — bukti: metadata versi tidak di-bump (masih "V1.82" di seluruh isi), typo brand `Rencanaapp`, §14 bug "Butuh 1 Initiative" pada kartu Initiative, sisa "respon WA lambat" setelah scrub, catatan RWT-04/07/12 + override 2026-06-29 hilang total, label UI Indonesia RWT-12 di-revert diam-diam.
+- Diskusi owner: (1) `Rencanaapp` = typo, pertahankan `Rencanapp`; (2) pertahankan field Satuan/`target_numeric` (§18, override 2026-06-29) — pembalikan berbiaya 40 file + migrasi 0032, tidak sepadan; (3) pertahankan label UI Indonesia RWT-12 (Strategi/Inisiatif/Rencana Aksi/Tugas + "Diskusi Rencana Aksi") — pembalikan berbiaya 42 file + berlawanan dgn §3 poin 7 "user non-teknis mudah paham"; (4) Evaluation di Action Plan (bukan Initiative) & Home fokus Task (bukan Action Plan) = SENGAJA, adopt.
+- **Rekonsiliasi selesai** — 10 edit surgical: fix brand typo global, bump V1.82→V1.83 di 8 lokasi metadata, kembalikan §1 aturan penamaan Rencanapp vs RencanApp, §5 label UI Indonesia + catatan RWT-12, §14 fix bug + scrub "WA lambat", §18 field opsional target_numeric + override note, §30 judul "Diskusi Rencana Aksi" + catatan RWT-04, §35 catatan RWT-07 Activity Log entity_type. Hasil: 1791 baris (draft asli 1758, tambahan 33 baris untuk audit trail + Satuan).
+- **Swap dilakukan**: `PRD.md` sekarang V1.83 (source of truth), `PRD_EMS_V1.83_Rencanapp.md` disimpan sebagai snapshot versioned, draft typo `PRD_EMS_V1.83_Rencanaapp.md` dihapus.
+- Konten baru V1.83 (adopted): reposisi "Execution Project Management" + 5 prinsip, de-scoring People (urutan kontribusi/status ringan, bukan angka score telanjang), MBR opsional 3 mode (Nonaktif/Peringatan/Blokir), Strategy Template kosong by default (lintas industri), Score Formula/Governance/Activity Log/Manual Score Override di-gate ke Admin Lanjutan, Evaluation dipicu di Action Plan, Home "Fokus Hari Ini" nyorot Task, seed data generik (hilang WhatsApp/Pizza).
+- Follow-up: (a) update memory `prd-v182-source-of-truth.md` → `prd-v183-source-of-truth.md`; (b) wiki/entities & wiki/concepts perlu audit untuk sinkron dengan perubahan V1.83 (People de-scoring, MBR opsional, Strategy Template kosong, Menu restructure); (c) audit kode untuk gap V1.82→V1.83 yang belum ter-implement (mis. MBR mode "Nonaktif" & "Peringatan saja", Home fokus Task, Evaluation di Action Plan).
+
+## [2026-07-15] update | Wiki sync V1.82 → V1.83
+
+- **Pages updated (evergreen only, historical snapshots ditinggal):**
+  - `overview.md` — "EMS V1.8.3" → "Execution Project Management V1.83"; tambah 5 prinsip PRD §2; note reposisi de-scoring People + Admin Lanjutan gating; Home Fokus Hari Ini = Task; Evaluation di Action Plan; Status paragraph list gap kode yang belum landing.
+  - `entities/surfaces.md` — rewrite penuh: Menu section (Akses Cepat = People/Archive/Pusat Bantuan; Pengaturan/Template/Admin Lanjutan gated); People section de-scored (buang Trust/Achievement/Score dari row, add "urutan kontribusi + Status ringan"); Inbox RWT-04 A note; Home fokus Task; Notifications V1.83 gating.
+  - `entities/score-formula.md` — tambah warning V1.83 Admin Lanjutan only + Manual Override via Admin Lanjutan.
+  - `concepts/minimum-breakdown-rule.md` — rewrite: opsional per org/workspace; 3 mode V1.83 (Nonaktif tambah); default 3/3/3/3 → "contoh konfigurasi"; gap kode note.
+  - `concepts/scope-guardrails.md` — V1.8.2 → V1.83; WhatsApp → External chat; KPI child → metric child; masuk-list update; tambah callout V1.83 §18 Satuan opsional bukan pelanggaran.
+  - `index.md` — bump `updated`; 5 entry descriptions disync V1.83.
+- **Pages NOT updated (historical snapshots, sengaja):** `prototype-prd-conformance` (audit V1.82), `workspace-lock-audit/sprint-plan`, `design-fidelity-audit`, `fase5/6-tdd-plan`, `fase6-spec`, `ws-04-governance-debt`, `workspace-progress-orb-tdd-plan`, semua `test-reports/` & `sources/`.
+- **Pages TIDAK butuh update** (sudah V1.8.3 correct): `entities/card-model.md`, `entities/workspace.md`, `entities/action-plan.md`, `entities/database-blueprint.md`, `concepts/execution-loop.md`, `concepts/audit-governance.md`, `concepts/permission-model.md`, `concepts/tech-stack.md`, `concepts/architecture.md`, `concepts/evidence-kinds.md`.
+- Sisa follow-up (belum dikerjakan): audit gap kode V1.82→V1.83.
+
+## [2026-07-15] update | OWNER-F: sweeper orphan chat-attachments DEFER
+
+- Keputusan owner OWNER-F (opsi a): sweeper otomatis untuk objek orphan di bucket `chat-attachments` **DEFER**, tidak dibangun sekarang.
+- Alasan mengikat: (1) menambah komponen operasional (schedule + monitoring + failure mode) di atas bucket yang immutability-nya (`specs/inbox-chat-attachments.md` §6.5) baru dibangun; (2) auto-delete berbasis retensi manual bertentangan dengan immutability by design; (3) angka retensi tanpa data pemakaian nyata = tebakan.
+- Spec bersyarat ditulis di `specs/chat-attachments-orphan-sweeper.md` (PR [#66](https://github.com/nawawi489/RencanApp/pull/66)): prasyarat telemetri 4 minggu pasca-landing V2 attachments, ambang keputusan build (orphan ratio ≥5% atau volume ≥500 MB/bulan), rancangan bersyarat (pg_cron + RPC `SECURITY DEFINER` + `pg_net`, pola konsisten `0043_activity_logs_retention.sql`), 7 test kontrak wajib sebelum implementasi.
+- Dua garis pertahanan tetap berlaku selama defer: FR-ATT-1.5 pre-commit cleanup klien (`Promise.allSettled`), dan immutability bucket itu sendiri (tidak ada policy UPDATE/DELETE).
+- Follow-up: buka `specs/chat-attachments-orphan-sweeper.md` §6 (OS-1..3) hanya setelah telemetri §3 terkumpul.
+
+## [2026-07-15] update | V1.83 §19: Strategy Template kosong by default (blocker landing)
+
+- **Migrasi `0059_v183_empty_strategy_templates.sql`** (renumbered dari draft awal `0052` — 0052-0058 sudah dipakai chat-attachments/reactions branch di `origin/staging`) — hapus 19 baris seed default (10 Omset per PRD V1.82 §47 + 9 Profit per §48) dari `public.strategy_templates` (post-rename V1.8.3 dari `kpi_area_templates`). WHERE selektif per (goal_template.key, name PRD PASTI) — baris admin custom tidak tersentuh. Idempotent (0 rows kalau sudah kosong). Tanpa cascade destruktif: `strategies.strategy_template_id` tidak eksis; `goals.goal_template_id` ON DELETE SET NULL kalau goal_templates ikut dihapus di masa depan.
+- **UI empty state disinkronkan ke V1.83 §19 copy:**
+  - `mobile/src/app/(app)/strategy/new.tsx` — modal picker: judul "Belum ada Strategy Template" + deskripsi "Admin dapat membuat template custom nanti. User tetap bisa membuat Strategy manual tanpa template." + tombol "Isi Manual" (`brand-dark` solid + text-white per DESIGN §4 a11y). No-Goal-Template branch juga di-soften copy-nya ("Isi Strategy manual — Goal ini tidak dibuat dari Goal Template").
+  - `mobile/src/app/(app)/settings-strategy-templates.tsx` — `EmptyState` deskripsi diganti persis copy PRD; CTA sementara tetap "Buka Goal Template Library" karena admin CRUD Strategy Template belum ada (V1.83 §19 baris 843 requires create/edit/disable/versioning — layar masih read-only V1).
+- **Preserved di migrasi ini:** `goal_templates` (omset/profit) TIDAK dihapus. V1.83 §17 New Goal tidak eksplisit menuntut hapus. Menu → Template → Goal Template masih menampilkan 2 entri, tapi Strategy Template picker di dalamnya akan kosong (arahan ke Isi Manual).
+- **Bug pre-existing ditemukan (out of scope, catatan):** RPC `apply_goal_template` di-DROP di `0046:132` dan tidak di-recreate — `mobile/src/lib/goals.ts:123` calls a dead function. `settings-goal-templates.tsx` CTA "Buat Goal dari Template" broken. Bukan bug V1.83; ekosistem Goal Template sudah rusak sebelum ini. Perlu keputusan owner: hidupkan lagi apply_goal_template atau resmi deprecate.
+- **Follow-up (belum dieksekusi):**
+  - Admin CRUD `strategy_templates` per V1.83 §19 baris 843 (create/edit/disable/versioning).
+  - Verifikasi visual empty state via preview: auth-gated + butuh apply 0059 dulu, diserahkan ke owner.
+
+## [2026-07-15] fix | Renumber migrasi 0052→0059 + perbaiki contract test fase4
+
+- **Migration numbering collision.** Draft migrasi blocker §19 pakai nomor `0052`, tapi `origin/staging` sudah mengklaim `0052`-`0058` untuk chat-attachments/reactions branch (`0052_chat_messages_realtime.sql` s.d. `0058_fix_reaction_table_grants.sql`, dan `origin/staging` sendiri sudah punya dua file `0058` — pre-existing, di luar scope ini). Renumbered ke `0059_v183_empty_strategy_templates.sql` (`git mv` + fix header comment + fix notice string di dalam file). Nomor berikutnya yang aman setelah `origin/staging` HEAD saat ini.
+- **Contract test `fase4_performance_workspace_contract.sql` TEST 1 diperbaiki** (baris 36-45): dua bug ditutup sekaligus —
+  1. Nama tabel `kpi_area_templates` (pre-rename V1.8.3) → `strategy_templates`. Test ini sudah broken sejak migrasi 0045 rename tabel; migrasi 0059 tidak menyebabkannya, tapi menandaskannya.
+  2. Assertion dibalik dari "seed 10 Omset + 9 Profit + CFO 'Control Budgeting' harus ADA" (kontrak V1.82) menjadi "seed default HARUS KOSONG (count=0), row 'Control Budgeting' tidak boleh survive" (kontrak V1.83 §19). Test sekarang membuktikan migrasi 0059 bekerja, bukan hanya tidak crash.
+- Verifikasi tambahan: tidak ada test mobile (`goals.test.ts`) yang menganggap seed default ada — satu match "A/R Collection" di sana adalah fixture key mock RPC, bukan assert terhadap DB.
+- Migrasi 0059 sendiri (safety claims FK) diverifikasi ulang: `strategies` tidak punya FK ke `strategy_templates`; `goals.goal_template_id` = `ON DELETE SET NULL` — DELETE seed aman tanpa cascade destruktif.
+
+## [2026-07-15] fix | Code review PR #67 — 4 temuan diperbaiki
+
+`/code-review` (8-angle, high effort) atas diff `origin/staging...HEAD` menemukan 8 temuan; 4 correctness-relevant diperbaiki, 4 cleanup minor diserahkan sebagai follow-up.
+
+- **KOREKSI: klaim "apply_goal_template adalah dead function" di entry `[2026-07-15] update | V1.83 §19` di atas TIDAK BENAR.** Verifikasi ulang: `0046:132` DROP diikuti `0046:430` CREATE OR REPLACE — RPC hidup, dipanggil dari `mobile/src/lib/goals.ts:114`, di-wire ke tombol live "Buat Goal dari Template" (`settings-goal-templates.tsx:73` → `goal-wizard.tsx`). Body RPC melakukan `INSERT INTO strategies ... SELECT ... FROM strategy_templates WHERE goal_template_id = ...` — begitu migrasi 0059 mengosongkan tabel itu, RPC tetap sukses tapi menghasilkan Goal dengan **nol Strategy turunan**, tanpa error, tanpa peringatan. Root cause salah baca: saya percaya klaim migrasi 0059 sendiri tanpa membaca ulang body function-nya.
+  - Fix: `mobile/src/app/(app)/goal-wizard.tsx` step 2 sekarang menampilkan catatan eksplisit saat `kpiTemplates.length === 0`, menjelaskan Goal akan dibuat tanpa Strategy dan mengarahkan isi manual — bukan silent zero-row.
+  - Fix: komentar migrasi 0059 dikoreksi (bukan diedit sejarah — ditambah blok `CORRECTION` baru).
+  - **Keputusan yang TIDAK diambil:** RPC tidak diubah untuk raise exception saat 0 match — itu justru akan mem-permanen-broken seluruh flow wizard (semua org baru mulai dengan strategy_templates kosong per §19). 0-Strategy tetap perilaku valid, hanya perlu transparan.
+- **Contract test TEST 4 & TEST 6 (`fase4_performance_workspace_contract.sql`)** diupdate count assertion dari `apply_kpi_count(10)`/`apply_count(10)` (hardcoded, era V1.82 seed) ke `count=0` (V1.83 kontrak) — TAPI ditemukan TEST 3/4/5/6 di file yang sama **sudah tidak bisa dieksekusi sejak sebelum PR ini**: masih referensi tabel pre-rename `kpi_areas` (dibuang saat rename V1.8.3 ke `strategies`) dan kolom `initiatives.strategy_id`/`kpi_area_id`. Debt terpisah, bukan disebabkan 0059 — flagged inline di test file, TIDAK dimodernisasi penuh (scope besar, di luar 4 temuan review ini, butuh keputusan owner soal `restore_goal_template_items` dan taksonomi kolom).
+- **Migrasi 0059 DELETE WHERE clause diperketat** dari 2-tuple `(goal_template_id, name)` ke 3-tuple `(goal_template_id, division, name)`, cocok dengan unique key asli tabel (`0010:35`). Sebelumnya: admin yang bikin custom template dengan nama sama-persis seed tapi division BEDA (mis. "Control Budgeting" di bawah `coo` alih-alih seeded `cfo`) akan ikut terhapus — melanggar klaim "admin custom aman" migrasi sendiri. Diverifikasi programatik: 19/19 tuple baru diff nol terhadap seed asli di `0010` (tidak under-match, tidak over-match).
+- **PRD.md §31 & wiki/concepts/scope-guardrails.md diperbaiki**: kalimat "Template kosong secara default" (ditulis mengikuti daftar Goal Template + Strategy Template) dipersempit eksplisit ke Strategy Template saja — sebelumnya kontradiksi dengan migrasi 0059 sendiri yang secara eksplisit MEMPERTAHANKAN 2 baris `goal_templates` (omset/profit).
+- **4 temuan cleanup minor dari review — SELESAI:**
+  - `strategy/new.tsx` empty-state + button hand-rolled → diganti `EmptyState` component (reuse `action` prop → `Button variant="secondary"` otomatis).
+  - Migrasi 0059 sanity DO-block: hapus redundant `count(*)` full-table scan (total rows informational saja); sisakan hanya `n_default` (omset/profit rows = 0) yang relevan.
+  - Contract test TEST 1: hapus EXISTS check spesifik (`'Control Budgeting'`) yang sudah logically-implied oleh count=0 profit di atasnya.
+
+## [2026-07-16] query | Audit kepatuhan PRD V1.83 penuh + tindak lanjut
+
+- **Audit dilakukan** (subagent, read-only) atas seluruh 45 section H2 `PRD.md` vs kode `mobile/` + migrasi + wiki. Hasil: mayoritas section **DONE**; 2 **PARTIAL** ditemukan:
+  1. **§19 Strategy Template CRUD** — admin panel `settings-strategy-templates.tsx` masih read-only (sudah dicatat di entry [2026-07-15] di atas, belum dieksekusi).
+  2. **§32 People row** — row tidak menampilkan **nomor urut kontribusi (rank)** maupun tombol "Lihat Profil" eksplisit; hanya nama + avatar + subhead.
+- **Push Notifications status dikoreksi**: Fase 1 (PR #71) yang sebelumnya tercatat "OPEN" di memory ternyata sudah **MERGED** ke staging 2026-07-15. Fase 2 (outbox drainer, branch `feat/push-notifications-fase2`, commit 2-A..2-G) sudah code-complete tapi belum di-PR.
+- **Tindakan diambil (2026-07-16):**
+  1. **PR #73** dibuka: `feat/push-notifications-fase2` → `staging` (migrasi `0060_push_infrastructure.sql` + `push-fanout` Edge Function + pg_net/pg_cron drainer + retensi 30h).
+  2. **Gap §32 ditutup** — `mobile/src/app/(app)/people.tsx`: tambah `RankBadge` (lingkaran nomor urut, hanya untuk user dengan data ranking dari periode closed terakhir) + label "Lihat Profil" menggantikan chevron polos. De-scoring tetap dijaga: rank menunjukkan posisi, bukan nilai skor. 3 test baru ditambahkan di `__tests__/people.test.tsx` (17/17 pass), `tsc --noEmit` bersih.
+- **Gap §19 Strategy Template CRUD CLOSED (PR #75, branch `feat/strategy-template-crud-v183`):**
+  - Migrasi `0061_strategy_template_crud.sql`: kolom `is_active boolean default true` + 3 RLS policy (INSERT/UPDATE/DELETE) gated `manage_kpi_area_templates` + rename label permission.
+  - Data layer: `createStrategyTemplate`, `updateStrategyTemplate`, `deleteStrategyTemplate` di `goals.ts`.
+  - UI rewrite `settings-strategy-templates.tsx`: list+search, create/edit modal, toggle active/inactive, delete confirmation.
+  - Contract test 7 pgTAP + 8 RNTL test (4-state + create/edit/toggle/badge). Jest 1377/1377, tsc clean.
+  - **Gotcha RNTL:** useMutation `onSuccess: invalidateQueries` menghasilkan async leak via React Query global `notifyManager` — meracuni `screen` singleton RNTL utk test berikutnya. Fix: pindahkan create test (satu-satunya yang trigger mutasi) ke describe terakhir.
+- **Memory disinkronkan:** `push-notifications-shipped.md` dikoreksi (Fase 1 MERGED bukan OPEN); `prd-v183-source-of-truth.md` + `app-scaffold.md` di-update.

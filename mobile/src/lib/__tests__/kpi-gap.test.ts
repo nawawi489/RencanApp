@@ -1,4 +1,4 @@
-import { computeKpiGap, formatRemaining, groupThousands } from '../kpi-gap';
+import { computeKpiGap, formatRemaining, groupThousands } from '../strategy-gap';
 
 describe('computeKpiGap', () => {
   it('tanpa target numerik → hasTarget false (KPI kualitatif)', () => {

@@ -26,10 +26,12 @@ Masalahnya murni di **lapisan presentasi** (regresi visual, bukan bug logika), t
 **Masuk V1.8.1:** UI-S-IN1 (minus chip PIC/Review/Deadline, minus search isi pesan), UI-S-IN2 penuh, composer circular-send, banner governance.
 **DEFER (butuh migrasi baru dan/atau keputusan owner):** seluruh UI-S-IN3 (reactions, read-receipt avatars, reply-quote, system events, banner konteks per-pesan) dan UI-S-IN4 attach-evidence, dan filter chip `Saya PIC`/`Review`/`Deadline`.
 
+> **Update 2026-07-12 — Un-DEFER search isi pesan.** Migrasi 0044 + RPC `public.search_chat_messages` mengangkat DEFER "search isi pesan" menjadi in-scope. Spec penuh: [specs/search-pesan-inbox.md](search-pesan-inbox.md) (Chat FTS V1). Perilaku Inbox berubah: placeholder `Cari Initiative atau pesan`, dua section (Initiative + Pesan sub-group per room), snippet server-side, gate `is_chat_member OR (can_view_workspace AND can_access_initiative)`, empty state IDENTIK utk no-match & silent-filter (AC-15).
+
 ---
 
 ## 2. Non-Goals
-Lihat daftar lengkap di field `non_goals`. Ringkas: tidak ada edit/delete pesan; tidak ada threaded reply; membership tetap derived server-side; chat bukan jalur formal/evidence; reactions/read-receipt-avatars/reply-quote/system-events/attach DEFER; filter chip PIC/Review/Deadline DEFER; search isi pesan DEFER; tidak ada realtime/presence/typing/feed; histori hanya page 0 + tombol "Muat pesan lama"; keanggotaan "PIC induk" tidak didukung backend; avatar = inisial+warna (bukan foto).
+Lihat daftar lengkap di field `non_goals`. Ringkas: tidak ada edit/delete pesan; tidak ada threaded reply; membership tetap derived server-side; chat bukan jalur formal/evidence; reactions/read-receipt-avatars/reply-quote/system-events/attach DEFER; filter chip PIC/Review/Deadline DEFER; search isi pesan DEFER; tidak ada realtime/presence/typing/feed; histori paginasi via infinite-scroll-up (revisi owner 2026-07-13 — sebelumnya tombol "Muat pesan lama"; lihat [spec keyset §10.2](keyset-pagination-list-chat-messages.md)); keanggotaan "PIC induk" tidak didukung backend; avatar = inisial+warna (bukan foto).
 
 ---
 
@@ -38,8 +40,10 @@ Lihat daftar lengkap di field `non_goals`. Ringkas: tidak ada edit/delete pesan;
 > [!warning] OWNER-1 — Reviewer Initiative sebagai chat member
 > PRD §57/§64 mencantumkan "Reviewer Initiative", tetapi `recompute_chat_room_members` (0008 baris 275-296) hanya memakai `initiatives.pic_id` + `action_plans.pic_id`/`reviewer_id` — tabel `initiatives` **tidak punya** `reviewer_id`. Keputusan owner WAJIB: koreksi PRD ATAU migrasi tambah kolom + recompute. Sampai itu, peran ini dihapus dari spec/persona dan tidak ditegakkan.
 
-> [!warning] OWNER-2 — emoji reaction vs scope-guardrails §88
-> `scope-guardrails §88` melarang "Social reaction/Story/Reels". Implementasi reactions tanpa amandemen tertulis pada `scope-guardrails.md` = pelanggaran guardrail. Default rekomendasi: TOLAK reactions V1.8.1.
+> [!note] OWNER-2 — RESOLVED (owner 2026-07-13): emoji reaction diizinkan (build V2)
+> Amandemen tertulis sudah turun di `wiki/concepts/scope-guardrails.md` §"Pengecualian sempit — Reaction pill Initiative Chat" + `prd/01-konsep-dan-fondasi.md` §12. "Reaction pill tingkat-pesan" (PRD §30 komponen 6) **dikecualikan** dari larangan "Social reaction feed/Story/Reels" sepanjang invarian dipenuhi (zero bobot skor, tanpa feed/leaderboard, bukan approval, whitelist emoji ack tertutup, otorisasi = keanggotaan room). Spec teknis final: [inbox-chat-reactions](inbox-chat-reactions.md). **Milestone build tetap V2** — larangan "jangan tulis kode/test" di L190 tetap berlaku sampai fase V2 dijadwalkan (bukan lagi karena gate owner, tapi karena prioritas rilis).
+>
+> Housekeeping: rujukan lama "scope-guardrails §88" ambigu — file itu tak punya penomoran §; sumber otoritatif = bagian "Ditolak (jangan bangun)" di `scope-guardrails.md` (yang menyandarkan diri ke PRD V1.8.2 §6).
 
 > [!warning] OWNER-3 — PIC card induk sebagai member room turunan
 > US-16 draft mengklaim PIC Goal/KPI/Strategy otomatis jadi member room turunan; komentar `recompute` (0008 baris 263-265) menyatakan "no-op s/d Fase 4". Klaim dihapus dari spec final.
@@ -85,7 +89,9 @@ Semua story tunduk RLS `is_chat_member()`; otorisasi di Postgres, bukan app laye
 - **FR-IN2.3** Date divider client-side dari `created_at`, **device timezone** (org tz tidak diekspos — known limitation V1.8.1). `created_at` invalid → skip divider.
 - **FR-IN2.4** Mark-read on open (existing, idempoten, no-regress).
 - **FR-IN2.5** Guard `roomId` undefined → ErrorState "Room tidak ditemukan".
-- **FR-IN2.6** Paginasi: page 0 (30 terbaru) + kontrol "Muat pesan lama" untuk page berikut.
+- **FR-IN2.6** Paginasi: page 0 (30 terbaru) + memuat halaman lama otomatis via **infinite-scroll-up** (scroll mendekati ujung atas → `loadOlder()`).
+  > [!warning] Revisi owner 2026-07-13 — infinite-scroll-up menggantikan tombol
+  > Keputusan mengikat di [specs/keyset-pagination-list-chat-messages.md](keyset-pagination-list-chat-messages.md) §10.2: model interaksi berubah dari **tombol manual "Muat pesan lama"** menjadi **auto-load saat scroll ke atas** pada inverted `FlatList`. Tombol dihapus total (tanpa fallback). Guard: `hasMore && !isFetchingNextPage`. Data layer berpindah ke keyset cursor `(created_at, id)` — mekanik detail di spec keyset. Kontrak output hook diperluas: `isFetchingNextPage: boolean` sebagai indikator (menggantikan surface tombol).
 
 ### C. Banner governance — WAJIB P0
 - **FR-GOV-BANNER** Satu banner level-room non-blocking dapat-ditutup: nama Initiative (dari `room.name`) + link "Buka Initiative" + microcopy kanonik **"Keputusan formal (Review, Bukti, Nilai Hasil) lewat Action Plan — chat untuk diskusi cepat."** (Menggantikan tiga varian bercabang di draft.)
@@ -95,7 +101,7 @@ Semua story tunduk RLS `is_chat_member()`; otorisasi di Postgres, bukan app laye
 - **FR-IN4.2** Kirim via `send_chat_message` (no-regress): trim body, error inline `accessibilityRole="alert"`, input tidak terhapus saat gagal, invalidate `['chat-messages',roomId]` + `['chat-rooms']`.
 - **FR-IN4.3** Composer gating read-only untuk workspace-viewer non-member — **butuh kontrak `can_send`** (DATA-2); DEFER jika belum diputuskan.
 - **FR-IN4.4** Mention: `mentions=[]` di V1.8.1 (picker DEFER — tidak ada RPC roster room ber-RLS).
-- **FR-IN4.5** Paperclip attach-evidence: **DEFER** (sembunyikan total atau deep-link ke Action Plan submit; tabel `chat_message_attachments` DILARANG — bypass evidence-locking PRD §35).
+- **FR-IN4.5** ~~Paperclip attach-evidence: **DEFER** (sembunyikan total atau deep-link ke Action Plan submit; tabel `chat_message_attachments` DILARANG — bypass evidence-locking PRD §35).~~ **Amandemen owner 2026-07-15 — dibuka bersyarat:** larangan diganti oleh spec baru `specs/inbox-chat-attachments.md` yang membuka *lampiran diskusi (gambar)* dengan batas struktural (bucket terpisah `chat-attachments`, tanpa FK ke evidence, whitelist `evidence_files.kind` tidak bertambah, Score Formula buta terhadap kolom lampiran). Sitasi lama *"bypass evidence-locking PRD §35"* **dikoreksi**: §35 adalah Activity Log; evidence locking yang benar adalah **PRD §24.1** + `prd/02 §E.1`. **Milestone build tetap V2** — larangan L192 di bawah TETAP berlaku sampai V2 dijadwalkan (preseden reactions).
 
 ### E. Governance invariants (mengikat)
 - **FR-GOV.1** RLS sole authority; client tidak menambah/melonggarkan filter otorisasi.
@@ -134,8 +140,8 @@ export type ChatRoom = {
 - Reactions: tabel `chat_message_reactions` + RPC `toggle_chat_reaction`/`get_chat_message_reactions` — **gate OWNER-2**.
 - Read receipt: RPC `get_chat_message_reads(p_room)` SECURITY DEFINER ber-gate `is_chat_member` — **jangan longgarkan policy `chat_message_reads_select` (`reader_id = auth.uid()`)** — gate DEFER-1 (privasi seen).
 - Reply-quote: kolom `reply_to_id` self-FK + validasi same-room di RPC.
-- System events: `message_type`/`event_type`/`linked_entity_*` + trigger dari `action_plan_submissions`; tidak bisa dipalsukan via composer.
-- Banner konteks per-pesan linked-entity: harus validasi `can_access_action_plan` (bukan sekadar tampilkan nama dari `linked_entity_id`) agar tidak bocor.
+- System events: `message_type`/`event_type`/`linked_entity_*` + trigger dari `task_submissions`; tidak bisa dipalsukan via composer.
+- Banner konteks per-pesan linked-entity: harus validasi `can_access_task` (bukan sekadar tampilkan nama dari `linked_entity_id`) agar tidak bocor.
 
 ### Dampak RLS
 Tidak ada policy tabel chat existing yang dilonggarkan di V1.8.1. FR-DATA.1 hanya menambah kolom output ke RPC SECURITY DEFINER yang sudah `is_chat_member`-gated.
@@ -159,7 +165,7 @@ Lihat field `acceptance_criteria` (Given/When/Then lengkap, ditandai `FE-only` /
 - Date divider device-tz (org tz tidak diekspos); `created_at` invalid → skip.
 - handleSend: anti double-submit, trim, error spesifik dari `e.message` ("Pesan tidak boleh kosong." / "Hanya anggota room…"), input tidak ter-reset saat gagal, no optimistic insert (V1.8.1).
 - Membership dicabut mid-sesi → kirim gagal di server; tampil error inline; banner read-only membantu (idealnya).
-- Paginasi >30 → "Muat pesan lama" (AC-IN2.9).
+- Paginasi >30 → auto-load saat scroll ke atas + indikator `Memuat pesan lama` (AC-IN2.9 revisi 2026-07-13; sebelumnya tombol manual, lihat [spec keyset §10.2](keyset-pagination-list-chat-messages.md#101-scope--read-path-fix-only)).
 
 ---
 

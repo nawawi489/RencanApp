@@ -4,13 +4,13 @@
 
 export const WS_COPY = {
   title: 'Workspace',
-  subtitle: 'Performance — Goal, KPI Area, Strategy, Initiative & Action Plan.',
+  subtitle: 'Performance — Goal, Strategi, Inisiatif, Rencana Aksi & Tugas.',
   sectionStrategis: 'Hierarki Strategis',
   // WSA-12 — CTA terkunci spec §6.3: "+ Goal" (bukan "+ Goal Baru").
   btnGoalBaru: '+ Goal',
   // WSA-12 — empty state terkunci spec §17.
   emptyGoalTitle: 'Belum ada Goal aktif di periode ini.',
-  emptyGoalDescCan: 'Buat Goal pertama lewat Wizard, lalu pecah jadi KPI Area, Strategy, dan Initiative.',
+  emptyGoalDescCan: 'Buat Goal pertama lewat Wizard, lalu pecah jadi Strategi, Inisiatif, dan Rencana Aksi.',
   emptyGoalDescView: 'Anda akan melihat Goal di sini begitu menjadi PIC atau Reviewer sebuah card.',
   // WSA-12 — toast periode-lewat terkunci spec §12.4 (satu kalimat, dipecah title/message untuk Alert).
   archivePeriodTitle: 'Periode ini sudah menjadi Archive',
@@ -63,7 +63,7 @@ export const WS_TREE_COMPACT_COPY = {
     compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.target(target)]),
     outcome ? WS_TREE_COMPACT_COPY.outcome(outcome) : null,
   ],
-  strategyMeta: ({
+  initiativeMeta: ({
     past,
     statusLabel,
     contribution,
@@ -80,7 +80,7 @@ export const WS_TREE_COMPACT_COPY = {
     ]),
     risk ? WS_TREE_COMPACT_COPY.risk(risk) : null,
   ],
-  initiativeMeta: ({
+  actionPlanMeta: ({
     past,
     statusLabel,
     target,
@@ -92,7 +92,7 @@ export const WS_TREE_COMPACT_COPY = {
     compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.target(target)]),
     null,
   ],
-  actionPlanMeta: ({
+  taskMeta: ({
     past,
     statusLabel,
     deadline,
@@ -139,7 +139,7 @@ export const WS_HUB_COPY = {
   perf: {
     kicker: 'Performance',
     title: 'Target Kinerja',
-    meta: 'Goal → KPI Area → Strategy → Initiative → Action Plan',
+    meta: 'Goal → Strategi → Inisiatif → Rencana Aksi → Tugas',
     // WSA-12 — tombol masuk visible = "Masuk" (spec §6.4 no.14); a11y label tetap
     // membedakan ruang agar test/aksesibilitas tak ambigu antar dua hub-card.
     enter: 'Masuk',
@@ -148,7 +148,7 @@ export const WS_HUB_COPY = {
   dev: {
     kicker: 'Development',
     title: 'Pembangunan Sistem',
-    meta: 'Development Area → Problem Statement → Initiative → Action Plan',
+    meta: 'Development Area → Problem Statement → Rencana Aksi → Tugas',
     enter: 'Masuk',
     enterA11y: 'Masuk Development',
   },
@@ -161,7 +161,7 @@ export const WS_HELP_COPY = {
     title: 'Apa itu Performance Workspace?',
     question: 'Ruang mana yang dipakai untuk mengejar target kinerja?',
     description:
-      'Performance Workspace berisi struktur eksekusi target perusahaan dari Goal sampai Action Plan.',
+      'Performance Workspace berisi struktur eksekusi target perusahaan dari Goal sampai Tugas.',
     checks: [
       'Dipakai untuk target tahunan dan pecahan bulan/quarter.',
       'Fokus pada hasil terukur seperti omset, profit, customer, dan output.',
@@ -173,7 +173,7 @@ export const WS_HELP_COPY = {
     title: 'Apa itu Development Workspace?',
     question: 'Ruang mana yang dipakai untuk memperbaiki sistem kerja?',
     description:
-      'Development Workspace berisi area perbaikan perusahaan, Problem Statement, Initiative, dan Action Plan.',
+      'Development Workspace berisi area perbaikan perusahaan, Problem Statement, Rencana Aksi, dan Tugas.',
     checks: [
       'Dipakai untuk membangun sistem, SOP, alur kerja, dan governance.',
       'Fokus pada masalah yang perlu dibereskan agar eksekusi lebih rapi.',
@@ -184,7 +184,7 @@ export const WS_HELP_COPY = {
 
 /** Label Development Workspace (Fase 6). */
 export const WS_DEV_COPY = {
-  subtitle: 'Development — Development Area, Problem Statement, Initiative & Action Plan.',
+  subtitle: 'Development — Development Area, Problem Statement, Rencana Aksi & Tugas.',
   sectionDevAreas: 'Development Area',
   // WSA-12 — CTA terkunci spec §7.1: "+ Development Area" (bukan "…Baru").
   btnDevAreaBaru: '+ Development Area',
@@ -193,7 +193,7 @@ export const WS_DEV_COPY = {
   // WSA-12 — empty state terkunci spec §17.
   emptyDevAreaTitle: 'Belum ada Development Area aktif di periode ini.',
   emptyDevAreaDescCan:
-    'Buat Development Area pertama, lalu pecah jadi Problem Statement, Initiative, dan Action Plan.',
+    'Buat Development Area pertama, lalu pecah jadi Problem Statement, Rencana Aksi, dan Tugas.',
   emptyDevAreaDescView:
     'Anda akan melihat Development Area di sini begitu menjadi PIC atau Reviewer sebuah card.',
 } as const;

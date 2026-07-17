@@ -1,5 +1,6 @@
-// Home (Fase 3) — Today Command Center per-section. Tanggal diklasifikasi SERVER (lib/home),
-// jadi test memock data layer & TIDAK pernah memock Date global (AC-H6b diuji di SQL, bukan sini).
+// Home (§27 V1.83) — "Pusat kendali hari ini." Compact layout: Fokus Hari Ini card,
+// Prioritas, Task Hari Ini (merged), Butuh Review, Update Terbaru.
+// Tanggal diklasifikasi SERVER (lib/home); test memock data layer, TIDAK memock Date global.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
@@ -12,7 +13,7 @@ const mockMine = jest.fn();
 const mockReview = jest.fn();
 jest.mock('@/lib/cards', () => ({
   ...jest.requireActual('@/lib/cards'),
-  listMyActionPlans: () => mockMine(),
+  listMyTasks: () => mockMine(),
   listPendingReviews: () => mockReview(),
 }));
 
@@ -38,8 +39,6 @@ jest.mock('@/hooks/use-profile', () => ({
   useProfile: () => ({ ...profileMock, isLoading: false, can: () => false }),
 }));
 
-// mockPush di scope modul agar push dapat di-assert (jest.fn() inline di dalam useRouter
-// membuat instance baru tiap panggilan → tak terlacak). WS-3a butuh assert route.
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -57,7 +56,6 @@ function wrapper() {
   return Wrapper;
 }
 
-/** Default semua section resolve kosong; tiap test override yang relevan. */
 function primeEmpty() {
   mockMine.mockResolvedValue([]);
   mockReview.mockResolvedValue([]);
@@ -83,15 +81,13 @@ beforeEach(() => {
   profileMock.profile = { full_name: 'Rina Jaya', id: 'u1', created_at: '2020-01-01T00:00:00Z' };
 });
 
-// Unmount di dalam act agar langganan react-query dari test sebelumnya dibatalkan dan
-// setiap state update tuntas SEBELUM test berikutnya render (cegah "overlapping act()").
 afterEach(async () => {
   await act(async () => {
     cleanup();
   });
 });
 
-describe('HomeScreen', () => {
+describe('HomeScreen — §27 compact layout', () => {
   it('loading → skeleton', async () => {
     mockMine.mockReturnValue(new Promise(() => {}));
     mockReview.mockReturnValue(new Promise(() => {}));
@@ -104,18 +100,18 @@ describe('HomeScreen', () => {
     expect(screen.getAllByLabelText('Memuat…').length).toBeGreaterThan(0);
   });
 
-  it('data → greeting + Terlewat count dari server + task row + repeat row', async () => {
+  it('data → greeting + Fokus Hari Ini + Prioritas + Task Hari Ini + Update Terbaru', async () => {
     mockMine.mockResolvedValue([
       { id: 'ap1', name: 'Upload 5 konten', status: 'in_progress', deadline: '2026-06-30', pic: { full_name: 'Rina' } },
     ]);
     mockReview.mockResolvedValue([]);
     mockToday.mockResolvedValue('2026-06-24');
     mockTodayRepeat.mockResolvedValue([
-      { kind: 'instance', id: 'i1', action_plan_id: 'ap9', name: 'Daily Finance Closing', due: '2026-06-24', status: 'assigned' },
+      { kind: 'instance', id: 'i1', task_id: 'ap9', name: 'Daily Finance Closing', due: '2026-06-24', status: 'assigned' },
     ]);
     mockOverdue.mockResolvedValue([
-      { kind: 'instance', id: 'i2', action_plan_id: 'ap8', name: 'Lapor harian', due: '2026-06-23', status: 'missed' },
-      { kind: 'action_plan', id: 'ap2', action_plan_id: 'ap2', name: 'Desain banner', due: '2026-06-20', status: 'in_progress' },
+      { kind: 'instance', id: 'i2', task_id: 'ap8', name: 'Lapor harian', due: '2026-06-23', status: 'missed' },
+      { kind: 'task', id: 'ap2', task_id: 'ap2', name: 'Desain banner', due: '2026-06-20', status: 'in_progress' },
     ]);
     mockNear.mockResolvedValue([]);
     mockKpiAttn.mockResolvedValue([
@@ -125,22 +121,22 @@ describe('HomeScreen', () => {
 
     expect(await screen.findByText('Upload 5 konten')).toBeTruthy();
     expect(screen.getByText(/Selamat (pagi|siang|sore|malam), Rina\./)).toBeTruthy();
-    expect(screen.getByText('Daily Finance Closing')).toBeTruthy(); // repeat hari ini
-    expect(screen.getByText('2 item lewat deadline.')).toBeTruthy(); // priority Terlewat dari listOverdueItems
-    expect(screen.getByText('1 KPI perlu dipantau.')).toBeTruthy(); // priority Gap KPI Area
-    expect(screen.getByText('Customer Baru')).toBeTruthy(); // Snapshot Tim row
-    expect(screen.getByText('kurang 1.060 customer')).toBeTruthy(); // "% gap" prototype
+    expect(screen.getByText('Daily Finance Closing')).toBeTruthy();
+    expect(screen.getByText('2 item lewat deadline.')).toBeTruthy();
+    expect(screen.getByText('1 KPI perlu dipantau.')).toBeTruthy();
+    expect(screen.getByText('Fokus Hari Ini')).toBeTruthy();
+    expect(screen.getByText('Task Hari Ini')).toBeTruthy();
+    expect(screen.getByText('Update Terbaru')).toBeTruthy();
   });
 
-  it('kosong → empty states tiap section', async () => {
+  it('kosong → empty states for Task Hari Ini, Review, Update Terbaru', async () => {
     primeEmpty();
     await render(<HomeScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Tidak ada tugas aktif')).toBeTruthy();
-    expect(screen.getByText('Tidak ada yang telat.')).toBeTruthy(); // priority subtitle
-    expect(screen.getByText('Semua KPI sesuai target.')).toBeTruthy(); // priority Gap KPI subtitle (kosong)
-    expect(screen.getByText('Semua KPI Area terpantau')).toBeTruthy(); // Snapshot Tim empty
-    expect(screen.getByText('Tidak ada tugas rutin hari ini')).toBeTruthy();
-    expect(screen.getByText('Tidak ada deadline mendekat')).toBeTruthy();
+    expect(await screen.findByText('Tidak ada task hari ini')).toBeTruthy();
+    expect(screen.getByText('Tidak ada yang telat.')).toBeTruthy();
+    expect(screen.getByText('Semua KPI sesuai target.')).toBeTruthy();
+    expect(screen.getByText('Tidak ada yang menunggu review')).toBeTruthy();
+    expect(screen.getByText('Semua berjalan tepat waktu')).toBeTruthy();
   });
 
   it('error Terlewat → tampil "Gagal memuat." (bukan "0")', async () => {
@@ -151,48 +147,85 @@ describe('HomeScreen', () => {
     expect(screen.queryByText('0 item lewat deadline.')).toBeNull();
   });
 
-  it('revisi → muncul di section "Revisi diperlukan"', async () => {
+  it('revisi → muncul di Fokus Hari Ini (prioritas tertinggi)', async () => {
     primeEmpty();
     mockMine.mockResolvedValue([
       { id: 'ap3', name: 'Revisi laporan', status: 'revision', deadline: '2026-06-28', pic: { full_name: 'Rina' } },
     ]);
     await render(<HomeScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Revisi laporan')).toBeTruthy();
-    expect(screen.getByText('Revisi Diperlukan')).toBeTruthy(); // badge label
+    expect(screen.getByText('Revisi Diperlukan')).toBeTruthy();
+    expect(screen.getByLabelText(/Fokus: Revisi laporan/)).toBeTruthy();
+    expect(screen.getByText('Detail')).toBeTruthy();
   });
 
-  // WS-3a (AP-03) — baris HomeItemRow bertipe instance harus membuka layar INSTANCE
-  // (/action-plan/instance/{id}), bukan parent AP. Kode saat ini memanggil
-  // openActionPlan(item.action_plan_id) untuk SEMUA item di 3 section (Repeat/Terlewat/
-  // Deadline) → salah rute ke parent. Baris bertipe action_plan tetap ke parent AP.
+  it('TypeBadge menampilkan T (Task) dan RT (Repeat Task), bukan AP/RP', async () => {
+    primeEmpty();
+    mockMine.mockResolvedValue([
+      { id: 'ap1', name: 'Task Biasa', status: 'in_progress', deadline: null, pic: null, repeat_setting: 'once' },
+      { id: 'ap2', name: 'Task Rutin', status: 'in_progress', deadline: null, pic: null, repeat_setting: 'repeat' },
+    ]);
+    await render(<HomeScreen />, { wrapper: wrapper() });
+    await screen.findByText('Task Biasa');
+    // TypeBadge text hidden from a11y tree (importantForAccessibility="no-hide-descendants"),
+    // so verify via serialised JSON instead of getAllByText.
+    const json = JSON.stringify(screen.toJSON());
+    expect(json).toMatch(/"children":\["T"\]/);
+    expect(json).toMatch(/"children":\["RT"\]/);
+    expect(json).not.toMatch(/"children":\["AP"\]/);
+    expect(json).not.toMatch(/"children":\["RP"\]/);
+  });
+
+  it('Fokus Hari Ini prioritas: revisi > overdue > repeat > todo', async () => {
+    primeEmpty();
+    mockMine.mockResolvedValue([
+      { id: 'ap3', name: 'Revisi laporan', status: 'revision', deadline: null, pic: null },
+      { id: 'ap4', name: 'Task aktif', status: 'in_progress', deadline: null, pic: null },
+    ]);
+    mockOverdue.mockResolvedValue([
+      { kind: 'task', id: 'ap2', task_id: 'ap2', name: 'Overdue task', due: '2026-06-20', status: 'in_progress' },
+    ]);
+    await render(<HomeScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText(/Fokus: Revisi laporan/)).toBeTruthy();
+  });
+
+  it('Fokus item tidak terduplikasi di Task Hari Ini', async () => {
+    primeEmpty();
+    mockMine.mockResolvedValue([
+      { id: 'ap1', name: 'Satu-satunya task', status: 'in_progress', deadline: null, pic: null },
+    ]);
+    await render(<HomeScreen />, { wrapper: wrapper() });
+    await screen.findByText('Fokus Hari Ini');
+    const matches = screen.getAllByText('Satu-satunya task');
+    expect(matches).toHaveLength(1);
+  });
+
   describe('WS-3a routing instance vs parent AP', () => {
-    // render dibungkus act async agar SEMUA query section settle di dalam test (bukan hanya
-    // yang di-findByText) → tak ada state update yang bocor ke test berikutnya (overlapping act).
     const renderHome = async () => {
       await act(async () => {
         render(<HomeScreen />, { wrapper: wrapper() });
       });
     };
 
-    it('Repeat hari ini (instance) → push /action-plan/instance/{id}, BUKAN parent AP', async () => {
+    it('Repeat hari ini (instance) → push /task/instance/{id}, BUKAN parent AP', async () => {
       primeEmpty();
       mockTodayRepeat.mockResolvedValue([
-        { kind: 'instance', id: 'i1', action_plan_id: 'ap9', name: 'Daily Finance Closing', due: '2026-06-24', status: 'assigned' },
+        { kind: 'instance', id: 'i1', task_id: 'ap9', name: 'Daily Finance Closing', due: '2026-06-24', status: 'assigned' },
       ]);
       await renderHome();
       const row = await screen.findByText('Daily Finance Closing');
       await act(async () => {
         fireEvent.press(row);
       });
-      expect(mockPush).toHaveBeenCalledWith('/action-plan/instance/i1');
-      expect(mockPush).not.toHaveBeenCalledWith('/action-plan/ap9');
+      expect(mockPush).toHaveBeenCalledWith('/task/instance/i1');
+      expect(mockPush).not.toHaveBeenCalledWith('/task/ap9');
     });
 
-    it('Terlewat: instance → instance route; action_plan → parent AP (list campuran)', async () => {
+    it('Overdue: instance → instance route; task → parent AP (Update Terbaru)', async () => {
       primeEmpty();
       mockOverdue.mockResolvedValue([
-        { kind: 'instance', id: 'i2', action_plan_id: 'ap8', name: 'Lapor harian', due: '2026-06-23', status: 'missed' },
-        { kind: 'action_plan', id: 'ap2', action_plan_id: 'ap2', name: 'Desain banner', due: '2026-06-20', status: 'in_progress' },
+        { kind: 'instance', id: 'i2', task_id: 'ap8', name: 'Lapor harian', due: '2026-06-23', status: 'missed' },
+        { kind: 'task', id: 'ap2', task_id: 'ap2', name: 'Desain banner', due: '2026-06-20', status: 'in_progress' },
       ]);
       await renderHome();
       const instRow = await screen.findByText('Lapor harian');
@@ -201,23 +234,23 @@ describe('HomeScreen', () => {
         fireEvent.press(instRow);
         fireEvent.press(apRow);
       });
-      expect(mockPush).toHaveBeenCalledWith('/action-plan/instance/i2');
-      expect(mockPush).toHaveBeenCalledWith('/action-plan/ap2'); // regresi: AP tetap ke parent
-      expect(mockPush).not.toHaveBeenCalledWith('/action-plan/ap8');
+      expect(mockPush).toHaveBeenCalledWith('/task/instance/i2');
+      expect(mockPush).toHaveBeenCalledWith('/task/ap2');
+      expect(mockPush).not.toHaveBeenCalledWith('/task/ap8');
     });
 
-    it('Deadline mendekat (instance) → push /action-plan/instance/{id}', async () => {
+    it('Near deadline (instance) → push /task/instance/{id} (Update Terbaru)', async () => {
       primeEmpty();
       mockNear.mockResolvedValue([
-        { kind: 'instance', id: 'i3', action_plan_id: 'ap7', name: 'Closing malam', due: '2026-06-26', status: 'assigned' },
+        { kind: 'instance', id: 'i3', task_id: 'ap7', name: 'Closing malam', due: '2026-06-26', status: 'assigned' },
       ]);
       await renderHome();
       const row = await screen.findByText('Closing malam');
       await act(async () => {
         fireEvent.press(row);
       });
-      expect(mockPush).toHaveBeenCalledWith('/action-plan/instance/i3');
-      expect(mockPush).not.toHaveBeenCalledWith('/action-plan/ap7');
+      expect(mockPush).toHaveBeenCalledWith('/task/instance/i3');
+      expect(mockPush).not.toHaveBeenCalledWith('/task/ap7');
     });
   });
 
@@ -226,7 +259,7 @@ describe('HomeScreen', () => {
     profileMock.profile = {
       full_name: 'Baru Sekali',
       id: 'u2',
-      created_at: new Date(Date.now() - 2 * 86_400_000).toISOString(), // 2 hari lalu
+      created_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
     };
     const { unmount } = await render(<HomeScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Selamat datang di Rencanapp')).toBeTruthy();
@@ -234,7 +267,7 @@ describe('HomeScreen', () => {
 
     profileMock.profile = { full_name: 'Lama', id: 'u3', created_at: '2020-01-01T00:00:00Z' };
     await render(<HomeScreen />, { wrapper: wrapper() });
-    await screen.findByText('Tidak ada tugas aktif');
+    await screen.findByText('Tidak ada task hari ini');
     expect(screen.queryByText('Selamat datang di Rencanapp')).toBeNull();
   });
 });

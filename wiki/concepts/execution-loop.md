@@ -7,11 +7,11 @@ sources: 1
 
 # Execution Loop — Bukti, Nilai Hasil, Review
 
-Loop yang mengubah [[action-plan|Action Plan]] dari "ditugaskan" menjadi "selesai & terbukti". Inti filosofi [[overview|EMS]]: eksekusi harus punya bukti, hasil, dan review — bukan sekadar klaim selesai.
+Loop yang mengubah [[action-plan|Task]] dari "ditugaskan" menjadi "selesai & terbukti". Inti filosofi [[overview|EMS]]: eksekusi harus punya bukti, hasil, dan review — bukan sekadar klaim selesai.
 
 ## Bukti (§30)
 
-Membuktikan pekerjaan dilakukan. Jenis: File, Foto, Screenshot, PDF, Link Google Drive, Link dokumen, Catatan teks, Rekap laporan. Jika diwajibkan, Action Plan tidak bisa submit tanpa bukti.
+Membuktikan pekerjaan dilakukan. Jenis: File, Foto, Screenshot, PDF, Link Google Drive, Link dokumen, Catatan teks, Rekap laporan. Jika diwajibkan, Task tidak bisa submit tanpa bukti.
 
 ## Nilai Hasil (§31)
 
@@ -21,7 +21,7 @@ Melaporkan output terukur. Tipe: Number, Currency, Percentage, Boolean, Text, Op
 
 ## Review (§33)
 
-Validasi hasil oleh **Reviewer** (Action Plan wajib punya Reviewer). Approve/reject. Tanpa approval, Action Plan tidak bisa Selesai. **PIC tidak boleh approve pekerjaannya sendiri** ([[permission-model]]). Reject wajib alasan → status **Revisi Diperlukan** → PIC submit ulang versi baru.
+Validasi hasil oleh **Reviewer** (Task wajib punya Reviewer). Approve/reject. Tanpa approval, Task tidak bisa Selesai. **PIC tidak boleh approve pekerjaannya sendiri** ([[permission-model]]). Reject wajib alasan → status **Revisi Diperlukan** → PIC submit ulang versi baru.
 
 ## Submission Versioning (§34)
 

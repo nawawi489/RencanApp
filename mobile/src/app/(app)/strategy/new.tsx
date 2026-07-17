@@ -1,42 +1,164 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
-import { Alert } from 'react-native';
-import { ScrollView, View } from 'react-native-css/components';
+import { useMemo, useState } from 'react';
+import { Alert, Modal } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
-import { DateField } from '@/components/date-field';
+import { Button, EmptyState, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
 import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
-import { DATE_HINT, periodError } from '@/lib/date';
-import type { PersonRef } from '@/lib/cards';
+import { periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
-import { getKpiArea } from '@/lib/kpi-areas';
+import { getGoal, listStrategyTemplates, type StrategyTemplate } from '@/lib/goals';
+import type { PersonRef } from '@/lib/strategies';
 
 type Person = NonNullable<PersonRef>;
 
+/**
+ * UI-S-K02 — Strategi Template Picker (PRD §18).
+ *
+ * "Klik Pakai Template membuka bottom sheet" → list `strategy_templates` di bawah goal_template_id
+ * parent Goal, dikelompokkan per `division_label`. Pilih → prefill `name`.
+ *
+ * V1 limitation: schema `strategy_templates` hanya punya `name` + `division`. Target & Ekspektasi
+ * Hasil rekomendasi belum ada di schema, jadi user tetap mengetik manual. Bisa di-extend
+ * follow-up via ALTER strategy_templates ADD COLUMN target_hint/expected_outcome_hint.
+ */
+function StrategyTemplatePicker({
+  goalTemplateId,
+  onPick,
+}: {
+  goalTemplateId: string | null | undefined;
+  onPick: (t: StrategyTemplate) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const tmplQ = useQuery({
+    queryKey: ['strategy_templates', goalTemplateId],
+    queryFn: () => listStrategyTemplates(goalTemplateId!),
+    enabled: !!goalTemplateId,
+  });
+  const grouped = useMemo(() => {
+    const map = new Map<string, StrategyTemplate[]>();
+    for (const t of tmplQ.data ?? []) {
+      const key = t.division_label;
+      const arr = map.get(key) ?? [];
+      arr.push(t);
+      map.set(key, arr);
+    }
+    return Array.from(map.entries());
+  }, [tmplQ.data]);
+
+  if (!goalTemplateId) {
+    // V1.83 §18: user "tetap lanjut isi manual" bila library tidak tersedia.
+    return (
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        Isi Strategy manual — Goal ini tidak dibuat dari Goal Template.
+      </Text>
+    );
+  }
+
+  return (
+    <View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Pakai Template Strategi"
+        onPress={() => setOpen(true)}
+        style={{ minHeight: 44 }}
+        className="min-h-[44px] flex-row items-center justify-center rounded-xl border border-brand-dark px-4 py-2 active:opacity-70">
+        <Text className="text-sm font-semibold text-brand-dark">Pakai Template</Text>
+      </Pressable>
+
+      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
+        <View className="flex-1 justify-end bg-black/40">
+          <View className="max-h-[80%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-black dark:text-white">
+                Pilih Template Strategi
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tutup"
+                onPress={() => setOpen(false)}
+                style={{ minHeight: 44 }}
+                className="min-h-[44px] items-center justify-center rounded-full px-3 active:opacity-70">
+                <Text className="text-sm text-neutral-500 dark:text-neutral-400">Tutup</Text>
+              </Pressable>
+            </View>
+
+            {tmplQ.isLoading ? (
+              <Text className="text-xs text-neutral-400">Memuat template…</Text>
+            ) : grouped.length === 0 ? (
+              <EmptyState
+                title="Belum ada Strategy Template"
+                description="Admin dapat membuat template custom nanti. User tetap bisa membuat Strategy manual tanpa template."
+                action={{ label: 'Isi Manual', onPress: () => setOpen(false) }}
+              />
+            ) : (
+              <ScrollView className="max-h-[60vh]">
+                <View className="gap-3">
+                  {grouped.map(([division, items]) => (
+                    <View key={division} className="gap-1.5">
+                      <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
+                        {division}
+                      </Text>
+                      {items.map((t) => (
+                        <Pressable
+                          key={t.id}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Pilih template ${t.name}`}
+                          onPress={() => {
+                            onPick(t);
+                            setOpen(false);
+                          }}
+                          style={{ minHeight: 44 }}
+                          className="min-h-[44px] rounded-xl border border-neutral-200 px-3 py-2 active:opacity-70 dark:border-neutral-800">
+                          <Text className="text-sm text-black dark:text-white">{t.name}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
 export function LiveNewStrategyScreen() {
-  const { kpiAreaId } = useLocalSearchParams<{ kpiAreaId: string }>();
+  const { goalId } = useLocalSearchParams<{ goalId: string }>();
   const router = useRouter();
-  const { create, isPending } = useStrategyActions(kpiAreaId);
-  // Default PIC turunan (PRD §52): picker di-prefill PIC KPI Area induk (terlihat & bisa diubah).
-  const parentQ = useQuery({ queryKey: ['kpi_area', kpiAreaId], queryFn: () => getKpiArea(kpiAreaId), enabled: !!kpiAreaId });
+  const { create, isPending } = useStrategyActions(goalId);
+  // Default PIC turunan (PRD §52): picker di-prefill PIC Goal induk (terlihat & bisa diubah/dikosongkan).
+  const parentQ = useQuery({ queryKey: ['goal', goalId], queryFn: () => getGoal(goalId), enabled: !!goalId });
   const { person: inheritedPic } = usePerson(parentQ.data?.pic_id);
 
   const [name, setName] = useState('');
-  const [reason, setReason] = useState('');
-  const [mainRisk, setMainRisk] = useState('');
-  const [alternative, setAlternative] = useState('');
+  const [target, setTarget] = useState('');
+  // 0032 (override PRD §18) — target numerik + satuan OPSIONAL, buka "% gap" presisi.
+  const [targetNumeric, setTargetNumeric] = useState('');
+  const [targetUnit, setTargetUnit] = useState('');
+  // UI-S-K03 — PRD §18 wajib "Ekspektasi Hasil".
+  const [expectedOutcome, setExpectedOutcome] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [description, setDescription] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
-  // UI-S-S01 — Kontribusi Q% (PRD §20). Free decimal, 0–100; NULL diizinkan saat Draft.
-  const [contributionPct, setContributionPct] = useState('');
 
   async function submit() {
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Strategy wajib diisi.');
+      Alert.alert('Belum lengkap', 'Nama Strategi wajib diisi.');
+      return;
+    }
+    if (!target.trim()) {
+      Alert.alert('Belum lengkap', 'Target Strategi wajib diisi.');
+      return;
+    }
+    if (!expectedOutcome.trim()) {
+      Alert.alert('Belum lengkap', 'Ekspektasi Hasil Strategi wajib diisi.');
       return;
     }
     const dateErr = periodError(periodStart, periodEnd);
@@ -44,27 +166,27 @@ export function LiveNewStrategyScreen() {
       Alert.alert('Tanggal tidak valid', dateErr);
       return;
     }
-    let contribution: number | null = null;
-    if (contributionPct.trim()) {
-      const parsed = Number(contributionPct.replace(',', '.'));
-      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
-        Alert.alert('Kontribusi tidak valid', 'Isi 0–100 (persen, mis. 25 atau 12.5).');
+    let targetNumericVal: number | null = null;
+    if (targetNumeric.trim()) {
+      const n = Number(targetNumeric.trim());
+      if (!Number.isFinite(n) || n < 0) {
+        Alert.alert('Target angka tidak valid', 'Isi angka ≥ 0, atau kosongkan untuk KPI kualitatif.');
         return;
       }
-      contribution = Math.round(parsed * 1000) / 1000; // selaras numeric(6,3)
+      targetNumericVal = n;
     }
     try {
       const created = await create({
-        kpi_area_id: kpiAreaId,
+        goal_id: goalId,
         name: name.trim(),
         description: description.trim() || null,
-        reason: reason.trim() || null,
-        main_risk: mainRisk.trim() || null,
-        alternative: alternative.trim() || null,
+        target: target.trim(),
+        target_numeric: targetNumericVal,
+        target_unit: targetUnit.trim() || null,
+        expected_outcome: expectedOutcome.trim(),
         pic_id: (pic ?? inheritedPic)?.id ?? null,
         period_start: periodStart || null,
         period_end: periodEnd || null,
-        contribution_pct: contribution,
       });
       router.replace(`/strategy/${created.id}` as Href);
     } catch (e) {
@@ -76,49 +198,65 @@ export function LiveNewStrategyScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
-          title="Strategy — Pendekatan mencapai KPI"
-          body="Strategy menjelaskan cara mencapai target KPI Area. Alasan, Risiko Utama, dan Alternatif wajib lengkap saat aktivasi (gate kualitas). Card disimpan sebagai Draft dulu."
+          title="Strategi — Area pengukuran"
+          body="Strategi mendefinisikan indikator keberhasilan sebuah Goal. Tetapkan Target yang terukur, lalu turunkan jadi Inisiatif. Card disimpan sebagai Draft dulu; aktifkan setelah kelengkapan terpenuhi."
         />
 
         <SectionCard>
+          <StrategyTemplatePicker
+            goalTemplateId={parentQ.data?.goal_template_id}
+            onPick={(t) => {
+              // PRD §18: "Setelah template dipilih, Nama Strategi, PIC rekomendasi, Target awal,
+              // dan Ekspektasi Hasil terisi otomatis." Prefill berbasis kolom hint (0027).
+              setName(t.name);
+              if (t.target_hint) setTarget(t.target_hint);
+              if (t.expected_outcome_hint) setExpectedOutcome(t.expected_outcome_hint);
+            }}
+          />
           <LabeledInput
-            label="Nama Strategy"
+            label="Nama Strategi"
             value={name}
             onChangeText={setName}
             required
-            placeholder="mis. Ekspansi kanal digital"
+            placeholder="mis. Pertumbuhan Pendapatan"
           />
           <LabeledInput
-            label="Alasan"
-            value={reason}
-            onChangeText={setReason}
-            placeholder="Mengapa strategi ini dipilih? (wajib saat aktivasi)"
+            label="Target"
+            value={target}
+            onChangeText={setTarget}
+            required
+            placeholder="mis. Naik 20% YoY"
             multiline
           />
           <LabeledInput
-            label="Risiko Utama"
-            value={mainRisk}
-            onChangeText={setMainRisk}
-            placeholder="Risiko terbesar yang harus diantisipasi (wajib saat aktivasi)"
-            multiline
+            label="Target angka (opsional)"
+            value={targetNumeric}
+            onChangeText={setTargetNumeric}
+            keyboardType="numeric"
+            placeholder="mis. 5000 — buka % capaian vs target"
           />
           <LabeledInput
-            label="Alternatif"
-            value={alternative}
-            onChangeText={setAlternative}
-            placeholder="Opsi lain bila strategi ini gagal (wajib saat aktivasi)"
+            label="Satuan (opsional)"
+            value={targetUnit}
+            onChangeText={setTargetUnit}
+            autoCapitalize="none"
+            placeholder="mis. customer, Rp, %"
+          />
+          <LabeledInput
+            label="Ekspektasi Hasil"
+            value={expectedOutcome}
+            onChangeText={setExpectedOutcome}
+            required
+            placeholder="Hasil konkret yang diharapkan tercapai"
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
-          <LabeledInput
-            label="Kontribusi Quarter (%)"
-            value={contributionPct}
-            onChangeText={setContributionPct}
-            keyboardType="numeric"
-            placeholder="mis. 25 (Σ siblings = 100%, divalidasi saat aktivasi)"
+          <DateRangeField
+            startValue={periodStart}
+            endValue={periodEnd}
+            onStartChange={setPeriodStart}
+            onEndChange={setPeriodEnd}
           />
-          <DateField label="Tanggal Mulai" value={periodStart} onChange={setPeriodStart} />
-          <DateField label="Tanggal Selesai" value={periodEnd} onChange={setPeriodEnd} />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
         </SectionCard>
 

@@ -591,9 +591,9 @@ export function ProgressBar({
 // ---------------------------------------------------------------- ProgressOrb (UI-G-001)
 
 /**
- * Orb capaian sistemik untuk header detail Goal/KPI/Strategy/Initiative/Action Plan.
+ * Orb capaian sistemik untuk header detail Goal/KPI/Inisiatif/Rencana Aksi/Tugas.
  * Discrete size 56 (compact) atau 72 (hero). Tone otomatis dari nilai bila tidak diisi:
- *   - 0–34 → danger (merah) "Perlu perhatian"
+ *   - 0–34 → danger (merah) "Perlu dukungan"
  *   - 35–69 → warn  (amber) "Berjalan"
  *   - 70–99 → brand (biru)  "Menuju target"
  *   - 100   → success (hijau) "Selesai"
@@ -613,7 +613,7 @@ const ORB_TONE_LABEL: Record<OrbTone, string> = {
   brand: 'Menuju target',
   success: 'Selesai',
   warn: 'Berjalan',
-  danger: 'Perlu perhatian',
+  danger: 'Perlu dukungan',
 };
 
 export function orbToneFor(value: number): OrbTone {
@@ -721,7 +721,7 @@ export const TREE_PROGRESS_ORB_COMPACT_SIZE = 38;
 
 /**
  * Orb progress varian tree (§10, WSA-15): default 50×50, mode compact 42×42, angka + "%" di
- * tengah, label visual di bawah (`Capaian` untuk Goal/KPI Area, `Progress` untuk lainnya).
+ * tengah, label visual di bawah (`Capaian` untuk Goal/Strategi, `Progress` untuk lainnya).
  * Ring SVG dgn warna good/risk/bad.
  */
 export function TreeProgressOrb({
@@ -847,13 +847,17 @@ export function TabBar<T extends string>({
   tabs,
   active,
   onChange,
+  showsScrollIndicator = false,
 }: {
   tabs: { key: T; label: string; badge?: number }[];
   active: T;
   onChange: (key: T) => void;
+  /** Tampilkan indikator scroll horizontal — pakai bila jumlah tab > yang muat di layar,
+   *  agar user tahu ada opsi tersembunyi (mis. Log Aktivitas dgn 7 filter). */
+  showsScrollIndicator?: boolean;
 }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={showsScrollIndicator}>
       <View className="flex-row gap-2 px-0.5 py-0.5">
         {tabs.map((t) => {
           const on = t.key === active;
@@ -1013,7 +1017,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** UI-S-AP6 (KpiLinkageCard DA-AP6-1). "Masuk KPI Area" + nama + sumber. */
+/** UI-S-AP6 (KpiLinkageCard DA-AP6-1). "Masuk Strategi" + nama + sumber. */
 export function KpiLinkageCard({
   kpiName,
   sourceLabel,
@@ -1024,7 +1028,7 @@ export function KpiLinkageCard({
   return (
     <View className="gap-1 rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/40">
       <Text className="text-xs font-semibold uppercase text-blue-700 dark:text-blue-300">
-        Masuk KPI Area
+        Masuk Strategi
       </Text>
       <Text className="text-base font-bold text-black dark:text-white">{kpiName}</Text>
       <Text className="text-xs text-neutral-500 dark:text-neutral-400">{sourceLabel}</Text>
@@ -1074,8 +1078,8 @@ export const IMPACT_APPROVAL_COPY = {
   heading: 'Setelah disetujui Reviewer',
   body: (kpiName: string, proposed: number | string | null) =>
     proposed == null
-      ? `Nilai KPI Area "${kpiName}" akan diperbarui setelah Reviewer menyetujui submission ini.`
-      : `Nilai KPI Area "${kpiName}" akan diperbarui menjadi ${proposed} setelah Reviewer menyetujui submission ini.`,
+      ? `Nilai Strategi "${kpiName}" akan diperbarui setelah Reviewer menyetujui submission ini.`
+      : `Nilai Strategi "${kpiName}" akan diperbarui menjadi ${proposed} setelah Reviewer menyetujui submission ini.`,
 };
 
 export function ImpactApprovalCard({
@@ -1108,6 +1112,39 @@ export function StatPill({ label, value, tone = 'neutral' }: { label: string; va
     <View className={`min-w-[28%] flex-1 items-center gap-0.5 rounded-xl px-3 py-2.5 ${BADGE_CLASS[tone]}`}>
       <Text className={`text-lg font-extrabold ${BADGE_TEXT_CLASS[tone]}`}>{value}</Text>
       <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{label}</Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- Banner
+
+export type BannerTone = 'warn' | 'error';
+
+export function Banner({
+  tone,
+  message,
+  action,
+}: {
+  tone: BannerTone;
+  message: string;
+  action?: { label: string; onPress: () => void };
+}) {
+  const bg =
+    tone === 'error'
+      ? 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-900'
+      : 'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-900';
+  const textCls =
+    tone === 'error'
+      ? 'text-red-800 dark:text-red-200'
+      : 'text-amber-800 dark:text-amber-200';
+  return (
+    <View className={`gap-2 rounded-xl border p-3 ${bg}`}>
+      <Text className={`text-sm ${textCls}`}>{message}</Text>
+      {action ? (
+        <View className="self-start">
+          <Button label={action.label} onPress={action.onPress} variant="secondary" />
+        </View>
+      ) : null}
     </View>
   );
 }

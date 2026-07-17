@@ -28,7 +28,7 @@ function apply(mode: ThemeMode) {
   if (typeof setter === 'function') {
     setter(scheme);
   }
-  // Web: react-native-web TIDAK implement setColorScheme. Pakai class strategy di root
+  // Web: react-native-web TIDAK implement setColorScheme. Pakai class initiative di root
   // (global.css mendefinisikan @custom-variant dark utk konsumsi class .dark).
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
     const root = document.documentElement;
@@ -96,4 +96,14 @@ export function useThemePreference(): ThemeContextValue {
   // Fallback aman untuk test/unit render tanpa provider: jangan crash, kembalikan default.
   if (!ctx) return { mode: 'system', effective: 'light', setMode: () => {} };
   return ctx;
+}
+
+/**
+ * Resolve a light/dark hex pair for props that can't take a NativeWind className
+ * (e.g. `Ionicons`' `color` prop). Wraps the `effective === 'dark' ? dark : light`
+ * ternary repeated across icon-heavy screens (DESIGN.md §10 Iconography).
+ */
+export function useThemedIcon(light: string, dark: string): string {
+  const { effective } = useThemePreference();
+  return effective === 'dark' ? dark : light;
 }

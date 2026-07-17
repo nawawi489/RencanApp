@@ -19,6 +19,12 @@ jest.mock('react-native', () => ({
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
 
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(),
+  setItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
+}));
+
 describe('supabase wiring (AC-CFG01-1..2 integrasi)', () => {
   const OLD_ENV = process.env;
 
@@ -44,5 +50,36 @@ describe('supabase wiring (AC-CFG01-1..2 integrasi)', () => {
     const call = mockCreateClient.mock.calls[0];
     expect(call[0]).toBe('http://localhost:54321');
     expect(call[1]).toBe('anon-test');
+  });
+
+  it('[2] Platform native (ios) → storage adalah secureStorage (SecureStore), bukan AsyncStorage langsung', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+
+    const SecureStoreMock = {
+      getItemAsync: jest.fn().mockResolvedValue(null),
+      setItemAsync: jest.fn().mockResolvedValue(undefined),
+      deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+    };
+
+    jest.isolateModules(() => {
+      jest.doMock('react-native', () => ({
+        AppState: { addEventListener: jest.fn() },
+        Platform: { OS: 'ios' },
+      }));
+      jest.doMock('expo-secure-store', () => SecureStoreMock);
+      require('../supabase');
+    });
+
+    expect(mockCreateClient).toHaveBeenCalledTimes(1);
+    const options = mockCreateClient.mock.calls[0][2] as { auth: { storage: { getItem: (k: string) => unknown; setItem: (k: string, v: string) => unknown; removeItem: (k: string) => unknown } } };
+    const storage = options?.auth?.storage;
+
+    storage.getItem('k');
+    expect(SecureStoreMock.getItemAsync).toHaveBeenCalledWith('k');
+    storage.setItem('k', 'v');
+    expect(SecureStoreMock.setItemAsync).toHaveBeenCalledWith('k', 'v');
+    storage.removeItem('k');
+    expect(SecureStoreMock.deleteItemAsync).toHaveBeenCalledWith('k');
   });
 });
