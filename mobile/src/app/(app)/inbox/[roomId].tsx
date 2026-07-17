@@ -36,7 +36,8 @@ import { createLogger } from '@/lib/logger';
 import { parseMentions } from '@/lib/mention-parse';
 import { applyMention, collectMentionIds, matchMentionQuery, type MentionPick } from '@/lib/mentions';
 import type { LocalFile } from '@/lib/storage';
-import { CHAT_MAX_ATTACHMENTS } from '@/lib/storage';
+import { CHAT_MAX_ATTACHMENTS, getChatAttachmentSignedUrl } from '@/lib/storage';
+import { useQuery } from '@tanstack/react-query';
 import { useProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth-provider';
 import { useThemedIcon } from '@/providers/theme-provider';
@@ -618,16 +619,68 @@ function AttachmentPreviewRow({
 }
 
 function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment }) {
+  // Signed URL berlaku 60 detik (lihat getChatAttachmentSignedUrl); refetch sebelum expired.
+  const { data: signedUrl } = useQuery({
+    queryKey: ['chat-attachment-signed-url', attachment.path],
+    queryFn: () => getChatAttachmentSignedUrl(attachment.path),
+    staleTime: 50 * 1000,
+    gcTime: 55 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const uri = signedUrl ?? `placeholder://${attachment.path}`;
   return (
-    <View
-      className="mt-1 overflow-hidden rounded-lg"
-      accessibilityLabel={`Lampiran ${attachment.name}`}>
-      <Image
-        source={{ uri: `placeholder://${attachment.path}` }}
-        style={{ width: '100%', maxWidth: 240, aspectRatio: 4 / 3, borderRadius: 8 }}
-        resizeMode="cover"
-      />
-    </View>
+    <>
+      <Pressable
+        onPress={() => setPreviewOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Lampiran ${attachment.name}`}
+        className="mt-1 overflow-hidden rounded-lg">
+        <Image
+          source={{ uri }}
+          style={{ width: 220, aspectRatio: 4 / 3, borderRadius: 8 }}
+          resizeMode="cover"
+        />
+      </Pressable>
+      <Modal
+        visible={previewOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}>
+          {/* Backdrop: full-area tap-to-close, no button role → no nested <button> on web */}
+          <Pressable
+            onPress={() => setPreviewOpen(false)}
+            accessibilityLabel="Tutup pratinjau"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+          <View pointerEvents="none" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Image
+              source={{ uri }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          </View>
+          <Pressable
+            onPress={() => setPreviewOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Tutup"
+            style={{
+              position: 'absolute',
+              top: 40,
+              right: 20,
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Ionicons name="close" size={24} color="#fff" />
+          </Pressable>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -785,7 +838,7 @@ export default function ChatRoomScreen() {
         uri: a.uri,
         name: a.fileName ?? `image-${Date.now()}.jpg`,
         size: a.fileSize ?? 0,
-        mimeType: a.type ?? null,
+        mimeType: a.mimeType ?? null,
       }));
       setPendingFiles((prev) => [...prev, ...newFiles].slice(0, CHAT_MAX_ATTACHMENTS));
     } catch {

@@ -141,7 +141,7 @@ describe('Composer — Kirim guard with attachments', () => {
     // Picker returns a file
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
-      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' }],
+      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' }],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
 
@@ -157,7 +157,7 @@ describe('Composer — Kirim guard with attachments', () => {
   it('[ATT-4] Kirim enabled when text + attachments both present', async () => {
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
-      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' }],
+      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' }],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
 
@@ -180,8 +180,8 @@ describe('AttachmentPreviewRow', () => {
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
       assets: [
-        { uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' },
-        { uri: 'file:///b.png', fileName: 'b.png', fileSize: 200, type: 'image/png' },
+        { uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' },
+        { uri: 'file:///b.png', fileName: 'b.png', fileSize: 200, mimeType: 'image/png' },
       ],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
@@ -196,7 +196,7 @@ describe('AttachmentPreviewRow', () => {
   it('[ATT-6] remove button removes file from preview', async () => {
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
-      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' }],
+      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' }],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
 
@@ -297,7 +297,7 @@ describe('handleSend — attachments', () => {
   it('[ATT-13] send with attachments calls useChatAttachmentFlow.run', async () => {
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
-      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' }],
+      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' }],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
 
@@ -325,7 +325,7 @@ describe('handleSend — attachments', () => {
     mockRunAttachmentFlow.mockRejectedValueOnce(new Error('upload fail'));
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
-      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' }],
+      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' }],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
 
@@ -348,7 +348,7 @@ describe('Validation microcopy', () => {
   it('[EE-4] "Tambahkan keterangan" hint when attachments present + caption empty', async () => {
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
-      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' }],
+      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' }],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
 
@@ -376,7 +376,7 @@ describe('Validation microcopy', () => {
     );
     mockLaunchImageLibraryAsync.mockResolvedValueOnce({
       canceled: false,
-      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, type: 'image/jpeg' }],
+      assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', fileSize: 100, mimeType: 'image/jpeg' }],
     });
     await render(<ChatRoomScreen />, { wrapper: wrapper() });
 
