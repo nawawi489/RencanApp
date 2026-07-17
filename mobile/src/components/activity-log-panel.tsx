@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native-css/components';
 
 import { SectionCard, SkeletonList } from '@/components/ui';
 import { useEntityActivityLog } from '@/hooks/use-activity-governance';
+import { personLabel } from '@/lib/cards';
 
 /** Label aksi human-readable (cocok dgn ENUM action di DB). */
 const ACTION_LABEL: Record<string, string> = {
@@ -76,25 +77,28 @@ export function ActivityLogPanel({
           </Text>
         ) : (
           <View className="gap-2">
-            {shown.map((log) => (
-              <View
-                key={log.id}
-                className="gap-0.5 rounded-xl bg-neutral-50 px-3 py-2 dark:bg-neutral-900">
-                <View className="flex-row items-start justify-between gap-2">
-                  <Text className="flex-1 text-sm font-medium text-black dark:text-white">
-                    {ACTION_LABEL[log.action] ?? log.action}
-                  </Text>
-                  <Text className="text-[11px] text-neutral-400">
-                    {formatTimestamp(log.created_at)}
-                  </Text>
+            {shown.map((log) => {
+              const actorLabel = log.actor_id
+                ? `Oleh ${personLabel(log.actor ?? null, 'pengguna')}`
+                : 'Oleh sistem';
+              return (
+                <View
+                  key={log.id}
+                  className="gap-0.5 rounded-xl bg-neutral-50 px-3 py-2 dark:bg-neutral-900">
+                  <View className="flex-row items-start justify-between gap-2">
+                    <Text className="flex-1 text-sm font-medium text-black dark:text-white">
+                      {ACTION_LABEL[log.action] ?? log.action}
+                    </Text>
+                    <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {formatTimestamp(log.created_at)}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">{actorLabel}</Text>
                 </View>
-                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {log.actor_id ? 'Oleh pengguna' : 'Oleh sistem'}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
             {truncated ? (
-              <Text className="px-1 text-xs text-neutral-400">
+              <Text className="px-1 text-xs text-neutral-500 dark:text-neutral-400">
                 {logs.length - 10} entri lain tersembunyi — buka Activity Log di Pengaturan untuk
                 melihat semua.
               </Text>
