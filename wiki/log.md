@@ -1695,3 +1695,14 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
   - Contract test 7 pgTAP + 8 RNTL test (4-state + create/edit/toggle/badge). Jest 1377/1377, tsc clean.
   - **Gotcha RNTL:** useMutation `onSuccess: invalidateQueries` menghasilkan async leak via React Query global `notifyManager` — meracuni `screen` singleton RNTL utk test berikutnya. Fix: pindahkan create test (satu-satunya yang trigger mutasi) ke describe terakhir.
 - **Memory disinkronkan:** `push-notifications-shipped.md` dikoreksi (Fase 1 MERGED bukan OPEN); `prd-v183-source-of-truth.md` + `app-scaffold.md` di-update.
+
+
+## [2026-07-17] update | PRD §4 dihapus + §6 dibersihkan (tech stack pindah ke wiki)
+
+Hasil audit hulu-ke-hilir menemukan PRD §4 mewajibkan Next.js + PWA sementara aplikasi shipped Expo React Native (mobile-first, native iOS+Android). Owner konfirmasi divergensi tech stack sudah final; PRD tidak lagi memegang keputusan stack.
+
+- **`PRD.md` §4** — konten Next.js/PWA dihapus, diganti pointer ke `wiki/concepts/tech-stack.md` (pilihan tumpukan) + `wiki/concepts/architecture.md` (ADR Thick-DB/Thin-Client). Nomor section dipertahankan (§4 tetap ada sebagai stub pointer) supaya cross-ref internal PRD dan wiki tidak putus.
+- **`PRD.md` §6** — "Native Android/iOS" dihapus dari daftar out-of-scope (kontradiktif dengan realita produk).
+- **`README.md` §"Status Deployment"** — koreksi klaim "belum ada CI/CD terpusat"; CI aktif di `.github/workflows/ci.yml` dan gate `deploy-staging.yml`.
+
+Wiki tech-stack + architecture sudah tetap konsisten; tidak perlu update di sana. `wiki/overview.md` tidak menyentuh detail stack sehingga tetap valid.

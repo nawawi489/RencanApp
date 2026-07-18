@@ -75,26 +75,11 @@ Rencanakan target. Pecah jadi aksi. Jalankan sampai tuntas.
 
 ---
 
-## 4. Tech Stack Target
+## 4. Tech Stack
 
-Frontend:
+Tech stack bukan lagi bagian dari PRD. Sumber kebenaran: [`wiki/concepts/tech-stack.md`](wiki/concepts/tech-stack.md) (pilihan tumpukan) dan [`wiki/concepts/architecture.md`](wiki/concepts/architecture.md) (ADR "Thick Database, Thin Client" — semua business rule di Postgres).
 
-1. Next.js.
-2. React.
-3. TypeScript.
-4. Mobile-first responsive web app.
-5. PWA-ready.
-
-Backend:
-
-1. Next.js Route Handler / Server Action.
-2. Supabase Auth.
-3. Supabase PostgreSQL.
-4. Supabase Storage.
-5. RLS untuk pembacaan data sederhana.
-6. Backend API wajib untuk business rule penting.
-
-Prototype saat ini masih static HTML/CSS/JS, tetapi implementasi produksi harus memakai Next.js dan Supabase.
+Ringkas: mobile-first Expo React Native (iOS + Android + web) di atas Supabase (Postgres/Auth/Storage/Realtime/Edge Functions + `pg_cron`). PRD tidak mendikte framework — perubahan tech stack ditetapkan di wiki dan tidak perlu amandemen PRD.
 
 ---
 
@@ -220,13 +205,12 @@ Yang tidak masuk V1.83:
 12. Google Calendar integration.
 13. AI Assistant.
 14. AI Review.
-15. Native Android/iOS.
-16. Routine entity.
-17. Checklist Routine entity.
-18. Watcher.
-19. Area Goal layer.
-20. metric child table di bawah Area Goal.
-21. Bobot planning card.
+15. Routine entity.
+16. Checklist Routine entity.
+17. Watcher.
+18. Area Goal layer.
+19. metric child table di bawah Area Goal.
+20. Bobot planning card.
 
 ---
 
