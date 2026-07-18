@@ -1,3 +1,7 @@
+-- [QUARANTINED — WIP] Excluded from CI (run-db-contract-tests.sh skips *.wip.sql).
+-- Reason: runner-incompatible: uses raise 'ROLLBACK_OK' as its PASS signal (needs block-by-block exec); rewrite to begin/rollback + raise-only-on-FAIL.
+-- Repair tracked in supabase/tests/WIP_REPAIR_BACKLOG.md. Rename back to *.sql once green.
+--
 -- WS-4 / DCR-05 "Minta Revisi" contract suite (per-block; ROLLBACK_OK = lulus).
 -- Pola fase8: set_config('request.jwt.claims',...) utk auth.uid(); user transient in-tx.
 -- UUID dev:

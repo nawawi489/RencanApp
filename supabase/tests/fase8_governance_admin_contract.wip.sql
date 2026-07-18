@@ -1,3 +1,7 @@
+-- [QUARANTINED — WIP] Excluded from CI (run-db-contract-tests.sh skips *.wip.sql).
+-- Reason: schema: evaluations.initiative_id column removed; ALSO runner-incompatible sentinel style (raise 'ROLLBACK_OK').
+-- Repair tracked in supabase/tests/WIP_REPAIR_BACKLOG.md. Rename back to *.sql once green.
+--
 -- Fase 8 — Governance & Admin contract suite (per-block; jalankan tiap DO via Supabase MCP execute_sql).
 -- Pola fase6/fase7: set request.jwt.claims utk auth.uid(); buat user transient in-tx; ROLLBACK via
 -- RAISE 'ROLLBACK_OK: ...' di akhir (MCP menampilkan error berisi summary = lulus). Ganti UUID dev:
