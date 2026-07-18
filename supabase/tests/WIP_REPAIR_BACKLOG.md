@@ -84,3 +84,25 @@ migration must be renumbered to the next free slot at merge time (**0076 or
 higher — re-check the actual highest migration number on staging then**,
 since more unrelated migrations may land on staging before this merges)
 before or during its merge.
+
+## New failures surfaced by the first fresh-bootstrap CI run (2026-07-18)
+
+Once the migration-numbering collisions above were fixed, `supabase start`
+succeeded end-to-end for the first time — and the contract suite immediately
+found two more pre-existing gaps, invisible until now for the same underlying
+reason as everything else in this file: nothing had ever exercised these
+migrations against a genuinely empty database before this CI job existed.
+
+| File | Rot class | Root cause |
+|---|---|---|
+| `0063_push_infrastructure_contract` | infra/environment parity | test `z2` (schema-net USAGE guardrail) fails on local/CI: `0063_push_infrastructure.sql`'s `revoke usage on schema net from public, authenticated, anon;` silently no-ops on Supabase LOCAL (the `net` schema is owned by `supabase_admin`; migrations run as `postgres`, not superuser, locally) and only actually takes effect on Supabase HOSTED. The migration's own comment (lines 409-414) already documents this with a manual `docker exec -U supabase_admin` workaround that was never automated. Test execution stops at `z2` (`ON_ERROR_STOP`), so `z3`-`z6` (vault secrets, cron job config) are **unverified** against a fresh bootstrap — the same migration's `vault.create_secret requires supabase_admin on local` comment suggests `z3` may have an identical gap |
+| `0073_strategy_template_crud_contract` | test-infra gap | written in pgTAP style (`select plan(10)`), but the `pgtap` extension is not enabled anywhere in `supabase/config.toml` or in a fresh `supabase start` bootstrap — `plan(integer)` does not exist. May never have run to completion in any environment this repo controls |
+
+**Repair priority**: `0063_push_infrastructure_contract`'s finding is
+security-adjacent (an HTTP-egress guardrail not actually enforced on
+local/CI) even though the author's comment suggests hosted is fine — worth
+confirming hosted staging/prod really has the guardrail active before
+treating this as low-urgency. `0073_strategy_template_crud_contract` is a
+test-authoring/infra gap only (enable `pgtap` in config, or rewrite to the
+`do $$ ... raise exception $$` pattern every other contract in this suite
+uses) — no known runtime security implication.

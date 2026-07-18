@@ -1,4 +1,16 @@
--- Contract test: 0069_strategy_template_crud
+-- [QUARANTINED — WIP] Excluded from CI (run-db-contract-tests.sh skips *.wip.sql).
+-- Reason: written in pgTAP style (select plan(10); ... select * from finish();)
+-- but the pgtap extension is not enabled anywhere in supabase/config.toml or in
+-- a fresh `supabase start` bootstrap, so `plan(integer)` does not exist and the
+-- test fails immediately. May never have run to completion in any environment
+-- this repo controls. Repair: either (a) enable pgtap in supabase/config.toml
+-- (project-wide change, needs checking hosted parity), or (b) rewrite to the
+-- do $$ ... raise exception $$ / rollback pattern every other contract in this
+-- suite uses (no extension dependency, most consistent with the rest of P2).
+-- Repair tracked in supabase/tests/WIP_REPAIR_BACKLOG.md. Rename back to *.sql
+-- once green against a genuinely fresh `supabase start`.
+--
+-- Contract test: 0073_strategy_template_crud
 -- Verifies organization_id + is_active + org-scoped RLS.
 begin;
 select plan(10);
