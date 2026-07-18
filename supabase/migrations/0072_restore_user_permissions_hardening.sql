@@ -22,7 +22,12 @@
 --     no second actor. (Self-granting manage_users_permissions itself stays CEO-gated.)
 --     This IS exploitable today. Restore the guard.
 --
--- No behavior change beyond restoring the two invariants; all other 0041 validation kept identical.
+-- (C) INVALID-KEY MESSAGE (contract test D_key)
+--     0017 raised 'Kunci hak akses tidak valid.'; 0041 (same rewrite that dropped the self-guard)
+--     changed the wording to 'Permission tidak dikenal: %'. Restore the Indonesian-consistent
+--     wording, keeping 0041's added key-name detail for debuggability.
+--
+-- No behavior change beyond restoring the three 0017 invariants; all other 0041 validation kept identical.
 
 -- (A) Re-revoke direct write privileges — RPC set_user_permission remains the only write path.
 revoke insert, update, delete on public.user_permissions from authenticated, anon;
@@ -44,7 +49,7 @@ begin
   if v_reason is null then raise exception 'Alasan perubahan wajib diisi.'; end if;
   v_org := public.current_user_org();
   select id into v_perm_id from public.permissions where key = p_permission_key;
-  if v_perm_id is null then raise exception 'Permission tidak dikenal: %', p_permission_key; end if;
+  if v_perm_id is null then raise exception 'Kunci hak akses tidak valid: %', p_permission_key; end if;
   select rt.level into v_target_level
   from public.profiles p join public.role_templates rt on rt.id = p.role_template_id
   where p.id = p_target_user_id and p.organization_id = v_org and p.is_active;
