@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
@@ -55,7 +55,7 @@ export function LiveInitiativeDetailScreen() {
     if (initiative && guardActivationFields('initiative', initiative)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Rencana Aksi',
-      onAddChild: () => router.push(`/action-plan/new?initiativeId=${id}` as Href),
+      onAddChild: () => router.push(`/action-plan/new?initiativeId=${id}`),
     });
     if (blocked) return;
     activateM.mutate();

@@ -68,7 +68,7 @@ function setupAdmin() {
   mockUseProfile.mockReturnValue({
     profile: { id: 'me' },
     isLoading: false,
-    can: (k: string) => k === 'manage_strategy_templates' || k === 'manage_goal_templates',
+    can: (k: string) => k === 'manage_kpi_area_templates' || k === 'manage_goal_templates',
   });
   mockListGoalTemplates.mockResolvedValue([GT_OMSET]);
 }

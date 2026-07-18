@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
@@ -70,7 +70,7 @@ export function LiveProblemStatementDetailScreen() {
     if (ps && guardActivationFields('problem_statement', ps)) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Rencana Aksi',
-      onAddChild: () => router.push(`/action-plan/new?problemStatementId=${id}` as Href),
+      onAddChild: () => router.push(`/action-plan/new?problemStatementId=${id}`),
     });
     if (blocked) return;
     activateM.mutate();
