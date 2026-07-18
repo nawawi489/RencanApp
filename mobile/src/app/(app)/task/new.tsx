@@ -8,6 +8,7 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { DateField } from '@/components/date-field';
 import { DateMultiField } from '@/components/date-multi-field';
 import { DateRangeField } from '@/components/date-range-field';
+import { MonthDaysPicker } from '@/components/month-days-picker';
 import { TimeField } from '@/components/time-field';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createTask, getActionPlan, type PersonRef } from '@/lib/cards';
@@ -140,7 +141,7 @@ export function LiveNewTaskScreen() {
   const [repeat, setRepeat] = useState(false);
   const [frequency, setFrequency] = useState<string>('daily');
   const [weekdays, setWeekdays] = useState<number[]>([]);
-  const [monthDays, setMonthDays] = useState('');
+  const [monthDays, setMonthDays] = useState<number[]>([]);
   const [customDates, setCustomDates] = useState<string[]>([]);
   const [repeatStart, setRepeatStart] = useState('');
   const [repeatEnd, setRepeatEnd] = useState('');
@@ -174,13 +175,7 @@ export function LiveNewTaskScreen() {
         await setRepeatRule(ap.id, {
           frequency,
           weekdays: frequency === 'weekly' ? weekdays : null,
-          monthDays:
-            frequency === 'monthly'
-              ? monthDays
-                  .split(',')
-                  .map((s) => parseInt(s.trim(), 10))
-                  .filter((n) => Number.isFinite(n))
-              : null,
+          monthDays: frequency === 'monthly' ? monthDays : null,
           customDates: frequency === 'custom' ? customDates : null,
           repeatStartDate: repeatStart,
           repeatEndDate: repeatEnd,
@@ -223,6 +218,10 @@ export function LiveNewTaskScreen() {
       }
       if (frequency === 'weekly' && weekdays.length === 0) {
         Alert.alert('Belum lengkap', 'Pilih minimal satu hari untuk repeat mingguan.');
+        return;
+      }
+      if (frequency === 'monthly' && monthDays.length === 0) {
+        Alert.alert('Belum lengkap', 'Pilih minimal satu tanggal untuk repeat bulanan.');
         return;
       }
       if (missedRule === 'grace_period' && !(parseInt(gracePeriod, 10) > 0)) {
@@ -338,12 +337,10 @@ export function LiveNewTaskScreen() {
               ) : null}
 
               {frequency === 'monthly' ? (
-                <LabeledInput
-                  label="Tanggal dalam bulan (pisah koma, mis. 1,15)"
+                <MonthDaysPicker
+                  label="Tanggal dalam bulan"
                   value={monthDays}
-                  onChangeText={setMonthDays}
-                  placeholder="1,15"
-                  keyboardType="numeric"
+                  onChange={setMonthDays}
                 />
               ) : null}
 

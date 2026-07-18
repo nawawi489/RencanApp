@@ -1,10 +1,12 @@
 // TimeField — analog DateField untuk memilih jam (HH:MM, 24h).
-// iOS/Android: native picker mode='time'. Jest/web: fallback TextInput HH:MM.
+// iOS/Android: native picker mode='time'. Web: <input type="time"> native browser.
+// Jest: fallback TextInput HH:MM agar test environment tidak crash karena native module.
 import { useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { usePlaceholderColor } from '@/components/ui';
+import { useThemePreference } from '@/providers/theme-provider';
 import { TIME_HINT, TIME_RE } from '@/lib/date';
 
 type NativePicker = React.ComponentType<{
@@ -64,11 +66,53 @@ export function TimeField({
 }: Props) {
   const [show, setShow] = useState(false);
   const placeholderColor = usePlaceholderColor();
+  const { effective } = useThemePreference();
   const a11yLabel = accessibilityLabel ?? label;
   const buttonPlaceholder = placeholder ?? 'Pilih jam';
   const inputPlaceholder = placeholder ?? TIME_HINT;
   const current = parseHM(value);
 
+  // Web: time picker native browser via <input type="time">. Value HTML5 selalu HH:MM,
+  // cocok dengan format simpan app. Dikecualikan saat test (jsdom
+  // memakai jalur TextInput agar query getByPlaceholderText yang ada tetap valid).
+  if (Platform.OS === 'web' && process.env.NODE_ENV !== 'test') {
+    const dark = effective === 'dark';
+    return (
+      <View className="gap-1.5">
+        <Text className="text-sm font-medium text-black dark:text-white">
+          {label}
+          {required ? <Text className="text-red-500"> *</Text> : null}
+        </Text>
+        <input
+          type="time"
+          aria-label={a11yLabel}
+          aria-required={required}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            boxSizing: 'border-box',
+            width: '100%',
+            minHeight: 44,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: dark ? '#404040' : '#d4d4d4',
+            paddingLeft: 16,
+            paddingRight: 16,
+            paddingTop: 12,
+            paddingBottom: 12,
+            fontSize: 16,
+            fontFamily: 'inherit',
+            color: dark ? '#ffffff' : '#000000',
+            backgroundColor: 'transparent',
+            colorScheme: dark ? 'dark' : 'light',
+          }}
+        />
+      </View>
+    );
+  }
+
+  // Fallback (test / native module hilang): TextInput pola lama.
   if (!Picker) {
     return (
       <View className="gap-1.5">
