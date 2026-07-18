@@ -158,4 +158,19 @@ describe('ProgressOrb (UI-G-001)', () => {
     await render(<ProgressOrb value={42} size={72} />);
     expect(screen.getByText('42')).toBeTruthy();
   });
+
+  it('[FR16-1] label="Progress" → a11y memuat "Progress" bukan "Capaian"', async () => {
+    await render(<ProgressOrb value={80} label="Progress" />);
+    expect(screen.getByLabelText(/^Progress 80 persen/)).toBeTruthy();
+  });
+
+  it('[FR16-2] tanpa label → default "Capaian"', async () => {
+    await render(<ProgressOrb value={50} />);
+    expect(screen.getByLabelText(/^Capaian 50 persen/)).toBeTruthy();
+  });
+
+  it('[FR18-1] a11y memuat label teks + sublabel', async () => {
+    await render(<ProgressOrb value={60} label="Progress" sublabel="3/5 Strategi terukur" />);
+    expect(screen.getByLabelText('Progress 60 persen, Berjalan. 3/5 Strategi terukur')).toBeTruthy();
+  });
 });

@@ -18,7 +18,7 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
-import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
+import { childrenSublabel, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
 import { getStrategyCurrentValue, listStrategyResultValueSources, type KpiResultValueSource } from '@/lib/cards';
 import { computeKpiGap, formatRemaining, groupThousands } from '@/lib/strategy-gap';
 import { REVIEW_STATUS, formatDateTime } from '@/components/submission-card';
@@ -29,7 +29,7 @@ import { StrategyBreakdownPanel } from '@/components/strategy-breakdown-panel';
 import { guardActivationFields } from '@/lib/activation-check';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { alertFriendlyError } from '@/lib/errors';
-import { usePerson, useInitiatives } from '@/hooks/use-workspace';
+import { useCardProgress, usePerson, useInitiatives } from '@/hooks/use-workspace';
 import {
   PLANNING_STATUS_LABEL,
   STATUS_TONE,
@@ -164,6 +164,7 @@ export function LiveStrategyDetailScreen() {
   const qc = useQueryClient();
 
   const strategyQ = useQuery({ queryKey: ['strategy', id], queryFn: () => getStrategy(id) });
+  const { progressOf, measuredOf } = useCardProgress([id]);
   // 0032 — nilai agregat approved untuk "% capaian vs target" (hanya relevan bila target_numeric diisi).
   const currentValueQ = useQuery({
     queryKey: ['strategy_current_value', id],
@@ -251,7 +252,8 @@ export function LiveStrategyDetailScreen() {
                 </View>
                 <ProgressOrb
                   size={72}
-                  value={ratioDoneOfChildren(initiatives)}
+                  value={progressOf(id) ?? ratioDoneOfChildren(initiatives)}
+                  label={treeOrbLabel('strategy', measuredOf(id))}
                   sublabel={childrenSublabel(initiatives)}
                 />
               </View>

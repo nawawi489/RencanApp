@@ -32,6 +32,7 @@ jest.mock('@/hooks/use-workspace', () => ({
   usePerson: () => ({ person: null }),
   useStrategyBreakdown: () => ({ rows: [], isLoading: false, isError: false, refetch: jest.fn() }),
   useStrategyBreakdownActions: () => ({ replace: jest.fn(), isPending: false }),
+  useCardProgress: () => ({ progressOf: () => null, measuredOf: () => false, isLoading: false, isError: false }),
 }));
 
 // Hook MBR — variabel dapat di-set per test.

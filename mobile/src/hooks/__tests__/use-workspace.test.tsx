@@ -374,8 +374,10 @@ describe('usePerson (prefill PIC induk)', () => {
 });
 
 describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
+  const cp = (progress: number, isMeasured = false) => ({ progress, isMeasured });
+
   it('[P1] memanggil fetchCardProgress & expose progressOf(id) 0–100', async () => {
-    mockFetchCardProgress.mockResolvedValue(new Map([['g1', 75], ['g2', 40]]));
+    mockFetchCardProgress.mockResolvedValue(new Map([['g1', cp(75, true)], ['g2', cp(40)]]));
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useCardProgress(['g1', 'g2']), { wrapper });
     await waitFor(() => expect(result.current.progressOf('g1')).toBe(75));
@@ -392,19 +394,18 @@ describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
   });
 
   it('[P3] queryKey terkunci ["workspace_card_progress", sortedIds] (order-stable cache)', async () => {
-    mockFetchCardProgress.mockResolvedValue(new Map([['a', 10], ['b', 20]]));
+    mockFetchCardProgress.mockResolvedValue(new Map([['a', cp(10)], ['b', cp(20)]]));
     const { qc, wrapper } = makeWrapper();
     const { result } = await renderHook(() => useCardProgress(['b', 'a']), { wrapper });
     await waitFor(() => expect(result.current.progressOf('a')).toBe(10));
-    // ids di-sort → cache dapat ditemukan lewat ['a','b'] walau input ['b','a'].
-    const cached = qc.getQueryData(['workspace_card_progress', ['a', 'b']]) as Map<string, number>;
+    const cached = qc.getQueryData(['workspace_card_progress', ['a', 'b']]) as Map<string, { progress: number }>;
     expect(cached).toBeInstanceOf(Map);
-    expect(cached.get('a')).toBe(10);
+    expect(cached.get('a')!.progress).toBe(10);
     expect(mockFetchCardProgress).toHaveBeenCalledWith(['a', 'b']);
   });
 
   it('[P3b] menormalkan ids unik sekali dan tetap memakai cache saat urutan/duplikasi berubah', async () => {
-    mockFetchCardProgress.mockResolvedValue(new Map([['a', 10], ['b', 30]]));
+    mockFetchCardProgress.mockResolvedValue(new Map([['a', cp(10)], ['b', cp(30)]]));
     const { qc, wrapper } = makeWrapper();
     const { result, rerender } = await renderHook(
       ({ ids }: { ids: string[] }) => useCardProgress(ids),
@@ -414,9 +415,9 @@ describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
     await waitFor(() => expect(result.current.progressOf('a')).toBe(10));
     expect(mockFetchCardProgress).toHaveBeenCalledWith(['a', 'b']);
 
-    const cached = qc.getQueryData(['workspace_card_progress', ['a', 'b']]) as Map<string, number>;
+    const cached = qc.getQueryData(['workspace_card_progress', ['a', 'b']]) as Map<string, { progress: number }>;
     expect(cached).toBeInstanceOf(Map);
-    expect(cached.get('b')).toBe(30);
+    expect(cached.get('b')!.progress).toBe(30);
 
     rerender({ ids: ['a', 'b'] });
     await waitFor(() => expect(result.current.progressOf('missing')).toBeNull());
@@ -424,7 +425,7 @@ describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
   });
 
   it('[P3c] progressOf stabil saat data query tidak berubah', async () => {
-    mockFetchCardProgress.mockResolvedValue(new Map([['a', 10], ['b', 30]]));
+    mockFetchCardProgress.mockResolvedValue(new Map([['a', cp(10)], ['b', cp(30)]]));
     const { wrapper } = makeWrapper();
     const { result, rerender } = await renderHook(
       ({ ids }: { ids: string[] }) => useCardProgress(ids),
@@ -440,7 +441,7 @@ describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
   });
 
   it('[P4] progressOf(id absen) → null; 0 tetap 0 (no misleading numbers)', async () => {
-    mockFetchCardProgress.mockResolvedValue(new Map([['g1', 0]]));
+    mockFetchCardProgress.mockResolvedValue(new Map([['g1', cp(0)]]));
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useCardProgress(['g1', 'g2']), { wrapper });
     await waitFor(() => expect(result.current.progressOf('g1')).toBe(0));
@@ -453,6 +454,37 @@ describe('useCardProgress (WSA-15 — progress orb rollup)', () => {
     const { result } = await renderHook(() => useCardProgress(['g1']), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.progressOf('g1')).toBeNull();
+  });
+
+  it('[P8] measuredOf(id) returns isMeasured flag', async () => {
+    mockFetchCardProgress.mockResolvedValue(new Map([['g1', cp(75, true)], ['g2', cp(40, false)]]));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCardProgress(['g1', 'g2']), { wrapper });
+    await waitFor(() => expect(result.current.progressOf('g1')).toBe(75));
+    expect(result.current.measuredOf('g1')).toBe(true);
+    expect(result.current.measuredOf('g2')).toBe(false);
+  });
+
+  it('[P9] measuredOf(id absen) → false (null-safe)', async () => {
+    mockFetchCardProgress.mockResolvedValue(new Map([['g1', cp(50, true)]]));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCardProgress(['g1']), { wrapper });
+    await waitFor(() => expect(result.current.progressOf('g1')).toBe(50));
+    expect(result.current.measuredOf('missing')).toBe(false);
+  });
+
+  it('[P10] measuredOf stabil saat data query tidak berubah', async () => {
+    mockFetchCardProgress.mockResolvedValue(new Map([['a', cp(10, true)]]));
+    const { wrapper } = makeWrapper();
+    const { result, rerender } = await renderHook(
+      ({ ids }: { ids: string[] }) => useCardProgress(ids),
+      { initialProps: { ids: ['a'] }, wrapper },
+    );
+    await waitFor(() => expect(result.current.measuredOf('a')).toBe(true));
+    const firstMeasuredOf = result.current.measuredOf;
+    rerender({ ids: ['a'] });
+    await waitFor(() => expect(result.current.measuredOf('a')).toBe(true));
+    expect(result.current.measuredOf).toBe(firstMeasuredOf);
   });
 });
 

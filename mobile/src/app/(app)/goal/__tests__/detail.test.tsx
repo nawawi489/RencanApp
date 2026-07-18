@@ -17,6 +17,7 @@ jest.mock('@/hooks/use-workspace', () => ({
   useGoal: (id: string) => mockUseGoal(id),
   useStrategies: (id: string) => mockUseStrategies(id),
   useGoalActions: () => ({ activate: mockActivate, isPending: false }),
+  useCardProgress: () => ({ progressOf: () => null, measuredOf: () => false, isLoading: false, isError: false }),
 }));
 
 jest.mock('@/hooks/use-profile', () => ({

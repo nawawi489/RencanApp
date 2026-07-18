@@ -1,8 +1,8 @@
 // Hooks Fase 2 — data instance repeat + turunan aksi per peran.
 // Compliance & progress dibedakan: hook mengekspos metrik compliance read-only dari server.
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getRepeatCompliance, listInstances, type InstanceWithSubmissions } from '@/lib/repeat';
+import { getRepeatCompliance, listInstances, reviewInstanceSubmission, type InstanceWithSubmissions } from '@/lib/repeat';
 
 export function useRepeatInstances(taskId: string, options?: { enabled?: boolean }) {
   const qc = useQueryClient();
@@ -46,6 +46,28 @@ export function useRepeatInstances(taskId: string, options?: { enabled?: boolean
 }
 
 type InstanceLike = { pic_id: string | null; reviewer_id: string | null; status: string };
+
+type ReviewableInstance = { task_id: string; current_submission_id: string | null };
+
+export function useInstanceReview(inst: ReviewableInstance | undefined, instanceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { decision: 'approve' | 'reject'; reason: string | null }) =>
+      reviewInstanceSubmission({
+        submissionId: inst!.current_submission_id!,
+        decision: args.decision,
+        reason: args.reason,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['instance', instanceId] });
+      if (inst?.task_id) {
+        qc.invalidateQueries({ queryKey: ['repeat-instances', inst.task_id] });
+        qc.invalidateQueries({ queryKey: ['repeat-compliance', inst.task_id] });
+      }
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
+    },
+  });
+}
 
 /** Aksi yang tersedia atas sebuah instance, ditentukan status + peran profil saat ini. */
 export function useInstanceActions(instance: InstanceLike, profileId: string | null) {

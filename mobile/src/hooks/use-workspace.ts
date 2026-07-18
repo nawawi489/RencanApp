@@ -83,11 +83,16 @@ export function useCardProgress(ids: string[]) {
   });
   const map = q.data;
   const progressOf = useMemo(
-    () => (id: string): number | null => map?.get(id) ?? null,
+    () => (id: string): number | null => map?.get(id)?.progress ?? null,
+    [map],
+  );
+  const measuredOf = useMemo(
+    () => (id: string): boolean => map?.get(id)?.isMeasured ?? false,
     [map],
   );
   return {
     progressOf,
+    measuredOf,
     isLoading: q.isLoading,
     isError: q.isError,
   };
