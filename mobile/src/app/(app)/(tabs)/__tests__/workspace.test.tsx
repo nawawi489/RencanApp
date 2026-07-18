@@ -209,7 +209,7 @@ beforeEach(async () => {
   mockUseActionPlanTasks.mockReturnValue(taskResult());
   mockUseCardProgress.mockReset();
   // Default WSA-15: progress belum ada → progressOf null (orb render '—'); test orb override per-kasus.
-  mockUseCardProgress.mockReturnValue({ progressOf: () => null, isLoading: false, isError: false });
+  mockUseCardProgress.mockReturnValue({ progressOf: () => null, measuredOf: () => false, isLoading: false, isError: false });
   mockArchive.mockReset();
   mockArchive.mockResolvedValue(undefined);
 });
@@ -514,6 +514,7 @@ describe('WorkspaceScreen', () => {
     mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
     mockUseCardProgress.mockReturnValue({
       progressOf: (id: string) => (id === GOAL.id ? 68 : null),
+      measuredOf: (id: string) => id === GOAL.id,
       isLoading: false,
       isError: false,
     });
@@ -1413,16 +1414,17 @@ describe('WorkspaceScreen', () => {
 
   describe('WSA-15 — progress orb tree (spec §6.4–6.8 / §10)', () => {
     const PERIOD = { period_start: '2026-01-01', period_end: '2026-12-31' };
-    const setProgress = (map: Record<string, number>) =>
+    const setProgress = (map: Record<string, number>, measuredIds: string[] = []) =>
       mockUseCardProgress.mockReturnValue({
         progressOf: (id: string) => (id in map ? map[id] : null),
+        measuredOf: (id: string) => measuredIds.includes(id),
         isLoading: false,
         isError: false,
       });
 
-    it('[ORB1] GoalRow render orb label "Capaian" dgn nilai capaian', async () => {
+    it('[ORB1] GoalRow measured render orb label "Capaian" dgn nilai capaian', async () => {
       mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Orb', status: 'active', ...PERIOD }] }));
-      setProgress({ g1: 82 });
+      setProgress({ g1: 82 }, ['g1']);
       await renderScreen();
       expect(await screen.findByText('82%')).toBeTruthy();
       expect(screen.getByLabelText('Capaian 82 persen')).toBeTruthy();
@@ -1470,8 +1472,8 @@ describe('WorkspaceScreen', () => {
       mockUseActionPlanTasks.mockReturnValue(
         taskResult({ tasks: [{ id: 'ap2', name: 'Rutin harian', status: 'active', repeat_setting: 'repeat', start_date: '2026-01-01', deadline: '2026-12-31' }] }),
       );
-      // Induk diberi nilai agar hanya AP repeat leaf yang jadi '—' (unik untuk assertion).
-      setProgress({ k1: 50, s1: 50, i1: 50 });
+      // Semua induk diberi nilai agar hanya AP repeat leaf yang jadi '—' (unik untuk assertion).
+      setProgress({ g1: 70, k1: 50, s1: 50, i1: 50 });
       await renderScreen();
       fireEvent.press(await screen.findByLabelText('Toggle Strategi Goal Orb'));
       fireEvent.press(await screen.findByLabelText('Toggle Inisiatif KPI A'));
@@ -1485,11 +1487,11 @@ describe('WorkspaceScreen', () => {
 
     it('[ORB5] progress induk null → orb "—", tidak mengarang 0%', async () => {
       mockUseGoals.mockReturnValue(goalsResult({ goals: [{ id: 'g1', name: 'Goal Kosong', status: 'active', ...PERIOD }] }));
-      // default mockUseCardProgress → progressOf null.
+      // default mockUseCardProgress → progressOf null, measuredOf false → label "Progress".
       await renderScreen();
       await screen.findByText('Goal Kosong');
       expect(screen.queryByText('0%')).toBeNull();
-      expect(screen.getByLabelText('Capaian belum tersedia')).toBeTruthy();
+      expect(screen.getByLabelText('Progress belum tersedia')).toBeTruthy();
     });
   });
 

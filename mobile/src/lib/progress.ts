@@ -47,12 +47,12 @@ export function ratioActiveOfChildren(children: StatusItem[]): number {
 }
 
 /**
- * Label bawah orb tree (spec §10 / WSA-15): Goal & Strategi = 'Capaian' (hasil KPI/Goal),
- * card lainnya = 'Progress'. Satu sumber kebenaran agar 7 row tree tak punya definisi berbeda.
+ * Label bawah orb tree (spec §10 / WSA-15, data-driven per P1 attainment):
+ * Goal/Strategi TERUKUR (isMeasured=true) → 'Capaian'; selain itu 'Progress'.
  * Kind tak dikenal → default 'Progress' (fail-safe; 'Capaian' punya makna khusus hasil).
  */
-export function treeOrbLabel(kind: string): 'Capaian' | 'Progress' {
-  return kind === 'goal' || kind === 'strategy' ? 'Capaian' : 'Progress';
+export function treeOrbLabel(kind: string, isMeasured = false): 'Capaian' | 'Progress' {
+  return (kind === 'goal' || kind === 'strategy') && isMeasured ? 'Capaian' : 'Progress';
 }
 
 /**
@@ -80,4 +80,14 @@ export function childrenSublabel(children: StatusItem[]): string {
   if (active.length === 0) return 'Belum ada turunan';
   const done = active.filter((c) => c.status === 'done').length;
   return `${done}/${active.length} selesai`;
+}
+
+type StrategyItem = { status: string; target_numeric: number | null };
+
+/** Sublabel cakupan Goal: "n/m Strategi terukur" (populasi active+done, O4). */
+export function measuredStrategiesSublabel(strategies: StrategyItem[]): string {
+  const eligible = strategies.filter((s) => s.status === 'active' || s.status === 'done');
+  if (eligible.length === 0) return 'Belum ada turunan';
+  const measured = eligible.filter((s) => s.target_numeric != null && s.target_numeric > 0).length;
+  return `${measured}/${eligible.length} Strategi terukur`;
 }

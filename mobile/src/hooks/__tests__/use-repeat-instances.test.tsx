@@ -1,19 +1,21 @@
 // Hooks Fase 2 — use-repeat-instances. Mock data layer (@/lib/repeat) agar tak menyentuh Supabase.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { PropsWithChildren } from 'react';
 import { createElement } from 'react';
 
 const mockListInstances = jest.fn();
 const mockGetRepeatCompliance = jest.fn();
+const mockReviewInstanceSubmission = jest.fn();
 
 jest.mock('@/lib/repeat', () => ({
   listInstances: (...a: unknown[]) => mockListInstances(...a),
   getRepeatCompliance: (...a: unknown[]) => mockGetRepeatCompliance(...a),
+  reviewInstanceSubmission: (...a: unknown[]) => mockReviewInstanceSubmission(...a),
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
-import { useInstanceActions, useRepeatInstances } from '../use-repeat-instances';
+import { useInstanceActions, useInstanceReview, useRepeatInstances } from '../use-repeat-instances';
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -33,6 +35,7 @@ const COMPLIANCE = {
 beforeEach(() => {
   mockListInstances.mockReset();
   mockGetRepeatCompliance.mockReset();
+  mockReviewInstanceSubmission.mockReset();
   mockListInstances.mockResolvedValue([{ id: 'i1' }, { id: 'i2' }]);
   mockGetRepeatCompliance.mockResolvedValue(COMPLIANCE);
 });
@@ -148,5 +151,77 @@ describe('useInstanceActions', () => {
     const a = useInstanceActions({ pic_id: 'same', reviewer_id: 'same', status: 'submitted' }, 'same');
     expect(a.isSelfApproval).toBe(true);
     expect(a.canReview).toBe(false);
+  });
+});
+
+const INST = { task_id: 'task-1', current_submission_id: 'sub-1' };
+
+describe('useInstanceReview', () => {
+  it('[R1] approve → invalidates workspace_card_progress', async () => {
+    mockReviewInstanceSubmission.mockResolvedValue(undefined);
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+
+    const { result } = await renderHook(() => useInstanceReview(INST, 'inst-1'), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({ decision: 'approve' as const, reason: null });
+    });
+
+    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: string[] }).queryKey);
+    expect(keys).toContainEqual(['workspace_card_progress']);
+  });
+
+  it('[R2] reject → calls reviewInstanceSubmission with correct args + invalidates workspace_card_progress', async () => {
+    mockReviewInstanceSubmission.mockResolvedValue(undefined);
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+
+    const { result } = await renderHook(() => useInstanceReview(INST, 'inst-1'), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({ decision: 'reject' as const, reason: 'Alasan' });
+    });
+
+    expect(mockReviewInstanceSubmission).toHaveBeenCalledWith({
+      submissionId: 'sub-1',
+      decision: 'reject',
+      reason: 'Alasan',
+    });
+
+    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: string[] }).queryKey);
+    expect(keys).toContainEqual(['workspace_card_progress']);
+  });
+
+  it('[R3] regression — still invalidates instance/repeat-instances/repeat-compliance', async () => {
+    mockReviewInstanceSubmission.mockResolvedValue(undefined);
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+
+    const { result } = await renderHook(() => useInstanceReview(INST, 'inst-1'), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({ decision: 'approve' as const, reason: null });
+    });
+
+    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: string[] }).queryKey);
+    expect(keys).toContainEqual(['instance', 'inst-1']);
+    expect(keys).toContainEqual(['repeat-instances', 'task-1']);
+    expect(keys).toContainEqual(['repeat-compliance', 'task-1']);
+  });
+
+  it('[R4] error propagates — workspace_card_progress NOT invalidated on failure', async () => {
+    mockReviewInstanceSubmission.mockRejectedValueOnce(new Error('server error'));
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+
+    const { result } = await renderHook(() => useInstanceReview(INST, 'inst-1'), { wrapper });
+
+    await expect(
+      result.current.mutateAsync({ decision: 'approve' as const, reason: null }),
+    ).rejects.toThrow('server error');
+
+    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: string[] }).queryKey);
+    expect(keys).not.toContainEqual(['workspace_card_progress']);
   });
 });

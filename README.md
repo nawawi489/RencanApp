@@ -419,7 +419,7 @@ Status deployment yang dapat disimpulkan dari repository:
 - profil build/submit native sudah dikonfigurasi di [`mobile/eas.json`](./mobile/eas.json) (EAS Build/Submit),
 - environment `staging` sudah live di `staging.rencanapp.com` lewat Cloudflare Worker proxy ([`workers/staging-proxy/`](./workers/staging-proxy/)) yang meneruskan ke EAS Hosting,
 - error tracking terpasang lewat `@sentry/react-native` di sisi mobile,
-- belum ada pipeline CI/CD terpusat (mis. GitHub Actions) yang menjalankan test/lint/build otomatis di repository ini — verifikasi masih dijalankan manual sebelum PR.
+- pipeline CI aktif di [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — menjalankan rename guard, lint, `tsc`, dan `npm run test:ci` di setiap PR ke `main`/`staging`; deploy staging di [`.github/workflows/deploy-staging.yml`](./.github/workflows/deploy-staging.yml) di-gate oleh job `quality` yang sama.
 
 ### Langkah Deployment yang Saat Ini Realistis
 

@@ -5,6 +5,7 @@ import { ScrollView, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
+import { YearField } from '@/components/year-field';
 import { useGoalActions } from '@/hooks/use-workspace';
 import { alertFriendlyError } from '@/lib/errors';
 import { type PersonRef } from '@/lib/goals';
@@ -65,14 +66,7 @@ export function LiveNewGoalScreen() {
             required
             placeholder="mis. Tumbuhkan pendapatan"
           />
-          <LabeledInput
-            label="Tahun Goal"
-            value={goalYear}
-            onChangeText={setGoalYear}
-            required
-            keyboardType="numeric"
-            placeholder={String(CURRENT_YEAR)}
-          />
+          <YearField label="Tahun Goal" value={goalYear} onChange={setGoalYear} required />
           <LabeledInput
             label="Target Tahunan"
             value={targetValue}

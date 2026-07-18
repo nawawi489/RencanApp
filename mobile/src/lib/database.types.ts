@@ -2562,6 +2562,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          organization_id: string
           sort_order: number
           target_hint: string | null
         }
@@ -2574,6 +2575,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          organization_id?: string
           sort_order?: number
           target_hint?: string | null
         }
@@ -2586,6 +2588,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          organization_id?: string
           sort_order?: number
           target_hint?: string | null
         }
@@ -2595,6 +2598,13 @@ export type Database = {
             columns: ["goal_template_id"]
             isOneToOne: false
             referencedRelation: "goal_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -4017,6 +4027,7 @@ export type Database = {
         Args: { p_card_ids: string[] }
         Returns: {
           card_id: string
+          is_measured: boolean
           progress: number
         }[]
       }

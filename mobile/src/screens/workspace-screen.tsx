@@ -131,30 +131,32 @@ function SiblingTreeLine({ offsetLeft }: { offsetLeft: number }) {
 }
 
 /**
- * Kolom kanan card tree (spec §6.4–6.8 / §10, WSA-15): progress orb 50px + label bawah
- * (`treeOrbLabel(kind)` → 'Capaian' Goal/KPI, 'Progress' lainnya). `value` null → '—'
- * (belum ter-fetch / error / RLS tak terlihat / AP repeat tanpa compliance) — no misleading
- * numbers, parity hub card; BUKAN 0%. Induk tanpa anak dikembalikan RPC sebagai 0 → orb '0%'.
+ * Kolom kanan card tree (spec §6.4–6.8 / §10, WSA-15): progress orb 50px + label bawah.
+ * `isMeasured` drives label: Goal/Strategy+measured→"Capaian", else "Progress" (P1 attainment).
+ * `value` null → '—' (belum ter-fetch / error / RLS tak terlihat / AP repeat tanpa compliance).
  */
 function TreeOrbCell({
   kind,
   value,
+  isMeasured = false,
   compact = false,
 }: {
   kind: string;
   value: number | null;
+  isMeasured?: boolean;
   compact?: boolean;
 }) {
+  const label = treeOrbLabel(kind, isMeasured);
   if (value == null) {
     return (
       <View style={{ width: compact ? 38 : 50 }} className="items-center justify-center py-0.5">
-        <Text className="text-base font-bold text-neutral-400 dark:text-neutral-500" accessibilityLabel={`${treeOrbLabel(kind)} belum tersedia`}>
+        <Text className="text-base font-bold text-neutral-400 dark:text-neutral-500" accessibilityLabel={`${label} belum tersedia`}>
           —
         </Text>
       </View>
     );
   }
-  return <TreeProgressOrb value={value} label={treeOrbLabel(kind)} compact={compact} />;
+  return <TreeProgressOrb value={value} label={label} compact={compact} />;
 }
 
 function CompactMeta({ lines }: { lines: Array<string | null | undefined> }) {
@@ -622,9 +624,11 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
 const StrategySubRow = memo(function StrategySubRow({
   kpi,
   progress,
+  isMeasured = false,
 }: {
   kpi: Strategi;
   progress: number | null;
+  isMeasured?: boolean;
 }) {
   const router = useRouter();
   const { can } = useProfile();
@@ -681,7 +685,7 @@ const StrategySubRow = memo(function StrategySubRow({
               <CompactMeta lines={metaLines} />
             </View>
             <View className="items-center gap-1">
-              <TreeOrbCell kind="strategy" value={progress} compact />
+              <TreeOrbCell kind="strategy" value={progress} isMeasured={isMeasured} compact />
               <TreeToggleButton
                 expanded={expanded}
                 label={`Toggle Inisiatif ${kpi.name}`}
@@ -738,9 +742,11 @@ const StrategySubRow = memo(function StrategySubRow({
 const GoalRow = memo(function GoalRow({
   goal,
   progress,
+  isMeasured = false,
 }: {
   goal: GoalWithKpiCount;
   progress: number | null;
+  isMeasured?: boolean;
 }) {
   const router = useRouter();
   const { can } = useProfile();
@@ -752,7 +758,7 @@ const GoalRow = memo(function GoalRow({
   const { focus, now } = usePeriodFocus();
   // WSA-15 — orb capaian anak (Strategi) di level kontainer (1 RPC per Goal expanded, bukan per row).
   const kpiIds = useMemo(() => (expanded ? strategies.map((k) => k.id) : EMPTY_IDS), [expanded, strategies]);
-  const { progressOf: kpiProgressOf } = useCardProgress(kpiIds);
+  const { progressOf: kpiProgressOf, measuredOf: kpiMeasuredOf } = useCardProgress(kpiIds);
 
   const count = kpiCountOf(goal);
   const past = isAddLocked(goal, focus, now);
@@ -793,7 +799,7 @@ const GoalRow = memo(function GoalRow({
                 <CompactMeta lines={metaLines} />
               </View>
               <View className="items-center gap-1">
-                <TreeOrbCell kind="goal" value={progress} compact />
+                <TreeOrbCell kind="goal" value={progress} isMeasured={isMeasured} compact />
                 <TreeToggleButton
                   expanded={expanded}
                   label={`Toggle Strategi ${goal.name}`}
@@ -838,6 +844,7 @@ const GoalRow = memo(function GoalRow({
                   key={k.id}
                   kpi={k}
                   progress={kpiProgressOf(k.id)}
+                  isMeasured={kpiMeasuredOf(k.id)}
                 />
               ))}
             </View>
@@ -1423,7 +1430,7 @@ type PaneConfig<T extends { id: string }> = {
   newRoute: string;
   periodSpace?: 'performance' | 'development';
   useItems: () => { items: T[]; isLoading: boolean; isError: boolean; refetch: () => void };
-  renderRow: (item: T, progress: number | null) => ReactNode;
+  renderRow: (item: T, progress: number | null, isMeasured: boolean) => ReactNode;
 };
 
 function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
@@ -1447,7 +1454,7 @@ function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
 
   const items = q.isLoading || q.isError ? [] : q.items;
   const showEmpty = !q.isLoading && !q.isError && q.items.length === 0;
-  const { progressOf } = useCardProgress(items.map((i) => i.id));
+  const { progressOf, measuredOf } = useCardProgress(items.map((i) => i.id));
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-black">
@@ -1491,7 +1498,7 @@ function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
           />
         ) : null}
         {items.map((item) => (
-          <Fragment key={item.id}>{config.renderRow(item, progressOf(item.id))}</Fragment>
+          <Fragment key={item.id}>{config.renderRow(item, progressOf(item.id), measuredOf(item.id))}</Fragment>
         ))}
       </ScrollView>
     </View>
@@ -1537,7 +1544,7 @@ export function PerformanceScreen() {
       permission="create_goal"
       newRoute="/goal-wizard"
       useItems={usePerformanceItems}
-      renderRow={(goal, progress) => <GoalRow goal={goal} progress={progress} />}
+      renderRow={(goal, progress, isMeasured) => <GoalRow goal={goal} progress={progress} isMeasured={isMeasured} />}
     />
   );
 }
@@ -1557,7 +1564,7 @@ export function DevelopmentScreen() {
       newRoute="/development-area/new"
       periodSpace="development"
       useItems={useDevelopmentItems}
-      renderRow={(d, progress) => <DevelopmentAreaRow devArea={d} progress={progress} />}
+      renderRow={(d, progress, _isMeasured) => <DevelopmentAreaRow devArea={d} progress={progress} />}
     />
   );
 }

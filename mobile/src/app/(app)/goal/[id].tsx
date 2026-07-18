@@ -7,9 +7,9 @@ import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
 import { DetailChildRow } from '@/components/detail-child-row';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressBar, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
-import { useGoal, useGoalActions, useStrategies } from '@/hooks/use-workspace';
+import { useCardProgress, useGoal, useGoalActions, useStrategies } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
-import { childrenSublabel, ratioActiveOfChildren, ratioDoneOfChildren } from '@/lib/progress';
+import { childrenSublabel, measuredStrategiesSublabel, ratioActiveOfChildren, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
 
@@ -19,6 +19,7 @@ export function LiveGoalDetailScreen() {
   const goalQ = useGoal(id);
   const kpiQ = useStrategies(id);
   const { activate, restore, activatePending, restorePending } = useGoalActions();
+  const { progressOf, measuredOf } = useCardProgress([id]);
   // WSA-08 §14.4 — CTA "+ Tambah" dihapus dari detail page; tambah turunan HANYA dari tree Workspace.
 
   useFocusEffect(
@@ -71,8 +72,9 @@ export function LiveGoalDetailScreen() {
                 </View>
                 <ProgressOrb
                   size={72}
-                  value={ratioDoneOfChildren(kpiQ.strategies ?? [])}
-                  sublabel={childrenSublabel(kpiQ.strategies ?? [])}
+                  value={progressOf(id) ?? ratioDoneOfChildren(kpiQ.strategies ?? [])}
+                  label={treeOrbLabel('goal', measuredOf(id))}
+                  sublabel={measuredOf(id) ? measuredStrategiesSublabel(kpiQ.strategies ?? []) : childrenSublabel(kpiQ.strategies ?? [])}
                 />
               </View>
               <MetaGrid
@@ -87,10 +89,10 @@ export function LiveGoalDetailScreen() {
               />
             </View>
 
-            {/* UI-S-GD1 — Progress vs Capaian: "Progress kerja" (Strategi sudah bergerak dari draft)
-                vs "Capaian hasil" (Strategi selesai). Indikatif dari status anak, lihat lib/progress.ts. */}
             <SectionCard>
-              <Text className="text-sm font-bold text-black dark:text-white">Progress vs Capaian</Text>
+              <Text className="text-sm font-bold text-black dark:text-white">
+                {measuredOf(id) ? 'Progress vs Capaian' : 'Progress kerja'}
+              </Text>
               <View className="gap-1.5">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400">Progress kerja</Text>
@@ -100,15 +102,17 @@ export function LiveGoalDetailScreen() {
                 </View>
                 <ProgressBar value={ratioActiveOfChildren(kpiQ.strategies ?? [])} tone="brand" />
               </View>
-              <View className="gap-1.5">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">Capaian hasil</Text>
-                  <Text className="text-xs font-semibold text-black dark:text-white">
-                    {ratioDoneOfChildren(kpiQ.strategies ?? [])}%
-                  </Text>
+              {measuredOf(id) && progressOf(id) != null ? (
+                <View className="gap-1.5">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">Capaian hasil</Text>
+                    <Text className="text-xs font-semibold text-black dark:text-white">
+                      {progressOf(id)}%
+                    </Text>
+                  </View>
+                  <ProgressBar value={progressOf(id)!} tone="success" />
                 </View>
-                <ProgressBar value={ratioDoneOfChildren(kpiQ.strategies ?? [])} tone="success" />
-              </View>
+              ) : null}
             </SectionCard>
 
             {goal.description ? (

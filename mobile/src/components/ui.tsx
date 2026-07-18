@@ -664,10 +664,12 @@ export function ProgressOrb({
   value,
   size = 56,
   sublabel,
+  label,
 }: {
   value: number;
   size?: OrbSize;
   sublabel?: string;
+  label?: string;
 }) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   const resolvedTone = orbToneFor(pct);
@@ -677,7 +679,8 @@ export function ProgressOrb({
   // Track ring wajib theme-aware: #e2e8f0 terang menyala di atas surface gelap (DESIGN §12).
   const { effective } = useThemePreference();
   const trackColor = effective === 'dark' ? '#27272a' : '#e2e8f0';
-  const a11y = `Capaian ${pct} persen, ${ORB_TONE_LABEL[resolvedTone]}${
+  const effectiveLabel = label ?? 'Capaian';
+  const a11y = `${effectiveLabel} ${pct} persen, ${ORB_TONE_LABEL[resolvedTone]}${
     sublabel ? `. ${sublabel}` : ''
   }`;
   return (

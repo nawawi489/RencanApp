@@ -2,7 +2,7 @@
 // Menutup celah: submission instance repeat sebelumnya tak punya jalur review di UI
 // (reviewInstanceSubmission ada di data layer, tak pernah dipanggil). Layar ini menyurfacekan
 // detail instance + approve/reject untuk reviewer. Anti-self-approval ditegakkan server + UI.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
@@ -13,19 +13,17 @@ import { StatTile } from '@/components/stat-tile';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
 import { SubmissionCard, formatDateTime } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
-import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
+import { useInstanceActions, useInstanceReview, useRepeatInstances } from '@/hooks/use-repeat-instances';
 import { getTask, personLabel } from '@/lib/cards';
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,
   getInstance,
-  reviewInstanceSubmission,
 } from '@/lib/repeat';
 
 export default function TaskInstanceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const qc = useQueryClient();
   const { profile } = useProfile();
 
   const instQ = useQuery({ queryKey: ['instance', id], queryFn: () => getInstance(id) });
@@ -47,24 +45,12 @@ export default function TaskInstanceDetailScreen() {
     }, [refetchInstance]),
   );
 
-  function refresh() {
-    qc.invalidateQueries({ queryKey: ['instance', id] });
-    if (inst?.task_id) {
-      qc.invalidateQueries({ queryKey: ['repeat-instances', inst.task_id] });
-      qc.invalidateQueries({ queryKey: ['repeat-compliance', inst.task_id] });
-    }
-  }
-
-  const reviewM = useMutation({
-    mutationFn: (args: { decision: 'approve' | 'reject'; reason: string | null }) =>
-      reviewInstanceSubmission({
-        submissionId: inst!.current_submission_id!,
-        decision: args.decision,
-        reason: args.reason,
-      }),
-    onSuccess: refresh,
-    onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.'),
-  });
+  const reviewM = useInstanceReview(inst, id);
+  const wrappedReviewM = {
+    mutate: (args: { decision: 'approve' | 'reject'; reason: string | null }) =>
+      reviewM.mutate(args, { onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.') }),
+    isPending: reviewM.isPending,
+  };
 
   const actions = useInstanceActions(
     { pic_id: inst?.pic_id ?? null, reviewer_id: inst?.reviewer_id ?? null, status: inst?.status ?? '' },
@@ -205,8 +191,8 @@ export default function TaskInstanceDetailScreen() {
             {/* Reviewer: review flow (mockup 24) — anti-self ditegakkan server. */}
             {actions.canReview && inst.current_submission_id ? (
               <ReviewSubmissionPanel
-                onDecide={(args) => reviewM.mutate(args)}
-                isPending={reviewM.isPending}
+                onDecide={(args) => wrappedReviewM.mutate(args)}
+                isPending={wrappedReviewM.isPending}
               />
             ) : null}
 

@@ -1,12 +1,14 @@
 // UI-S-I02 — Native date picker reusable.
 // iOS: bottom-sheet Modal yang berisi inline calendar @expo/ui.
 // Android: dialog DateTimePicker (auto-buka saat mount, unmount setelah pilih/cancel).
-// Jest/web: fallback TextInput agar test environment tidak crash karena native module.
+// Web: <input type="date"> native browser (kalender + ikon), value sudah YYYY-MM-DD.
+// Jest: fallback TextInput agar test environment tidak crash karena native module.
 import { useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { usePlaceholderColor } from '@/components/ui';
+import { useThemePreference } from '@/providers/theme-provider';
 import {
   DATE_HINT,
   DATE_RE,
@@ -78,6 +80,7 @@ export function DateField({
 }: Props) {
   const [show, setShow] = useState(false);
   const placeholderColor = usePlaceholderColor();
+  const { effective } = useThemePreference();
   const a11yLabel = accessibilityLabel ?? label;
   const buttonPlaceholder = placeholder ?? 'Pilih tanggal';
   const inputPlaceholder = placeholder ?? DATE_HINT;
@@ -112,7 +115,48 @@ export function DateField({
     </View>
   ) : null;
 
-  // Fallback (web/test/native module hilang): TextInput pola lama.
+  // Web: kalender native browser via <input type="date">. Value HTML5 selalu YYYY-MM-DD,
+  // cocok dengan format simpan app — tak perlu konversi. Dikecualikan saat test (jsdom
+  // memakai jalur TextInput agar query getByPlaceholderText yang ada tetap valid).
+  if (Platform.OS === 'web' && process.env.NODE_ENV !== 'test') {
+    const dark = effective === 'dark';
+    return (
+      <View className="gap-1.5">
+        <Text className="text-sm font-medium text-black dark:text-white">
+          {label}
+          {required ? <Text className="text-red-500"> *</Text> : null}
+        </Text>
+        {chips}
+        <input
+          type="date"
+          aria-label={a11yLabel}
+          aria-required={required}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            boxSizing: 'border-box',
+            width: '100%',
+            minHeight: 44,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: dark ? '#404040' : '#d4d4d4',
+            paddingLeft: 16,
+            paddingRight: 16,
+            paddingTop: 12,
+            paddingBottom: 12,
+            fontSize: 16,
+            fontFamily: 'inherit',
+            color: dark ? '#ffffff' : '#000000',
+            backgroundColor: 'transparent',
+            colorScheme: dark ? 'dark' : 'light',
+          }}
+        />
+      </View>
+    );
+  }
+
+  // Fallback (test / native module hilang): TextInput pola lama.
   if (!Picker) {
     return (
       <View className="gap-1.5">
