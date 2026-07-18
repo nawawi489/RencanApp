@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 0067: Re-create missing RLS SELECT policies
+-- Migration 0071: Re-create missing RLS SELECT policies
 -- on user_score_results and ranking_snapshots.
 --
 -- These policies were originally defined in 0013_fase7_people_score

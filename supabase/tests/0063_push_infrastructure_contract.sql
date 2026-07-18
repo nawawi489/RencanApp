@@ -1,4 +1,4 @@
--- Migration 0060 contract test — Push Notifications Fase 2 server infrastructure.
+-- Migration 0063 contract test — Push Notifications Fase 2 server infrastructure.
 --
 -- Jalankan (butuh role postgres/owner):
 --   docker exec -i supabase_db_supabase psql -U postgres -d postgres \

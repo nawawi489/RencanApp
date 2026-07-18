@@ -5,7 +5,7 @@
 --
 -- Jalankan:
 --   docker exec -i supabase_db_supabase psql -U postgres -d postgres \
---     -f supabase/tests/0060_push_ac_fan6_cross_org.sql
+--     -f supabase/tests/0063_push_ac_fan6_cross_org.sql
 --
 -- Pola: seed 2 org × 2 user × berbagai kondisi token → jalankan CANONICAL DRAINER QUERY
 -- (encoded di sini agar Edge Function Fase 2-E wajib match) → assert set token yg cocok

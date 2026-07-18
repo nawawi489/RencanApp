@@ -1,6 +1,6 @@
--- Migration 0064 contract test — Group A follow-up cross-org isolation guards.
+-- Migration 0068 contract test — Group A follow-up cross-org isolation guards.
 --
--- Covers the 4 SECURITY DEFINER RPCs missed by migration 0063:
+-- Covers the 4 SECURITY DEFINER RPCs missed by migration 0067:
 --   review_task_submission, review_task_instance_submission,
 --   assign_score_formula, create_team.
 --

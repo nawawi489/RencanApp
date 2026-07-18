@@ -4,7 +4,7 @@
 --
 -- Jalankan:
 --   docker exec -i supabase_db_supabase psql -U postgres -d postgres \
---     -f supabase/tests/0060_push_ac_fan4_isolation.sql
+--     -f supabase/tests/0063_push_ac_fan4_isolation.sql
 --
 -- Invarian:
 --   (a) STATIC: TIDAK ada trigger pada public.notifications yang menyentuh push_deliveries,

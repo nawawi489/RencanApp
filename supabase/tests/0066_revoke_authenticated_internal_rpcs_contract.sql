@@ -1,4 +1,4 @@
--- Migration 0062 contract test — authenticated/anon/PUBLIC EXECUTE must stay revoked
+-- Migration 0066 contract test — authenticated/anon/PUBLIC EXECUTE must stay revoked
 -- on internal-only RPCs. This is the third time this repo has been bitten by a blanket
 -- GRANT (0036) or a DROP+CREATE ACL reset (0046) silently re-exposing these functions —
 -- this contract exists so a future regression fails CI instead of shipping silently.

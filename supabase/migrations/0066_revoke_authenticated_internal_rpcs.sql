@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0062_revoke_authenticated_internal_rpcs.sql
+-- 0066_revoke_authenticated_internal_rpcs.sql
 -- =============================================================================
 -- SECURITY FIX (Finding 3, /cso audit 2026-07-16, conf 9/10, VERIFIED):
 --

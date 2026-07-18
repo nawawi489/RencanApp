@@ -1,5 +1,5 @@
 -- =====================================================================
--- 0061_fix_strategy_current_values_security_invoker.sql
+-- 0064_fix_strategy_current_values_security_invoker.sql
 -- =====================================================================
 -- Fixes a regression introduced by 0045 (rename workspace terminology):
 -- the view was originally created (0019, as kpi_area_current_values)

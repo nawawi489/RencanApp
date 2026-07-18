@@ -1,9 +1,9 @@
 -- =============================================================================
--- 0064_cross_org_isolation_groupA_followups.sql
+-- 0068_cross_org_isolation_groupA_followups.sql
 -- =============================================================================
 -- SECURITY FIX (Group A, /cso follow-up 2026-07-16):
 --
--- Migration 0063 fixed 13 SECURITY DEFINER RPCs that never compared the target
+-- Migration 0067 fixed 13 SECURITY DEFINER RPCs that never compared the target
 -- row's organization_id to the caller's own org. Post-merge review surfaced
 -- four more RPCs with the same shape:
 --

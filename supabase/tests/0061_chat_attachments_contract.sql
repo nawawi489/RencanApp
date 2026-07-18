@@ -1,8 +1,8 @@
--- Migration 0059 contract test — chat message attachments (Lampiran diskusi gambar).
+-- Migration 0061 contract test — chat message attachments (Lampiran diskusi gambar).
 --
 -- Jalankan (butuh role postgres/owner):
 --   docker exec -i supabase_db_supabase psql -U postgres -d postgres \
---     < supabase/tests/0059_chat_attachments_contract.sql
+--     < supabase/tests/0061_chat_attachments_contract.sql
 --
 -- Pola: raise notice 'PASS …' / raise exception 'FAIL: …'.
 -- Sesuai TDD plan step 0.1–0.38.
@@ -177,15 +177,15 @@ begin
     v_ap_id := gen_random_uuid();
     v_room_id := gen_random_uuid();
 
-    insert into public.organizations (id, name) values (v_org_id, '_test_0059_org');
+    insert into public.organizations (id, name) values (v_org_id, '_test_0061_org');
     insert into auth.users (id, email, aud, role, encrypted_password, email_confirmed_at)
-      values (v_user_id, '_test0059@x.com', 'authenticated', 'authenticated', '', now());
+      values (v_user_id, '_test0061@x.com', 'authenticated', 'authenticated', '', now());
     -- profile auto-created by handle_new_user trigger
     update public.profiles set organization_id = v_org_id where id = v_user_id;
     insert into public.action_plans (id, organization_id, name, pic_id)
-      values (v_ap_id, v_org_id, '_test_0059_ap', v_user_id);
+      values (v_ap_id, v_org_id, '_test_0061_ap', v_user_id);
     insert into public.chat_rooms (id, organization_id, action_plan_id, name)
-      values (v_room_id, v_org_id, v_ap_id, '_test_0059_room');
+      values (v_room_id, v_org_id, v_ap_id, '_test_0061_room');
     v_seeded := true;
   else
     select id into v_user_id from public.profiles where organization_id = v_org_id limit 1;
@@ -280,15 +280,15 @@ begin
     v_user_id := gen_random_uuid();
     v_ap_id := gen_random_uuid();
     v_room_id := gen_random_uuid();
-    insert into public.organizations (id, name) values (v_org_id, '_test_0059f_org');
+    insert into public.organizations (id, name) values (v_org_id, '_test_0061f_org');
     insert into auth.users (id, email, aud, role, encrypted_password, email_confirmed_at)
-      values (v_user_id, '_test0059f@x.com', 'authenticated', 'authenticated', '', now());
+      values (v_user_id, '_test0061f@x.com', 'authenticated', 'authenticated', '', now());
     -- profile auto-created by handle_new_user trigger
     update public.profiles set organization_id = v_org_id where id = v_user_id;
     insert into public.action_plans (id, organization_id, name, pic_id)
-      values (v_ap_id, v_org_id, '_test_0059f_ap', v_user_id);
+      values (v_ap_id, v_org_id, '_test_0061f_ap', v_user_id);
     insert into public.chat_rooms (id, organization_id, action_plan_id, name)
-      values (v_room_id, v_org_id, v_ap_id, '_test_0059f_room');
+      values (v_room_id, v_org_id, v_ap_id, '_test_0061f_room');
     v_seeded := true;
   else
     select id into v_user_id from public.profiles where organization_id = v_org_id limit 1;
@@ -313,7 +313,7 @@ begin
     raise exception 'FAIL f: system message with 0 attachments should be valid';
   end;
 
-  -- kind='system' + 1 attachment = 23514 (BARU di 0059)
+  -- kind='system' + 1 attachment = 23514 (BARU di 0061)
   begin
     insert into public.chat_messages (organization_id, chat_room_id, author_id, body, kind,
       system_event_type, actor_id, attachments)
@@ -435,9 +435,9 @@ end $$;
 
 -- ============================================================ (j) APPEND-ONLY 2-lapis intact
 -- Catatan: Supabase local dev "alter default privileges in schema public grant all on tables
--- to authenticated" bisa re-grant DML setelah 0008 REVOKE. Ini bukan regresi 0059 — test ini
--- memverifikasi 0059 TIDAK menambah grant baru. Di prod, REVOKE 0008 efektif. Downgrade ke
--- warning jika authenticated masih punya DML (pre-existing issue, bukan 0059).
+-- to authenticated" bisa re-grant DML setelah 0008 REVOKE. Ini bukan regresi 0061 — test ini
+-- memverifikasi 0061 TIDAK menambah grant baru. Di prod, REVOKE 0008 efektif. Downgrade ke
+-- warning jika authenticated masih punya DML (pre-existing issue, bukan 0061).
 do $$
 declare
   warns text := '';
@@ -453,7 +453,7 @@ begin
   end if;
 
   if warns <> '' then
-    raise notice 'WARN j: pre-existing DML grants on chat_messages (Supabase default privileges — not caused by 0059): %', warns;
+    raise notice 'WARN j: pre-existing DML grants on chat_messages (Supabase default privileges — not caused by 0061): %', warns;
   else
     raise notice 'PASS j: append-only 2-lapis intact (no direct INSERT/UPDATE/DELETE for authenticated)';
   end if;
@@ -463,6 +463,6 @@ end $$;
 do $$
 begin
   raise notice '============================';
-  raise notice 'All 0059 contract tests DONE';
+  raise notice 'All 0061 contract tests DONE';
   raise notice '============================';
 end $$;

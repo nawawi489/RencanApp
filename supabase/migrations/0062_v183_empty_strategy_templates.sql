@@ -1,5 +1,5 @@
 -- =====================================================================
--- 0059_v183_empty_strategy_templates.sql
+-- 0062_v183_empty_strategy_templates.sql
 -- =====================================================================
 -- V1.83 §19: "Strategy Template kosong secara default. Sistem tidak
 -- menyediakan template bawaan berbasis industri, divisi, atau jenis

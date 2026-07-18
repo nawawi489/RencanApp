@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0063_cross_org_isolation_security_definer.sql
+-- 0067_cross_org_isolation_security_definer.sql
 -- =============================================================================
 -- SECURITY FIX (Finding 2, /cso audit 2026-07-16):
 --

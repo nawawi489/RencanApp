@@ -1,5 +1,5 @@
 -- ==========================================================================
--- 0059 — Fix #64: Chat Confidential Visibility (RLS + FTS + Preview + Turunan)
+-- 0060 — Fix #64: Chat Confidential Visibility (RLS + FTS + Preview + Turunan)
 -- ==========================================================================
 --
 -- Bug: chat_messages_select (0008:336-341) hanya cek is_chat_member OR can_view_workspace.

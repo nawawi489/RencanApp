@@ -1,5 +1,5 @@
 -- =====================================================================
--- 0070_workspace_card_progress_attainment.sql
+-- 0074_workspace_card_progress_attainment.sql
 -- =====================================================================
 -- workspace_card_progress v2 — attainment-aware roll-up Goal/Strategi.
 -- READ-ONLY. SECURITY INVOKER: RLS on parent+child tables enforced per caller.

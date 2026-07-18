@@ -1,4 +1,4 @@
--- 0068_fix_submit_task_review_notif.sql
+-- 0072_fix_submit_task_review_notif.sql
 -- Regresi 0046: submit_task (one-time) tak lagi memanggil emit_notification,
 -- sedangkan submit_task_instance (rutin) tetap emit 'review_request' ke
 -- reviewer_id. Konsekuensi: PIC submit tugas one-time → reviewer tidak

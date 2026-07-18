@@ -1,16 +1,16 @@
--- Migration 0063 contract test — cross-org isolation guard in SECURITY DEFINER RPCs.
+-- Migration 0067 contract test — cross-org isolation guard in SECURITY DEFINER RPCs.
 --
--- Verifies that all 13 functions patched in 0063 contain the cross-org guard
+-- Verifies that all 13 functions patched in 0067 contain the cross-org guard
 -- pattern (`current_user_org()` check via `is distinct from`). This is a
 -- structural contract: if a future migration rewrites any of these functions
 -- without the guard, this test fails CI instead of shipping silently.
 --
 -- Pola: `raise notice 'PASS'` bila lolos, `raise exception 'FAIL: ...'` bila gagal.
 -- Jalankan:
---   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0063_cross_org_isolation_contract.sql
+--   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0067_cross_org_isolation_contract.sql
 
--- ============================================================ 0063-DB-1: structural guard — function body contains current_user_org()
--- Every function patched by 0063 must contain both 'current_user_org()' and
+-- ============================================================ 0067-DB-1: structural guard — function body contains current_user_org()
+-- Every function patched by 0067 must contain both 'current_user_org()' and
 -- 'lintas-organisasi' in its body. This catches accidental guard removal in
 -- future CREATE OR REPLACE rewrites.
 do $$
@@ -60,12 +60,12 @@ begin
   end loop;
 
   if fails <> '' then
-    raise exception 'FAIL 0063-DB-1: %', fails;
+    raise exception 'FAIL 0067-DB-1: %', fails;
   end if;
-  raise notice 'PASS 0063-DB-1: all 13 functions contain cross-org guard (current_user_org + is distinct from + lintas-organisasi)';
+  raise notice 'PASS 0067-DB-1: all 13 functions contain cross-org guard (current_user_org + is distinct from + lintas-organisasi)';
 end $$;
 
--- ============================================================ 0063-DB-2: all 13 functions are SECURITY DEFINER
+-- ============================================================ 0067-DB-2: all 13 functions are SECURITY DEFINER
 -- Guard only matters if the function is SECURITY DEFINER (bypasses RLS).
 -- If any gets downgraded to INVOKER the guard is harmless but this test
 -- should still pass — however, losing SECURITY DEFINER accidentally would
@@ -106,12 +106,12 @@ begin
   end loop;
 
   if fails <> '' then
-    raise exception 'FAIL 0063-DB-2: %', fails;
+    raise exception 'FAIL 0067-DB-2: %', fails;
   end if;
-  raise notice 'PASS 0063-DB-2: all 13 functions are SECURITY DEFINER';
+  raise notice 'PASS 0067-DB-2: all 13 functions are SECURITY DEFINER';
 end $$;
 
--- ============================================================ 0063-DB-3: runtime cross-org rejection (activate_goal)
+-- ============================================================ 0067-DB-3: runtime cross-org rejection (activate_goal)
 -- End-to-end proof: CEO of Org A tries to activate a Goal belonging to Org B.
 -- Must raise 'lintas-organisasi', NOT succeed.
 -- Konstanta LOCAL DB: org A = 52b0ebe1-..., ceo A = 11111111-...-000000000001.
@@ -141,12 +141,12 @@ begin
   select status into v_status from public.goals where id = v_goalB;
   if v_status <> 'draft' then fails := fails||'goal_status_mutated('||v_status||'); '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0063-DB-3: %', fails; end if;
-  raise notice 'PASS 0063-DB-3: cross-org activate_goal rejected + no side effect';
+  if fails <> '' then raise exception 'FAIL 0067-DB-3: %', fails; end if;
+  raise notice 'PASS 0067-DB-3: cross-org activate_goal rejected + no side effect';
 end $$;
 rollback;
 
--- ============================================================ 0063-DB-4: runtime cross-org rejection (archive_card — dynamic table)
+-- ============================================================ 0067-DB-4: runtime cross-org rejection (archive_card — dynamic table)
 -- Tests the dynamic-table variant (archive_card) which uses EXECUTE FORMAT.
 begin;
 do $$
@@ -169,12 +169,12 @@ begin
   end;
   execute 'reset role';
 
-  if fails <> '' then raise exception 'FAIL 0063-DB-4: %', fails; end if;
-  raise notice 'PASS 0063-DB-4: cross-org archive_card rejected';
+  if fails <> '' then raise exception 'FAIL 0067-DB-4: %', fails; end if;
+  raise notice 'PASS 0067-DB-4: cross-org archive_card rejected';
 end $$;
 rollback;
 
--- ============================================================ 0063-DB-5: regression — same-org activate_goal TETAP jalan
+-- ============================================================ 0067-DB-5: regression — same-org activate_goal TETAP jalan
 -- Guard must not block same-org operations.
 begin;
 do $$
@@ -198,12 +198,12 @@ begin
   select status into v_status from public.goals where id = v_goalA;
   if v_status <> 'active' then fails := fails||'same_org_activate_failed('||v_status||'); '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0063-DB-5: %', fails; end if;
-  raise notice 'PASS 0063-DB-5: same-org activate_goal works (regression)';
+  if fails <> '' then raise exception 'FAIL 0067-DB-5: %', fails; end if;
+  raise notice 'PASS 0067-DB-5: same-org activate_goal works (regression)';
 end $$;
 rollback;
 
--- ============================================================ 0063-DB-6: NULL-org caller rejected
+-- ============================================================ 0067-DB-6: NULL-org caller rejected
 -- Caller with organization_id = NULL must be rejected by `is distinct from`
 -- (not just `<>`).
 begin;
@@ -213,7 +213,7 @@ declare
   v_ceo_rt uuid; fails text := '';
 begin
   select id into v_ceo_rt from public.role_templates where level = 'ceo' limit 1;
-  if v_ceo_rt is null then raise notice 'SKIP 0063-DB-6 (no ceo role_template)'; return; end if;
+  if v_ceo_rt is null then raise notice 'SKIP 0067-DB-6 (no ceo role_template)'; return; end if;
 
   insert into public.organizations (name) values ('OrgB-null-caller') returning id into v_orgB;
 
@@ -242,7 +242,7 @@ begin
   end;
   execute 'reset role';
 
-  if fails <> '' then raise exception 'FAIL 0063-DB-6: %', fails; end if;
-  raise notice 'PASS 0063-DB-6: NULL-org caller rejected (is distinct from NULL-safe)';
+  if fails <> '' then raise exception 'FAIL 0067-DB-6: %', fails; end if;
+  raise notice 'PASS 0067-DB-6: NULL-org caller rejected (is distinct from NULL-safe)';
 end $$;
 rollback;

@@ -1,4 +1,4 @@
--- 0069_strategy_template_crud.sql
+-- 0073_strategy_template_crud.sql
 -- PRD V1.83 §19: admin CRUD untuk strategy_templates (create/edit/disable).
 --
 -- Ganti draft awal 0061_strategy_template_crud.sql. Draft tersebut menambah

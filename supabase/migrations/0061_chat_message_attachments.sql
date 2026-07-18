@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0059_chat_message_attachments.sql
+-- 0061_chat_message_attachments.sql
 -- =============================================================================
 -- Lampiran diskusi (gambar) di Initiative Chat — PRD §30 komponen 11 (V2).
 -- Spec: specs/inbox-chat-attachments.md (FINAL 2026-07-15, owner A–F locked).
