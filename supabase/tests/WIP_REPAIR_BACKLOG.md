@@ -68,10 +68,19 @@ apply order** (no file changed position relative to any other). New range:
 their migration's new number, and self-referencing header comments were
 updated.
 
+A second collision surfaced after merging in `origin/staging` (PR #104,
+`0071_fix_search_chat_messages_limit_clamp.sql`, landed on staging after this
+branch forked): it collided with this branch's renumbered
+`0071_fix_score_ranking_rls_policies.sql`. Resolved by moving the incoming
+file to `0075` (unrelated content, no ordering constraint beyond "after
+0060_chat_confidential_rls_fts.sql", the migration it patches — its own
+cross-references to that file were updated from the old `0059_` name).
+Current highest migration on this branch: **0075**.
+
 **⚠️ PR #105** (`claude/elegant-vaughan-e76148`, adds
 `0072_restore_user_permissions_hardening.sql`) will collide with this branch's
-new `0072_fix_submit_task_review_notif.sql` once both land on staging. That
-PR's migration must be renumbered to the next free slot (`0075` or later,
-whatever is free at merge time) before or during its merge — do not merge
-PR #105 as-is once this branch has landed without re-checking for a
-`0072` collision first.
+`0072_fix_submit_task_review_notif.sql` once both land on staging. That PR's
+migration must be renumbered to the next free slot at merge time (**0076 or
+higher — re-check the actual highest migration number on staging then**,
+since more unrelated migrations may land on staging before this merges)
+before or during its merge.

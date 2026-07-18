@@ -1,10 +1,10 @@
--- 0071 — Fix: search_chat_messages kehilangan limit clamp + length guard.
+-- 0075 — Fix: search_chat_messages kehilangan limit clamp + length guard.
 --
 -- Port dari main (migrasi 0068, PR #103) — main dan staging keduanya mewarisi
--- 0059_chat_confidential_rls_fts.sql identik (byte-for-byte) dari histori bersama
+-- 0060_chat_confidential_rls_fts.sql identik (byte-for-byte) dari histori bersama
 -- sebelum kedua branch divergen, jadi staging punya bug persis yang sama.
 --
--- Bug: 0059 (chat_confidential_rls_fts) melakukan `create or replace function` penuh untuk
+-- Bug: 0060 (chat_confidential_rls_fts) melakukan `create or replace function` penuh untuk
 -- menambah klausa (b) confidential, tapi body fungsi yang dipakai adalah versi lama tanpa
 -- pengaman dari 0054 — hasilnya:
 --   * `limit p_limit` mentah (tanpa clamp) → p_limit=100 mengembalikan 100 baris, bukan cap 30.
@@ -13,7 +13,7 @@
 --   * Truncation p_query ke 200 char ("sabuk pengaman biaya") hilang.
 --
 -- Perbaikan: restore ketiga guard di atas dari 0054. Logika confidential-gate, join, dan kolom
--- lain dari 0059 TIDAK diubah — hanya menambahkan clamp/guard yang lebih ketat (additive-only,
+-- lain dari 0060 TIDAK diubah — hanya menambahkan clamp/guard yang lebih ketat (additive-only,
 -- tidak melonggarkan apa pun).
 
 create or replace function public.search_chat_messages(
