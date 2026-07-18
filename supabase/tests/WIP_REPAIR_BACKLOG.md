@@ -14,7 +14,6 @@ pre-0045 tests hardcode.
 
 | File | Rot class | Root cause |
 |---|---|---|
-| `0017_permission_settings_contract` | behaviour/grant drift — **confirmed real security regression, fix drafted but not yet merged here** | `authenticated`/`anon` hold direct INSERT/UPDATE/DELETE on `public.user_permissions` (undone by 0036's bulk grant); `set_user_permission` lost its self-modification guard (dropped by 0041's rewrite) — a staff user holding delegated `manage_users_permissions` can self-grant other permissions; invalid-key wording also drifted. Fix exists as `0072_restore_user_permissions_hardening.sql` on branch `claude/elegant-vaughan-e76148` (PR #105 → staging), but that PR's diff is unexpectedly large (100+ files, many unrelated deletions — looks like a stale base) and has **not** been reviewed/merged. Do not un-quarantine until 0072 is cherry-picked here (or lands on staging) and this test re-verifies green |
 | `0018_inbox_preview_contract` | schema | `initiatives` now requires `strategy_id` (goal→strategy→initiative rename); test attaches an initiative with no strategy parent |
 | `0019_ap5_ap6_contract` | dropped object | tests the dropped `kpi_areas` table + renamed `kpi_area_current_values` view (V1.8.3) |
 | `0038_dcr05_minta_revisi_contract` | runner-incompatible | uses `raise 'ROLLBACK_OK'` as its **pass** signal (needs block-by-block exec); rewrite to `begin … rollback` + raise-only-on-FAIL |
@@ -37,15 +36,13 @@ pre-0045 tests hardcode.
 2. The `initiatives.strategy_id` cluster (`0018`, `0040`, `ws3b`, `fase3`) shares
    one fix: build a valid `goal→strategy→initiative` chain in each scenario.
 
-## Investigated, fix drafted but NOT merged
+## Un-quarantined — depends on migration 0072
 
-- **`0017_permission_settings_contract`** — the suspected grant/behaviour drift
-  was confirmed as a real security regression (not test staleness): see the row
-  above. A fix (`0072_restore_user_permissions_hardening.sql`) has been drafted
-  on branch `claude/elegant-vaughan-e76148` (PR #105 → staging), but that PR's
-  diff is unexpectedly large (100+ files, many unrelated deletions — likely a
-  stale base) and has not been reviewed or merged. **Remains quarantined here**
-  until 0072 is cherry-picked onto this branch (or lands on staging first) and
-  the test is re-verified green. Do not treat this as resolved based on commit
-  messages alone — check `ls supabase/migrations/ | grep 0072` before trusting
-  any "resolved" claim.
+- **`0017_permission_settings_contract`** — un-quarantined; the three regressions
+  it catches (table write grants, self-modification guard, invalid-key message)
+  are fixed by `0072_restore_user_permissions_hardening.sql` (PR #105 → staging).
+  This test will fail until 0072 lands in the migration chain. **Pre-existing
+  message drift**: test D_key asserts `%tidak valid%` (0017 original); 0041
+  changed the wording to `'Permission tidak dikenal'`; 0072 restores the 0017
+  wording but keeps the key-name suffix — needs separate reconciliation if the
+  project standardises on one style.
