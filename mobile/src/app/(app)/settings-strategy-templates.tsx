@@ -49,7 +49,7 @@ const EMPTY_FORM: FormData = {
 
 export default function SettingsStrategyTemplatesScreen() {
   const { can } = useProfile();
-  const allowed = can('manage_strategy_templates') || can('manage_goal_templates');
+  const allowed = can('manage_kpi_area_templates') || can('manage_goal_templates');
   const placeholderColor = usePlaceholderColor();
   const [q, setQ] = useState('');
   const qc = useQueryClient();

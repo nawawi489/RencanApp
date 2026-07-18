@@ -98,7 +98,7 @@ const AKSES_CEPAT: MenuItem[] = [
 
 const TEMPLATE_ITEMS: MenuItem[] = [
   { label: 'Goal Template', description: 'Library Goal', icon: 'document-text-outline', tone: 'success', href: '/settings-goal-templates' as Href },
-  { label: 'Strategi Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-strategy-templates' as Href, permission: 'manage_strategy_templates' },
+  { label: 'Strategi Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-strategy-templates' as Href, permission: 'manage_kpi_area_templates' },
 ];
 
 // Bantuan — §31: Pusat Bantuan pindah ke Akses Cepat; sisa hanya Support.
@@ -305,7 +305,7 @@ export default function MenuScreen() {
         </View>
 
         {/* Accordion (collapsed by default). Template conditional §31. */}
-        {can('manage_strategy_templates') ? (
+        {can('manage_kpi_area_templates') ? (
           <MenuAccordion title="Template" items={TEMPLATE_ITEMS} onPress={onItemPress} />
         ) : null}
         <MenuAccordion title="Bantuan" items={BANTUAN_ITEMS} onPress={onItemPress} />

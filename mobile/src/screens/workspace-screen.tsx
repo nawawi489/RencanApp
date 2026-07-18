@@ -521,7 +521,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/initiative/${initiative.id}` as Href),
+    () => router.push(`/initiative/${initiative.id}`),
     [router, initiative.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -535,7 +535,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
       showPastPeriodAlert();
       return;
     }
-    router.push(`/action-plan/new?initiativeId=${initiative.id}` as Href);
+    router.push(`/action-plan/new?initiativeId=${initiative.id}`);
   }, [mbrGuarded, parentCompliance, past, router, initiative.id, initiative.name]);
   // Tombol redup bila past ATAU ter-guard MBR (spec §11: tetap terlihat, tapi redup).
   const addDimmed = past || mbrGuarded;
@@ -654,7 +654,7 @@ const StrategySubRow = memo(function StrategySubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/strategy/${kpi.id}` as Href),
+    () => router.push(`/strategy/${kpi.id}`),
     [router, kpi.id],
   );
   const addInitiative = useCallback(
@@ -769,9 +769,9 @@ const GoalRow = memo(function GoalRow({
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  const openDetail = useCallback(() => router.push(`/goal/${goal.id}` as Href), [router, goal.id]);
+  const openDetail = useCallback(() => router.push(`/goal/${goal.id}`), [router, goal.id]);
   const addKpi = useCallback(
-    () => router.push(`/strategy/new?goalId=${goal.id}` as Href),
+    () => router.push(`/strategy/new?goalId=${goal.id}`),
     [router, goal.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -883,7 +883,7 @@ const TaskSubRow = memo(function TaskSubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/task/${item.id}` as Href),
+    () => router.push(`/task/${item.id}`),
     [router, item.id],
   );
 
@@ -963,7 +963,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
     [router, item.id],
   );
   const addPlan = useCallback(
-    () => router.push(`/task/new?actionPlanId=${item.id}` as Href),
+    () => router.push(`/task/new?actionPlanId=${item.id}`),
     [router, item.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -1074,11 +1074,11 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/problem-statement/${ps.id}` as Href),
+    () => router.push(`/problem-statement/${ps.id}`),
     [router, ps.id],
   );
   const addActionPlan = useCallback(
-    () => router.push(`/action-plan/new?problemStatementId=${ps.id}` as Href),
+    () => router.push(`/action-plan/new?problemStatementId=${ps.id}`),
     [router, ps.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -1189,11 +1189,11 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openDetail = useCallback(
-    () => router.push(`/development-area/${devArea.id}` as Href),
+    () => router.push(`/development-area/${devArea.id}`),
     [router, devArea.id],
   );
   const addProblemStatement = useCallback(
-    () => router.push(`/problem-statement/new?developmentAreaId=${devArea.id}` as Href),
+    () => router.push(`/problem-statement/new?developmentAreaId=${devArea.id}`),
     [router, devArea.id],
   );
   const retryChildren = useCallback(() => refetch(), [refetch]);
@@ -1357,7 +1357,7 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
         <Pressable
           accessibilityRole="search"
           accessibilityLabel="Cari Workspace"
-          onPress={() => router.push('/search' as Href)}
+          onPress={() => router.push('/search')}
           className="min-h-[44px] flex-row items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-950">
           <Text className="text-base text-neutral-400 dark:text-neutral-500">⌕</Text>
           <Text className="text-sm text-neutral-400 dark:text-neutral-500">
@@ -1520,7 +1520,7 @@ function useDevelopmentItems() {
 /** Route index `/workspace` — Hub (lobby). Tap "Masuk" → push pane deep-linkable. */
 export function HubScreen() {
   const router = useRouter();
-  return <HubView onSelect={(t) => router.push(`/workspace/${t}` as Href)} />;
+  return <HubView onSelect={(t) => router.push(`/workspace/${t}`)} />;
 }
 
 /** Route `/workspace/performance` — pane Performance. Back button di AppHeader. */

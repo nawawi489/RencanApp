@@ -101,14 +101,14 @@ describe('Menu §31 — Akses Cepat', () => {
 });
 
 describe('Menu §31 — Template conditional accordion', () => {
-  it('Template accordion TIDAK tampil tanpa manage_strategy_templates', async () => {
+  it('Template accordion TIDAK tampil tanpa manage_kpi_area_templates', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     await screen.findByLabelText('People');
     expect(screen.queryByLabelText('Template')).toBeNull();
   });
 
-  it('Template accordion tampil + collapsed saat user punya manage_strategy_templates', async () => {
-    mockCan.mockImplementation((k: string) => k === 'manage_strategy_templates');
+  it('Template accordion tampil + collapsed saat user punya manage_kpi_area_templates', async () => {
+    mockCan.mockImplementation((k: string) => k === 'manage_kpi_area_templates');
     await render(<MenuScreen />, { wrapper: wrapper() });
     await screen.findByLabelText('People');
     expect(screen.queryByText('Goal Template')).toBeNull();
@@ -117,7 +117,7 @@ describe('Menu §31 — Template conditional accordion', () => {
   });
 
   it('Goal Template → push /settings-goal-templates', async () => {
-    mockCan.mockImplementation((k: string) => k === 'manage_strategy_templates');
+    mockCan.mockImplementation((k: string) => k === 'manage_kpi_area_templates');
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Template'));
     fireEvent.press(await screen.findByLabelText('Goal Template'));
