@@ -146,7 +146,7 @@ export function LiveProblemStatementDetailScreen() {
                     name={item.name}
                     statusLabel={INITIATIVE_STATUS_LABEL[item.status] ?? item.status}
                     statusTone={INIT_TONE[item.status]}
-                    onPress={() => router.push(`/action_plan/${item.id}` as Href)}
+                    onPress={() => router.push(`/action-plan/${item.id}`)}
                   />
                 ))
               ) : (
