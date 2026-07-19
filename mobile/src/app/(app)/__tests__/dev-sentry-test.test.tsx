@@ -9,16 +9,16 @@ function mockTransport(): LogTransport & { write: jest.Mock } {
   return { name: 'mock', write: jest.fn() };
 }
 
-const ORIGINAL_APP_ENV = process.env.EXPO_PUBLIactionPlanP_ENV;
+const ORIGINAL_APP_ENV = process.env.EXPO_PUBLIC_APP_ENV;
 
 afterEach(() => {
   _resetForTest();
-  process.env.EXPO_PUBLIactionPlanP_ENV = ORIGINAL_APP_ENV;
+  process.env.EXPO_PUBLIC_APP_ENV = ORIGINAL_APP_ENV;
 });
 
 describe('DevSentryTest — smoke test route', () => {
   it('MENYEMBUNYIKAN tombol di production (safety guard)', async () => {
-    process.env.EXPO_PUBLIactionPlanP_ENV = 'production';
+    process.env.EXPO_PUBLIC_APP_ENV = 'production';
     await render(<DevSentryTest />);
     expect(screen.queryByRole('button', { name: 'Trigger sync error' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Trigger async error' })).toBeNull();
@@ -26,14 +26,14 @@ describe('DevSentryTest — smoke test route', () => {
   });
 
   it('menampilkan 2 tombol di non-production (staging/dev)', async () => {
-    process.env.EXPO_PUBLIactionPlanP_ENV = 'staging';
+    process.env.EXPO_PUBLIC_APP_ENV = 'staging';
     await render(<DevSentryTest />);
     expect(screen.getByRole('button', { name: 'Trigger sync error' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Trigger async error' })).toBeTruthy();
   });
 
   it('tombol sync error meneruskan Error ke logger transport (namespace DevSmokeTest)', async () => {
-    process.env.EXPO_PUBLIactionPlanP_ENV = 'staging';
+    process.env.EXPO_PUBLIC_APP_ENV = 'staging';
     const t = mockTransport();
     addTransport(t);
     await render(<DevSentryTest />);
@@ -47,7 +47,7 @@ describe('DevSentryTest — smoke test route', () => {
   });
 
   it('tombol async error meneruskan Error ke logger transport', async () => {
-    process.env.EXPO_PUBLIactionPlanP_ENV = 'staging';
+    process.env.EXPO_PUBLIC_APP_ENV = 'staging';
     const t = mockTransport();
     addTransport(t);
     await render(<DevSentryTest />);
