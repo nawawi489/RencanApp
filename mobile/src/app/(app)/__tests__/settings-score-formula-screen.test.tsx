@@ -21,12 +21,10 @@ const mockUseScoreFormulaVersions = jest.fn();
 const mockActivate = jest.fn();
 const mockCreateDraft = jest.fn();
 const mockUpdateWeights = jest.fn();
-const mockClosePeriod = jest.fn();
 const mockRefetchPeriod = jest.fn();
 jest.mock('@/hooks/use-people-score', () => ({
   __esModule: true,
   useActivePeriod: (...a: unknown[]) => mockUseActivePeriod(...a),
-  useClosePeriod: () => ({ closePeriod: mockClosePeriod, isPending: false }),
   useScoreOverride: () => ({ override: mockOverride, isPending: false }),
   useScoreFormulaTemplates: (...a: unknown[]) => mockUseScoreFormulaTemplates(...a),
   useScoreFormulaVersions: (...a: unknown[]) => mockUseScoreFormulaVersions(...a),
@@ -39,6 +37,29 @@ jest.mock('@/hooks/use-people-score', () => ({
     isUpdatingWeights: false,
   }),
 }));
+
+// Fase 4: FinalizePeriodModal di-mock jadi stub. Coverage modal internals ada di
+// mobile/src/components/__tests__/finalize-period-modal.test.tsx (T-M-1..16); di sini
+// kami hanya menegaskan wiring (tombol → modal props visible=true) dan invocation onClose.
+jest.mock('@/components/finalize-period-modal', () => {
+  const React = require('react');
+  const { Text } = require('react-native-css/components');
+  return {
+    __esModule: true,
+    FinalizePeriodModal: ({ visible, onClose }: { visible: boolean; onClose: () => void }) =>
+      visible
+        ? React.createElement(
+            Text,
+            {
+              testID: 'finalize-modal-open',
+              accessibilityLabel: 'Modal finalisasi terbuka',
+              onPress: onClose,
+            },
+            'MODAL_OPEN',
+          )
+        : null,
+  };
+});
 
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
@@ -65,9 +86,7 @@ beforeEach(() => {
   mockActivate.mockReset();
   mockCreateDraft.mockReset();
   mockUpdateWeights.mockReset();
-  mockClosePeriod.mockReset();
   mockRefetchPeriod.mockReset();
-  mockClosePeriod.mockResolvedValue(3);
   mockUseActivePeriod.mockReturnValue({
     period: { id: 'p1', period_name: 'Q1', period_start: '2026-01-01', period_end: '2026-03-31' },
     isLoading: false,
@@ -270,148 +289,89 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
 
 });
 
-// ============================================================ WS-5 — Tutup Periode
-describe('SettingsScoreFormulaScreen — WS-5 Tutup Periode', () => {
-  it('[WS5-UI-01] periode active + permission → tombol "Tutup Periode" tampil', async () => {
+// ============================================================ Fase 4 — Finalisasi Periode & Peringkat (specs/score-ranking-finalization-tdd-plan.md)
+// WS5-UI-06..14 (modal internals) DIHAPUS di Fase 4 karena modal berubah arsitektur ke hook-driven
+// dengan 9-state machine. Coverage modal ada di mobile/src/components/__tests__/finalize-period-modal.test.tsx.
+// Yang tersisa di sini: wiring screen (label tombol, guard visibility, permission gate, delegated permission).
+describe('SettingsScoreFormulaScreen — Fase 4 Finalisasi Periode & Peringkat', () => {
+  it('[T-UI-1 / ex WS5-UI-01] periode active + permission → tombol "Finalisasi Periode & Peringkat" tampil', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    expect(await screen.findByLabelText('Tutup Periode')).toBeTruthy();
+    expect(await screen.findByLabelText('Finalisasi Periode & Peringkat')).toBeTruthy();
   });
 
-  it('[WS5-UI-02] periode null → tombol TIDAK render + copy tidak menjanjikan "Buka periode"', async () => {
+  it('[ex WS5-UI-02] periode null → tombol TIDAK render + copy tidak menjanjikan "Buka periode"', async () => {
     mockCan.mockReturnValue(true);
-    mockUseActivePeriod.mockReturnValue({ period: null, isLoading: false, isError: false, refetch: mockRefetchPeriod });
+    mockUseActivePeriod.mockReturnValue({
+      period: null,
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetchPeriod,
+    });
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    await waitFor(() => expect(screen.queryByLabelText('Tutup Periode')).toBeNull());
-    // Copy state-kosong tidak menyesatkan (tak ada UI open-period).
+    await waitFor(() =>
+      expect(screen.queryByLabelText('Finalisasi Periode & Peringkat')).toBeNull(),
+    );
+    // Copy state-kosong tidak menyesatkan (tak ada UI open-period; NG-2 spec).
     expect(screen.queryByText(/Buka periode skoring/i)).toBeNull();
   });
 
-  it('[WS5-UI-04] tanpa permission → guard + tombol Tutup Periode tak pernah render', async () => {
+  it('[ex WS5-UI-04] tanpa permission → guard + tombol tak pernah render', async () => {
     mockCan.mockReturnValue(false);
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
     expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
-    expect(screen.queryByLabelText('Tutup Periode')).toBeNull();
+    expect(screen.queryByLabelText('Finalisasi Periode & Peringkat')).toBeNull();
   });
 
-  it('[WS5-UI-05] isError fetch periode → pesan + "Coba lagi" memicu refetch; tombol tak render', async () => {
+  it('[ex WS5-UI-05] isError fetch periode → pesan + "Coba lagi" memicu refetch; tombol tak render', async () => {
     mockCan.mockReturnValue(true);
-    mockUseActivePeriod.mockReturnValue({ period: null, isLoading: false, isError: true, refetch: mockRefetchPeriod });
+    mockUseActivePeriod.mockReturnValue({
+      period: null,
+      isLoading: false,
+      isError: true,
+      refetch: mockRefetchPeriod,
+    });
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
     expect(await screen.findByText(/Gagal memuat periode/i)).toBeTruthy();
-    expect(screen.queryByLabelText('Tutup Periode')).toBeNull();
+    expect(screen.queryByLabelText('Finalisasi Periode & Peringkat')).toBeNull();
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Coba lagi memuat periode'));
     });
     expect(mockRefetchPeriod).toHaveBeenCalledTimes(1);
   });
 
-  it('[WS5-UI-06/07] tekan Tutup Periode → modal langkah 1 (ringkasan) → Lanjutkan → tombol final', async () => {
+  it('[T-UI-2] tap tombol → FinalizePeriodModal terbuka (visible=true)', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
+    // Modal awalnya tertutup — stub tidak render.
+    expect(screen.queryByTestId('finalize-modal-open')).toBeNull();
     await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Tutup Periode'));
+      fireEvent.press(await screen.findByLabelText('Finalisasi Periode & Peringkat'));
     });
-    // Langkah 1: ringkasan dampak (teks khas modal); belum ada tombol final.
-    expect(await screen.findByText(/membekukan ranking/i)).toBeTruthy();
-    expect(screen.queryByLabelText('Tutup periode Q1')).toBeNull();
-    // Lanjut ke langkah 2.
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Lanjutkan tutup periode'));
-    });
-    expect(await screen.findByLabelText('Tutup periode Q1')).toBeTruthy();
+    expect(await screen.findByTestId('finalize-modal-open')).toBeTruthy();
   });
 
-  it('[WS5-UI-08] batal di langkah 1 → closePeriod TIDAK dipanggil', async () => {
+  it('[T-UI-2b] onClose dari modal → showCloseModal jadi false → modal tersembunyi', async () => {
     mockCan.mockReturnValue(true);
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Tutup Periode'));
+      fireEvent.press(await screen.findByLabelText('Finalisasi Periode & Peringkat'));
     });
+    // Stub Text.onPress adalah proxy untuk onClose (jest.mock di atas).
     await act(async () => {
-      fireEvent.press(screen.getByLabelText('Batal tutup periode'));
+      fireEvent.press(screen.getByTestId('finalize-modal-open'));
     });
-    expect(mockClosePeriod).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByTestId('finalize-modal-open')).toBeNull(),
+    );
   });
 
-  it('[WS5-UI-09] konfirmasi final → closePeriod(id) dipanggil + pesan sukses menyebut jumlah', async () => {
-    mockCan.mockReturnValue(true);
-    mockClosePeriod.mockResolvedValueOnce(4);
+  it('[T-UI-4] non-CEO dengan delegated manage_score_formula → tombol tetap render (AC-FIN-12)', async () => {
+    // useProfile pakai mockCan (bukan role_level check di client). has_permission semantics
+    // di server (0016:41-53) memperbolehkan CEO OR user dengan user_permissions.granted=true.
+    // Client mempercayai profile.can — ini test simulasi delegated non-CEO.
+    mockCan.mockImplementation((key: string) => key === 'manage_score_formula');
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Tutup Periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Lanjutkan tutup periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Tutup periode Q1'));
-    });
-    expect(mockClosePeriod).toHaveBeenCalledWith('p1');
-    expect(await screen.findByText(/4 pengguna/)).toBeTruthy();
-  });
-
-  it('[WS5-UI-10] n=0 → sukses dengan copy "0 pengguna" (bukan error)', async () => {
-    mockCan.mockReturnValue(true);
-    mockClosePeriod.mockResolvedValueOnce(0);
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Tutup Periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Lanjutkan tutup periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Tutup periode Q1'));
-    });
-    expect(await screen.findByText(/0 pengguna/)).toBeTruthy();
-  });
-
-  it('[WS5-UI-11] error E1 (sudah ditutup) → pesan inline + refetch periode', async () => {
-    mockCan.mockReturnValue(true);
-    mockClosePeriod.mockRejectedValueOnce(new Error('Periode ini sudah ditutup dan tidak bisa diubah.'));
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Tutup Periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Lanjutkan tutup periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Tutup periode Q1'));
-    });
-    expect(await screen.findByText(/sudah ditutup/i)).toBeTruthy();
-    expect(mockRefetchPeriod).toHaveBeenCalled();
-  });
-
-  it('[WS5-UI-13] a11y: tombol final accessibilityLabel menyebut periode + kontainer konfirmasi role alert', async () => {
-    mockCan.mockReturnValue(true);
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Tutup Periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Lanjutkan tutup periode'));
-    });
-    const finalBtn = await screen.findByLabelText('Tutup periode Q1');
-    expect(finalBtn.props.accessibilityState?.disabled).toBe(false);
-    // Kontainer konfirmasi mengumumkan intent destruktif.
-    expect(screen.getByRole('alert')).toBeTruthy();
-  });
-
-  it('[WS5-UI-14] error E3 unauthorized → pesan inline apa adanya', async () => {
-    mockCan.mockReturnValue(true);
-    mockClosePeriod.mockRejectedValueOnce(new Error('Anda tidak berwenang mengelola Score Formula.'));
-    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
-    await act(async () => {
-      fireEvent.press(await screen.findByLabelText('Tutup Periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Lanjutkan tutup periode'));
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Tutup periode Q1'));
-    });
-    expect(await screen.findByText(/tidak berwenang/i)).toBeTruthy();
+    expect(await screen.findByLabelText('Finalisasi Periode & Peringkat')).toBeTruthy();
   });
 });

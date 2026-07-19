@@ -17,10 +17,14 @@ const mockAssignScoreFormula = jest.fn();
 const mockCreateScoreFormulaDraft = jest.fn();
 const mockUpdateFormulaVersionWeights = jest.fn();
 const mockClosePeriodSnapshot = jest.fn();
+const mockCalculatePeriodScores = jest.fn();
+const mockPreviewFinalization = jest.fn();
 
 const mockListMyScoreHistory = jest.fn();
 const mockListUserScoreHistory = jest.fn();
 jest.mock('@/lib/people-score', () => ({
+  calculatePeriodScores: (...a: unknown[]) => mockCalculatePeriodScores(...a),
+  previewFinalization: (...a: unknown[]) => mockPreviewFinalization(...a),
   closePeriodSnapshot: (...a: unknown[]) => mockClosePeriodSnapshot(...a),
   getActivePeriod: (...a: unknown[]) => mockGetActivePeriod(...a),
   getLatestClosedPeriod: (...a: unknown[]) => mockGetLatestClosedPeriod(...a),
@@ -41,8 +45,10 @@ jest.mock('@/lib/people-score', () => ({
 // eslint-disable-next-line import/first
 import {
   useActivePeriod,
+  useCalculatePeriodScores,
   useClosePeriod,
   useFormulaActions,
+  usePreviewFinalization,
   useLatestClosedPeriod,
   useMyScore,
   useMyScoreHistory,
@@ -75,6 +81,8 @@ beforeEach(() => {
   mockActivateScoreFormulaVersion.mockResolvedValue(undefined);
   mockAssignScoreFormula.mockResolvedValue('a1');
   mockClosePeriodSnapshot.mockResolvedValue(3);
+  mockCalculatePeriodScores.mockResolvedValue(5);
+  mockPreviewFinalization.mockResolvedValue({ eligibleUsers: 5, activeOverrides: 1 });
 });
 
 describe('useActivePeriod', () => {
@@ -405,5 +413,89 @@ describe('useClosePeriod — WS-5 tutup periode', () => {
     expect(keys).not.toContain(JSON.stringify({ queryKey: ['my_score_history'] }));
     expect(keys).not.toContain(JSON.stringify({ queryKey: ['user_score_history'] }));
     expect(spy).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('useCalculatePeriodScores — Fase 2 TDD plan (jembatan finalize)', () => {
+  it('[T-H-1] calculatePeriod(id) → calculatePeriodScores(id) & return int', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCalculatePeriodScores(), { wrapper });
+    let n: number | undefined;
+    await act(async () => {
+      n = await result.current.calculatePeriod('p1');
+    });
+    expect(mockCalculatePeriodScores).toHaveBeenCalledWith('p1');
+    expect(n).toBe(5);
+  });
+
+  it('[T-H-2] onSuccess invalidasi TEPAT [my_score],[user_score],[my_score_history],[user_score_history]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useCalculatePeriodScores(), { wrapper });
+    await act(async () => {
+      await result.current.calculatePeriod('p1');
+    });
+    const keys = spy.mock.calls.map((c) => JSON.stringify(c[0]));
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        JSON.stringify({ queryKey: ['my_score'] }),
+        JSON.stringify({ queryKey: ['user_score'] }),
+        JSON.stringify({ queryKey: ['my_score_history'] }),
+        JSON.stringify({ queryKey: ['user_score_history'] }),
+      ]),
+    );
+    // Negative: calculate TIDAK mengubah status periode maupun ranking → jangan invalidate.
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['active_period'] }));
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['latest_closed_period'] }));
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['ranking'] }));
+    expect(spy).toHaveBeenCalledTimes(4);
+  });
+
+  it('[T-H-3a] error E1 sudah ditutup → mutateAsync MELEMPAR + TIDAK invalidasi', async () => {
+    mockCalculatePeriodScores.mockRejectedValueOnce(
+      new Error('Periode ini sudah ditutup dan tidak bisa diubah.'),
+    );
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useCalculatePeriodScores(), { wrapper });
+    await expect(result.current.calculatePeriod('p1')).rejects.toThrow(/sudah ditutup/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('[T-H-3b] error E2 tidak ditemukan (cross-org) → mutateAsync MELEMPAR', async () => {
+    mockCalculatePeriodScores.mockRejectedValueOnce(new Error('Periode tidak ditemukan.'));
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCalculatePeriodScores(), { wrapper });
+    await expect(result.current.calculatePeriod('p1')).rejects.toThrow(/tidak ditemukan/);
+  });
+
+  it('[T-H-3c] error E3 unauthorized → melempar apa adanya', async () => {
+    mockCalculatePeriodScores.mockRejectedValueOnce(
+      new Error('Anda tidak berwenang mengelola Score Formula.'),
+    );
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useCalculatePeriodScores(), { wrapper });
+    await expect(result.current.calculatePeriod('p1')).rejects.toThrow(/tidak berwenang/);
+  });
+});
+
+describe('usePreviewFinalization — Fase 2 TDD plan', () => {
+  it('[T-H-4] enabled=true → query fires; return { eligibleUsers, activeOverrides }', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => usePreviewFinalization('p1'), { wrapper });
+    await waitFor(() =>
+      expect(result.current.preview).toEqual({ eligibleUsers: 5, activeOverrides: 1 }),
+    );
+    expect(mockPreviewFinalization).toHaveBeenCalledWith('p1');
+  });
+
+  it('[T-H-5] enabled=false ketika periodId undefined → tidak fetch', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => usePreviewFinalization(undefined), { wrapper });
+    // Beri jest kesempatan flush micro-task tanpa memicu fetch.
+    await act(async () => { await Promise.resolve(); });
+    expect(mockPreviewFinalization).not.toHaveBeenCalled();
+    expect(result.current.preview).toBeUndefined();
+    expect(result.current.isLoading).toBe(false);
   });
 });

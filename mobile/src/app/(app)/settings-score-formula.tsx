@@ -16,10 +16,9 @@ import {
   SkeletonCard,
   usePlaceholderColor,
 } from '@/components/ui';
-import { ClosePeriodModal } from '@/components/close-period-modal';
+import { FinalizePeriodModal } from '@/components/finalize-period-modal';
 import {
   useActivePeriod,
-  useClosePeriod,
   useFormulaActions,
   useScoreFormulaTemplates,
   useScoreFormulaVersions,
@@ -31,6 +30,7 @@ import {
   METRIC_LABEL,
   type FormulaCategory,
   type FormulaLevel,
+  type PeriodSnapshot,
   type ScoreFormulaVersion,
 } from '@/lib/people-score';
 
@@ -430,8 +430,11 @@ export default function SettingsScoreFormulaScreen() {
   const { isLoading: profileLoading, can } = useProfile();
   const { period, isLoading: periodLoading, isError: periodError, refetch: refetchPeriod } = useActivePeriod();
   const { templates } = useScoreFormulaTemplates();
-  const { closePeriod } = useClosePeriod();
-  const [showCloseModal, setShowCloseModal] = useState(false);
+  // Snapshot period saat modal dibuka (BUKAN `period` live dari hook). Setelah close sukses,
+  // useClosePeriod invalidasi ['active_period'] → `period` bisa jadi null di render berikutnya;
+  // kalau modal digate oleh `period` langsung, ia ter-unmount SEBELUM user sempat melihat state
+  // `done` (ditemukan via smoke test manual Fase 5 — race antara query refetch vs modal state).
+  const [finalizingPeriod, setFinalizingPeriod] = useState<PeriodSnapshot | null>(null);
 
   if (profileLoading) return <SkeletonCard />;
 
@@ -486,12 +489,13 @@ export default function SettingsScoreFormulaScreen() {
               <Text className="text-sm text-neutral-600 dark:text-neutral-300">
                 {period.period_name} · {period.period_start} – {period.period_end}
               </Text>
-              {/* WS-5: aksi tutup periode (buka dialog dua-langkah). Layar sudah digate
-                  manage_score_formula → tombol tak pernah tampil tanpa izin. */}
+              {/* Fase 4 (specs/score-ranking-finalization-tdd-plan.md): tombol memicu FinalizePeriodModal
+                  yang menjalankan calculate + close berurutan. Layar sudah digate manage_score_formula
+                  → tombol tak pernah tampil tanpa izin. Modal menangani sendiri error surface + retry. */}
               <Button
-                label="Tutup Periode"
+                label="Finalisasi Periode & Peringkat"
                 variant="secondary"
-                onPress={() => setShowCloseModal(true)}
+                onPress={() => setFinalizingPeriod(period)}
               />
             </View>
           ) : (
@@ -503,13 +507,11 @@ export default function SettingsScoreFormulaScreen() {
           )}
         </SectionCard>
 
-        {period ? (
-          <ClosePeriodModal
-            visible={showCloseModal}
-            period={period}
-            onConfirm={closePeriod}
-            onError={() => refetchPeriod()}
-            onClose={() => setShowCloseModal(false)}
+        {finalizingPeriod ? (
+          <FinalizePeriodModal
+            visible={!!finalizingPeriod}
+            period={finalizingPeriod}
+            onClose={() => setFinalizingPeriod(null)}
           />
         ) : null}
 
