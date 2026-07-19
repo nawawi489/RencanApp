@@ -1,4 +1,4 @@
--- 0076_activation_bypass_and_confidential_holes.sql
+-- 0077_activation_bypass_and_confidential_holes.sql
 --
 -- Dua P0 keamanan yang terlewat dari P0 handoff sebelumnya. Keduanya
 -- silent-exploitable (tidak melempar error, hanya menghilangkan proteksi
@@ -183,7 +183,7 @@ begin
     from pg_trigger
    where tgname like '%_guard_activation_bypass'
      and not tgisinternal;
-  raise notice '0076: activation-bypass triggers = % (expect 5: goals + strategies + initiatives + action_plans + tasks)', n_triggers;
+  raise notice '0077: activation-bypass triggers = % (expect 5: goals + strategies + initiatives + action_plans + tasks)', n_triggers;
 
   select count(*) into n_fns
     from pg_proc p
@@ -191,7 +191,7 @@ begin
    where n.nspname = 'public'
      and p.proname in ('can_access_goal','can_access_strategy','can_access_initiative')
      and pg_get_functiondef(p.oid) like '%confidential_access_rules%';
-  raise notice '0076: can_access_* dengan klausa confidential = % (expect 3)', n_fns;
+  raise notice '0077: can_access_* dengan klausa confidential = % (expect 3)', n_fns;
 end $$;
 
 commit;

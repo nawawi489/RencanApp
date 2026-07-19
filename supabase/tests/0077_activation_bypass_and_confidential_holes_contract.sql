@@ -1,4 +1,4 @@
--- Contract test: 0076_activation_bypass_and_confidential_holes
+-- Contract test: 0077_activation_bypass_and_confidential_holes
 -- Verifies:
 --   [BUG 1] activation-bypass trigger installed on all 5 tables + guards
 --           direct draft→active transitions via authenticated role.
