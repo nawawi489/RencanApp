@@ -33,6 +33,7 @@ import {
   listUserScoreHistory,
   openPeriodSnapshot,
   overrideUserScore,
+  previewFinalization,
   createScoreFormulaDraft,
   updateFormulaVersionWeights,
   upsertScoreFormulaVersion,
@@ -499,6 +500,97 @@ describe('calculatePeriodScores & closePeriodSnapshot', () => {
     const n = await closePeriodSnapshot('p1');
     expect(n).toBe(0);
     expect(typeof n).toBe('number');
+  });
+
+  // Fase 1 TDD plan (specs/score-ranking-finalization-tdd-plan.md) — calc error branches mirror WS5-L1..L4.
+  // Pesan server verified 0013:516 + 0039:39 ('mengelola Score Formula', BUKAN 'mengubah periode ini').
+  it('[T-DL-2a] calculatePeriodScores melempar E1 "sudah ditutup" apa adanya', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Periode ini sudah ditutup dan tidak bisa diubah.' },
+    });
+    await expect(calculatePeriodScores('p1')).rejects.toEqual({
+      message: 'Periode ini sudah ditutup dan tidak bisa diubah.',
+    });
+    expect(mockRpc).toHaveBeenCalledWith('calculate_period_scores', { p_period_id: 'p1' });
+  });
+  it('[T-DL-2b] calculatePeriodScores melempar E2 "tidak ditemukan" (cross-org/tak ada) apa adanya', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Periode tidak ditemukan.' } });
+    await expect(calculatePeriodScores('p1')).rejects.toEqual({ message: 'Periode tidak ditemukan.' });
+  });
+  it('[T-DL-2c] calculatePeriodScores melempar E3 unauthorized apa adanya', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Anda tidak berwenang mengelola Score Formula.' },
+    });
+    await expect(calculatePeriodScores('p1')).rejects.toEqual({
+      message: 'Anda tidak berwenang mengelola Score Formula.',
+    });
+  });
+  it('[T-DL-2d] calculatePeriodScores resolve number 0 saat tak ada staff (n=0 = sukses)', async () => {
+    mockRpc.mockResolvedValue({ data: 0, error: null });
+    const n = await calculatePeriodScores('p1');
+    expect(n).toBe(0);
+    expect(typeof n).toBe('number');
+  });
+});
+
+// ============================================================ previewFinalization (Fase 1 TDD plan)
+// Query builder untuk 2 count query berturut-turut (total is_current + subset result_kind='override').
+// Tidak ada preseden count-query di codebase — helper baru mirror makeQueryThenable
+// tapi resolve ke { data: null, count, error } shape.
+function makeCountThenable(result: { count: number | null; error: unknown }) {
+  const calls: Record<string, unknown[][]> = {};
+  const builder: Record<string, unknown> = {};
+  for (const m of ['select', 'eq', 'is']) {
+    builder[m] = jest.fn((...args: unknown[]) => {
+      (calls[m] ||= []).push(args);
+      return builder;
+    });
+  }
+  builder.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+    Promise.resolve({ data: null, count: result.count, error: result.error }).then(resolve, reject);
+  return { builder, calls };
+}
+
+describe('previewFinalization', () => {
+  it('[T-DL-3] sukses → return { eligibleUsers, activeOverrides } dari 2 count query', async () => {
+    const total = makeCountThenable({ count: 5, error: null });
+    const overrides = makeCountThenable({ count: 1, error: null });
+    mockFrom
+      .mockReturnValueOnce(total.builder)
+      .mockReturnValueOnce(overrides.builder);
+
+    const result = await previewFinalization('p1');
+    expect(result).toEqual({ eligibleUsers: 5, activeOverrides: 1 });
+    expect(mockFrom).toHaveBeenCalledWith('user_score_results');
+    expect(mockFrom).toHaveBeenCalledTimes(2);
+    // Total query: filter period_snapshot_id + is_current=true
+    expect(total.calls.eq).toEqual(
+      expect.arrayContaining([['period_snapshot_id', 'p1'], ['is_current', true]]),
+    );
+    // Override subset query: filter tambahan result_kind='override'
+    expect(overrides.calls.eq).toEqual(
+      expect.arrayContaining([
+        ['period_snapshot_id', 'p1'],
+        ['is_current', true],
+        ['result_kind', 'override'],
+      ]),
+    );
+  });
+
+  it('[T-DL-4] count 0 → return { 0, 0 } (bukan throw)', async () => {
+    const zero1 = makeCountThenable({ count: 0, error: null });
+    const zero2 = makeCountThenable({ count: 0, error: null });
+    mockFrom.mockReturnValueOnce(zero1.builder).mockReturnValueOnce(zero2.builder);
+    const result = await previewFinalization('p1');
+    expect(result).toEqual({ eligibleUsers: 0, activeOverrides: 0 });
+  });
+
+  it('[T-DL-5] count query error → throw dengan message persis', async () => {
+    const err = makeCountThenable({ count: null, error: { message: 'boom' } });
+    mockFrom.mockReturnValueOnce(err.builder);
+    await expect(previewFinalization('p1')).rejects.toEqual({ message: 'boom' });
   });
 });
 

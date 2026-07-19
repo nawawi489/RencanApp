@@ -370,6 +370,43 @@ export async function closePeriodSnapshot(periodId: string): Promise<number> {
   return data as number;
 }
 
+export type FinalizationPreview = {
+  eligibleUsers: number;
+  activeOverrides: number;
+};
+
+/**
+ * Pratinjau finalisasi periode (Fase 1 TDD plan · specs/score-ranking-finalization-bridge.md FR-DL-3).
+ * Menghitung: (a) jumlah baris `user_score_results.is_current=true` untuk period tsb (eligibleUsers),
+ * (b) subset dengan `result_kind='override'` (activeOverrides). Modal step 1 menampilkan angka ini
+ * sebelum konfirmasi (mencegah surprise N=0 pasca-aksi ireversibel; grill Product F-3/F-7).
+ *
+ * Dua query terpisah supaya mudah di-test isolated (helper makeCountThenable). RLS SELECT policy
+ * user_score_results (0071_fix_score_ranking_rls_policies) sudah menegakkan org + permission gate;
+ * user tanpa manage_score_formula akan melihat count=0 — konsisten dengan gate screen (defense-in-depth).
+ */
+export async function previewFinalization(periodId: string): Promise<FinalizationPreview> {
+  const total = await supabase
+    .from('user_score_results')
+    .select('id', { count: 'exact', head: true })
+    .eq('period_snapshot_id', periodId)
+    .eq('is_current', true);
+  if (total.error) throw total.error;
+
+  const overrides = await supabase
+    .from('user_score_results')
+    .select('id', { count: 'exact', head: true })
+    .eq('period_snapshot_id', periodId)
+    .eq('is_current', true)
+    .eq('result_kind', 'override');
+  if (overrides.error) throw overrides.error;
+
+  return {
+    eligibleUsers: total.count ?? 0,
+    activeOverrides: overrides.count ?? 0,
+  };
+}
+
 export type OverrideUserScoreInput = {
   periodId: string;
   userId: string;

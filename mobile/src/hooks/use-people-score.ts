@@ -9,10 +9,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   activateScoreFormulaVersion,
+  calculatePeriodScores,
   closePeriodSnapshot,
   createScoreFormulaDraft,
+  previewFinalization,
   updateFormulaVersionWeights,
   type CreateScoreFormulaDraftInput,
+  type FinalizationPreview,
   type UpdateFormulaVersionWeightsInput,
   assignScoreFormula,
   getActivePeriod,
@@ -188,6 +191,51 @@ export function useClosePeriod() {
   return {
     closePeriod: (periodId: string) => m.mutateAsync(periodId),
     isPending: m.isPending,
+  };
+}
+
+/**
+ * Fase 2 TDD plan (specs/score-ranking-finalization-tdd-plan.md) — hitung skor per user
+ * untuk periode aktif. Orchestrator FinalizePeriodModal memanggil ini SEBELUM useClosePeriod;
+ * standalone call juga aman (calc idempotent + advisory lock 0078). onSuccess invalidate TEPAT
+ * 4 key skor (bukan ranking/active/latest — calc tidak mengubah status period maupun ranking_snapshots).
+ * Bila caller masa depan pakai standalone dan butuh ranking refresh, caller invalidasi manual.
+ */
+export function useCalculatePeriodScores() {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (periodId: string) => calculatePeriodScores(periodId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my_score'] });
+      qc.invalidateQueries({ queryKey: ['user_score'] });
+      qc.invalidateQueries({ queryKey: ['my_score_history'] });
+      qc.invalidateQueries({ queryKey: ['user_score_history'] });
+    },
+  });
+  return {
+    calculatePeriod: (periodId: string) => m.mutateAsync(periodId),
+    isPending: m.isPending,
+  };
+}
+
+/**
+ * Fase 2 TDD plan — pratinjau angka pre-flight untuk modal step 1 (FR-DL-3).
+ * enabled=!!periodId supaya tidak fetch saat modal belum tahu period. staleTime=0 + gcTime=0
+ * agar setiap kali modal dibuka, angka segar (bukan cached stale).
+ */
+export function usePreviewFinalization(periodId: string | undefined) {
+  const q = useQuery({
+    queryKey: ['finalize_preview', periodId],
+    queryFn: () => previewFinalization(periodId as string),
+    enabled: !!periodId,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  return {
+    preview: q.data as FinalizationPreview | undefined,
+    isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
   };
 }
 
