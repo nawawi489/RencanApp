@@ -36,18 +36,16 @@ pre-0045 tests hardcode.
 2. The `initiatives.strategy_id` cluster (`0018`, `0040`, `ws3b`, `fase3`) shares
    one fix: build a valid `goal→strategy→initiative` chain in each scenario.
 
-## Re-quarantined — waiting for PR #105 (migration 0072) to land on staging
+## Un-quarantined (2026-07-19) — PR #107 merged, migration 0076 live
 
-- **`0017_permission_settings_contract`** — re-quarantined (`.wip.sql`) so the
-  CI gate goes green. The three regressions it catches (table write grants,
-  self-modification guard, invalid-key message) are fixed by
-  `0072_restore_user_permissions_hardening.sql` on branch
-  `claude/elegant-vaughan-e76148` (PR #105 → staging). **Un-quarantine this
-  immediately after PR #105 merges to staging and this branch rebases.**
-  Pre-existing message drift: test D_key asserts `%tidak valid%` (0017
-  original); 0041 changed the wording to `'Permission tidak dikenal'`; the
-  PR #105 fix restores the 0017 wording but keeps the key-name suffix — needs
-  separate reconciliation if the project standardises on one style.
+- **`0017_permission_settings_contract`** — un-quarantined. PR #107 (squash-
+  merged PR #105's migration as `0076_restore_user_permissions_hardening.sql`)
+  landed on staging 2026-07-19. The three regressions (table write grants,
+  self-modification guard, invalid-key message) are now fixed in the migration
+  chain. **Pre-existing message drift**: test D_key asserts `%tidak valid%`
+  (0017 original); 0041 changed the wording to `'Permission tidak dikenal'`;
+  the 0076 fix restores the 0017 wording but keeps the key-name suffix —
+  needs separate reconciliation if the project standardises on one style.
 
 ## Migration renumbering (2026-07-18) — collides with PR #105
 
@@ -78,13 +76,11 @@ file to `0075` (unrelated content, no ordering constraint beyond "after
 cross-references to that file were updated from the old `0059_` name).
 Current highest migration on this branch: **0075**.
 
-**⚠️ PR #105** (`claude/elegant-vaughan-e76148`, adds
-`0072_restore_user_permissions_hardening.sql`) will collide with this branch's
-`0072_fix_submit_task_review_notif.sql` once both land on staging. That PR's
-migration must be renumbered to the next free slot at merge time (**0076 or
-higher — re-check the actual highest migration number on staging then**,
-since more unrelated migrations may land on staging before this merges)
-before or during its merge.
+**✅ PR #107** (replacement for closed #105) merged to staging 2026-07-19.
+Its `0072_restore_user_permissions_hardening.sql` collided with this branch's
+`0072_fix_submit_task_review_notif.sql` as predicted — resolved by renaming
+the incoming migration to `0076_restore_user_permissions_hardening.sql` on
+this branch. Current highest migration: **0076**.
 
 ## New failures surfaced by the first fresh-bootstrap CI run (2026-07-18)
 
