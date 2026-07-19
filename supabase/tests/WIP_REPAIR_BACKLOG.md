@@ -36,17 +36,18 @@ pre-0045 tests hardcode.
 2. The `initiatives.strategy_id` cluster (`0018`, `0040`, `ws3b`, `fase3`) shares
    one fix: build a valid `goal→strategy→initiative` chain in each scenario.
 
-## Un-quarantined — depends on the 0072 permission-hardening fix
+## Re-quarantined — waiting for PR #105 (migration 0072) to land on staging
 
-- **`0017_permission_settings_contract`** — un-quarantined; the three regressions
-  it catches (table write grants, self-modification guard, invalid-key message)
-  are fixed by `0072_restore_user_permissions_hardening.sql` on branch
-  `claude/elegant-vaughan-e76148` (PR #105 → staging). This test will fail
-  until that fix lands in the migration chain. **Pre-existing message drift**:
-  test D_key asserts `%tidak valid%` (0017 original); 0041 changed the wording
-  to `'Permission tidak dikenal'`; the PR #105 fix restores the 0017 wording
-  but keeps the key-name suffix — needs separate reconciliation if the project
-  standardises on one style.
+- **`0017_permission_settings_contract`** — re-quarantined (`.wip.sql`) so the
+  CI gate goes green. The three regressions it catches (table write grants,
+  self-modification guard, invalid-key message) are fixed by
+  `0072_restore_user_permissions_hardening.sql` on branch
+  `claude/elegant-vaughan-e76148` (PR #105 → staging). **Un-quarantine this
+  immediately after PR #105 merges to staging and this branch rebases.**
+  Pre-existing message drift: test D_key asserts `%tidak valid%` (0017
+  original); 0041 changed the wording to `'Permission tidak dikenal'`; the
+  PR #105 fix restores the 0017 wording but keeps the key-name suffix — needs
+  separate reconciliation if the project standardises on one style.
 
 ## Migration renumbering (2026-07-18) — collides with PR #105
 
