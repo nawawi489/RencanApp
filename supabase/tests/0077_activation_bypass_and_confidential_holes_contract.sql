@@ -4,127 +4,177 @@
 --           direct draft→active transitions via authenticated role.
 --   [BUG 2] can_access_goal/strategy/initiative contains klausa
 --           confidential_access_rules (function definition text).
+--
+-- Pola: begin; do $$ ... raise exception on fail ... end $$; rollback;
+-- No pgTAP — CI runner uses ON_ERROR_STOP=1 (exception = FAIL, no exception = PASS).
+
+-- ============================================================ TEST 1: structural checks
 begin;
-select plan(13);
-
--- ---------------------------------------------------------------- BUG 1: triggers exist on 5 tables
-select has_trigger('public', 'goals',        'goals_guard_activation_bypass',        'T1a: trigger on goals');
-select has_trigger('public', 'strategies',   'strategies_guard_activation_bypass',   'T1b: trigger on strategies');
-select has_trigger('public', 'initiatives',  'initiatives_guard_activation_bypass',  'T1c: trigger on initiatives');
-select has_trigger('public', 'action_plans', 'action_plans_guard_activation_bypass', 'T1d: trigger on action_plans');
-select has_trigger('public', 'tasks',        'tasks_guard_activation_bypass',        'T1e: trigger on tasks');
-
--- ---------------------------------------------------------------- BUG 1: guard function exists + right shape
-select has_function('public', 'tg_guard_activation_direct_update',
-  'T2: guard function exists');
-
--- Critical: trigger MUST be SECURITY INVOKER, not DEFINER. DEFINER akan
--- flip current_user ke owner sehingga role-check gagal & trigger tak
--- pernah blok bypass — regresi silent.
-select is(
-  (select prosecdef from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = 'tg_guard_activation_direct_update'),
-  false,
-  'T3: guard function is SECURITY INVOKER (NOT DEFINER — DEFINER would flip current_user and break role check)'
-);
-
--- ---------------------------------------------------------------- BUG 2: 3 can_access_* now reference confidential rules
-select ok(
-  (select pg_get_functiondef(p.oid) from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname = 'can_access_goal')
-  like '%confidential_access_rules%',
-  'T4: can_access_goal references confidential_access_rules'
-);
-
-select ok(
-  (select pg_get_functiondef(p.oid) from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname = 'can_access_strategy')
-  like '%confidential_access_rules%',
-  'T5: can_access_strategy references confidential_access_rules'
-);
-
-select ok(
-  (select pg_get_functiondef(p.oid) from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname = 'can_access_initiative')
-  like '%confidential_access_rules%',
-  'T6: can_access_initiative references confidential_access_rules'
-);
-
--- ---------------------------------------------------------------- BUG 1 behavioral: bypass truly blocked
--- Butuh user real dari seed supaya RLS lolos & trigger sempat firing.
--- Ambil profil pertama yang ada di DB; jika seed kosong, skip (unknown-user
--- akan lolos RLS = null match; kita mau real test).
 do $$
-declare v_uid uuid; v_org uuid;
+declare
+  v_trigger_count int;
+  v_fn_exists bool;
+  v_secdef bool;
+  v_conf_goal bool;
+  v_conf_strategy bool;
+  v_conf_initiative bool;
+  fails text := '';
+begin
+  -- T1: 5 triggers exist
+  select count(*) into v_trigger_count
+    from pg_trigger
+   where tgname in (
+     'goals_guard_activation_bypass',
+     'strategies_guard_activation_bypass',
+     'initiatives_guard_activation_bypass',
+     'action_plans_guard_activation_bypass',
+     'tasks_guard_activation_bypass'
+   ) and not tgisinternal;
+  if v_trigger_count <> 5 then
+    fails := fails || 'triggers_exist(' || v_trigger_count || '/5); ';
+  end if;
+
+  -- T2: guard function exists
+  select exists(
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'tg_guard_activation_direct_update'
+  ) into v_fn_exists;
+  if not v_fn_exists then
+    fails := fails || 'guard_fn_missing; ';
+  end if;
+
+  -- T3: guard function is SECURITY INVOKER (prosecdef = false)
+  select prosecdef into v_secdef
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'tg_guard_activation_direct_update';
+  if v_secdef is distinct from false then
+    fails := fails || 'guard_fn_is_SECURITY_DEFINER(MUST_BE_INVOKER); ';
+  end if;
+
+  -- T4-T6: can_access_* reference confidential_access_rules
+  select pg_get_functiondef(p.oid) like '%confidential_access_rules%' into v_conf_goal
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'can_access_goal';
+  if not coalesce(v_conf_goal, false) then
+    fails := fails || 'can_access_goal_missing_confidential; ';
+  end if;
+
+  select pg_get_functiondef(p.oid) like '%confidential_access_rules%' into v_conf_strategy
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'can_access_strategy';
+  if not coalesce(v_conf_strategy, false) then
+    fails := fails || 'can_access_strategy_missing_confidential; ';
+  end if;
+
+  select pg_get_functiondef(p.oid) like '%confidential_access_rules%' into v_conf_initiative
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'can_access_initiative';
+  if not coalesce(v_conf_initiative, false) then
+    fails := fails || 'can_access_initiative_missing_confidential; ';
+  end if;
+
+  if fails <> '' then
+    raise exception 'TEST1 structural checks FAIL: %', fails;
+  end if;
+  raise notice 'TEST1 structural (5 triggers + fn INVOKER + 3 confidential clauses) PASS';
+end $$;
+rollback;
+
+-- ============================================================ TEST 2: behavioral — bypass blocked + archive allowed
+begin;
+do $$
+declare
+  v_uid uuid; v_org uuid;
+  v_blocked bool := false;
+  v_errcode text;
+  fails text := '';
 begin
   select id, organization_id into v_uid, v_org
     from public.profiles order by id limit 1;
   if v_uid is null then
-    raise notice 'SKIP behavioral tests: no seed profile';
+    raise notice 'TEST2 SKIP: no seed profile';
     return;
   end if;
 
   insert into public.goals (id, organization_id, name, status, pic_id, created_by)
-  values ('99999999-9999-9999-9999-000000000076', v_org, 'test-0076-bypass',
+  values ('99999999-9999-9999-9999-000000000077', v_org, 'test-0077-bypass',
           'draft', v_uid, v_uid);
 
-  set local role authenticated;
+  -- Simulate authenticated role (PostgREST direct call)
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_uid::text, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- T2a: direct draft→active MUST raise 42501
+  begin
+    update public.goals set status = 'active'
+      where id = '99999999-9999-9999-9999-000000000077';
+    fails := fails || 'bypass_not_blocked; ';
+  exception when others then
+    get stacked diagnostics v_errcode = returned_sqlstate;
+    if v_errcode <> '42501' then
+      fails := fails || 'wrong_errcode(' || v_errcode || '); ';
+    end if;
+    v_blocked := true;
+  end;
+
+  -- T2b: direct draft→archived MUST succeed
+  begin
+    update public.goals set status = 'archived'
+      where id = '99999999-9999-9999-9999-000000000077';
+  exception when others then
+    fails := fails || 'archive_blocked(' || sqlerrm || '); ';
+  end;
+
+  execute 'reset role';
+
+  if fails <> '' then
+    raise exception 'TEST2 behavioral FAIL: %', fails;
+  end if;
+  raise notice 'TEST2 behavioral (bypass→42501, archive→ok) PASS';
 end $$;
+rollback;
 
--- T7: direct draft→active blocked
-select throws_ok(
-  $q$ update public.goals set status = 'active'
-        where id = '99999999-9999-9999-9999-000000000076' $q$,
-  '42501',
-  null,
-  'T7: direct draft→active from authenticated raises 42501'
-);
-
--- T8: draft→archived still allowed (client can archive draft cards)
-select lives_ok(
-  $q$ update public.goals set status = 'archived'
-        where id = '99999999-9999-9999-9999-000000000076' $q$,
-  'T8: direct draft→archived from authenticated allowed'
-);
-
-reset role;
-
--- T9: SECURITY DEFINER RPC (activate_goal) bypasses trigger — legit path works
+-- ============================================================ TEST 3: SECURITY DEFINER RPC bypasses trigger (legit path)
+begin;
 do $$
-declare v_uid uuid; v_org uuid;
+declare
+  v_uid uuid; v_org uuid;
+  fails text := '';
 begin
   select id, organization_id into v_uid, v_org
     from public.profiles order by id limit 1;
+  if v_uid is null then
+    raise notice 'TEST3 SKIP: no seed profile';
+    return;
+  end if;
 
-  insert into public.strategies (id, organization_id, goal_id, name, status, pic_id, created_by)
-  select '88888888-8888-8888-8888-000000000076', v_org,
-         '99999999-9999-9999-9999-000000000076', 'test-0076-kpi', 'draft', v_uid, v_uid
-   where v_uid is not null
-     and exists (select 1 from public.goals where id = '99999999-9999-9999-9999-000000000076');
+  -- Create goal in draft with required fields for activate_goal
+  insert into public.goals (id, organization_id, name, status, pic_id, created_by,
+                            period_start, period_end, target_value)
+  values ('99999999-9999-9999-9999-000000000078', v_org, 'test-0077-rpc',
+          'draft', v_uid, v_uid, '2026-01-01', '2026-12-31', 'Rp 1M');
 
-  -- Reset goal ke draft (T8 bikin archived) supaya activate_goal valid.
-  update public.goals
-    set status = 'draft',
-        period_start = '2026-01-01', period_end = '2026-12-31',
-        target_value = 'Rp 1M'
-    where id = '99999999-9999-9999-9999-000000000076';
+  -- Create a KPI Area (activate_goal requires ≥1)
+  insert into public.kpi_areas (organization_id, goal_id, name, created_by)
+  values (v_org, '99999999-9999-9999-9999-000000000078', 'KPI-test-0077', v_uid);
 
-  set local role authenticated;
+  -- Call as authenticated (activate_goal is SECURITY DEFINER → runs as postgres inside)
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_uid::text, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  begin
+    perform public.activate_goal('99999999-9999-9999-9999-000000000078'::uuid);
+  exception when others then
+    fails := fails || 'activate_goal_failed(' || sqlerrm || '); ';
+  end;
+
+  execute 'reset role';
+
+  if fails <> '' then
+    raise exception 'TEST3 RPC bypass FAIL: %', fails;
+  end if;
+  raise notice 'TEST3 legitimate activate_goal RPC bypasses trigger PASS';
 end $$;
-
-select lives_ok(
-  $q$ select public.activate_goal('99999999-9999-9999-9999-000000000076'::uuid) $q$,
-  'T9: legitimate activate_goal RPC bypasses trigger (SECURITY DEFINER = postgres owner)'
-);
-
-reset role;
-
-select * from finish();
 rollback;
