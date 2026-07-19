@@ -91,10 +91,10 @@ describe('initSentry', () => {
     expect(result).not.toBeNull();
   });
 
-  it('memakai environment dari EXPO_PUBLIactionPlanP_ENV bila diset', () => {
+  it('memakai environment dari EXPO_PUBLIC_APP_ENV bila diset', () => {
     const sentry = mockSentry();
     initSentry({
-      env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1', EXPO_PUBLIactionPlanP_ENV: 'staging' },
+      env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1', EXPO_PUBLIC_APP_ENV: 'staging' },
       sentry,
     });
     const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
@@ -104,7 +104,7 @@ describe('initSentry', () => {
   it('memakai sampling konservatif di produksi (tracesSampleRate < 1)', () => {
     const sentry = mockSentry();
     initSentry({
-      env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1', EXPO_PUBLIactionPlanP_ENV: 'production' },
+      env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1', EXPO_PUBLIC_APP_ENV: 'production' },
       sentry,
     });
     const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
@@ -119,7 +119,7 @@ describe('initSentry', () => {
       initSentry({
         env: {
           EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
-          EXPO_PUBLIactionPlanP_ENV: 'production',
+          EXPO_PUBLIC_APP_ENV: 'production',
           EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: '0.5',
         },
         sentry,
@@ -133,7 +133,7 @@ describe('initSentry', () => {
       initSentry({
         env: {
           EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
-          EXPO_PUBLIactionPlanP_ENV: 'production',
+          EXPO_PUBLIC_APP_ENV: 'production',
           EXPO_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE: '0',
         },
         sentry,
@@ -152,7 +152,7 @@ describe('initSentry', () => {
       initSentry({
         env: {
           EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
-          EXPO_PUBLIactionPlanP_ENV: 'production',
+          EXPO_PUBLIC_APP_ENV: 'production',
           EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: raw,
         },
         sentry,
@@ -168,7 +168,7 @@ describe('initSentry', () => {
       initSentry({
         env: {
           EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
-          EXPO_PUBLIactionPlanP_ENV: 'development',
+          EXPO_PUBLIC_APP_ENV: 'development',
           EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: '0',
         },
         sentry,

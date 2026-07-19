@@ -93,13 +93,26 @@ migrations against a genuinely empty database before this CI job existed.
 | File | Rot class | Root cause |
 |---|---|---|
 | `0063_push_infrastructure_contract` | infra/environment parity | test `z2` (schema-net USAGE guardrail) fails on local/CI: `0063_push_infrastructure.sql`'s `revoke usage on schema net from public, authenticated, anon;` silently no-ops on Supabase LOCAL (the `net` schema is owned by `supabase_admin`; migrations run as `postgres`, not superuser, locally) and only actually takes effect on Supabase HOSTED. The migration's own comment (lines 409-414) already documents this with a manual `docker exec -U supabase_admin` workaround that was never automated. Test execution stops at `z2` (`ON_ERROR_STOP`), so `z3`-`z6` (vault secrets, cron job config) are **unverified** against a fresh bootstrap — the same migration's `vault.create_secret requires supabase_admin on local` comment suggests `z3` may have an identical gap |
-| `0073_strategy_template_crud_contract` | test-infra gap | written in pgTAP style (`select plan(10)`), but the `pgtap` extension is not enabled anywhere in `supabase/config.toml` or in a fresh `supabase start` bootstrap — `plan(integer)` does not exist. May never have run to completion in any environment this repo controls |
-
 **Repair priority**: `0063_push_infrastructure_contract`'s finding is
 security-adjacent (an HTTP-egress guardrail not actually enforced on
 local/CI) even though the author's comment suggests hosted is fine — worth
 confirming hosted staging/prod really has the guardrail active before
-treating this as low-urgency. `0073_strategy_template_crud_contract` is a
-test-authoring/infra gap only (enable `pgtap` in config, or rewrite to the
-`do $$ ... raise exception $$` pattern every other contract in this suite
-uses) — no known runtime security implication.
+treating this as low-urgency.
+
+## Un-quarantined (2026-07-19) — `0073_strategy_template_crud_contract` repaired
+
+- **`0073_strategy_template_crud_contract`** — un-quarantined (P0-5). Rewritten
+  from the pgTAP draft into the extension-free `do $$ ... raise exception $$ /
+  rollback` pattern the rest of the suite uses, so it now runs under
+  `run-db-contract-tests.sh` (no `pgtap` dependency). Beyond restoring the
+  original structural checks (org column, is_active default, 4 policies, label
+  rename), it adds the **behavioural** cross-tenant proofs the pgTAP version
+  lacked — the whole reason 0073 replaced the withdrawn 0061 draft:
+  - DB-4: CEO of org A cannot DELETE org B's template (the headline hole).
+  - DB-5: cross-org UPDATE blocked + cross-org SELECT invisible.
+  - DB-6: same-org DELETE still works (guard does not over-block).
+  - DB-7: `apply_goal_template` (SECURITY DEFINER) does not seed cross-org
+    templates.
+  Verified 7/7 PASS against a fixtures-seeded local DB, and validated with a
+  negative control: reproducing the full 0061 draft (SELECT `using(true)` +
+  DELETE without org scope) makes DB-4 fail as designed.

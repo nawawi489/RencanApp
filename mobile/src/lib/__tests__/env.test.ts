@@ -46,4 +46,45 @@ describe('env guard (AC-CFG01-3)', () => {
       }),
     ).not.toThrow();
   });
+
+  // Guard placeholder (P3-F): nilai template lolos check "kosong" tapi menunjuk host fiktif.
+  it('[4] throw saat URL masih placeholder REPLACE (profil production eas.json belum di-wire)', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://REPLACE-prod-project-ref.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).toThrow(/placeholder/i);
+  });
+
+  it('[5] throw saat anon key masih placeholder REPLACE', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://real-project-ref.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'REPLACE_PROD_ANON_KEY';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).toThrow(/placeholder/i);
+  });
+
+  it('[6] throw saat URL masih memakai angle-bracket template <prod-project-ref>', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://<prod-project-ref>.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).toThrow(/placeholder/i);
+  });
+
+  it('[7] tidak throw untuk nilai staging asli (sb_publishable_ + host nyata)', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://fhnqwytqprsptjshoxfn.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_X2vs--I2zijaTf4UXPX1Aw_ytcaggRq';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).not.toThrow();
+  });
 });

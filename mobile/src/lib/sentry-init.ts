@@ -23,7 +23,7 @@ const PROD_TRACES_SAMPLE_RATE = 0.1;
 const PROD_PROFILES_SAMPLE_RATE = 0;
 
 function resolveEnvironment(env: Record<string, string | undefined>): string {
-  if (env.EXPO_PUBLIactionPlanP_ENV) return env.EXPO_PUBLIactionPlanP_ENV;
+  if (env.EXPO_PUBLIC_APP_ENV) return env.EXPO_PUBLIC_APP_ENV;
   // __DEV__ hanya ada di runtime RN/Metro; di jest env-nya tidak ada. Fallback aman.
   const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
   return isDev ? 'development' : 'production';
