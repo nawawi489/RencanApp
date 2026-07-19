@@ -23,6 +23,8 @@ import {
 } from '@/lib/cards';
 import { listTeams } from '@/lib/org-structure';
 import { guardActivationFields } from '@/lib/activation-check';
+import { useProfile } from '@/hooks/use-profile';
+// use-profile provides orgId at component level below
 
 // ---------- UI-S-ID2 — Ruang Eksekusi & Tim/Akses Otomatis ----------
 type ExecCounts = {
@@ -197,6 +199,7 @@ function TaskRow({ item, onPress }: { item: TaskWithPeople; onPress: () => void 
 export function LiveActionPlanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { profile } = useProfile();
   const qc = useQueryClient();
 
   const actionPlanQ = useQuery({ queryKey: ['action_plan', id], queryFn: () => getActionPlan(id) });
@@ -230,8 +233,9 @@ export function LiveActionPlanDetailScreen() {
   );
   // WSA-08 §14.4 — CTA "+ Tambah" dihapus; tambah Tugas hanya dari tree Workspace.
 
-  function handleActivate() {
-    if (action_plan && guardActivationFields('action_plan', action_plan)) return;
+  async function handleActivate() {
+    const orgId = profile?.organization_id ?? '';
+    if (action_plan && (await guardActivationFields(orgId, 'action_plan', action_plan))) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Tugas',
       onAddChild: () => router.push(`/task/new?actionPlanId=${id}` as Href),

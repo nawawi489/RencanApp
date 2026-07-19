@@ -199,36 +199,11 @@ describe('settings-confidential-access', () => {
   });
 });
 
-describe('settings-card-completion-rule', () => {
-  it('[F8-UI-23] tanpa permission → akses ditolak', async () => {
-    mockCan.mockReturnValue(false);
-    await render(<SettingsCardCompletionRuleScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
-  });
-
-  it('[F8-UI-24] submit memanggil upsertSettings dengan key whitelist valid', async () => {
-    mockCan.mockReturnValue(true);
-    await render(<SettingsCardCompletionRuleScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByLabelText('Simpan Aturan'));
-    await waitFor(() =>
-      expect(mockUpsertSettings).toHaveBeenCalledWith('card_completion_rule_task', expect.any(Object)),
-    );
-  });
-});
-
-describe('settings-card-guidance', () => {
-  it('[F8-UI-28] submit memanggil upsertSettings key card_guidance_*', async () => {
-    mockCan.mockReturnValue(true);
-    await render(<SettingsCardGuidanceScreen />, { wrapper: wrapper() });
-    const input = screen.getByLabelText('Keterangan');
-    fireEvent.changeText(input, 'panduan goal');
-    await waitFor(() => expect(input.props.value).toBe('panduan goal'));
-    fireEvent.press(screen.getByLabelText('Simpan Keterangan'));
-    await waitFor(() =>
-      expect(mockUpsertSettings).toHaveBeenCalledWith('card_guidance_goal', expect.objectContaining({ body: 'panduan goal' })),
-    );
-  });
-});
+// F8-UI-23/24/28: SUPERSEDED by Wave 3 tests (migration 0078 pivot ke tabel dedicated):
+// - src/app/(app)/__tests__/settings-card-completion-rule-screen.test.tsx (5 tests)
+// - src/app/(app)/__tests__/settings-card-guidance-screen.test.tsx (4 tests)
+// Legacy `upsertSettings` untuk kedua screen dihapus per spec settings-consumers §4.7.
+// Blocks di sini dihapus untuk menghindari coverage ganda + false-negative.
 
 describe('settings-notifications-rule', () => {
   it('[F8-UI-26] submit key valid; RPC reject → pesan error inline', async () => {

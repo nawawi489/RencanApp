@@ -61,6 +61,7 @@ const DRAFT_INITIATIVE = {
   initiative_id: 's1',
   pic_id: 'u1',
   target_result: 'naik 20%',
+  team_id: 't1', // locked base per 0078 spec (action_plan)
   description: null,
   period_start: '2026-01-01',
   period_end: '2026-03-31',
@@ -113,7 +114,9 @@ describe('ActionPlanDetailScreen — MBR', () => {
     });
     await render(<ActionPlanDetailScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByText('Aktifkan Rencana Aksi'));
-    expect((Alert.alert as jest.Mock).mock.calls[0][0]).toBe('Tidak Dapat Melanjutkan');
+    await waitFor(() => {
+      expect((Alert.alert as jest.Mock).mock.calls[0]?.[0]).toBe('Tidak Dapat Melanjutkan');
+    });
     expect(mockActivateActionPlan).not.toHaveBeenCalled();
   });
 
