@@ -204,4 +204,21 @@ describe('AuthProvider — signOut', () => {
     });
     expect(qc.getQueryData(['goals'])).toBeUndefined();
   });
+
+  // AC-14 regression pin (Wave 5.2, spec settings-consumers §5.1):
+  // queryClient.clear() must also evict ['card-rules', ...] entries to prevent
+  // cross-org contamination when a multi-org user signs out + signs in as another org.
+  // If a future refactor drops .clear() or narrows it, this test tersandung.
+  it('[AC-14] card-rules cache dihapus di signOut (cross-org contamination guard)', async () => {
+    const { qc, wrapper } = makeWrapper();
+    qc.setQueryData(['card-rules', 'completion', 'org-A', 'goal'], { requiredFields: ['reason'] });
+    qc.setQueryData(['card-rules', 'guidance', 'org-A', 'initiative'], { title: 't', body: 'b' });
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.initializing).toBe(false));
+    await act(async () => {
+      await result.current.signOut();
+    });
+    expect(qc.getQueryData(['card-rules', 'completion', 'org-A', 'goal'])).toBeUndefined();
+    expect(qc.getQueryData(['card-rules', 'guidance', 'org-A', 'initiative'])).toBeUndefined();
+  });
 });

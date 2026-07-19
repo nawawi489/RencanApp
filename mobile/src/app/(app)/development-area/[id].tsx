@@ -29,6 +29,7 @@ import type { ProblemStatement } from '@/lib/problem-statements';
 import { ratioDoneOfChildren } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
+import { useProfile } from '@/hooks/use-profile';
 
 /** UI-S-DA2 — Progress (Problem Statement selesai), jumlah Problem Statement, jumlah Rencana Aksi turunan. */
 function DevAreaSummaryStrip({
@@ -69,6 +70,7 @@ function DevAreaSummaryStrip({
 export function LiveDevelopmentAreaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { profile } = useProfile();
   const qc = useQueryClient();
 
   const devAreaQ = useQuery({
@@ -112,8 +114,9 @@ export function LiveDevelopmentAreaDetailScreen() {
   const devArea = devAreaQ.data;
   // WSA-08 §14.4 — CTA "+ Tambah Problem Statement" dihapus; tambah turunan hanya dari tree.
 
-  function handleActivate() {
-    if (devArea && guardActivationFields('development_area', devArea)) return;
+  async function handleActivate() {
+    const orgId = profile?.organization_id ?? '';
+    if (devArea && (await guardActivationFields(orgId, 'development_area', devArea))) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Problem Statement',
       onAddChild: () => router.push(`/problem-statement/new?developmentAreaId=${id}` as Href),

@@ -15,12 +15,14 @@ import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateInitiative, getInitiative } from '@/lib/initiatives';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
+import { useProfile } from '@/hooks/use-profile';
 
 export function LiveInitiativeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
 
+  const { profile } = useProfile();
   const initiativeQ = useQuery({ queryKey: ['initiative', id], queryFn: () => getInitiative(id) });
   const {
     action_plans,
@@ -51,8 +53,9 @@ export function LiveInitiativeDetailScreen() {
   const initiative = initiativeQ.data;
   // WSA-08 §14.4 — CTA "+ Tambah Rencana Aksi" dihapus; tambah turunan hanya dari tree Workspace.
 
-  function handleActivate() {
-    if (initiative && guardActivationFields('initiative', initiative)) return;
+  async function handleActivate() {
+    const orgId = profile?.organization_id ?? '';
+    if (initiative && (await guardActivationFields(orgId, 'initiative', initiative))) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Rencana Aksi',
       onAddChild: () => router.push(`/action-plan/new?initiativeId=${id}`),

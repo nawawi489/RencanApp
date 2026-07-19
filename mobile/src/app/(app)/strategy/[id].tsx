@@ -162,6 +162,7 @@ export function LiveStrategyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const { profile } = useProfile();
 
   const strategyQ = useQuery({ queryKey: ['strategy', id], queryFn: () => getStrategy(id) });
   const { progressOf, measuredOf } = useCardProgress([id]);
@@ -208,8 +209,9 @@ export function LiveStrategyDetailScreen() {
   const { person: currentPic } = usePerson(strategy?.pic_id);
   // WSA-08 §14.4 — CTA "+ Tambah Inisiatif" dihapus; tambah turunan hanya dari tree Workspace.
 
-  function handleActivate() {
-    if (strategy && guardActivationFields('strategy', strategy)) return;
+  async function handleActivate() {
+    const orgId = profile?.organization_id ?? '';
+    if (strategy && (await guardActivationFields(orgId, 'strategy', strategy))) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Inisiatif',
       onAddChild: () => router.push(`/action-plan/new?strategyId=${id}` as Href),

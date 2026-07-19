@@ -11,6 +11,7 @@ import { useCardProgress, useGoal, useGoalActions, useStrategies } from '@/hooks
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import { childrenSublabel, measuredStrategiesSublabel, ratioActiveOfChildren, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
 import { guardActivationFields } from '@/lib/activation-check';
+import { useProfile } from '@/hooks/use-profile';
 import { alertFriendlyError } from '@/lib/errors';
 
 export function LiveGoalDetailScreen() {
@@ -20,6 +21,8 @@ export function LiveGoalDetailScreen() {
   const kpiQ = useStrategies(id);
   const { activate, restore, activatePending, restorePending } = useGoalActions();
   const { progressOf, measuredOf } = useCardProgress([id]);
+  const { profile } = useProfile();
+  const orgId = profile?.organization_id ?? '';
   // WSA-08 §14.4 — CTA "+ Tambah" dihapus dari detail page; tambah turunan HANYA dari tree Workspace.
 
   useFocusEffect(
@@ -33,7 +36,7 @@ export function LiveGoalDetailScreen() {
   const goal = goalQ.goal;
 
   async function onActivate() {
-    if (goalQ.goal && guardActivationFields('goal', goalQ.goal)) return;
+    if (goalQ.goal && (await guardActivationFields(orgId, 'goal', goalQ.goal))) return;
     try {
       await activate(id);
     } catch (e) {

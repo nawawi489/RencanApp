@@ -26,10 +26,12 @@ import {
 } from '@/lib/problem-statements';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
+import { useProfile } from '@/hooks/use-profile';
 
 export function LiveProblemStatementDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { profile } = useProfile();
   const qc = useQueryClient();
 
   const psQ = useQuery({
@@ -66,8 +68,9 @@ export function LiveProblemStatementDetailScreen() {
   const ps = psQ.data;
   // WSA-08 §14.4 — CTA "+ Tambah Rencana Aksi" dihapus; tambah turunan hanya dari tree Workspace.
 
-  function handleActivate() {
-    if (ps && guardActivationFields('problem_statement', ps)) return;
+  async function handleActivate() {
+    const orgId = profile?.organization_id ?? '';
+    if (ps && (await guardActivationFields(orgId, 'problem_statement', ps))) return;
     const blocked = guardMbrActivation(compliance, {
       childLabel: 'Rencana Aksi',
       onAddChild: () => router.push(`/action-plan/new?problemStatementId=${id}`),

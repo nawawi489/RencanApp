@@ -1,5 +1,26 @@
-// Completeness popups (PRD V1.8.2 §7.4 + §7.5). Pure helpers — Alert.alert di-mock via injection.
+// Wave 3.2 — activation-check async rewrite (spec §5.2).
+// - missingRequiredFor + guardActivationFields jadi async (await getCompletionRule).
+// - Merge HARDCODED_CORE + admin extras.
+// - Popup copy generic (PRD §7.4) — TIDAK menyebut nama field.
+// - Offline fallback: kalau getCompletionRule throw, pakai HARDCODED_CORE only + logger.warn.
 jest.mock('../supabase', () => ({ supabase: {} }));
+
+const mockGetCompletionRule = jest.fn();
+jest.mock('../card-rules', () => ({
+  __esModule: true,
+  getCompletionRule: (...args: unknown[]) => mockGetCompletionRule(...args),
+}));
+
+const mockWarn = jest.fn();
+jest.mock('../logger', () => ({
+  __esModule: true,
+  createLogger: () => ({
+    warn: (...args: unknown[]) => mockWarn(...args),
+    info: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  }),
+}));
 
 import {
   guardActivationFields,
@@ -8,83 +29,102 @@ import {
 } from '../activation-check';
 import type { MbrCompliance } from '../settings-mbr';
 
-const FULL = {
-  name: 'Goal X',
-  pic_id: 'u1',
-  period_start: '2026-01-01',
-  period_end: '2026-12-31',
-  target: 'Naik 20%',
-  target_result: 'Naik 20%',
-  reason: 'r',
-  main_risk: 'm',
-  alternative: 'a',
+const FULL_GOAL = {
+  name: 'Goal X', pic_id: 'u1', period_start: '2026-01-01', period_end: '2026-12-31',
+  target_value: '100',
 };
+const FULL_STRAT = { ...FULL_GOAL, target: 'Naik', expected_outcome: 'Hasil' };
+const FULL_INIT = { ...FULL_STRAT, reason: 'r', main_risk: 'm', alternative: 'a' };
+const FULL_AP = { ...FULL_GOAL, target_result: 'Hasil', team_id: 't1' };
+const FULL_PS = { ...FULL_GOAL, impact: 'i' };
 
-describe('missingRequiredFor', () => {
-  it('goal lengkap → []', () => {
-    expect(missingRequiredFor('goal', FULL)).toEqual([]);
+beforeEach(() => {
+  mockGetCompletionRule.mockReset();
+  mockWarn.mockReset();
+  mockGetCompletionRule.mockResolvedValue({ requiredFields: [] });
+});
+
+describe('missingRequiredFor (async)', () => {
+  it('goal lengkap + no admin extras → []', async () => {
+    expect(await missingRequiredFor('org-A', 'goal', FULL_GOAL)).toEqual([]);
   });
-  it('goal kosong → 4 field shared', () => {
-    expect(missingRequiredFor('goal', {})).toEqual([
-      'Nama', 'PIC', 'Periode mulai', 'Periode selesai',
-    ]);
+
+  it('goal kosong → locked base 5 field', async () => {
+    const missing = await missingRequiredFor('org-A', 'goal', {});
+    expect(missing).toEqual(expect.arrayContaining(['Nama', 'PIC', 'Periode mulai', 'Periode selesai', 'Target Tahunan']));
   });
-  it('strategy + Target wajib', () => {
-    const m = missingRequiredFor('strategy', { ...FULL, target: '   ' });
-    expect(m).toEqual(['Target']);
+
+  it('strategy lengkap + admin extras kosong ["expected_outcome"] → []', async () => {
+    mockGetCompletionRule.mockResolvedValueOnce({ requiredFields: ['expected_outcome'] });
+    expect(await missingRequiredFor('org-A', 'strategy', FULL_STRAT)).toEqual([]);
   });
-  it('initiative + reason/main_risk/alternative wajib', () => {
-    const m = missingRequiredFor('initiative', {
-      ...FULL, reason: '', main_risk: ' ', alternative: '',
-    });
-    expect(m).toEqual(['Alasan', 'Risiko Utama', 'Alternatif']);
+
+  it('locked base per cardType — goal target_value tetap wajib (F1)', async () => {
+    // Uncheck admin → set requiredFields=[]. Locked base tetap enforce target_value untuk goal.
+    mockGetCompletionRule.mockResolvedValueOnce({ requiredFields: [] });
+    const missing = await missingRequiredFor('org-A', 'goal', { ...FULL_GOAL, target_value: '' });
+    expect(missing).toContain('Target Tahunan');
   });
-  it('action_plan + target_result wajib', () => {
-    const m = missingRequiredFor('action_plan', { ...FULL, target_result: '' });
-    expect(m).toEqual(['Target Hasil']);
+
+  it('locked base per cardType — strategy expected_outcome tetap wajib', async () => {
+    mockGetCompletionRule.mockResolvedValueOnce({ requiredFields: [] });
+    const missing = await missingRequiredFor('org-A', 'strategy', { ...FULL_STRAT, expected_outcome: '' });
+    expect(missing).toContain('Ekspektasi Hasil');
   });
-  it('development_area: shared field only (tidak ada extra)', () => {
-    expect(missingRequiredFor('development_area', FULL)).toEqual([]);
-    expect(missingRequiredFor('development_area', { name: 'x' })).toEqual([
-      'PIC', 'Periode mulai', 'Periode selesai',
-    ]);
+
+  it('locked base per cardType — problem_statement impact wajib', async () => {
+    mockGetCompletionRule.mockResolvedValueOnce({ requiredFields: [] });
+    const missing = await missingRequiredFor('org-A', 'problem_statement', { ...FULL_PS, impact: '' });
+    expect(missing).toContain('Dampak');
   });
-  it('problem_statement: shared field only', () => {
-    expect(missingRequiredFor('problem_statement', FULL)).toEqual([]);
+
+  it('locked base per cardType — action_plan team_id + target_result wajib', async () => {
+    mockGetCompletionRule.mockResolvedValueOnce({ requiredFields: [] });
+    const missing = await missingRequiredFor('org-A', 'action_plan', { ...FULL_AP, team_id: null });
+    expect(missing).toContain('Tim');
+  });
+
+  it('locked base per cardType — initiative reason/main_risk/alternative wajib', async () => {
+    mockGetCompletionRule.mockResolvedValueOnce({ requiredFields: [] });
+    const missing = await missingRequiredFor('org-A', 'initiative', { ...FULL_INIT, reason: '', main_risk: '', alternative: '' });
+    expect(missing).toEqual(expect.arrayContaining(['Alasan', 'Risiko Utama', 'Alternatif']));
+  });
+
+  it('offline (getCompletionRule throw) → HARDCODED_CORE only + logger.warn', async () => {
+    mockGetCompletionRule.mockRejectedValueOnce(new Error('offline'));
+    const missing = await missingRequiredFor('org-A', 'goal', {});
+    expect(missing).toContain('Nama');
+    expect(mockWarn).toHaveBeenCalledWith(expect.objectContaining({ event: 'card_rule_offline_fallback', cardType: 'goal' }));
   });
 });
 
-describe('guardActivationFields', () => {
-  it('lengkap → return false; alertImpl tak terpanggil', () => {
+describe('guardActivationFields (async, popup generic per PRD §7.4)', () => {
+  it('lengkap → return false; alertImpl tak terpanggil', async () => {
     const alertSpy = jest.fn();
-    expect(guardActivationFields('goal', FULL, alertSpy)).toBe(false);
+    expect(await guardActivationFields('org-A', 'goal', FULL_GOAL, alertSpy)).toBe(false);
     expect(alertSpy).not.toHaveBeenCalled();
   });
-  it('kosong → return true + popup berisi label CARD + daftar field', () => {
+
+  it('kosong → return true + popup GENERIC (PRD §7.4)', async () => {
     const alertSpy = jest.fn();
-    const blocked = guardActivationFields('strategy', { name: 'KPI X' }, alertSpy);
+    const blocked = await guardActivationFields('org-A', 'strategy', { name: 'KPI X' }, alertSpy);
     expect(blocked).toBe(true);
     expect(alertSpy).toHaveBeenCalledTimes(1);
     const [title, msg] = alertSpy.mock.calls[0];
-    expect(title).toBe('Lengkapi data wajib');
-    expect(msg).toContain('Strategi ini belum bisa diaktifkan');
-    expect(msg).toContain('PIC');
-    expect(msg).toContain('Periode mulai');
-    expect(msg).toContain('Target');
+    expect(title).toBe('Aktifkan Card');
+    expect(msg).toBe('Lengkapi data wajib terlebih dahulu sebelum Card bisa diaktifkan.');
   });
-  it('initiative 3 reason fields kosong → semua dilist', () => {
+
+  it('popup TIDAK menyebut nama field spesifik', async () => {
     const alertSpy = jest.fn();
-    const card = { ...FULL, reason: '', main_risk: '', alternative: '' };
-    guardActivationFields('initiative', card, alertSpy);
+    await guardActivationFields('org-A', 'strategy', { name: 'KPI X' }, alertSpy);
     const [, msg] = alertSpy.mock.calls[0];
-    expect(msg).toContain('Alasan');
-    expect(msg).toContain('Risiko Utama');
-    expect(msg).toContain('Alternatif');
+    // Tidak boleh mengandung nama field (PIC, Periode, Target, dst.)
+    expect(msg).not.toMatch(/PIC|Periode mulai|Periode selesai|Target/);
   });
 });
 
-// WSA-04 — pesan guard tree §12.3: pola persis spec, mengacu type parent + next button.
-describe('mbrBreakdownGuardMessage', () => {
+describe('mbrBreakdownGuardMessage (tetap sync)', () => {
   const kpiToInitiative: MbrCompliance = {
     child_card_type: 'initiative',
     child_count: 2,
@@ -93,7 +133,7 @@ describe('mbrBreakdownGuardMessage', () => {
     is_compliant: false,
   };
 
-  it('Strategi 2/3 Inisiatif → kalimat §12.3 persis (next button Rencana Aksi)', () => {
+  it('kalimat §12.3 persis (next button Rencana Aksi)', () => {
     const { title, message } = mbrBreakdownGuardMessage('Strategi', kpiToInitiative, 'Rencana Aksi');
     expect(title).toBe('Kelengkapan Perencanaan');
     expect(message).toBe(

@@ -120,8 +120,10 @@ describe('InitiativeDetailScreen — MBR', () => {
     });
     await render(<InitiativeDetailScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByText('Aktifkan Inisiatif'));
-    const calls = (Alert.alert as jest.Mock).mock.calls;
-    expect(calls[0][0]).toBe('Tidak Dapat Melanjutkan');
+    await waitFor(() => {
+      const calls = (Alert.alert as jest.Mock).mock.calls;
+      expect(calls[0]?.[0]).toBe('Tidak Dapat Melanjutkan');
+    });
     expect(mockActivateInitiative).not.toHaveBeenCalled();
   });
 

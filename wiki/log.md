@@ -1696,7 +1696,6 @@ PR #52 siap review untuk merge ke `staging`. Total: 12+ commits, 200+ file berub
   - **Gotcha RNTL:** useMutation `onSuccess: invalidateQueries` menghasilkan async leak via React Query global `notifyManager` — meracuni `screen` singleton RNTL utk test berikutnya. Fix: pindahkan create test (satu-satunya yang trigger mutasi) ke describe terakhir.
 - **Memory disinkronkan:** `push-notifications-shipped.md` dikoreksi (Fase 1 MERGED bukan OPEN); `prd-v183-source-of-truth.md` + `app-scaffold.md` di-update.
 
-
 ## [2026-07-17] update | PRD §4 dihapus + §6 dibersihkan (tech stack pindah ke wiki)
 
 Hasil audit hulu-ke-hilir menemukan PRD §4 mewajibkan Next.js + PWA sementara aplikasi shipped Expo React Native (mobile-first, native iOS+Android). Owner konfirmasi divergensi tech stack sudah final; PRD tidak lagi memegang keputusan stack.
@@ -1772,3 +1771,28 @@ Modal `done` state (menampilkan "N pengguna masuk peringkat" + footer escape hat
 **Update spec/plan**: `specs/score-ranking-finalization-tdd-plan.md` §9.5/9.6 smoke checklist TERBUKTI akurat. Tambahan follow-up: kontrak `0079_..._contract.sql` di-patch permanen (3 fixture fix di atas) — versi baru sudah di file, bukan hanya dijalankan lalu dibuang.
 
 **Catatan rebase (2026-07-19)**: branch awalnya dicabang dari `main` (`d12914a`) sementara PR menargetkan `staging`; keduanya divergen dua arah (main 12 commit unik, staging 96). Diperbaiki dengan `git rebase --onto origin/staging d12914a` sehingga PR hanya membawa 1 commit kerja ini. Semua file kode yang disentuh terbukti **identik** antara main dan staging sebelum rebase, jadi nol konflik pada kode; satu-satunya konflik adalah file log ini (dua entry berbeda tanggal, keduanya dipertahankan).
+
+## [2026-07-19] sdd-plan | settings-consumers bundled spec (§34.5 + §34.6)
+
+- Pages created: [[settings-consumers-spec]] (wiki/concepts/) — bundled SDD spec closing 2 config black-holes.
+- Pages updated: wiki/index.md concepts list; memory settings-consumers-owner-decisions.md (D-1..D-7 locked + reframe post-research).
+- Key takeaways:
+  - Premise pivot: writer UI [settings-card-completion-rule.tsx] + [settings-card-guidance.tsx] target `public.settings` key store yang salah. Storage kanonik `card_completion_rules` (0005:145) + `card_guidance_contents` (0005:154) sudah ada + seeded (0047).
+  - 6 RPC activate_* (bukan 5) hardcode required-field RAISE; migration 0078 (post-rebase ke origin/staging tip 0077) inject helper `enforce_card_completion_rule` yang consult tabel dedicated + emit `governance_violations` (PRD §36 #3).
+  - Two-layer required: HARDCODED_CORE (PRD-wired, locked) + admin-configurable overlay per (org, cardType). UI disclose lock section supaya admin tidak bingung.
+  - Owner decisions locked D-1..D-7 termasuk D-7 reuse `manage_card_completion_rule` untuk §34.6 (tanpa amandemen PRD §9).
+  - 3 grill critics (product/eng/gov) → 17 finding integrated + 2 dilarutkan sebagai owner decision (D-7) atau non-goal (task/0077 pre-existing bug).
+  - Siap sambung ke /tdd-plan (4 wave: DB contract → migration → client unit → client impl).
+
+## [2026-07-19] tdd-plan | settings-consumers TDD plan (post-spec)
+
+- Pages created: [[settings-consumers-tdd-plan]] (wiki/concepts/) — 5-wave red-green-refactor untuk spec settings-consumers.
+- Pages updated: [[settings-consumers-spec]] amendment D-8 (governance_violations emit deferred karena single-tx rollback bug, mirror Fase 7 dokumentasi limitation); wiki/index.md concepts list.
+- Key takeaways:
+  - **Amendment D-8** ditemukan di Map phase — `governance_violations` INSERT dalam RAISE path helper akan rolled-back karena single-transaction; Fase 7 sudah dokumentasikan pola sama dan defer ke "Fase 8 dblink/pg_background". Spec §4.2 + AC-1 diamandemen; test S1 assert count=0 (bukan 1) untuk mencegah false-positive coverage.
+  - **Big finding**: DB contract test suite (`supabase/tests/*.sql`) belum di-wire ke CI meski memori [[p2-db-contract-ci]] mengklaim demikian. Diflag sebagai FUT-1 (tambah job baru di ci.yml) + FUT-4 (correct wiki + memori).
+  - **Test naming**: rename semua ke `0078_settings_consumers_*_contract.sql` (sesuai konvensi NNNN_*_contract, aman glob CI).
+  - **HARDCODED_CORE per cardType** eksplisit (6 baris) — critic F1 mencegah silent-PASS drift saat existing activation-check.ts fall-through kosong untuk goal/dev_area/problem_statement.
+  - **AC-14 auth-provider** dari lahir GREEN karena existing `queryClient.clear()` sudah cover — critic F4 pindah ke Wave 5.2 sebagai regression pin (bukan red-green wave 3).
+  - Grill critic 8 finding all-adopt; adjudikasi lengkap di plan §10.
+- Next: eksekutor bisa mulai dari §0 preflight checklist di plan.

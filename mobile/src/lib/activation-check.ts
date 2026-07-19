@@ -1,108 +1,128 @@
-// Completeness popups (PRD V1.8.2 §7.4 + §7.5).
+// Completeness popups (PRD V1.8.2/V1.8.3 §7.4 + §7.5).
 //
-// Pre-flight validator klien — wajib field per tipe kartu sesuai server RPC activate_*
-// (sumber kebenaran: 0010_fase4_performance_workspace.sql + 0012_fase6_development_workspace.sql
-// + 0005_fase1_card_engine.sql). Server tetap penegak akhir; klien hanya UX shortcut.
+// Pre-flight validator klien — wajib field per tipe kartu = HARDCODED_CORE
+// (locked base sesuai server RPC activate_*) + admin extras dari
+// public.card_completion_rules (via getCompletionRule). Server tetap penegak
+// akhir; klien hanya UX shortcut.
 //
-// Alert injectable (`alertImpl`) supaya unit test pure tanpa react-native Alert.
+// Popup copy PRD §7.4 GENERIC — tidak menyebut nama field spesifik.
+// missingRequiredFor tetap kembalikan label untuk telemetry/log saja.
 import { Alert } from 'react-native';
 
+import { getCompletionRule, type CardTypeGated } from './card-rules';
+import { createLogger } from './logger';
 import { CARD_TYPE_LABEL, type MbrCompliance } from './settings-mbr';
 
-export type ActivatableCardType =
-  | 'goal'
-  | 'strategy'
-  | 'initiative'
-  | 'action_plan'
-  | 'development_area'
-  | 'problem_statement';
+const log = createLogger('ActivationCheck');
 
-const CARD_LABEL: Record<ActivatableCardType, string> = {
-  goal: 'Goal',
-  strategy: 'Strategi',
-  initiative: 'Inisiatif',
-  action_plan: 'Rencana Aksi',
-  development_area: 'Development Area',
-  problem_statement: 'Problem Statement',
-};
+export type ActivatableCardType = CardTypeGated;
 
-/** Shape minimum yang dibutuhkan helper — caller cukup spread row tabel apa pun. */
+/** Shape minimum untuk pengecekan — caller cukup spread row tabel apa pun. */
 export type CardForCheck = {
   name?: string | null;
   pic_id?: string | null;
   period_start?: string | null;
   period_end?: string | null;
   target?: string | null;
+  target_value?: string | null;
   target_result?: string | null;
+  expected_outcome?: string | null;
   reason?: string | null;
   main_risk?: string | null;
   alternative?: string | null;
+  impact?: string | null;
+  team_id?: string | null;
 };
 
 type AlertFn = (
   title: string,
   message: string,
-  buttons?: Array<{ text: string; onPress?: () => void; style?: 'cancel' | 'default' | 'destructive' }>,
+  buttons?: { text: string; onPress?: () => void; style?: 'cancel' | 'default' | 'destructive' }[],
 ) => void;
 
-function trimEmpty(v: string | null | undefined): boolean {
-  return !v || v.trim() === '';
+const FIELD_LABEL: Record<string, string> = {
+  name: 'Nama',
+  pic_id: 'PIC',
+  period_start: 'Periode mulai',
+  period_end: 'Periode selesai',
+  target: 'Target',
+  target_value: 'Target Tahunan',
+  target_result: 'Target Hasil',
+  expected_outcome: 'Ekspektasi Hasil',
+  reason: 'Alasan',
+  main_risk: 'Risiko Utama',
+  alternative: 'Alternatif',
+  impact: 'Dampak',
+  team_id: 'Tim',
+};
+
+// F1 (critic): HARDCODED_CORE per cardType eksplisit — mirror locked base RPC
+// activate_* di server (migration 0078). Fall-through kosong DILARANG.
+export const HARDCODED_CORE: Record<ActivatableCardType, string[]> = {
+  goal:              ['name', 'pic_id', 'period_start', 'period_end', 'target_value'],
+  strategy:          ['name', 'pic_id', 'period_start', 'period_end', 'target', 'expected_outcome'],
+  initiative:        ['name', 'pic_id', 'period_start', 'period_end', 'reason', 'main_risk', 'alternative'],
+  action_plan:       ['name', 'pic_id', 'period_start', 'period_end', 'target_result', 'team_id'],
+  development_area:  ['name', 'pic_id', 'period_start', 'period_end'],
+  problem_statement: ['name', 'pic_id', 'period_start', 'period_end', 'impact'],
+};
+
+function isEmpty(v: unknown): boolean {
+  if (v === null || v === undefined) return true;
+  if (typeof v === 'string') return v.trim() === '';
+  return false;
 }
 
 /**
- * Daftar label field yang KOSONG menurut aturan server activate_<type>.
- * Kembalikan [] bila semua lengkap. Caller pakai untuk popup §7.4.
+ * Kembalikan array label field wajib yang KOSONG (merge HARDCODED_CORE +
+ * admin extras). Caller pakai untuk logger/telemetry — POPUP jangan menyebut
+ * daftar (PRD §7.4).
  */
-export function missingRequiredFor(cardType: ActivatableCardType, card: CardForCheck): string[] {
+export async function missingRequiredFor(
+  orgId: string,
+  cardType: ActivatableCardType,
+  card: CardForCheck,
+): Promise<string[]> {
+  let extras: string[] = [];
+  try {
+    const rule = await getCompletionRule(orgId, cardType);
+    extras = rule.requiredFields;
+  } catch (err) {
+    log.warn({ event: 'card_rule_offline_fallback', cardType, err });
+  }
+  const requiredSet = new Set<string>([...HARDCODED_CORE[cardType], ...extras]);
   const missing: string[] = [];
-  if (trimEmpty(card.name)) missing.push('Nama');
-  if (!card.pic_id) missing.push('PIC');
-  if (!card.period_start) missing.push('Periode mulai');
-  if (!card.period_end) missing.push('Periode selesai');
-
-  switch (cardType) {
-    case 'strategy':
-      if (trimEmpty(card.target)) missing.push('Target');
-      break;
-    case 'initiative':
-      if (trimEmpty(card.reason)) missing.push('Alasan');
-      if (trimEmpty(card.main_risk)) missing.push('Risiko Utama');
-      if (trimEmpty(card.alternative)) missing.push('Alternatif');
-      break;
-    case 'action_plan':
-      if (trimEmpty(card.target_result)) missing.push('Target Hasil');
-      break;
-    case 'goal':
-    case 'development_area':
-    case 'problem_statement':
-      break;
+  for (const field of requiredSet) {
+    if (isEmpty((card as Record<string, unknown>)[field])) {
+      missing.push(FIELD_LABEL[field] ?? field);
+    }
   }
   return missing;
 }
 
 /**
- * §7.4 — Pre-flight popup Aktifkan. Return `true` bila TERBLOKIR (caller harus berhenti
- * dan TIDAK panggil activate_*). Tampilkan satu popup berisi daftar field yang kosong.
+ * §7.4 — Pre-flight popup Aktifkan. Return `true` bila TERBLOKIR (caller stop,
+ * TIDAK panggil activate_*). Popup GENERIC — tak menyebut field spesifik.
  */
-export function guardActivationFields(
+export async function guardActivationFields(
+  orgId: string,
   cardType: ActivatableCardType,
   card: CardForCheck,
   alertImpl?: AlertFn,
-): boolean {
-  const missing = missingRequiredFor(cardType, card);
+): Promise<boolean> {
+  const missing = await missingRequiredFor(orgId, cardType, card);
   if (missing.length === 0) return false;
-  const title = 'Lengkapi data wajib';
-  const msg = `${CARD_LABEL[cardType]} ini belum bisa diaktifkan. Lengkapi: ${missing.join(', ')}.`;
+  const title = 'Aktifkan Card';
+  const msg = 'Lengkapi data wajib terlebih dahulu sebelum Card bisa diaktifkan.';
+  // detail.missing di log untuk telemetry (bukan ke user)
+  log.info({ event: 'activation_blocked', cardType, missing });
   (alertImpl ?? (Alert.alert as AlertFn))(title, msg);
   return true;
 }
 
 /**
- * Kalimat guard MBR §12.3 untuk tombol "+ <next>" di tree (terkunci spec §6.6/§12.3):
- * "<ParentType> ini baru punya <n> dari <min> <Child>. Tambahkan <sisa> <Child> lagi dulu,
- *  baru tombol + <NextButton> aktif."
- * `parentTypeLabel` = label TIPE parent (mis. "Strategi"); `nextButtonLabel` = turunan yang
- * tombolnya di-guard (mis. "Rencana Aksi"); jenis child yang dihitung diambil dari compliance.
+ * Kalimat guard MBR §12.3 untuk tombol "+ <next>" di tree (spec §6.6/§12.3).
+ * Tetap sync — sumber `MbrCompliance` sudah pre-fetched via useMbr hook lain.
  */
 export function mbrBreakdownGuardMessage(
   parentTypeLabel: string,

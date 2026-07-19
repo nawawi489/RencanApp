@@ -72,6 +72,7 @@ const DRAFT_KPI = {
   status: 'draft',
   goal_id: 'g1',
   target: 'Tagih 95%',
+  expected_outcome: 'Konversi lead naik', // locked base per 0078 spec
   description: null,
   pic_id: 'u1',
   period_start: '2026-01-01',
@@ -144,9 +145,11 @@ describe('StrategyDetailScreen — indikator Kelengkapan & gating MBR', () => {
     await render(<StrategyDetailScreen />, { wrapper: wrapper() });
     const btn = await screen.findByText('Aktifkan Strategi');
     fireEvent.press(btn);
-    const calls = (Alert.alert as jest.Mock).mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    expect(calls[0][0]).toBe('Tidak Dapat Melanjutkan');
+    await waitFor(() => {
+      const calls = (Alert.alert as jest.Mock).mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      expect(calls[0][0]).toBe('Tidak Dapat Melanjutkan');
+    });
     expect(mockActivateStrategy).not.toHaveBeenCalled();
   });
 
