@@ -155,9 +155,9 @@ begin
   values ('99999999-9999-9999-9999-000000000078', v_org, 'test-0077-rpc',
           'draft', v_uid, v_uid, '2026-01-01', '2026-12-31', 'Rp 1M');
 
-  -- Create a KPI Area (activate_goal requires ≥1)
-  insert into public.kpi_areas (organization_id, goal_id, name, created_by)
-  values (v_org, '99999999-9999-9999-9999-000000000078', 'KPI-test-0077', v_uid);
+  -- Create ≥1 strategy (activate_goal requires ≥1; post-0046 rename kpi_areas→strategies)
+  insert into public.strategies (organization_id, goal_id, name, pic_id, created_by)
+  values (v_org, '99999999-9999-9999-9999-000000000078', 'KPI-test-0077', v_uid, v_uid);
 
   -- Call as authenticated (activate_goal is SECURITY DEFINER → runs as postgres inside)
   perform set_config('request.jwt.claims',
