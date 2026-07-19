@@ -77,12 +77,15 @@ EXCLUDES=(
   'specs/rollback-plan.md'
   # 0045R migration reverts to legacy names.
   'supabase/migrations/0045R_'
-  # 0059 comments document the pre-rename table name `kpi_area_templates`
-  # (renamed to `strategy_templates` in 0045) for historical context.
-  'supabase/migrations/0059_'
-  # 0061_fix_strategy_current_values comments reference the original view name
-  # `kpi_area_current_values` to explain the security_invoker regression from 0045.
-  'supabase/migrations/0061_fix_strategy_current_values'
+  # 0062_v183_empty_strategy_templates comments document the pre-rename table
+  # name `kpi_area_templates` (renamed to `strategy_templates` in 0045) for
+  # historical context. (Was 0059_ before the 2026-07-18 migration renumbering
+  # that resolved a duplicate-prefix collision — see WIP_REPAIR_BACKLOG.md.)
+  'supabase/migrations/0062_v183_empty_strategy_templates'
+  # 0064_fix_strategy_current_values comments reference the original view name
+  # `kpi_area_current_values` to explain the security_invoker regression from
+  # 0045. (Was 0061_fix_strategy_current_values before the same renumbering.)
+  'supabase/migrations/0064_fix_strategy_current_values'
   # Historical SQL contract tests (fase-N_*_contract.sql, 00NN_*_contract.sql).
   # These document DDL against the schema of their time and are not rewritten.
   'supabase/tests/'

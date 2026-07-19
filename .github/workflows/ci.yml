@@ -68,3 +68,41 @@ jobs:
 
       - name: Test
         run: npm run test:ci
+
+  db-contract:
+    name: DB contract tests (Postgres)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # supabase/ and scripts/ live at the repo root, not in mobile/.
+        working-directory: .
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        with:
+          version: 2.109.1
+
+      - name: Start Supabase stack
+        # `supabase start` boots the local stack (Postgres + auth schema) and
+        # applies every migration in supabase/migrations in order — the same
+        # path `db reset` uses. No seed runs (there is no supabase/seed.sql);
+        # the contract runner applies supabase/tests/_fixtures.sql itself.
+        # This is where the ADR's "thick database" is finally exercised by CI.
+        run: supabase start
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run DB contract suite
+        # Fails the job if any *.sql contract fails (ON_ERROR_STOP). Quarantined
+        # *.wip.sql files are skipped — see supabase/tests/WIP_REPAIR_BACKLOG.md.
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: bash scripts/ci/run-db-contract-tests.sh
+
+      - name: Stop Supabase stack
+        if: always()
+        run: supabase stop --no-backup
