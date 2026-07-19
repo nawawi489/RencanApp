@@ -71,10 +71,11 @@ export async function upsertCompletionRule(
   reason?: string,
 ): Promise<void> {
   // RPC baru (migration 0078); regen database.types.ts akan menghapus cast ini.
-  const { error } = await (supabase.rpc as (name: string, args: unknown) => Promise<{ error: unknown }>)(
-    'upsert_card_completion_rule',
-    { p_card_type: cardType, p_required_fields: requiredFields, p_reason: reason ?? null },
-  );
+  // Double-cast via unknown karena RPC belum di generated types (FUT-5).
+  const rpc = supabase.rpc as unknown as (name: string, args: unknown) => Promise<{ error: unknown }>;
+  const { error } = await rpc('upsert_card_completion_rule', {
+    p_card_type: cardType, p_required_fields: requiredFields, p_reason: reason ?? null,
+  });
   if (error) throw error;
 }
 
@@ -84,9 +85,9 @@ export async function upsertCardGuidance(
   body: string,
   reason?: string,
 ): Promise<void> {
-  const { error } = await (supabase.rpc as (name: string, args: unknown) => Promise<{ error: unknown }>)(
-    'upsert_card_guidance',
-    { p_card_type: cardType, p_title: title, p_body: body, p_reason: reason ?? null },
-  );
+  const rpc = supabase.rpc as unknown as (name: string, args: unknown) => Promise<{ error: unknown }>;
+  const { error } = await rpc('upsert_card_guidance', {
+    p_card_type: cardType, p_title: title, p_body: body, p_reason: reason ?? null,
+  });
   if (error) throw error;
 }
