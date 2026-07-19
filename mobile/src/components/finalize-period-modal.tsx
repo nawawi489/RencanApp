@@ -22,7 +22,7 @@
 //
 // Copy Indonesia konsisten "pengguna" (bukan "user"); label utama menyebut nama periode.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Modal } from 'react-native';
 import { Text, View } from 'react-native-css/components';
 
@@ -41,16 +41,22 @@ export type FinalizePeriodModalPeriod = {
   period_end: string;
 };
 
-type State =
-  | { kind: 'loading-preview' }
-  | { kind: 'step1'; eligibleUsers: number; activeOverrides: number }
-  | { kind: 'error-preview' }
+// Fase yang dipicu AKSI USER. Disimpan di state karena tidak bisa diturunkan dari query manapun.
+type Phase =
   | { kind: 'calculating' }
   | { kind: 'locking' }
   | { kind: 'error-calc'; message: string }
   | { kind: 'error-lock'; message: string }
   | { kind: 'error-mismatch' }
   | { kind: 'done'; count: number };
+
+// Fase pra-aksi DITURUNKAN dari status query preview saat render (bukan disalin ke state lewat
+// useEffect — setState sinkron di effect memicu cascading render dan dilarang React Compiler).
+type State =
+  | { kind: 'loading-preview' }
+  | { kind: 'step1'; eligibleUsers: number; activeOverrides: number }
+  | { kind: 'error-preview' }
+  | Phase;
 
 // Copy §6.4 (verified spec). Sengaja diletakkan sebagai konstanta agar mudah refactor ke i18n.
 const CONFIRM_LABEL = 'Saya paham, finalisasi periode & kunci peringkat';
@@ -82,34 +88,23 @@ export function FinalizePeriodModal({
   const preview = usePreviewFinalization(visible ? period?.id : undefined);
   const calc = useCalculatePeriodScores();
   const close = useClosePeriod();
-  const [state, setState] = useState<State>({ kind: 'loading-preview' });
+  // Hanya fase pasca-konfirmasi yang disimpan. `null` = user belum menekan tombol konfirmasi,
+  // sehingga tampilan mengikuti status query preview.
+  const [phase, setPhase] = useState<Phase | null>(null);
 
-  // Sinkronisasi state dari preview query hingga user mengonfirmasi step1.
-  useEffect(() => {
-    if (!visible) return;
-    // Setelah transisi keluar dari step1 (calculating/locking/done/error-*), jangan revert ke step1.
-    if (
-      state.kind !== 'loading-preview' &&
-      state.kind !== 'step1' &&
-      state.kind !== 'error-preview'
-    ) {
-      return;
-    }
-    if (preview.isLoading) {
-      if (state.kind !== 'loading-preview') setState({ kind: 'loading-preview' });
-      return;
-    }
-    if (preview.isError) {
-      if (state.kind !== 'error-preview') setState({ kind: 'error-preview' });
-      return;
-    }
-    if (preview.preview) {
-      const { eligibleUsers, activeOverrides } = preview.preview;
-      if (state.kind !== 'step1') {
-        setState({ kind: 'step1', eligibleUsers, activeOverrides });
-      }
-    }
-  }, [visible, preview.isLoading, preview.isError, preview.preview, state.kind]);
+  // State efektif diturunkan saat render. Begitu `phase` terisi, ia menang atas preview —
+  // itulah yang mencegah modal "mundur" ke step1 saat query di-invalidate pasca-close.
+  const state: State =
+    phase ??
+    (preview.isError
+      ? { kind: 'error-preview' }
+      : preview.preview
+        ? {
+            kind: 'step1',
+            eligibleUsers: preview.preview.eligibleUsers,
+            activeOverrides: preview.preview.activeOverrides,
+          }
+        : { kind: 'loading-preview' });
 
   const isBusy =
     state.kind === 'loading-preview' ||
@@ -119,26 +114,26 @@ export function FinalizePeriodModal({
   const handleDismiss = useCallback(() => {
     if (isBusy) return;
     // Reset saat menutup dari terminal state, supaya modal fresh saat dibuka lagi.
-    setState({ kind: 'loading-preview' });
+    setPhase(null);
     onClose();
   }, [isBusy, onClose]);
 
   const runFinalize = useCallback(async () => {
-    setState({ kind: 'calculating' });
+    setPhase({ kind: 'calculating' });
     let calcCount: number;
     try {
       calcCount = await calc.calculatePeriod(period.id);
     } catch (e) {
-      setState({ kind: 'error-calc', message: mapError(e, 'Gagal menghitung skor.') });
+      setPhase({ kind: 'error-calc', message: mapError(e, 'Gagal menghitung skor.') });
       return;
     }
 
-    setState({ kind: 'locking' });
+    setPhase({ kind: 'locking' });
     let closeCount: number;
     try {
       closeCount = await close.closePeriod(period.id);
     } catch (e) {
-      setState({ kind: 'error-lock', message: mapError(e, 'Gagal mengunci peringkat.') });
+      setPhase({ kind: 'error-lock', message: mapError(e, 'Gagal mengunci peringkat.') });
       return;
     }
 
@@ -146,27 +141,27 @@ export function FinalizePeriodModal({
     // meng-insert ranking_snapshots. Kombinasi ini adalah tanda tangan bug asli V1.83
     // yang seharusnya sudah tertutup Fase 0 advisory lock + close membaca is_current=true.
     if (calcCount > 0 && closeCount === 0) {
-      setState({ kind: 'error-mismatch' });
+      setPhase({ kind: 'error-mismatch' });
       return;
     }
-    setState({ kind: 'done', count: closeCount });
+    setPhase({ kind: 'done', count: closeCount });
   }, [calc, close, period.id]);
 
   const retryCalcOnly = useCallback(async () => {
-    setState({ kind: 'calculating' });
+    setPhase({ kind: 'calculating' });
     try {
       const calcCount = await calc.calculatePeriod(period.id);
       // Setelah calc sukses lanjut ke close (mengikuti flow normal).
-      setState({ kind: 'locking' });
+      setPhase({ kind: 'locking' });
       const closeCount = await close.closePeriod(period.id);
       if (calcCount > 0 && closeCount === 0) {
-        setState({ kind: 'error-mismatch' });
+        setPhase({ kind: 'error-mismatch' });
         return;
       }
-      setState({ kind: 'done', count: closeCount });
+      setPhase({ kind: 'done', count: closeCount });
     } catch (e) {
       // Bila error terjadi pada calc (kita di state.kind === 'calculating'), tetap error-calc.
-      setState({ kind: 'error-calc', message: mapError(e, 'Gagal menghitung skor.') });
+      setPhase({ kind: 'error-calc', message: mapError(e, 'Gagal menghitung skor.') });
     }
   }, [calc, close, period.id]);
 
