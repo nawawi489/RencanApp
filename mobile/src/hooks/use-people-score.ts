@@ -197,7 +197,7 @@ export function useClosePeriod() {
 /**
  * Fase 2 TDD plan (specs/score-ranking-finalization-tdd-plan.md) — hitung skor per user
  * untuk periode aktif. Orchestrator FinalizePeriodModal memanggil ini SEBELUM useClosePeriod;
- * standalone call juga aman (calc idempotent + advisory lock 0078). onSuccess invalidate TEPAT
+ * standalone call juga aman (calc idempotent + advisory lock 0079). onSuccess invalidate TEPAT
  * 4 key skor (bukan ranking/active/latest — calc tidak mengubah status period maupun ranking_snapshots).
  * Bila caller masa depan pakai standalone dan butuh ranking refresh, caller invalidasi manual.
  */

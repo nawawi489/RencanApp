@@ -1,5 +1,5 @@
--- Fase 0 (specs/score-ranking-finalization-tdd-plan.md) — kontrak untuk migrasi 0078.
--- Jalankan: docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0078_score_finalize_advisory_lock_contract.sql
+-- Fase 0 (specs/score-ranking-finalization-tdd-plan.md) — kontrak untuk migrasi 0079.
+-- Jalankan: docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0079_score_finalize_advisory_lock_contract.sql
 -- Pola: `begin; do $$..$$; rollback;` per blok. RAISE NOTICE 'PASS' bila lolos, RAISE EXCEPTION 'FAIL: …' bila regresi.
 -- ID dev lokal: org=52b0ebe1-…b70, ceo=11111111-…001 (mirror close_period_snapshot_contract.sql).
 --
@@ -23,11 +23,11 @@ declare
   period_other uuid; fails text := '';
 begin
   -- Fixture org kedua (minimum viable): org + CEO profile + role_template staff + period aktif.
-  insert into public.organizations (id, name) values (v_org_other, '0078-T1-other-org')
+  insert into public.organizations (id, name) values (v_org_other, '0079-T1-other-org')
     on conflict (id) do nothing;
   insert into auth.users (id) values (v_other_ceo) on conflict (id) do nothing;
   insert into public.role_templates (id, organization_id, level, name)
-    values (v_other_role_staff, v_org_other, 'staff', '0078-T1-other-staff')
+    values (v_other_role_staff, v_org_other, 'staff', '0079-T1-other-staff')
     on conflict (id) do nothing;
   -- Level user ini tidak relevan untuk T-DB-1: dia hanya dipakai sebagai created_by
   -- pada period_snapshots org lain. Aktor sesungguhnya (v_ceo) berasal dari v_org_self.
@@ -35,7 +35,7 @@ begin
     values (v_other_ceo, v_org_other, v_other_role_staff)
     on conflict (id) do update set organization_id = excluded.organization_id;
   insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status, created_by)
-    values (v_org_other, '0078-T1-other-period', current_date, current_date + 30, 'active', v_other_ceo)
+    values (v_org_other, '0079-T1-other-period', current_date, current_date + 30, 'active', v_other_ceo)
     returning id into period_other;
 
   -- v_ceo (org_self) mencoba calc periode milik v_org_other → cross-org guard 0039 harus menolak
@@ -68,11 +68,11 @@ declare
   v_other_role_staff uuid := 'aaaaaaaa-0000-0000-0000-0000000000d2';
   period_other uuid; fails text := '';
 begin
-  insert into public.organizations (id, name) values (v_org_other, '0078-T2-other-org')
+  insert into public.organizations (id, name) values (v_org_other, '0079-T2-other-org')
     on conflict (id) do nothing;
   insert into auth.users (id) values (v_other_ceo) on conflict (id) do nothing;
   insert into public.role_templates (id, organization_id, level, name)
-    values (v_other_role_staff, v_org_other, 'staff', '0078-T2-other-staff')
+    values (v_other_role_staff, v_org_other, 'staff', '0079-T2-other-staff')
     on conflict (id) do nothing;
   -- Level user ini tidak relevan untuk T-DB-2: dia hanya dipakai sebagai created_by
   -- pada period_snapshots org lain. Aktor sesungguhnya (v_ceo) berasal dari v_org_self.
@@ -80,7 +80,7 @@ begin
     values (v_other_ceo, v_org_other, v_other_role_staff)
     on conflict (id) do update set organization_id = excluded.organization_id;
   insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status, created_by)
-    values (v_org_other, '0078-T2-other-period', current_date, current_date + 30, 'draft', v_other_ceo)
+    values (v_org_other, '0079-T2-other-period', current_date, current_date + 30, 'draft', v_other_ceo)
     returning id into period_other;
 
   perform set_config('request.jwt.claims',
@@ -112,7 +112,7 @@ begin
   if not has_function_privilege('authenticated', 'public.close_period_snapshot(uuid)', 'EXECUTE') then
     fails := fails || 'authenticated_no_execute_close; ';
   end if;
-  -- anon TIDAK boleh EXECUTE (0013 inline + 0050 sweep + tidak reset oleh CREATE OR REPLACE 0078).
+  -- anon TIDAK boleh EXECUTE (0013 inline + 0050 sweep + tidak reset oleh CREATE OR REPLACE 0079).
   if has_function_privilege('anon', 'public.calculate_period_scores(uuid)', 'EXECUTE') then
     fails := fails || 'anon_has_execute_calc; ';
   end if;
@@ -203,7 +203,7 @@ begin
   -- Periode aktif (INSERT langsung sebagai postgres; RPC open_period_snapshot dilewati agar
   -- tidak bentrok partial-unique "one active per org" di lingkungan dev yang sudah ter-seed).
   insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status, created_by)
-    values (v_org, '0078-T6', current_date, current_date + 30, 'active', v_ceo)
+    values (v_org, '0079-T6', current_date, current_date + 30, 'active', v_ceo)
     returning id into period;
 
   -- Expected count DINAMIS: v_org bisa sudah punya staff lain dari dev seed di luar 3 yang
@@ -282,7 +282,7 @@ begin
     on conflict (id) do update set organization_id = excluded.organization_id, role_template_id = excluded.role_template_id;
 
   insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status, created_by)
-    values (v_org, '0078-T7', current_date, current_date + 30, 'active', v_ceo)
+    values (v_org, '0079-T7', current_date, current_date + 30, 'active', v_ceo)
     returning id into period;
 
   -- Seed baris auto is_current=true dengan auto_calculated_score=80.

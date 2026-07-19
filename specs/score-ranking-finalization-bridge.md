@@ -23,12 +23,12 @@ supersedes: draft v1 (2026-07-19 pra-grill)
 >
 > | # | Isu | Keputusan |
 > |---|---|---|
-> | **4** | Race dua-tab (Engineer F-2/F-3) | **Migrasi 0078**: `pg_advisory_xact_lock` di calculate & close (surgical; membatalkan klaim "no migration" v1) |
+> | **4** | Race dua-tab (Engineer F-2/F-3) | **Migrasi 0079**: `pg_advisory_xact_lock` di calculate & close (surgical; membatalkan klaim "no migration" v1) |
 > | **5** | Reminder period-end (Product F-1) | NG-8: defer ke spec follow-up `score-period-end-nudge`. Backlog explicit di §11. |
 > | **6** | Escape hatch pasca-close (Governance F-9) | Accept sadar; ADR baru `wiki/concepts/score-period-immutability.md`. Koreksi = periode berikutnya. |
 > | **7** | Label tombol (Product F-4) | **"Finalisasi Periode & Peringkat"** (Indonesia konsisten) |
 
-> **Ringkasan eksekutif.** V1.83 kehilangan jembatan pengeksekusi Score/Ranking: `close_period_snapshot` menghitung `ranking_snapshots` dengan menjoin `user_score_results`, tapi `calculate_period_scores` — satu-satunya sumber baris `user_score_results` — tidak pernah dipanggil dari UI (verified: nol caller di luar test-nya sendiri). Akibatnya setiap kali Owner menekan "Tutup Periode", ranking snapshot terbuat dengan 0 baris dan seluruh fitur Ranking mati diam-diam. **Solusi**: tombol tunggal "Finalisasi Periode & Peringkat" menggantikan "Tutup Periode" di `settings-score-formula.tsx`, membuka modal dua-langkah yang menampilkan pratinjau angka lalu memanggil dua RPC berurutan dalam satu tab yang di-serialisasi server via advisory lock. Satu migrasi kecil (0078), nol perubahan RPC signature — hanya kabel client yang hilang plus guard concurrency.
+> **Ringkasan eksekutif.** V1.83 kehilangan jembatan pengeksekusi Score/Ranking: `close_period_snapshot` menghitung `ranking_snapshots` dengan menjoin `user_score_results`, tapi `calculate_period_scores` — satu-satunya sumber baris `user_score_results` — tidak pernah dipanggil dari UI (verified: nol caller di luar test-nya sendiri). Akibatnya setiap kali Owner menekan "Tutup Periode", ranking snapshot terbuat dengan 0 baris dan seluruh fitur Ranking mati diam-diam. **Solusi**: tombol tunggal "Finalisasi Periode & Peringkat" menggantikan "Tutup Periode" di `settings-score-formula.tsx`, membuka modal dua-langkah yang menampilkan pratinjau angka lalu memanggil dua RPC berurutan dalam satu tab yang di-serialisasi server via advisory lock. Satu migrasi kecil (0079), nol perubahan RPC signature — hanya kabel client yang hilang plus guard concurrency.
 >
 > **Kaveat penting** (dari grill Engineering F-10): bug ini reachable **hanya untuk organisasi yang sudah punya periode aktif** (via seed SQL, migration, atau path yang sejak V1.8.2 tidak lagi ada di UI). Screen `open_period_snapshot` UI **tidak ada** di baseline. Sampai spec follow-up "buka periode" dijadwalkan, jembatan finalization ini akan bermanfaat untuk staging seed dan legacy production instances — bukan flow lengkap. NG-2 tetap.
 
@@ -45,7 +45,7 @@ Fakta baseline terverifikasi (2026-07-19):
 
 | Fakta | Nilai | Sumber |
 |---|---|---|
-| Migrasi tertinggi | `0077` (spec ini mengklaim **`0078`**) | `git ls-tree` |
+| Migrasi tertinggi | `0077` (spec ini mengklaim **`0079`**) | `git ls-tree` |
 | `calculate_period_scores(uuid) → int` | LIVE, SECURITY DEFINER, gate `manage_score_formula`, guard cross-org via 0039, revoke anon/PUBLIC via `0013:621` + sweep `0050` | `supabase/migrations/0013:500-621` + `0039:23-152` + `0050` |
 | `close_period_snapshot(uuid) → int` | LIVE, SECURITY DEFINER, gate + guard sama, revoke anon/PUBLIC via `0013:672` + `0050` | `0013:625-672` + `0039:154-208` + `0050` |
 | `override_user_score(uuid,uuid,numeric,text) → uuid` | LIVE, menolak periode closed (FREEZE), revoke via `0013:740` + `0050` | `0013:676-740` + `0039:211-282` |
@@ -60,7 +60,7 @@ Fakta baseline terverifikasi (2026-07-19):
 | `ranking_snapshots` unique | `UNIQUE (period_snapshot_id, user_id)` | `0013:164` |
 | Trigger `..._no_delete` | Append-only enforce di 3 tabel Fase 7 | `0013:187-193` |
 
-> **Koreksi baseline dari draft v1**: (a) migration 0071 di draft v1 KELIRU sebagai sumber ACL revoke — sumber sebenarnya `0013` inline + `0050` sweep; (b) draft v1 mengklaim "tidak butuh migrasi" — batal, dengan migrasi 0078 tambahan (advisory lock).
+> **Koreksi baseline dari draft v1**: (a) migration 0071 di draft v1 KELIRU sebagai sumber ACL revoke — sumber sebenarnya `0013` inline + `0050` sweep; (b) draft v1 mengklaim "tidak butuh migrasi" — batal, dengan migrasi 0079 tambahan (advisory lock).
 
 ---
 
@@ -113,7 +113,7 @@ Bug ini reachable **hanya untuk organisasi yang sudah punya periode aktif** (`pe
 ### 1.4 Kenapa ini bukan "sekadar tambah tombol"
 
 - **FREEZE semantics** harus dijaga: PRD §34.10 + AC-7.14 memaksa `calculate` **tidak menyentuh** baris `result_kind='override'` yang `is_current=true`. Ini sudah benar di server (`0013:596-611`) — spec ini tidak boleh menambah logika client yang melanggarnya.
-- **Idempotency asymmetric SETELAH advisory lock**: `calculate` idempotent (aman retry) — tapi TANPA lock, dua sesi paralel bisa memicu partial-unique violation atau menulis ke period yang di-close mid-flight (grill Engineering F-2/F-3). Migrasi 0078 memperbaiki ini.
+- **Idempotency asymmetric SETELAH advisory lock**: `calculate` idempotent (aman retry) — tapi TANPA lock, dua sesi paralel bisa memicu partial-unique violation atau menulis ke period yang di-close mid-flight (grill Engineering F-2/F-3). Migrasi 0079 memperbaiki ini.
 - **Cross-org guard** sudah dipasang di `0039` (`current_user_org()` bisa NULL untuk CEO tanpa org → `is distinct from`). Spec tidak boleh berasumsi period lain yang dilempar `periodId` bocor lintas org — RPC menolak sendiri.
 - **Ranking immutability** (AC-7.20 + trigger `ranking_snapshots_no_delete`) berarti spec **tidak boleh** menambah tombol "Hitung Ulang" pasca-close.
 
@@ -129,7 +129,7 @@ Bug ini reachable **hanya untuk organisasi yang sudah punya periode aktif** (`pe
 
 **G3** — Manual Score Override tetap efektif setelah finalization: baris `is_current` dari calculate diikuti oleh `close` yang membaca `manual_adjusted_score` (kolom sudah di-coalesce di `0013:654`).
 
-**G4** — Jalur pemulihan untuk "calculate OK, close gagal": user boleh menekan tombol lagi; calculate re-run idempotent (dijamin serial oleh advisory lock 0078), close percobaan ulang berhasil.
+**G4** — Jalur pemulihan untuk "calculate OK, close gagal": user boleh menekan tombol lagi; calculate re-run idempotent (dijamin serial oleh advisory lock 0079), close percobaan ulang berhasil.
 
 **G5** *(baru)* — **Concurrent finalization aman**: dua sesi paralel (dua tab / dua device) di-serialisasi oleh advisory lock server; tidak ada partial-unique violation, tidak ada calculate menulis ke closed period.
 
@@ -141,7 +141,7 @@ Bug ini reachable **hanya untuk organisasi yang sudah punya periode aktif** (`pe
 
 **NG-3** — Perubahan RPC signature atau semantic.
 
-**NG-4** — Migrasi SQL besar. **Satu migrasi kecil (0078)** untuk advisory lock; nol perubahan skema, nol perubahan grant, nol data migration.
+**NG-4** — Migrasi SQL besar. **Satu migrasi kecil (0079)** untuk advisory lock; nol perubahan skema, nol perubahan grant, nol data migration.
 
 **NG-5** — Menambah permission key baru; reuse `manage_score_formula`.
 
@@ -175,11 +175,11 @@ Bug ini reachable **hanya untuk organisasi yang sudah punya periode aktif** (`pe
 
 Kedua query dilakukan client-side via Supabase (RLS SELECT sudah menegakkan org & permission — restored di migrasi 0071 per memory `p2-db-contract-ci`). Bila RLS SELECT tidak memadai, buat RPC `preview_finalize_period` SECURITY DEFINER dengan gate `manage_score_formula`. **Keputusan implementasi diserahkan ke fase RED di /tdd-plan** — spec cukup mengunci kontrak return.
 
-### 3.2 Migrasi 0078 (baru — dari grill Engineering F-2/F-3)
+### 3.2 Migrasi 0079 (baru — dari grill Engineering F-2/F-3)
 
-> **Konflik penomoran** *(baru — dari cross-check memory 2026-07-19)*: memory `settings-consumers-owner-decisions` juga menargetkan slot `0078` untuk migrasi `card_completion_rules + card_guidance_contents`. Kedua spec sedang paralel. Resolusi: **siapa merge ke `origin/staging` duluan pakai `0078`; yang belakang shift ke `0079`**. Konvensi ini pra-cedent dari collision `0058` (dua PR mendarat bersamaan lewat file name yang berbeda; deterministik oleh Supabase CLI). Nama file spec ini boleh diklaim tapi PR harus rename di merge-time bila settings-consumers landed dulu.
+> **Penomoran migrasi** *(diselesaikan 2026-07-19)*: slot `0078` sempat diklaim paralel oleh spec `settings-consumers` (`card_completion_rules` + `card_guidance_contents`) yang sudah shipped lokal. Resolusi: **spec ini mengalah ke `0079`**; settings-consumers memegang `0078`. Keduanya independen — nol irisan tabel/fungsi, jadi urutan apply bebas. Preseden collision `0058` (dua PR mendarat bersamaan dengan nama file berbeda; urutan apply tetap deterministik karena Supabase CLI mengurutkan nama file lengkap) menunjukkan tabrakan nomor bukan blocker selama nama file unik.
 
-**FR-MIG-1** — Migrasi `0078_score_finalize_advisory_lock.sql` (atau `0079_...` bila settings-consumers landed dulu) menambahkan advisory transaction lock di dua RPC:
+**FR-MIG-1** — Migrasi `0079_score_finalize_advisory_lock.sql` (atau `0079_...` bila settings-consumers landed dulu) menambahkan advisory transaction lock di dua RPC:
 
 ```sql
 -- di atas SELECT ... INTO v_period di calculate_period_scores (0013:518)
@@ -194,7 +194,7 @@ Efek:
 - Race calculate-mid-flight ↔ close (grill F-3) hilang: close menunggu calculate selesai; retry setelah error mengambil lock baru.
 - Nol perubahan interface RPC. Nol dampak pada RLS/permission. Nol perubahan test lain kecuali kontrak DB baru.
 
-**FR-MIG-2** — Migrasi 0078 dijalankan **sebelum** hook baru mendarat di produksi. Rilis order: (a) apply 0078 di staging → contract test hijau → (b) apply 0078 di prod → (c) release build client dengan hook + modal baru.
+**FR-MIG-2** — Migrasi 0079 dijalankan **sebelum** hook baru mendarat di produksi. Rilis order: (a) apply 0079 di staging → contract test hijau → (b) apply 0079 di prod → (c) release build client dengan hook + modal baru.
 
 ### 3.3 Hooks
 
@@ -243,7 +243,7 @@ done                            ← "Selesai · N pengguna masuk peringkat" + "T
 
 **FR-UI-6** *(baru — dari grill Engineering F-6)* — Modal.onRequestClose (hardware back / overlay tap) adalah no-op pada state ∈ {`loading-preview`, `calculating`, `locking`}. Dismiss diperbolehkan pada {`idle`, `step1`, `error-preview`, `error-calc`, `error-lock`, `done`}.
 
-**FR-UI-7** *(baru — dari grill Engineering F-6)* — Mutation-level guard: `FinalizePeriodModal` merender tombol confirm dengan `disabled={calcMutation.isPending || closeMutation.isPending}` supaya multi-tap client-side tidak spawn RPC ganda. Advisory lock 0078 tetap serve sebagai backstop server.
+**FR-UI-7** *(baru — dari grill Engineering F-6)* — Mutation-level guard: `FinalizePeriodModal` merender tombol confirm dengan `disabled={calcMutation.isPending || closeMutation.isPending}` supaya multi-tap client-side tidak spawn RPC ganda. Advisory lock 0079 tetap serve sebagai backstop server.
 
 ### 3.5 Reactivity
 
@@ -258,7 +258,7 @@ done                            ← "Selesai · N pengguna masuk peringkat" + "T
 
 ## 4. Data Contract
 
-**Nol perubahan skema.** Migrasi 0078 hanya menambah `pg_advisory_xact_lock` di badan dua fungsi.
+**Nol perubahan skema.** Migrasi 0079 hanya menambah `pg_advisory_xact_lock` di badan dua fungsi.
 
 Ringkasan kolom yang dibaca / ditulis:
 
@@ -279,7 +279,7 @@ Ringkasan kolom yang dibaca / ditulis:
 | INV-4 | Calculate + Close diulang pada period yang sudah closed → close raise `E1` server; UI surface tanpa modifikasi | FR-UI-3 |
 | INV-5 | Override baris `is_current=true` yang di-apply SEBELUM finalization ikut ke `ranking_snapshots.score` via coalesce | `0013:654` |
 | INV-6 | Override pada period closed ditolak server (`E1`) — FREEZE | `0013:700-702` |
-| INV-7 *(baru)* | Dua sesi paralel `calculate(periodId)` / `close(periodId)` tidak menghasilkan partial-unique violation, tidak menghasilkan calculate-write ke closed period | Migrasi 0078 |
+| INV-7 *(baru)* | Dua sesi paralel `calculate(periodId)` / `close(periodId)` tidak menghasilkan partial-unique violation, tidak menghasilkan calculate-write ke closed period | Migrasi 0079 |
 | INV-8 *(baru)* | Setiap attempt calculate menulis 1 baris `activity_logs` `event_kind='scores_calculated'`; setiap attempt close menulis 1 baris `event_kind='period_closed'` (verifikasi nama pasti saat implementasi) | `0013:616-617` + close event |
 
 ---
@@ -299,7 +299,7 @@ Empat RPC dilibatkan. Semua sudah live dan bergrant benar per baseline. Spec **h
 
 **Cross-org guard**: `0039` memasang `v_period.organization_id is distinct from current_user_org()` (NULL-safety untuk CEO tanpa org). Spec ini **tidak** melewati param org — periodId cukup; RPC menolak sendiri.
 
-**Advisory lock**: dipasang 0078 pada calculate + close; lock name `hashtext('score_finalize:' || periodId::text)`. Lock adalah transaction-scoped; auto-release saat COMMIT/ROLLBACK.
+**Advisory lock**: dipasang 0079 pada calculate + close; lock name `hashtext('score_finalize:' || periodId::text)`. Lock adalah transaction-scoped; auto-release saat COMMIT/ROLLBACK.
 
 ---
 
@@ -356,14 +356,14 @@ Empat RPC dilibatkan. Semua sudah live dan bergrant benar per baseline. Spec **h
 | E-2 | Calculate raise permission denied (defense-in-depth) | Modal `error-calc`; screen sudah gated | Tidak berubah |
 | E-3 | Calculate network fail | Modal `error-calc`; retry aman (idempotent + lock) | Tidak berubah atau parsial-belum-commit |
 | E-4 | Calculate OK, close raise E1 (race dua-tab: session lain sudah close duluan) | Modal `error-lock`; retry akan calc-ulang + close ulang; close menolak dengan E1 lagi karena `status='closed'`; user tap "Tutup" | user_score_results terisi dari calc pertama; period tetap active atau sudah closed di session lain |
-| E-5 | Calculate OK, close network fail | Modal `error-lock`; retry aman via advisory lock (0078) | Sama seperti E-3 |
-| E-6 | Close raise `duplicate key value violates unique constraint "ranking_snapshots_period_snapshot_id_user_id_key"` | Sudah dicegah oleh advisory lock 0078; bila tetap terjadi (mis. advisory lock miss karena bug), client mapping 23505 → copy Indonesia di §6.4 | ranking_snapshots kemungkinan sudah ada dari session lain |
+| E-5 | Calculate OK, close network fail | Modal `error-lock`; retry aman via advisory lock (0079) | Sama seperti E-3 |
+| E-6 | Close raise `duplicate key value violates unique constraint "ranking_snapshots_period_snapshot_id_user_id_key"` | Sudah dicegah oleh advisory lock 0079; bila tetap terjadi (mis. advisory lock miss karena bug), client mapping 23505 → copy Indonesia di §6.4 | ranking_snapshots kemungkinan sudah ada dari session lain |
 | E-7 *(baru)* | Advisory lock timeout / wait (session lain memegang lock >5s) | Server: lock antri; client tidak melihat progress; setelah lock diperoleh, calc lanjut normal. Bila client timeout HTTP (default 60s), user retry dan advisory lock memastikan hasil tetap konsisten | Konsisten |
 
 ### 7.2 Rollback filosofi
 
 - **Tidak ada compensating action client-side**. Server tidak menyediakan `undo_calculate_period_scores` — konsisten dengan K5 append-only.
-- **Retry adalah rollback**. Advisory lock (0078) memastikan retry serial; calculate idempotent (aman ulang); close menolak setelah sukses (natural idempotency).
+- **Retry adalah rollback**. Advisory lock (0079) memastikan retry serial; calculate idempotent (aman ulang); close menolak setelah sukses (natural idempotency).
 - **Pesan server diteruskan apa adanya** ke `surfaceServerError` (WS-5 pattern). Untuk error kode PG spesifik (23505 → concurrent finalize), mapping client ke copy Indonesia di §6.4.
 
 ---
@@ -408,7 +408,7 @@ Empat RPC dilibatkan. Semua sudah live dan bergrant benar per baseline. Spec **h
 
 **AC-FIN-17** *(baru)* — Confirm button di-disable saat mutation calculate atau close in-flight (FR-UI-7).
 
-**AC-FIN-18** *(baru — dari grill Engineering F-2/F-3)* — Dua sesi paralel `useCalculatePeriodScores` pada `periodId` sama serial di server via advisory lock 0078; sesi kedua menunggu, tidak menghasilkan `duplicate key value` mentah.
+**AC-FIN-18** *(baru — dari grill Engineering F-2/F-3)* — Dua sesi paralel `useCalculatePeriodScores` pada `periodId` sama serial di server via advisory lock 0079; sesi kedua menunggu, tidak menghasilkan `duplicate key value` mentah.
 
 **AC-FIN-19** *(baru — dari grill Governance F-11)* — Bila error 23505 tetap terangkat (defense-in-depth), client mapping ke copy Indonesia "Perhitungan sedang berjalan di sesi lain. Muat ulang halaman dan coba lagi." (§6.4). Raw PG error tidak boleh sampai user.
 
@@ -418,7 +418,7 @@ Empat RPC dilibatkan. Semua sudah live dan bergrant benar per baseline. Spec **h
 
 ## 9. Test Plan (handoff ke /tdd-plan)
 
-### 9.0 Fase 0 — Migrasi 0078 advisory lock (RED wajib)
+### 9.0 Fase 0 — Migrasi 0079 advisory lock (RED wajib)
 
 Tambah di `supabase/tests/` (kalau `db-contract-tests` CI aktif):
 
@@ -506,7 +506,7 @@ Setelah GREEN:
 
 | # | Fase | Deliverable RED | Deliverable GREEN | Blocker resolusi |
 |---|---|---|---|---|
-| 0 | Migrasi 0078 advisory lock | T-DB-1..6 | `supabase/migrations/0078_score_finalize_advisory_lock.sql` | Grill Eng F-2/F-3 |
+| 0 | Migrasi 0079 advisory lock | T-DB-1..6 | `supabase/migrations/0079_score_finalize_advisory_lock.sql` | Grill Eng F-2/F-3 |
 | 1 | Data-layer + preview | T-DL-1..4 | `previewFinalization` di people-score.ts | Grill Prod F-7 |
 | 2 | Hooks | T-H-1..5 | `useCalculatePeriodScores`, `usePreviewFinalization` di `hooks/use-people-score.ts` | Grill Eng F-1 (path) |
 | 3 | Modal orkestrator | T-M-1..14 | `FinalizePeriodModal` (rename dari `close-period-modal.tsx`) | Grill Prod F-2/F-5/F-6, Eng F-6/F-8 |

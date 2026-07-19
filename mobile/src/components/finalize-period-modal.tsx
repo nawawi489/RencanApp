@@ -4,7 +4,7 @@
 // Menggantikan ClosePeriodModal (WS-5) yang hanya memanggil close_period_snapshot
 // dan menghasilkan ranking KOSONG karena calculatePeriodScores tak pernah dipanggil dari UI.
 // Bug jembatan V1.83 ditutup di sini: modal ini memanggil calculate → close berurutan sync
-// client-side (owner decision #2), dengan advisory lock 0078 sebagai backstop concurrency.
+// client-side (owner decision #2), dengan advisory lock 0079 sebagai backstop concurrency.
 //
 // State machine (spec §6.2, TDD plan Fase 3):
 //   loading-preview  → useQuery(usePreviewFinalization) belum siap
@@ -312,7 +312,7 @@ export function FinalizePeriodModal({
               <Text className="text-sm font-semibold text-red-700 dark:text-red-400">
                 {state.message}
               </Text>
-              {/* runFinalize aman diulang: calculate idempotent + advisory lock 0078. */}
+              {/* runFinalize aman diulang: calculate idempotent + advisory lock 0079. */}
               <Button
                 label="Coba lagi"
                 accessibilityLabel="Coba lagi finalisasi peringkat"

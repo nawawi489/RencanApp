@@ -12,7 +12,7 @@ spec: specs/score-ranking-finalization-bridge.md
 > **Prasyarat eksekusi** (spec bagian §11.2):
 >
 > - ADR `wiki/concepts/score-period-immutability.md` di-commit di fase yang sama (B-3 MERGE-BLOCKER).
-> - Konflik penomoran 0078 (settings-consumers) diselesaikan sebelum PR mendarat; kalau settings-consumers merged duluan → shift migrasi ke 0079 di fase Fase-0.
+> - Penomoran migrasi SUDAH diselesaikan: slot `0078` diserahkan ke settings-consumers, spec ini memakai `0079`.
 > - Semua 7 keputusan owner terkunci; jangan tanya ulang (lihat memory `score-ranking-finalization-owner-decisions`).
 
 # TDD Plan — Jembatan Score/Ranking Finalization
@@ -21,8 +21,8 @@ spec: specs/score-ranking-finalization-bridge.md
 
 | Layer | File yang disentuh | Fase RED | Fase GREEN |
 |---|---|---|---|
-| Migrasi DB | `supabase/migrations/0078_score_finalize_advisory_lock.sql` (baru) | Fase 0 | Fase 0 |
-| DB contract test | `supabase/tests/0078_score_finalize_advisory_lock_contract.sql` (baru) | Fase 0 | — |
+| Migrasi DB | `supabase/migrations/0079_score_finalize_advisory_lock.sql` (baru) | Fase 0 | Fase 0 |
+| DB contract test | `supabase/tests/0079_score_finalize_advisory_lock_contract.sql` (baru) | Fase 0 | — |
 | Data-layer | `mobile/src/lib/people-score.ts` (+ `previewFinalization` baru; fungsi lain tetap) | Fase 1 | Fase 1 |
 | Data-layer test | `mobile/src/lib/__tests__/people-score.test.ts` (extend) | Fase 1 | — |
 | Hook | `mobile/src/hooks/use-people-score.ts` (+ `useCalculatePeriodScores`, `usePreviewFinalization`) | Fase 2 | Fase 2 |
@@ -38,11 +38,11 @@ spec: specs/score-ranking-finalization-bridge.md
 
 ---
 
-## Fase 0 — Migrasi 0078 advisory lock + DB contract
+## Fase 0 — Migrasi 0079 advisory lock + DB contract
 
 ### RED
 
-**File baru**: `supabase/tests/0078_score_finalize_advisory_lock_contract.sql`
+**File baru**: `supabase/tests/0079_score_finalize_advisory_lock_contract.sql`
 
 Struktur mengikuti pola `supabase/tests/close_period_snapshot_contract.sql`:
 
@@ -136,12 +136,12 @@ Concurrency behavior (dua session sungguhan) **AC-FIN-18** diverifikasi manual d
 
 ### GREEN
 
-**File baru**: `supabase/migrations/0078_score_finalize_advisory_lock.sql`
+**File baru**: `supabase/migrations/0079_score_finalize_advisory_lock.sql`
 
 ```sql
--- Migrasi 0078 — advisory lock untuk score finalization pipeline.
+-- Migrasi 0079 — advisory lock untuk score finalization pipeline.
 -- Ref: specs/score-ranking-finalization-bridge.md FR-MIG-1
--- Konflik penomoran: kalau settings-consumers mendarat di 0078 duluan, rename ke 0079.
+-- Penomoran: slot 0078 milik settings-consumers; migrasi ini 0079. Keduanya independen.
 
 -- CREATE OR REPLACE FUNCTION calculate_period_scores(p_period_id uuid) RETURNS int
 -- LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
@@ -161,8 +161,8 @@ Concurrency behavior (dua session sungguhan) **AC-FIN-18** diverifikasi manual d
 -- CREATE OR REPLACE ≠ DROP+CREATE; grant tidak reset). Cross-check dengan T-DB-3 di kontrak.
 
 -- WAJIB catat rilis order:
--- 1. Apply 0078 ke staging → jalankan T-DB-1..6 → semua PASS.
--- 2. Apply 0078 ke produksi.
+-- 1. Apply 0079 ke staging → jalankan T-DB-1..6 → semua PASS.
+-- 2. Apply 0079 ke produksi.
 -- 3. Baru release build client dengan modal & hook baru (Fase 3-4).
 ```
 
@@ -1027,7 +1027,7 @@ Setiap fase = 1 commit (Strategi A). Ordering ketat:
 
 | # | Fase | Commit message |
 |---|---|---|
-| 1 | Fase 0 | `feat(db): 0078 advisory lock + T-DB-1..7 contract` |
+| 1 | Fase 0 | `feat(db): 0079 advisory lock + T-DB-1..7 contract` |
 | 2 | Fase 1 | `feat(lib): previewFinalization + T-DL-1..5` |
 | 3 | Fase 2 | `feat(hooks): useCalculatePeriodScores + usePreviewFinalization + T-H-1..5` |
 | 4 | Fase 3 | `feat(components): FinalizePeriodModal (rename) + T-M-1..16` |
@@ -1044,7 +1044,7 @@ Setiap fase = 1 commit (Strategi A). Ordering ketat:
 
 - Semua fase merged; tidak boleh Fase 3 tanpa Fase 0.
 - `wiki/concepts/score-period-immutability.md` ada di diff (B-3 MERGE-BLOCKER).
-- Bila konflik penomoran 0078: cek `origin/staging` — kalau settings-consumers sudah landed, rename migration file + contract test + PR title.
+- Penomoran sudah final di `0079` (0078 = settings-consumers). Kalau saat merge ternyata 0079 juga terpakai, rename BERSAMAAN: migrasi + contract test + rujukan di spec/TDD plan + judul PR.
 - Cross-check `mobile/src/lib/database.types.ts` — tidak perlu regen (nol signature change), tapi `git status` harus bersih.
 
 ---
@@ -1075,7 +1075,7 @@ Untuk telusur balik: 4 BLOCKER + 4 MAJOR + 5 MINOR dari critic. Semua BLOCKER + 
 2. CREATE OR REPLACE preserve ACL correctness (memory `anon-public-rpc-grant-gotcha`).
 3. Cross-org error text `'Periode tidak ditemukan.'` dengan trailing dot benar (`0039:48` + `0013:519`).
 4. Done copy §6.4 pakai `.` (period), bukan `·` (middle dot); middle dot hanya di preview + progress labels.
-5. Konflik penomoran 0078 vs settings-consumers sudah didokumentasi dengan mekanisme resolusi.
+5. Penomoran migrasi sudah diselesaikan: 0078 = settings-consumers, 0079 = spec ini.
 
 ---
 

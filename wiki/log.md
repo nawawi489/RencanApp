@@ -1720,7 +1720,7 @@ Bug jembatan V1.83: `close_period_snapshot` menghitung `ranking_snapshots` dari 
 - [[index]] — entry [[score-period-immutability]] ditambah alfabetis di Concepts
 
 **Kode terwujud (branch `claude/nifty-tu-077d71`):**
-- Fase 0: migrasi `0078_score_finalize_advisory_lock.sql` (`pg_advisory_xact_lock('score_finalize:'||p_period_id)` di calc + close, mencegah race dua-tab R1/R2) + kontrak `0078_..._contract.sql` T-DB-1..7 (cross-org guard, ACL `authenticated`/`anon`, static regex advisory lock, end-to-end bug-fix confirmation, override coalesce INV-5)
+- Fase 0: migrasi `0079_score_finalize_advisory_lock.sql` (`pg_advisory_xact_lock('score_finalize:'||p_period_id)` di calc + close, mencegah race dua-tab R1/R2) + kontrak `0079_..._contract.sql` T-DB-1..7 (cross-org guard, ACL `authenticated`/`anon`, static regex advisory lock, end-to-end bug-fix confirmation, override coalesce INV-5)
 - Fase 1: `previewFinalization(periodId)` di `mobile/src/lib/people-score.ts` (2 count query `is_current=true` + subset `result_kind='override'`) + 7 test T-DL-2a..d + T-DL-3..5 (55/55 hijau)
 - Fase 2: `useCalculatePeriodScores`, `usePreviewFinalization` di `mobile/src/hooks/use-people-score.ts` (invalidasi 4 key skor tanpa sentuh ranking/active/latest) + 7 test T-H-1..5 (34/34 hijau)
 - Fase 3: `mobile/src/components/finalize-period-modal.tsx` orkestrator 9-state (loading-preview → step1 → calculating → locking → done + 4 error variants) + mapping PG code 23505 → copy Indonesia + canary AC-FIN-8b + 14 test T-M-1..16 (14/14 hijau)
@@ -1731,7 +1731,7 @@ Bug jembatan V1.83: `close_period_snapshot` menghitung `ranking_snapshots` dari 
 1. Trigger = tombol UI admin
 2. Eksekusi = sync client-side
 3. Override pasca-close = FREEZE (server E1 dipertahankan)
-4. Race dua-tab = migrasi 0078 advisory lock
+4. Race dua-tab = migrasi 0079 advisory lock
 5. Reminder period-end = NG-8 defer ke spec follow-up `score-period-end-nudge` (B-1 HIGH)
 6. Escape hatch pasca-close = accept sadar (ADR di sini)
 7. Label = "Finalisasi Periode & Peringkat"
@@ -1739,8 +1739,8 @@ Bug jembatan V1.83: `close_period_snapshot` menghitung `ranking_snapshots` dari 
 **Gotcha kritikal**:
 - RNTL `render()` = **async function** — WAJIB `await render(...)` di test komponen; jika tidak, `screen` proxy melempar `\`render\` function has not been called`
 - Pesan server E3 = `'Anda tidak berwenang mengelola Score Formula.'` (BUKAN "mengubah periode ini" — critic BLOCKER-1)
-- Migrasi 0078 CREATE OR REPLACE preserve ACL (BUKAN DROP+CREATE)
-- Konflik penomoran 0078: `settings-consumers-owner-decisions` juga mengklaim slot — siapa merge duluan pakai 0078, yang belakang shift ke 0079
+- Migrasi 0079 CREATE OR REPLACE preserve ACL (BUKAN DROP+CREATE)
+- Penomoran migrasi: slot 0078 diserahkan ke `settings-consumers` (sudah shipped lokal duluan); migrasi ini memakai **0079**. Keduanya independen, nol irisan tabel/fungsi
 
 **Backlog dibuka (7 item)**: B-1 `score-period-end-nudge` HIGH, B-2 `score-open-period-ui` HIGH, B-3 ADR MERGE-BLOCKER (SHIPPED bersama fase ini), B-4 divergensi PRD §35 vs kode `scores_calculated` event, B-5 retention PDP, B-6 correlation `finalize_run_id`, B-7 rate-limit.
 
@@ -1748,9 +1748,9 @@ Bug jembatan V1.83: `close_period_snapshot` menghitung `ranking_snapshots` dari 
 
 ## [2026-07-19] update | Smoke Fase 5 dijalankan — bug UI nyata ditemukan + diperbaiki
 
-Smoke manual dijalankan end-to-end di Supabase local (Docker `supabase_db_supabase`, 3 hari uptime). Migrasi 0078 di-apply live (`docker exec ... < 0078_score_finalize_advisory_lock.sql`), tercatat manual di `schema_migrations` karena worktree filesystem migrasi tertinggal dari yang ter-apply di DB lokal (gotcha: [[worktree-run-tests-preview]] — DB lokal punya 0069/0070 yang tidak ada di filesystem worktree branch ini).
+Smoke manual dijalankan end-to-end di Supabase local (Docker `supabase_db_supabase`, 3 hari uptime). Migrasi 0079 di-apply live (`docker exec ... < 0079_score_finalize_advisory_lock.sql`), tercatat manual di `schema_migrations` karena worktree filesystem migrasi tertinggal dari yang ter-apply di DB lokal (gotcha: [[worktree-run-tests-preview]] — DB lokal punya 0069/0070 yang tidak ada di filesystem worktree branch ini).
 
-**Kontrak DB (`supabase/tests/0078_score_finalize_advisory_lock_contract.sql`) — 3 bug fixture ditemukan + diperbaiki sebelum 7/7 PASS:**
+**Kontrak DB (`supabase/tests/0079_score_finalize_advisory_lock_contract.sql`) — 3 bug fixture ditemukan + diperbaiki sebelum 7/7 PASS:**
 1. T-DB-1/T-DB-2 pakai kolom `profiles.role_level` yang **tidak ada** di skema — level diturunkan dari `role_templates.level` via FK `role_template_id`. Fixture diperbaiki (kolom dihapus; level user fixture memang tidak relevan untuk skenario cross-org).
 2. T-DB-6 hardcode `calc harus = 3` — gagal karena org dev seed sudah punya staff lain di luar 3 yang ditambahkan fixture (`calc=4`). Diperbaiki: hitung `v_expected_staff` dinamis dari populasi staff sungguhan sebelum assert.
 3. T-DB-7 mengambil `score_formula_versions` via `select ... where status='active' limit 1` **tanpa filter org** — berpotensi false-positive PASS dari formula org lain. Diperbaiki: seed formula sendiri di-scope `v_org`.
@@ -1769,6 +1769,6 @@ Modal `done` state (menampilkan "N pengguna masuk peringkat" + footer escape hat
 
 **Data smoke tersisa di DB lokal** (harmless, tidak bisa dihapus by design): 2 period closed (`a28ba739…`, `e7666488…`) org `52b0ebe1…`, 1 `score_formula_versions` level=staff status=active. Tidak perlu dibersihkan — lokal saja, bukan staging/prod.
 
-**Update spec/plan**: `specs/score-ranking-finalization-tdd-plan.md` §9.5/9.6 smoke checklist TERBUKTI akurat. Tambahan follow-up: kontrak `0078_..._contract.sql` di-patch permanen (3 fixture fix di atas) — versi baru sudah di file, bukan hanya dijalankan lalu dibuang.
+**Update spec/plan**: `specs/score-ranking-finalization-tdd-plan.md` §9.5/9.6 smoke checklist TERBUKTI akurat. Tambahan follow-up: kontrak `0079_..._contract.sql` di-patch permanen (3 fixture fix di atas) — versi baru sudah di file, bukan hanya dijalankan lalu dibuang.
 
 **Catatan rebase (2026-07-19)**: branch awalnya dicabang dari `main` (`d12914a`) sementara PR menargetkan `staging`; keduanya divergen dua arah (main 12 commit unik, staging 96). Diperbaiki dengan `git rebase --onto origin/staging d12914a` sehingga PR hanya membawa 1 commit kerja ini. Semua file kode yang disentuh terbukti **identik** antara main dan staging sebelum rebase, jadi nol konflik pada kode; satu-satunya konflik adalah file log ini (dua entry berbeda tanggal, keduanya dipertahankan).

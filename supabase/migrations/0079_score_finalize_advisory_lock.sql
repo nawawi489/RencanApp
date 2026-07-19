@@ -28,9 +28,12 @@
 -- sebagai statement pertama di dalam BEGIN blok utama. Perubahan lain di 0013/0039 tidak
 -- tersentuh.
 --
--- KONFLIK PENOMORAN: settings-consumers-owner-decisions juga mengklaim slot 0078. Bila
--- settings-consumers landed duluan ke origin/staging, rename file ini + kontraknya ke 0079
--- (dan update `basis:` di specs/score-ranking-finalization-bridge.md).
+-- PENOMORAN: slot 0078 diserahkan ke spec settings-consumers (card_completion_rules +
+-- card_guidance_contents) yang lebih dulu mengklaimnya; migrasi ini memakai 0079. Keduanya
+-- independen — tidak ada tabel/fungsi yang beririsan, jadi urutan apply antar-keduanya bebas.
+-- Kalau saat merge ternyata 0079 juga sudah terpakai, geser ke nomor bebas berikutnya dan
+-- rename BERSAMAAN: file migrasi + supabase/tests/<n>_score_finalize_advisory_lock_contract.sql
+-- + rujukan di specs/score-ranking-finalization-{bridge,tdd-plan}.md.
 --
 -- OPEN_PERIOD_SNAPSHOT: SENGAJA TIDAK di-lock. RPC tsb tidak menerima UUID periode; guard
 -- "one active per org" sudah ditegakkan partial unique index ux_period_snapshots_one_active_per_org
@@ -56,7 +59,7 @@ declare
   v_metric_value numeric;
   v_existing_auto uuid;
 begin
-  -- Advisory lock (0078): serialize per-periodId. Statement pertama supaya sesi lain
+  -- Advisory lock (0079): serialize per-periodId. Statement pertama supaya sesi lain
   -- yang menunggu tidak melakukan pekerjaan yang akan di-supersede. Auto-release di COMMIT/ROLLBACK.
   perform pg_advisory_xact_lock(hashtext('score_finalize:' || p_period_id::text));
 
@@ -180,7 +183,7 @@ create or replace function public.close_period_snapshot(p_period_id uuid)
 returns int language plpgsql security definer set search_path = '' as $$
 declare v_period public.period_snapshots; v_count int := 0;
 begin
-  -- Advisory lock (0078): serialize per-periodId. Menutup R2 (calc mid-flight vs close):
+  -- Advisory lock (0079): serialize per-periodId. Menutup R2 (calc mid-flight vs close):
   -- close menunggu calc selesai, membaca state pasca-commit yang konsisten.
   perform pg_advisory_xact_lock(hashtext('score_finalize:' || p_period_id::text));
 

@@ -90,7 +90,7 @@ Sampai spec itu ada dan disetujui owner, jawaban adalah **"tidak ada reopen"**.
 - [[score-ranking-finalization-bridge]] §2.2 NG-9, AC-FIN-20
 - Precedent Fase 7: `specs/fase-7-people-score.md` §0 D9 + AC-7.7/7.19/7.20
 - Implementasi trigger: `supabase/migrations/0013_fase7_people_score.sql` K1-K5 header
-- Advisory lock (Fase 0 spec ini): `supabase/migrations/0078_score_finalize_advisory_lock.sql`
+- Advisory lock (Fase 0 spec ini): `supabase/migrations/0079_score_finalize_advisory_lock.sql`
 - Modal: `mobile/src/components/finalize-period-modal.tsx`
 - Memory: `score-ranking-finalization-owner-decisions`
 - Terkait: [[audit-governance]] (append-only philosophy), [[permission-model]]
