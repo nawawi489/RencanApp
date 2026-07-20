@@ -116,8 +116,16 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          # `cache: npm` SENGAJA tidak dipakai di runner self-hosted. Cache Actions
+          # menambah satu langkah simpan di akhir job yang mengunggah ~/.npm (177 MB)
+          # ke layanan cache GitHub — teramati menggantung sampai job harus dibatalkan,
+          # sementara load average runner hanya 0,33 (bukan CPU-bound, melainkan
+          # menunggu layanan yang ikut terdampak blokir billing).
+          #
+          # Di mesin yang sama sepanjang waktu, ~/.npm memang sudah persisten antar-run,
+          # jadi perjalanan pulang-pergi ke cache GitHub murni overhead. Bila job ini
+          # suatu saat kembali ke runner GitHub, kembalikan `cache: npm` +
+          # `cache-dependency-path: mobile/package-lock.json`.
 
       # Catatan anggaran: meng-cache node_modules pernah dipertimbangkan dan DITOLAK.
       # Diukur di runner: `Install dependencies` hanya 18 detik, sementara restore cache
