@@ -1866,3 +1866,29 @@ Pasca re-run: ketiga job hijau, staging ter-deploy `5e85bd6`, dan verifikasi reg
 - **`db-contract` sengaja tidak dipindah** — `supabase start`/`stop` di runner yang berbagi Docker dengan mesin dev akan bentrok port dan berpotensi merobohkan stack dev developer. Konsekuensinya job itu mati selama kuota terblokir; perubahan DB butuh verifikasi manual.
 - **Dua jebakan yang ditemukan saat setup** (keduanya bergejala senyap): cache npm Actions menggantung di step `Post Setup Node` (177 MB, load average 0,33 → bukan CPU-bound) sehingga dicabut; dan WSL mematikan distro saat idle sehingga job menggantung `queued` atau ter-*cancel* di tengah — ditutup dengan keepalive Startup folder yang memulihkan diri (terverifikasi: `wsl --terminate Ubuntu` → pulih ~25 detik).
 - **Keamanan:** user `runner` sengaja TIDAK diberi sudo tanpa password. Konsekuensi lanjutan: **repo tidak boleh dijadikan publik** selama runner terpasang — meniadakan opsi "repo publik agar Actions gratis".
+## [2026-07-20] fix | Akar flake CI ditemukan: anggaran timeout async, bukan tekanan memori
+
+Menutup pertanyaan terbuka dari entri [2026-07-19] di atas. Hipotesis lama (**tekanan memori / worker crash**, dengan resep menaikkan `NODE_OPTIONS=--max-old-space-size`) **terbukti salah**. Penyebabnya dua batas waktu yang terlalu ketat untuk stack ini.
+
+**Dua knob berbeda, sering dikira satu:**
+
+| Knob | Default | Dipakai oleh | Status sebelum fix |
+|---|---|---|---|
+| `testTimeout` jest | 5000ms | seluruh body test | ditambal `jest.setTimeout(30000)` yang **disalin manual ke 45 dari 128 file**; 83 sisanya telanjang |
+| `asyncUtilTimeout` RNTL | 1000ms | `findBy*`, `waitFor` | **tidak pernah diset di mana pun** |
+
+`jest.setTimeout()` **tidak** memengaruhi `asyncUtilTimeout` — inilah salah paham yang membuat tambalan lama tampak sudah menutup masalah padahal tidak. `repeat-ui.test.tsx` bahkan memasang `jest.setTimeout(30000)` dengan komentar "cold transform bisa >5s", tapi tetap gagal di `findByText` pada 1000ms.
+
+**Bukti deterministik (probe delay, tanpa membebani CPU):** render `TaskDetailScreen` dengan `listInstances` sengaja resolve setelah 1500ms — data selalu sampai, tidak ada yang membatalkan/menimpa state:
+- `asyncUtilTimeout: 1000` → gagal `Unable to find an element with text: 2026-06-01` — **persis pesan yang muncul di CI**
+- `asyncUtilTimeout: 5000`, delay identik → lulus
+
+Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada assert yang berlomba dengan state, hanya kehabisan waktu tunggu.
+
+**A/B terkontrol** (base sama, beban CPU sama 6 proses, hanya config berbeda): tanpa fix → 2 gagal (`repeat-ui` + `finalize-period-modal`, pasangan yang sama persis dengan yang terlihat di CI); dengan fix → 128 suite / 1548 tes hijau. Tanpa beban, keduanya hijau — itulah sebabnya flake ini tak pernah muncul di laptop yang senggang dan rutin muncul di runner.
+
+**Fix:** pindahkan anggaran ke satu tempat — `testTimeout: 20000` + `setupFilesAfterEnv` → `configure({ asyncUtilTimeout: 5000 })` di `mobile/jest.setup.after-env.js`. File test baru ikut aman tanpa perlu ingat menyalin `jest.setTimeout`.
+
+**Catatan kalibrasi:** beban CPU ekstrem (12 proses, durasi suite 146–218s vs 37–49s) membuat **semua** anggaran jebol termasuk yang 30s — di titik itu pengukuran berhenti diskriminatif. Pakai beban sedang saat menguji flake timeout, bukan beban maksimum.
+
+`--runInBand` di `test:ci` memang mematikan paralelisme jest, tapi tidak menolong: runner CI tetap lambat per-render, dan anggaran 1000ms-lah yang jebol.
