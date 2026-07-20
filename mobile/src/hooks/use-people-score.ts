@@ -11,6 +11,8 @@ import {
   activateScoreFormulaVersion,
   calculatePeriodScores,
   closePeriodSnapshot,
+  openPeriodSnapshot,
+  type OpenPeriodSnapshotInput,
   createScoreFormulaDraft,
   previewFinalization,
   updateFormulaVersionWeights,
@@ -190,6 +192,29 @@ export function useClosePeriod() {
   });
   return {
     closePeriod: (periodId: string) => m.mutateAsync(periodId),
+    isPending: m.isPending,
+  };
+}
+
+/**
+ * Buka periode skoring baru (NG-2 follow-up jembatan finalisasi — sebelumnya open_period_snapshot
+ * ada di DB tapi nol caller UI, sehingga org tanpa periode seeded tidak punya jalan masuk sama sekali).
+ * onSuccess invalidate TEPAT 1 key: ['active_period']. Sengaja TIDAK menyentuh ['ranking'],
+ * ['latest_closed_period'], maupun key skor — periode baru lahir kosong, belum ada skor
+ * maupun peringkat yang berubah; meng-invalidate mereka hanya memicu refetch sia-sia.
+ * Error RPC (has_permission / guard satu-aktif-per-org / CHECK period_order) di-propagate
+ * apa adanya lewat mutateAsync agar modal menyurface + memetakan ke copy Indonesia.
+ */
+export function useOpenPeriod() {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (input: OpenPeriodSnapshotInput) => openPeriodSnapshot(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['active_period'] });
+    },
+  });
+  return {
+    openPeriod: (input: OpenPeriodSnapshotInput) => m.mutateAsync(input),
     isPending: m.isPending,
   };
 }

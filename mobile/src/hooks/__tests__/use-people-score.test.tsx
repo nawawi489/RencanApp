@@ -19,6 +19,7 @@ const mockUpdateFormulaVersionWeights = jest.fn();
 const mockClosePeriodSnapshot = jest.fn();
 const mockCalculatePeriodScores = jest.fn();
 const mockPreviewFinalization = jest.fn();
+const mockOpenPeriodSnapshot = jest.fn();
 
 const mockListMyScoreHistory = jest.fn();
 const mockListUserScoreHistory = jest.fn();
@@ -26,6 +27,7 @@ jest.mock('@/lib/people-score', () => ({
   calculatePeriodScores: (...a: unknown[]) => mockCalculatePeriodScores(...a),
   previewFinalization: (...a: unknown[]) => mockPreviewFinalization(...a),
   closePeriodSnapshot: (...a: unknown[]) => mockClosePeriodSnapshot(...a),
+  openPeriodSnapshot: (...a: unknown[]) => mockOpenPeriodSnapshot(...a),
   getActivePeriod: (...a: unknown[]) => mockGetActivePeriod(...a),
   getLatestClosedPeriod: (...a: unknown[]) => mockGetLatestClosedPeriod(...a),
   listMyScoreHistory: (...a: unknown[]) => mockListMyScoreHistory(...a),
@@ -52,6 +54,7 @@ import {
   useLatestClosedPeriod,
   useMyScore,
   useMyScoreHistory,
+  useOpenPeriod,
   useRanking,
   useScoreFormulaTemplates,
   useScoreFormulaVersions,
@@ -83,6 +86,7 @@ beforeEach(() => {
   mockClosePeriodSnapshot.mockResolvedValue(3);
   mockCalculatePeriodScores.mockResolvedValue(5);
   mockPreviewFinalization.mockResolvedValue({ eligibleUsers: 5, activeOverrides: 1 });
+  mockOpenPeriodSnapshot.mockResolvedValue('p-new');
 });
 
 describe('useActivePeriod', () => {
@@ -497,5 +501,73 @@ describe('usePreviewFinalization — Fase 2 TDD plan', () => {
     expect(mockPreviewFinalization).not.toHaveBeenCalled();
     expect(result.current.preview).toBeUndefined();
     expect(result.current.isLoading).toBe(false);
+  });
+});
+
+describe('useOpenPeriod — buka periode (NG-2 follow-up jembatan finalisasi)', () => {
+  it('[T-OP-H-1] openPeriod(input) → openPeriodSnapshot(input) & return uuid', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useOpenPeriod(), { wrapper });
+    const input = { periodName: 'Juli 2026', periodStart: '2026-07-01', periodEnd: '2026-07-31' };
+    let id: string | undefined;
+    await act(async () => {
+      id = await result.current.openPeriod(input);
+    });
+    expect(mockOpenPeriodSnapshot).toHaveBeenCalledWith(input);
+    expect(id).toBe('p-new');
+  });
+
+  it('[T-OP-H-2] onSuccess invalidasi TEPAT [active_period]', async () => {
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useOpenPeriod(), { wrapper });
+    await act(async () => {
+      await result.current.openPeriod({
+        periodName: 'Juli 2026', periodStart: '2026-07-01', periodEnd: '2026-07-31',
+      });
+    });
+    const keys = spy.mock.calls.map((c) => JSON.stringify(c[0]));
+    expect(keys).toEqual(
+      expect.arrayContaining([JSON.stringify({ queryKey: ['active_period'] })]),
+    );
+    // Negative: membuka periode belum menghasilkan skor maupun ranking → jangan invalidate.
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['ranking'] }));
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['latest_closed_period'] }));
+    expect(keys).not.toContain(JSON.stringify({ queryKey: ['my_score'] }));
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('[T-OP-H-3a] error guard satu-aktif → mutateAsync MELEMPAR + TIDAK invalidasi', async () => {
+    mockOpenPeriodSnapshot.mockRejectedValueOnce(
+      new Error('Sudah ada periode aktif untuk organisasi ini. Tutup dulu sebelum membuka yang baru.'),
+    );
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useOpenPeriod(), { wrapper });
+    await expect(
+      result.current.openPeriod({
+        periodName: 'Juli 2026', periodStart: '2026-07-01', periodEnd: '2026-07-31',
+      }),
+    ).rejects.toThrow(/Sudah ada periode aktif/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('[T-OP-H-3b] error unauthorized → melempar apa adanya', async () => {
+    mockOpenPeriodSnapshot.mockRejectedValueOnce(
+      new Error('Anda tidak berwenang mengelola Score Formula.'),
+    );
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useOpenPeriod(), { wrapper });
+    await expect(
+      result.current.openPeriod({
+        periodName: 'Juli 2026', periodStart: '2026-07-01', periodEnd: '2026-07-31',
+      }),
+    ).rejects.toThrow(/tidak berwenang/);
+  });
+
+  it('[T-OP-H-4] isPending terekspos untuk gating tombol', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useOpenPeriod(), { wrapper });
+    expect(result.current.isPending).toBe(false);
   });
 });
