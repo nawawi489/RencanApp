@@ -1926,3 +1926,15 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - Test: `[F8-UI-28]` di `fase8-settings-screens.test.tsx` — spy `QueryClient.invalidateQueries`, jalankan tombol "Pulihkan" dari dialog konfirmasi, assert key `['cards_search']`. Red check dilakukan: dengan key lama test GAGAL, dengan key baru LULUS.
 - `npm run type-check` bersih.
 - BL-09(b) (row arsip tanpa `onPress`) masih terbuka; BL-09(a) sudah gugur saat verifikasi.
+## [2026-07-20] update | BL-08 — aksi review ke-3 "Catatan" (PRD §24.3)
+
+- **Pages updated:** [[ui-prototype-gap]] — item baru **UI-G-017** (alias BL-08) di §2 + §2.2 baru untuk sisa yang ter-defer.
+- **Temuan awal:** halaman `wiki/concepts/feature-gap-backlog.md` yang dirujuk task **tidak ada**, dan ID `BL-08` tidak muncul di mana pun di repo. Backlog ber-ID satu-satunya = [[ui-prototype-gap]] (`UI-G-###`/`UI-S-###`), jadi item didaftarkan di sana dengan alias BL-08.
+- **Semantik "Catatan" tidak tersurat di PRD.** `PRD.md` §24.3 hanya menuliskan tiga nama aksi + "Jika Minta Revisi, alasan wajib" — tidak menyebut apakah Catatan menulis comment, submission note, atau activity_log, maupun apakah ia terminal. Diangkat ke owner; **putusan: NON-TERMINAL** (kirim umpan balik tanpa menyetujui/menolak).
+- **DB tidak mendukung aksi ke-3** (diverifikasi sebelum menulis kode): `reviews.decision` CHECK `('approve','reject')` (`0005:140`), `task_submissions.review_status` CHECK `('pending','approved','rejected')` (`0005:97`), dan guard RPC `if p_decision not in ('approve','reject') then raise` (`0046:1976`). Karena putusannya non-terminal, ketiganya **tidak disentuh** — tidak ada migrasi.
+- **Implementasi (chat-only, nol perubahan DB):**
+  - `lib/inbox.ts::postReviewNote` — resolve room Rencana Aksi (`getRoomIdForActionPlan`, RLS member-gated) lalu `send_chat_message` dengan `p_context_action_plan` = id Tugas yang direview. Guard body kosong + pesan jelas saat reviewer bukan anggota room.
+  - `components/review-submission-panel.tsx` — mode ketiga "Catatan". Aksi terminal disembunyikan saat form terbuka (cegah tap tak sengaja); `onNote` async sehingga form **hanya reset saat kirim berhasil** — teks tidak hilang bila jaringan gagal.
+  - Ter-wire di `task/[id].tsx` + `task/instance/[id].tsx`. Mutasi Catatan sengaja **tidak** memanggil `refresh()` — tidak ada status yang berubah.
+- **Test:** 8 test komponen baru (`review-submission-panel.test.tsx`, termasuk assert non-terminal `onDecide` tidak terpanggil + teks bertahan saat gagal) + 10 test data layer (`inbox.test.ts` — termasuk assert hanya `send_chat_message` yang dipanggil, tiga varian `actionPlanId` kosong, dan invariant lintas-AP 0056). **Jest 1573/1573, 129 suite, tsc bersih, lint 0 error** — diverifikasi setelah rebase ke `staging` (angka lama 1419/119 diukur pada base yang tertinggal 106 commit, jadi tidak lagi berlaku).
+- **Ter-defer (butuh migrasi 0080+):** entri Activity Log. `write_activity` dicabut dari `authenticated` di `0062` (anti audit-log palsu) → hanya bisa lewat RPC SECURITY DEFINER baru. Rinci di [[ui-prototype-gap]] §2.2, termasuk pertanyaan terbuka "siapa yang boleh meninggalkan Catatan".

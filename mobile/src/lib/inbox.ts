@@ -265,6 +265,47 @@ export async function getRoomIdForActionPlan(actionPlanId: string): Promise<stri
   return data?.id ?? null;
 }
 
+/**
+ * PRD §24.3 aksi ke-3 "Catatan" — umpan balik reviewer yang NON-TERMINAL.
+ *
+ * Tidak menyentuh `reviews` / `task_submissions.review_status`: submission tetap
+ * `pending` dan status Tugas tidak berubah. Catatan mendarat sebagai pesan biasa di
+ * Diskusi Rencana Aksi, ditandai konteks Tugas yang direview (`p_context_action_plan`)
+ * supaya PIC melihat catatan itu menempel pada Tugas yang benar.
+ *
+ * Entri Activity Log belum ditulis: `write_activity` dicabut dari `authenticated`
+ * (migrasi 0062, anti audit-log palsu), jadi butuh RPC SECURITY DEFINER baru —
+ * di-defer, lihat catatan BL-08 di [[ui-prototype-gap]].
+ */
+export async function postReviewNote(args: {
+  /** Tugas yang direview — jadi konteks pesan. */
+  taskId: string;
+  /**
+   * Induk Rencana Aksi dari `taskId` — dipakai me-resolve room. WAJIB induk dari
+   * `taskId` itu sendiri: `send_chat_message` menolak konteks yang tidak sebidang
+   * (`a.action_plan_id = v_room.action_plan_id`, guard 0056 → 'Tugas tidak berada
+   * dalam Action Plan room ini.'). Null = Tugas jalur Development (induknya Problem
+   * Statement, bukan Rencana Aksi) atau data induk belum termuat.
+   */
+  actionPlanId: string | null | undefined;
+  body: string;
+}): Promise<string> {
+  const body = args.body.trim();
+  if (!body) throw new Error('Catatan tidak boleh kosong.');
+  // Dibedakan dari kasus room-null di bawah: tanpa guard ini, Tugas yang induknya
+  // belum termuat (atau jalur Development yang memang tak punya Rencana Aksi) akan
+  // jatuh ke pesan "tidak tersedia untuk Anda" — terbaca sebagai masalah izin,
+  // padahal bukan.
+  if (!args.actionPlanId) {
+    throw new Error('Tugas ini belum terhubung ke Diskusi Rencana Aksi.');
+  }
+  const roomId = await getRoomIdForActionPlan(args.actionPlanId);
+  // RLS chat_rooms member-gated → null saat reviewer bukan anggota room. Pesan eksplisit
+  // lebih berguna daripada melempar error RPC mentah dari send_chat_message.
+  if (!roomId) throw new Error('Diskusi Rencana Aksi tidak tersedia untuk Anda.');
+  return sendChatMessage(roomId, body, [], { contextActionPlan: args.taskId });
+}
+
 /** Detail room (nama + action_plan_id) untuk topbar. RLS menolak non-anggota → null. */
 export async function getChatRoom(roomId: string): Promise<ChatRoomDetail | null> {
   if (!roomId) return null;

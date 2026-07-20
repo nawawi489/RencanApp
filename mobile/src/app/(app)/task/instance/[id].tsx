@@ -2,7 +2,7 @@
 // Menutup celah: submission instance repeat sebelumnya tak punya jalur review di UI
 // (reviewInstanceSubmission ada di data layer, tak pernah dipanggil). Layar ini menyurfacekan
 // detail instance + approve/reject untuk reviewer. Anti-self-approval ditegakkan server + UI.
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
@@ -15,6 +15,7 @@ import { SubmissionCard, formatDateTime } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useInstanceReview, useRepeatInstances } from '@/hooks/use-repeat-instances';
 import { getTask, personLabel } from '@/lib/cards';
+import { postReviewNote } from '@/lib/inbox';
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,
@@ -51,6 +52,14 @@ export default function TaskInstanceDetailScreen() {
       reviewM.mutate(args, { onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.') }),
     isPending: reviewM.isPending,
   };
+
+  // PRD §24.3 "Catatan" — non-terminal, jadi TIDAK memanggil refresh(): status instance
+  // maupun submission tidak berubah.
+  const noteM = useMutation({
+    mutationFn: (body: string) =>
+      postReviewNote({ taskId: inst!.task_id, actionPlanId: apQ.data?.action_plan_id, body }),
+    onError: (e) => alertFriendlyError('Catatan gagal dikirim', e, 'Kesalahan.'),
+  });
 
   const actions = useInstanceActions(
     { pic_id: inst?.pic_id ?? null, reviewer_id: inst?.reviewer_id ?? null, status: inst?.status ?? '' },
@@ -193,6 +202,8 @@ export default function TaskInstanceDetailScreen() {
               <ReviewSubmissionPanel
                 onDecide={(args) => wrappedReviewM.mutate(args)}
                 isPending={wrappedReviewM.isPending}
+                onNote={(body) => noteM.mutateAsync(body)}
+                isNotePending={noteM.isPending}
               />
             ) : null}
 
