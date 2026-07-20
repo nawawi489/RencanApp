@@ -1853,3 +1853,16 @@ Pasca re-run: ketiga job hijau, staging ter-deploy `5e85bd6`, dan verifikasi reg
   - Fallback berlapis (tak dikenal → nilai mentah; null/kosong → `—`) karena kolom bebas berarti tipe baru bisa muncul tanpa perubahan client. Test 20/20, `tsc --noEmit` bersih.
 - **BL-13 dibuka (OPEN):** `violation_type` tidak punya sumber kebenaran. Migrasi dengan tipe baru — atau salah ketik tipe lama — lolos semua gate CI (kolom `text` bebas, contract test tidak mengenumerasi tipe, Jest tidak melihat migrasi). Fallback BL-12 menahan dampaknya jadi kosmetik → degradasi diam-diam. Dua opsi dicatat (CHECK constraint vs tabel lookup + FK); hanya lookup yang membuat drift dapat diuji di CI.
 - **Gotcha proses:** cabang kerja awal dibuat dari `main`, sedangkan konvensi PR = `staging`. `main` dan `staging` sudah divergen (12 commit `main` absen dari `staging`), jadi `git rebase origin/staging` mencoba memutar ulang ke-12 commit itu dan konflik di seluruh repo. Solusi: cabang baru dari `origin/staging` + pindahkan perubahan kode (3 file identik di kedua branch), tulis ulang bagian wiki terhadap isi `staging`.
+
+## [2026-07-20] update | CI pindah ke self-hosted runner setelah kuota Actions terblokir
+
+- Pages created: `entities/self-hosted-runner.md`
+- Pages updated: `index.md`
+- **Pemicu:** seluruh run CI gagal dengan **nol step tereksekusi** sejak ~07:36 UTC, di semua branch termasuk `staging`. Anotasi check-run: *"The job was not started because recent account payments have failed or your spending limit needs to be increased."* Repo privat + paket Free = 2.000 menit/bulan; terukur ~10,1 menit per run × 200+ run/30 hari.
+- **Diagnosis penting:** jangan salah baca sebagai kegagalan kode. Cirinya `steps=0` — job tidak pernah mulai. Ambil alasannya dari `gh api repos/<o>/<r>/check-runs/<id>/annotations`, bukan dari log job (kosong).
+- **Dua jalur ditempuh:** (1) gating job by changed-path agar muat kuota — [[log#2026-07-20-ci-budget|PR #122]], hemat terukur 24% (bukan 50-60% seperti perkiraan awal); (2) runner self-hosted [[self-hosted-runner]] — PR #123.
+- **Terbukti:** menit self-hosted tidak dihitung terhadap kuota. Job self-hosted jalan sukses saat semua job hosted menolak start.
+- **Jujur soal trade-off:** `quality` 9,3 menit di WSL vs 6,9 menit di runner GitHub — **35% lebih lambat**. Yang dibeli ketersediaan + biaya nol, bukan kecepatan.
+- **`db-contract` sengaja tidak dipindah** — `supabase start`/`stop` di runner yang berbagi Docker dengan mesin dev akan bentrok port dan berpotensi merobohkan stack dev developer. Konsekuensinya job itu mati selama kuota terblokir; perubahan DB butuh verifikasi manual.
+- **Dua jebakan yang ditemukan saat setup** (keduanya bergejala senyap): cache npm Actions menggantung di step `Post Setup Node` (177 MB, load average 0,33 → bukan CPU-bound) sehingga dicabut; dan WSL mematikan distro saat idle sehingga job menggantung `queued` atau ter-*cancel* di tengah — ditutup dengan keepalive Startup folder yang memulihkan diri (terverifikasi: `wsl --terminate Ubuntu` → pulih ~25 detik).
+- **Keamanan:** user `runner` sengaja TIDAK diberi sudo tanpa password. Konsekuensi lanjutan: **repo tidak boleh dijadikan publik** selama runner terpasang — meniadakan opsi "repo publik agar Actions gratis".
