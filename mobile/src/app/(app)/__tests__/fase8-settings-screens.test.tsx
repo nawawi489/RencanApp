@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
+import { Alert } from 'react-native';
 
 jest.setTimeout(30000);
 
@@ -20,9 +21,11 @@ jest.mock('@/lib/supabase', () => ({
 }));
 
 const mockUpsertSettings = jest.fn();
+const mockRestoreCard = jest.fn();
 jest.mock('@/lib/governance-admin', () => ({
   ...jest.requireActual('@/lib/governance-admin'),
   upsertSettings: (...a: unknown[]) => mockUpsertSettings(...a),
+  restoreCard: (...a: unknown[]) => mockRestoreCard(...a),
 }));
 
 const mockPush = jest.fn();
@@ -98,6 +101,7 @@ function wrapper() {
 beforeEach(() => {
   mockCan.mockReset().mockReturnValue(true);
   mockUpsertSettings.mockReset().mockResolvedValue(undefined);
+  mockRestoreCard.mockReset().mockResolvedValue(undefined);
   mockCreateDepartment.mockReset().mockResolvedValue('d1');
   mockPush.mockReset();
   mockUseOrgStructure.mockReset().mockReturnValue({ departments: [{ id: 'd1', name: 'Operasi', is_active: true }], isLoading: false });
@@ -229,5 +233,35 @@ describe('settings-archive', () => {
     expect(screen.queryByLabelText(/hapus/i)).toBeNull();
     // C5 UI-S-AR1: tombol Pulihkan tampil per row (governance-safe: restore_card → status 'draft').
     expect(screen.getByLabelText('Pulihkan ke Draft')).toBeTruthy();
+  });
+
+  // BL-09(c) — restore sukses harus meng-invalidate key yang BENAR-BENAR dipakai useSearchCards
+  // (['cards_search', ...]). Sebelumnya ['search'] — tidak dipakai query mana pun, jadi no-op:
+  // card yang sudah dipulihkan tetap tampil di daftar arsip sampai layar di-mount ulang.
+  it('[F8-UI-28] Pulihkan meng-invalidate query key cards_search (bukan key mati "search")', async () => {
+    mockUseSearch.mockReturnValue({
+      results: [{ id: 'g1', entity_type: 'goal', name: 'Goal Lama', status: 'archived' }],
+      isLoading: false,
+      enabled: true,
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+    const W = ({ children }: PropsWithChildren) =>
+      createElement(QueryClientProvider, { client }, children);
+    W.displayName = 'ArchiveWrapper';
+
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<SettingsArchiveScreen />, { wrapper: W });
+    fireEvent.press(await screen.findByLabelText('Pulihkan ke Draft'));
+
+    // konfirmasi dialog → jalankan tombol "Pulihkan".
+    const buttons = alertSpy.mock.calls[0][2] as { text: string; onPress?: () => void }[];
+    buttons.find((b) => b.text === 'Pulihkan')?.onPress?.();
+
+    await waitFor(() => expect(mockRestoreCard).toHaveBeenCalledWith('goal', 'g1'));
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['cards_search'] }),
+    );
+    alertSpy.mockRestore();
   });
 });
