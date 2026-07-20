@@ -18,6 +18,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[action-plan]] — Unit eksekusi konkret; One Time vs Repeat, Instance, Progress/Capaian/Compliance
 - [[card-model]] — Hierarki card dua workspace, makna & field wajib tiap card, Kelengkapan Card
 - [[database-blueprint]] — 53 tabel Postgres, tabel yang dibuang, relationship rules
+- [[self-hosted-runner]] — Runner CI `rencanapp-wsl` (Ubuntu/WSL2) sebagai jalan keluar dari blokir kuota Actions; keputusan keamanan + keepalive wajib
 - [[score-formula]] — Penilaian performa berbobot per level (Staff/Management/C-Level/CEO); V1.83 Admin Lanjutan only, tidak tampil di UI utama staff
 - [[surfaces]] — Bottom nav V1.83: Home (Fokus Task), Notifications, Workspace, Inbox (Diskusi Rencana Aksi), **Menu** (People de-scoring + Admin Lanjutan gated)
 - [[workspace]] — Performance vs Development workspace dan hierarki card masing-masing
