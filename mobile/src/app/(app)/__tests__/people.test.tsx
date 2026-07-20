@@ -172,6 +172,36 @@ describe('PeopleScreen — §32 rank + Lihat Profil', () => {
     expect(screen.getByLabelText('Peringkat 2')).toBeTruthy();
   });
 
+  // D11: skor identik → rank kembar (1,1,3). Angka harus datang dari
+  // ranking_snapshots.rank_number, bukan posisi array (yang akan render 1,2,3).
+  it('tie renders rank_number kembar dari DB, bukan index+1', async () => {
+    mockListOrgProfiles.mockResolvedValue([
+      { id: 'u1', full_name: 'Rina', email: 'r@n.id' },
+      { id: 'u2', full_name: 'Arman', email: 'a@n.id' },
+      { id: 'u3', full_name: 'Budi', email: 'b@n.id' },
+    ]);
+    mockUseLatestClosedPeriod.mockReturnValue({
+      period: { id: 'p-closed', period_name: 'Q1', status: 'closed' },
+      isLoading: false,
+      isError: false,
+    });
+    mockUseRanking.mockReturnValue({
+      ranking: [
+        { user_id: 'u2', rank_number: 1, score: 90 },
+        { user_id: 'u1', rank_number: 1, score: 90 },
+        { user_id: 'u3', rank_number: 3, score: 75 },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    await render(<PeopleScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Rina')).toBeTruthy();
+    expect(screen.getAllByLabelText('Peringkat 1')).toHaveLength(2);
+    expect(screen.getByLabelText('Peringkat 3')).toBeTruthy();
+    expect(screen.queryByLabelText('Peringkat 2')).toBeNull();
+  });
+
   it('no rank badge when no closed period; keterangan tampil', async () => {
     mockListOrgProfiles.mockResolvedValue([
       { id: 'u1', full_name: 'Rina', email: 'r@n.id' },

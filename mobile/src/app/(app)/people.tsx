@@ -74,7 +74,16 @@ export function LivePeopleScreen() {
     return m;
   }, [ranking]);
 
-  // Roster diurutkan by score DESC supaya angka rank (i+1) sesuai dengan posisi nyata.
+  // Angka rank berasal dari DB (ranking_snapshots.rank_number), bukan posisi array.
+  // D11: skor identik → rank kembar (1,1,3), jadi index+1 akan menyimpang dari
+  // angka yang ditampilkan people-profile untuk orang yang sama.
+  const rankByUser = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of ranking) m.set(r.user_id, r.rank_number);
+    return m;
+  }, [ranking]);
+
+  // Roster diurutkan by score DESC supaya urutan tampilan sesuai posisi nyata.
   // User tanpa skor → ke bawah dan tak diberi badge angka rank.
   const people: Person[] = useMemo(() => {
     const raw = (data ?? []) as Person[];
@@ -90,18 +99,6 @@ export function LivePeopleScreen() {
     });
     return mapped;
   }, [data, scoreByUser]);
-
-  const rankByUser = useMemo(() => {
-    const m = new Map<string, number>();
-    let rank = 0;
-    for (const p of people) {
-      if (p.score != null) {
-        rank += 1;
-        m.set(p.id, rank);
-      }
-    }
-    return m;
-  }, [people]);
 
   const filtered: Person[] = useMemo(() => {
     const q = search.trim().toLowerCase();
