@@ -20,6 +20,65 @@ defaults:
     working-directory: mobile
 
 jobs:
+  # Anggaran menit Actions repo privat = 2.000/bulan (paket Free). Satu run penuh
+  # memakan ~10 menit (quality 6,9 + db-contract 2,9 + rename guard 0,3), sementara
+  # sebagian besar PR di repo ini hanya menyentuh wiki/spec — membayar 10 menit untuk
+  # nol risiko regresi. Job murah ini (~0,2 menit) memutuskan dua job mahal mana yang
+  # perlu jalan.
+  #
+  # Arah gagalnya SENGAJA "jalankan semuanya": kalau base sha tidak terjangkau atau
+  # diff gagal, kedua output di-set true. Lebih baik boros menit daripada meloloskan
+  # regresi diam-diam.
+  #
+  # Rename guard TIDAK ikut digating — ia memindai `wiki`, `specs`, dan `DESIGN.md`
+  # (lihat ROOTS di scripts/ci/no-old-names.sh), jadi justru PR wiki-only yang paling
+  # perlu dijaga olehnya. Biayanya 0,3 menit; tidak sepadan untuk dioptimasi.
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile }}
+      db: ${{ steps.filter.outputs.db }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # Butuh riwayat agar base sha PR terjangkau untuk di-diff.
+          fetch-depth: 0
+
+      - name: Filter changed paths
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then BASE="$PR_BASE"; else BASE="$PUSH_BASE"; fi
+
+          # Base tak dikenal (mis. push pertama ke branch, force-push) → jalankan semua.
+          if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            echo "base sha tidak terjangkau ($BASE) → jalankan semua job"
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
+            echo "db=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES=$(git diff --name-only "$BASE" HEAD)
+          echo "File berubah:"; echo "$FILES" | sed 's/^/  /'
+
+          # .github/** ikut memicu keduanya: perubahan workflow harus diuji oleh
+          # workflow itu sendiri, bukan di-skip oleh dirinya.
+          if echo "$FILES" | grep -qE '^(mobile/|\.github/)'; then MOBILE=true; else MOBILE=false; fi
+          if echo "$FILES" | grep -qE '^(supabase/|scripts/ci/|\.github/)'; then DB=true; else DB=false; fi
+
+          echo "mobile=$MOBILE" >> "$GITHUB_OUTPUT"
+          echo "db=$DB" >> "$GITHUB_OUTPUT"
+          echo "→ quality=$MOBILE db-contract=$DB"
+
   no-old-names:
     name: Rename guard (V1.8.3)
     runs-on: ubuntu-latest
@@ -42,6 +101,8 @@ jobs:
 
   quality:
     name: Lint, types & tests
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -54,6 +115,10 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
+      # Catatan anggaran: meng-cache node_modules pernah dipertimbangkan dan DITOLAK.
+      # Diukur di runner: `Install dependencies` hanya 18 detik, sementara restore cache
+      # node_modules Expo (ratusan MB) berpotensi lebih lama dari itu. Biaya job ini
+      # ada di step Test (361 detik), bukan di install.
       - name: Install dependencies
         # npm install (bukan npm ci): proyek Expo/RN punya optional dep wasm (@emnapi/*,
         # lightningcss) yang resolusinya berbeda antar-OS, sehingga lock yang digenerate di
@@ -71,6 +136,8 @@ jobs:
 
   db-contract:
     name: DB contract tests (Postgres)
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
