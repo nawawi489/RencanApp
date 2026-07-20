@@ -10,6 +10,8 @@ import { makeQueryThenable, someCall } from '@/test-support/fase8-builders';
 // eslint-disable-next-line import/first
 import {
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
+  GOVERNANCE_VIOLATION_TYPE_LABEL,
+  governanceViolationTypeLabel,
   listActivityLog,
   listGovernanceViolations,
 } from '../activity-governance';
@@ -23,6 +25,48 @@ it('[4] GOVERNANCE_VIOLATION_SEVERITY_TONE memetakan 4 tier ke tone', () => {
   expect(GOVERNANCE_VIOLATION_SEVERITY_TONE.medium).toBe('warn');
   expect(GOVERNANCE_VIOLATION_SEVERITY_TONE.high).toBe('warn');
   expect(GOVERNANCE_VIOLATION_SEVERITY_TONE.critical).toBe('danger');
+});
+
+describe('[BL-12] governanceViolationTypeLabel', () => {
+  // Setiap tipe yang benar-benar ditulis fungsi DB harus punya label Indonesia.
+  const DB_EMITTED_TYPES = [
+    'deadline_change_self_approval',
+    'finalize_non_submitter',
+    'instance_missed',
+    'kpi_area_mismatch',
+    'orphan_cleanup_unauthorized',
+    'reviewer_override',
+    'self_approval_attempt',
+    'self_evaluation',
+    'settings_invalid_key',
+    'strategy_mismatch',
+    'submit_non_pic',
+  ];
+
+  it.each(DB_EMITTED_TYPES)('memetakan %s ke label Indonesia', (type) => {
+    const label = governanceViolationTypeLabel(type);
+    expect(GOVERNANCE_VIOLATION_TYPE_LABEL[type]).toBeDefined();
+    expect(label).toBe(GOVERNANCE_VIOLATION_TYPE_LABEL[type]);
+    // Bukan snake_case mentah.
+    expect(label).not.toBe(type);
+    expect(label).not.toMatch(/_/);
+  });
+
+  it('fallback ke nilai mentah untuk tipe tak dikenal', () => {
+    expect(governanceViolationTypeLabel('tipe_baru_dari_db')).toBe('tipe_baru_dari_db');
+  });
+
+  it('tidak pernah render kosong untuk null/undefined/whitespace', () => {
+    expect(governanceViolationTypeLabel(null)).toBe('—');
+    expect(governanceViolationTypeLabel(undefined)).toBe('—');
+    expect(governanceViolationTypeLabel('   ')).toBe('—');
+  });
+
+  it('trim nilai mentah sebelum lookup', () => {
+    expect(governanceViolationTypeLabel('  self_approval_attempt  ')).toBe(
+      GOVERNANCE_VIOLATION_TYPE_LABEL.self_approval_attempt,
+    );
+  });
 });
 
 it('[27] listActivityLog order created_at desc + filter action', async () => {

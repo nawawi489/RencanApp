@@ -12,6 +12,7 @@ import { Badge, Button, EmptyState, SectionCard, SkeletonList, TabBar, usePlaceh
 import {
   GOVERNANCE_VIOLATION_SEVERITY_LABEL,
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
+  governanceViolationTypeLabel,
 } from '@/lib/activity-governance';
 import { useGovernanceViolations } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
@@ -96,7 +97,7 @@ export default function SettingsGovernanceViolationScreen() {
                   <SectionCard key={v.id}>
                     <View className="flex-row items-center justify-between gap-2">
                       <Text className="flex-1 text-base font-semibold text-black dark:text-white">
-                        {v.violation_type}
+                        {governanceViolationTypeLabel(v.violation_type)}
                       </Text>
                       <View className="flex-row items-center gap-1.5">
                         <Badge

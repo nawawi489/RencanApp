@@ -1841,3 +1841,15 @@ Pasca re-run: ketiga job hijau, staging ter-deploy `5e85bd6`, dan verifikasi reg
 - Dua yang paling dekat ambang P-slot: **BL-02** (AC-11 FAIL — `strategy/new` expose DateRangeField, seharusnya inherit periode Goal) dan bagian **invalidate query key salah** di BL-09 (bug diam: restore berhasil tapi list tidak menyegar).
 - BL-09 sengaja ditandai "bukan satu bug" — tiga penyebab berbeda dalam satu baris backlog, harus dipecah sebelum dikerjakan.
 - Status: item belum diverifikasi ulang terhadap `mobile/src/` saat pencatatan `[?]`; konfirmasi gap sebelum mengerjakan.
+
+## [2026-07-20] update | BL-12 dikerjakan + halaman backlog direkonstruksi
+
+- Pages created: `concepts/feature-gap-backlog.md` — **file dari entry sebelumnya ternyata tidak pernah masuk ke branch mana pun.** Entry `[2026-07-20] update | Backlog fitur di bawah ambang P-slot dicatat` mencatat `Pages created`, tapi `git ls-tree` di `origin/main` maupun `origin/staging` tidak menemukan file-nya; hanya `index.md` yang menautkan → wikilink menggantung.
+- Pages updated: `index.md` (BL-01..BL-12 → BL-01..BL-13 + catatan rekonstruksi)
+- **Rekonstruksi:** tabel dibangun ulang dari entry log sumber, satu-satunya jejak tersisa. Entry itu menyebut 9 dari 12 ID; **BL-04, BL-05, BL-06 tidak dapat dipulihkan** dan ditandai UNKNOWN daripada dikarang. Row BL-01..BL-11 mewarisi `[?]` — sumbernya menyatakan item belum diverifikasi ulang terhadap `mobile/src/`.
+- **BL-12 DONE** — label Indonesia untuk `violation_type` di Settings › Governance Violation.
+  - `violation_type` bertipe `text` **tanpa CHECK constraint** (0005), jadi himpunan tipe sah ditelusuri dari setiap penulis baris: INSERT langsung di 0005/0007/0008/0014/0038/0040/0046/0063/0064 + `log_governance_violation()` di 0019/0046 → **11 tipe**.
+  - `minimum_breakdown_not_met` = false lead: hanya ada di contract test fase5; migrasi 0011 eksplisit hanya `RAISE` pada gate-block tanpa menulis baris. Tetap dipetakan untuk baris lama, dikecualikan dari daftar tipe wajib di test.
+  - Fallback berlapis (tak dikenal → nilai mentah; null/kosong → `—`) karena kolom bebas berarti tipe baru bisa muncul tanpa perubahan client. Test 20/20, `tsc --noEmit` bersih.
+- **BL-13 dibuka (OPEN):** `violation_type` tidak punya sumber kebenaran. Migrasi dengan tipe baru — atau salah ketik tipe lama — lolos semua gate CI (kolom `text` bebas, contract test tidak mengenumerasi tipe, Jest tidak melihat migrasi). Fallback BL-12 menahan dampaknya jadi kosmetik → degradasi diam-diam. Dua opsi dicatat (CHECK constraint vs tabel lookup + FK); hanya lookup yang membuat drift dapat diuji di CI.
+- **Gotcha proses:** cabang kerja awal dibuat dari `main`, sedangkan konvensi PR = `staging`. `main` dan `staging` sudah divergen (12 commit `main` absen dari `staging`), jadi `git rebase origin/staging` mencoba memutar ulang ke-12 commit itu dan konflik di seluruh repo. Solusi: cabang baru dari `origin/staging` + pindahkan perubahan kode (3 file identik di kedua branch), tulis ulang bagian wiki terhadap isi `staging`.
