@@ -24,6 +24,35 @@ export const GOVERNANCE_VIOLATION_SEVERITY_LABEL: Record<string, string> = {
   critical: 'Kritis',
 };
 
+/** Label Indonesia untuk `governance_violations.violation_type`.
+ *  Kolom di DB adalah `text` bebas (tanpa CHECK constraint), jadi peta ini enumerasi
+ *  nilai yang benar-benar ditulis fungsi DB — bukan kontrak yang dipaksakan schema.
+ *  Sumber: insert langsung (0005/0007/0008/0014/0038/0040/0046/0063/0064) dan
+ *  `log_governance_violation()` (0019/0046). Gunakan `governanceViolationTypeLabel()`
+ *  agar tipe baru dari DB tetap tampil (fallback ke nilai mentah). */
+export const GOVERNANCE_VIOLATION_TYPE_LABEL: Record<string, string> = {
+  deadline_change_self_approval: 'Menyetujui perubahan deadline sendiri',
+  finalize_non_submitter: 'Finalisasi oleh bukan pengirim',
+  instance_missed: 'Pekerjaan terlewat',
+  kpi_area_mismatch: 'KPI Area tidak sesuai',
+  minimum_breakdown_not_met: 'Minimum breakdown belum terpenuhi',
+  orphan_cleanup_unauthorized: 'Pembersihan data yatim tanpa izin',
+  reviewer_override: 'Review di luar Reviewer yang ditunjuk',
+  self_approval_attempt: 'Percobaan menyetujui pekerjaan sendiri',
+  self_evaluation: 'Evaluasi pekerjaan sendiri',
+  settings_invalid_key: 'Kunci pengaturan tidak valid',
+  strategy_mismatch: 'Strategi tidak sesuai',
+  submit_non_pic: 'Pengiriman oleh bukan PIC',
+};
+
+/** Label aman untuk satu `violation_type`. Tidak pernah mengembalikan string kosong:
+ *  tipe tak dikenal / nilai kosong jatuh balik ke nilai mentah, lalu ke '—'. */
+export function governanceViolationTypeLabel(type: string | null | undefined): string {
+  const raw = (type ?? '').trim();
+  if (raw === '') return '—';
+  return GOVERNANCE_VIOLATION_TYPE_LABEL[raw] ?? raw;
+}
+
 export const ACTIVITY_LOG_PAGE_SIZE = 30;
 const PAGE_SIZE = 50;
 

@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-07-16
+updated: 2026-07-20
 ---
 
 # Rencanapp Wiki — Index
@@ -31,7 +31,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[execution-loop]] — Bukti → Nilai Hasil → Review; submission versioning & evidence locking
 - [[fase6-spec]] — Spec eksekutabel Fase 6 Development Workspace (AC, data contract, non-goals, TDD handoff)
 - [[fase6-tdd-plan]] — Rencana TDD red→green→refactor Fase 6 + addendum kritik (missing cases & concerns)
-- [[feature-gap-backlog]] — Backlog di bawah ambang P-slot (BL-01..BL-12): gap app vs PRD + inkonsistensi perilaku; triage XS/S/M/L + kandidat chip task
+- [[feature-gap-backlog]] — Backlog di bawah ambang P-slot (BL-01..BL-13): gap app vs PRD + inkonsistensi perilaku; halaman direkonstruksi dari log (BL-04/05/06 hilang), BL-12 DONE, BL-13 baru
 - [[minimum-breakdown-rule]] — Jumlah minimal card turunan (label UI "Aturan Pecah Target"); V1.83 opsional 3 mode (Nonaktif/Peringatan/Blokir), angka konfigurabel admin
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[prototype-prd-conformance]] — Prototype `design.html` vs PRD V1.82: 46/46 screen + 28 AC terpenuhi; penyimpangan kecil (header notif, tab People Q3)
