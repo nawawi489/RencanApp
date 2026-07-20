@@ -30,6 +30,26 @@ const activePeriod = {
   period_end: '2026-07-31',
 };
 
+// Copy terkunci spec §6.4. Pernyataan-paham kini di checkbox body (DESIGN §7 `AckCheckbox`),
+// bukan di label tombol — tombol destruktif terkunci sampai checkbox dicentang.
+const CONFIRM_LABEL = 'Finalisasi Periode & Peringkat';
+const ACK_LABEL = 'Saya paham periode ini tidak dapat dibuka kembali.';
+
+/**
+ * Alur konfirmasi lengkap: centang pernyataan-paham, lalu tekan tombol destruktif.
+ * Dua `act` TERPISAH — wajib: tombol baru lepas dari `disabled` setelah re-render
+ * akibat centang. Digabung dalam satu act, press kedua mengenai tombol yang masih
+ * terkunci dan diam-diam tidak melakukan apa-apa.
+ */
+async function konfirmasi() {
+  await act(async () => {
+    fireEvent.press(await screen.findByLabelText(ACK_LABEL));
+  });
+  await act(async () => {
+    fireEvent.press(await screen.findByLabelText(CONFIRM_LABEL));
+  });
+}
+
 type MutationOverrides = {
   calculatePeriod?: jest.Mock;
   closePeriod?: jest.Mock;
@@ -80,7 +100,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     );
     expect(screen.getByText(/1 Manual Override aktif akan efektif/)).toBeTruthy();
     expect(
-      screen.getByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
+      screen.getByLabelText(CONFIRM_LABEL),
     ).toBeTruthy();
   });
 
@@ -91,7 +111,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
       expect(screen.getByText(/Belum ada pengguna dengan template role/)).toBeTruthy(),
     );
     expect(
-      screen.getByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
+      screen.getByLabelText(CONFIRM_LABEL),
     ).toBeTruthy();
   });
 
@@ -116,14 +136,10 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
     await waitFor(() =>
       expect(
-        screen.getByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
+        screen.getByLabelText(CONFIRM_LABEL),
       ).toBeTruthy(),
     );
-    await act(async () => {
-      fireEvent.press(
-        screen.getByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     expect(calcAsync).toHaveBeenCalledWith('p1');
     expect(closeAsync).toHaveBeenCalledWith('p1');
     await waitFor(() =>
@@ -136,11 +152,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     mockUseCalc.mockReturnValue(factoryCalc({ calculatePeriod: jest.fn().mockResolvedValue(0) }));
     mockUseClose.mockReturnValue(factoryClose({ closePeriod: jest.fn().mockResolvedValue(0) }));
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     await waitFor(() =>
       expect(
         screen.getByText(/0 pengguna diperingkat.*template role belum dipetakan/i),
@@ -156,11 +168,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     mockUseCalc.mockReturnValue(factoryCalc({ calculatePeriod: calcAsync }));
     mockUseClose.mockReturnValue(factoryClose({ closePeriod: closeAsync }));
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     await waitFor(() =>
       expect(screen.getByText('Periode ini sudah ditutup dan tidak bisa diubah.')).toBeTruthy(),
     );
@@ -185,11 +193,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     mockUseCalc.mockReturnValue(factoryCalc({ calculatePeriod: calcAsync }));
     mockUseClose.mockReturnValue(factoryClose({ closePeriod: closeAsync }));
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     await waitFor(() =>
       expect(screen.getByText('Periode ini sudah ditutup dan tidak bisa diubah.')).toBeTruthy(),
     );
@@ -211,11 +215,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
       factoryClose({ closePeriod: jest.fn().mockRejectedValueOnce(pgErr) }),
     );
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     await waitFor(() =>
       expect(
         screen.getByText(/Perhitungan sedang berjalan di sesi lain/),
@@ -224,13 +224,70 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     expect(screen.queryByText(/duplicate key value/)).toBeNull();
   });
 
-  it('[T-M-11] confirm button disabled saat calc.isPending=true', async () => {
+  it('[T-M-11] confirm button disabled saat calc.isPending=true (meski sudah dicentang)', async () => {
     mockUseCalc.mockReturnValue(factoryCalc({ isPending: true }));
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    const btn = await screen.findByLabelText(
-      'Saya paham, finalisasi periode & kunci peringkat',
-    );
+    fireEvent.press(await screen.findByLabelText(ACK_LABEL));
+    const btn = await screen.findByLabelText(CONFIRM_LABEL);
     expect(btn.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  // AckCheckbox (DESIGN §7) — pernyataan-paham wajib sebelum aksi ireversibel.
+  it('[T-M-17] tombol destruktif TERKUNCI sebelum checkbox dicentang; RPC tidak dipanggil', async () => {
+    const calcAsync = jest.fn();
+    const closeAsync = jest.fn();
+    mockUseCalc.mockReturnValue(factoryCalc({ calculatePeriod: calcAsync }));
+    mockUseClose.mockReturnValue(factoryClose({ closePeriod: closeAsync }));
+    await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
+    const btn = await screen.findByLabelText(CONFIRM_LABEL);
+    expect(btn.props.accessibilityState?.disabled).toBe(true);
+    // Menekan tombol terkunci tidak boleh memicu apa pun.
+    await act(async () => {
+      fireEvent.press(btn);
+    });
+    expect(calcAsync).not.toHaveBeenCalled();
+    expect(closeAsync).not.toHaveBeenCalled();
+  });
+
+  it('[T-M-18] centang checkbox membuka kunci tombol + accessibilityState.checked ikut berubah', async () => {
+    await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
+    const ack = await screen.findByLabelText(ACK_LABEL);
+    expect(ack.props.accessibilityState?.checked).toBe(false);
+    expect((await screen.findByLabelText(CONFIRM_LABEL)).props.accessibilityState?.disabled).toBe(
+      true,
+    );
+    await act(async () => {
+      fireEvent.press(ack);
+    });
+    expect((await screen.findByLabelText(ACK_LABEL)).props.accessibilityState?.checked).toBe(true);
+    expect((await screen.findByLabelText(CONFIRM_LABEL)).props.accessibilityState?.disabled).toBe(
+      false,
+    );
+  });
+
+  it('[T-M-19] checkbox bisa di-uncheck lagi → tombol terkunci kembali', async () => {
+    await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
+    const ack = await screen.findByLabelText(ACK_LABEL);
+    await act(async () => {
+      fireEvent.press(ack);
+    });
+    await act(async () => {
+      fireEvent.press(await screen.findByLabelText(ACK_LABEL));
+    });
+    expect((await screen.findByLabelText(ACK_LABEL)).props.accessibilityState?.checked).toBe(false);
+    expect((await screen.findByLabelText(CONFIRM_LABEL)).props.accessibilityState?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('[T-M-20] glyph checkbox = sinyal non-warna (DESIGN §4): ○ saat unchecked, ✓ saat checked', async () => {
+    await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
+    expect(await screen.findByText('○')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(await screen.findByLabelText(ACK_LABEL));
+    });
+    expect(await screen.findByText('✓')).toBeTruthy();
+    expect(screen.queryByText('○')).toBeNull();
   });
 
   it('[T-M-12] label calculating pakai accessibilityLiveRegion="polite"', async () => {
@@ -240,11 +297,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     );
     mockUseCalc.mockReturnValue(factoryCalc({ calculatePeriod: calcAsync }));
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     const progressLabel = await screen.findByText(
       /Langkah 1 dari 2 · Menghitung skor pengguna/,
     );
@@ -258,11 +311,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
   it('[T-M-13] setelah done, tap Tutup memanggil onClose', async () => {
     const onClose = jest.fn();
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={onClose} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     await waitFor(() =>
       expect(screen.getByText(/Periode Juli 2026 difinalisasi\./)).toBeTruthy(),
     );
@@ -274,11 +323,7 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     mockUseCalc.mockReturnValue(factoryCalc({ calculatePeriod: jest.fn().mockResolvedValue(5) }));
     mockUseClose.mockReturnValue(factoryClose({ closePeriod: jest.fn().mockResolvedValue(0) }));
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     await waitFor(() =>
       expect(
         screen.getByText(/Perhitungan selesai tapi peringkat tidak tersimpan/),
@@ -293,17 +338,13 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
       expect(screen.getByText(/Memuat pratinjau/)).toBeTruthy(),
     );
     expect(
-      screen.queryByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
+      screen.queryByLabelText(CONFIRM_LABEL),
     ).toBeNull();
   });
 
   it('[T-M-16] done state menampilkan footer "Butuh mengoreksi?"', async () => {
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    await act(async () => {
-      fireEvent.press(
-        await screen.findByLabelText('Saya paham, finalisasi periode & kunci peringkat'),
-      );
-    });
+    await konfirmasi();
     await waitFor(() =>
       expect(
         screen.getByText(/Butuh mengoreksi\?.*Buat periode berikutnya/i),

@@ -227,7 +227,7 @@ loading-preview   ← useQuery(usePreviewFinalization) → { eligibleUsers, acti
   └─ ok
 step1 (confirm)                 ← body menampilkan pratinjau + warning override + kalimat ireversibilitas
   ├─ dismiss (aman) → close
-  ↓ user tap "Saya paham, finalisasi periode & kunci peringkat"
+  ↓ user centang AckCheckbox, lalu tap "Finalisasi Periode & Peringkat"
 calculating                     ← Langkah 1/2 · Menghitung skor pengguna…
   ├─ error → error-calc          ← "Coba lagi" + "Tutup" (calculate saja)
   └─ ok
@@ -329,7 +329,8 @@ Empat RPC dilibatkan. Semua sudah live dan bergrant benar per baseline. Spec **h
 | Modal step 1 preview (bila `eligibleUsers > 0`) | **"{N} pengguna akan diperingkat · {M} Manual Override aktif akan efektif."** |
 | Modal step 1 preview (bila `eligibleUsers = 0`) | Warning kuning: **"Belum ada pengguna dengan template role terpetakan untuk periode ini. Melanjutkan berarti mengunci periode tanpa peringkat."** |
 | Modal step 1 body | **"Skor setiap pengguna akan dihitung ulang berdasar formula aktif, lalu peringkat dibekukan dan periode ditutup. Setelah dikunci, periode ini tidak dapat dibuka kembali dari aplikasi dan Manual Override tidak bisa lagi diubah."** |
-| Modal step 1 confirm | **"Saya paham, finalisasi periode & kunci peringkat"** |
+| Modal step 1 **checkbox** (amandemen 2026-07-20) | **"Saya paham periode ini tidak dapat dibuka kembali."** — `AckCheckbox` (DESIGN §7), glyph `✓`/`○` sebagai sinyal non-warna |
+| Modal step 1 confirm | **"Finalisasi Periode & Peringkat"** — **disabled sampai checkbox dicentang** |
 | Modal step 1 cancel | "Batal" |
 | Calculating label | **"Langkah 1 dari 2 · Menghitung skor pengguna…"** |
 | Locking label | **"Langkah 2 dari 2 · Mengunci peringkat…"** |
@@ -378,7 +379,7 @@ Empat RPC dilibatkan. Semua sudah live dan bergrant benar per baseline. Spec **h
   - Bila `eligibleUsers > 0`: kalimat "N pengguna akan diperingkat · M Manual Override aktif akan efektif."
   - Bila `eligibleUsers = 0`: warning kuning dengan copy §6.4.
 
-**AC-FIN-4** — Konfirmasi step 1 dengan copy "Saya paham, finalisasi periode & kunci peringkat" → state `calculating`; label "Langkah 1 dari 2 · Menghitung skor pengguna…"; on success → state `locking`.
+**AC-FIN-4** *(amandemen 2026-07-20)* — Step 1 mensyaratkan **dua tindakan sadar**: centang `AckCheckbox` "Saya paham periode ini tidak dapat dibuka kembali." lalu tap "Finalisasi Periode & Peringkat". Tombol **disabled** selama checkbox belum dicentang (menekan tombol terkunci TIDAK memicu RPC apa pun). Setelah keduanya → state `calculating`; label "Langkah 1 dari 2 · Menghitung skor pengguna…"; on success → state `locking`.
 
 **AC-FIN-5** — State `locking` menampilkan "Langkah 2 dari 2 · Mengunci peringkat…"; on success → state `done` dengan N dari return value close.
 
@@ -458,7 +459,8 @@ Buat file baru `mobile/src/components/__tests__/finalize-period-modal.test.tsx` 
 - **T-M-1** Open modal → state `loading-preview` → setelah `usePreviewFinalization` resolve → state `step1` dengan copy pratinjau (N>0)
 - **T-M-2** `usePreviewFinalization` return N=0 → state `step1` dengan warning kuning; tombol confirm tetap ada
 - **T-M-3** `usePreviewFinalization` error → state `error-preview` dengan tombol "Coba lagi" + "Batal"
-- **T-M-4** Confirm step 1 (dengan tap tombol "Saya paham, finalisasi periode & kunci peringkat") → state `calculating`; label "Langkah 1 dari 2 · Menghitung skor pengguna…"
+- **T-M-4** Confirm step 1 (centang `AckCheckbox` → tap "Finalisasi Periode & Peringkat") → state `calculating`; label "Langkah 1 dari 2 · Menghitung skor pengguna…"
+- **T-M-17..20** *(amandemen 2026-07-20)* Kontrak `AckCheckbox`: tombol terkunci sebelum dicentang (RPC tidak dipanggil) · centang membuka kunci + `accessibilityState.checked` ikut berubah · bisa di-uncheck (tombol terkunci lagi) · glyph `○`/`✓` sebagai sinyal non-warna (DESIGN §4)
 - **T-M-5** Calculate sukses → state `locking`; label "Langkah 2 dari 2 · Mengunci peringkat…"
 - **T-M-6** Close sukses → state `done`; copy `"Periode {name} difinalisasi. {N} pengguna masuk peringkat."` untuk N>0
 - **T-M-7** Close sukses N=0 → state `done`; copy "0 pengguna diperingkat — kemungkinan penyebab template role…"

@@ -13,6 +13,8 @@ spec: specs/score-ranking-finalization-bridge.md
 >
 > - ADR `wiki/concepts/score-period-immutability.md` di-commit di fase yang sama (B-3 MERGE-BLOCKER).
 > - Penomoran migrasi SUDAH diselesaikan: slot `0078` diserahkan ke settings-consumers, spec ini memakai `0079`.
+>
+> **Amandemen UI 2026-07-20 (pasca-ship).** Contoh kode `T-M-*` di bawah masih memakai label tombol lama `'Saya paham, finalisasi periode & kunci peringkat'` — **sengaja dibiarkan** sebagai catatan historis rencana. Implementasi final berbeda: label itu terukur 351px, melebihi ruang tombol 302px di viewport 390 sehingga wrap 2 baris. Pernyataan-paham dipindah ke `AckCheckbox` di body (DESIGN §7); tombol menjadi `'Finalisasi Periode & Peringkat'` dan **disabled sampai checkbox dicentang**. Test aktual memakai helper `konfirmasi()` (dua `act` terpisah — press kedua harus menunggu re-render agar tombol sudah lepas dari `disabled`) plus T-M-17..20 untuk kontrak checkbox. Rujuk `specs/score-ranking-finalization-bridge.md` §6.4 untuk copy yang berlaku.
 > - Semua 7 keputusan owner terkunci; jangan tanya ulang (lihat memory `score-ranking-finalization-owner-decisions`).
 
 # TDD Plan — Jembatan Score/Ranking Finalization

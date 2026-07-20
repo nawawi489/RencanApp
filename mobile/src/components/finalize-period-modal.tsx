@@ -24,7 +24,7 @@
 
 import { useCallback, useState } from 'react';
 import { Modal } from 'react-native';
-import { Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 import {
   useCalculatePeriodScores,
@@ -59,7 +59,14 @@ type State =
   | Phase;
 
 // Copy §6.4 (verified spec). Sengaja diletakkan sebagai konstanta agar mudah refactor ke i18n.
-const CONFIRM_LABEL = 'Saya paham, finalisasi periode & kunci peringkat';
+//
+// Pernyataan-paham dipindah dari label tombol ke checkbox body (DESIGN §7 `AckCheckbox`):
+// label lama "Saya paham, finalisasi periode & kunci peringkat" = 351px, melebihi ruang
+// tombol 302px di viewport 390 → wrap 2 baris. Selain itu kalimat panjang DI DALAM tombol
+// cenderung dilewati mata (dibaca sebagai "tombol biru", bukan sebagai pernyataan).
+// Checkbox terpisah memaksa satu tindakan sadar sebelum aksi ireversibel.
+const CONFIRM_LABEL = 'Finalisasi Periode & Peringkat';
+const ACK_LABEL = 'Saya paham periode ini tidak dapat dibuka kembali.';
 const CONCURRENT_COPY =
   'Perhitungan sedang berjalan di sesi lain. Muat ulang halaman dan coba lagi.';
 const MISMATCH_COPY =
@@ -91,6 +98,8 @@ export function FinalizePeriodModal({
   // Hanya fase pasca-konfirmasi yang disimpan. `null` = user belum menekan tombol konfirmasi,
   // sehingga tampilan mengikuti status query preview.
   const [phase, setPhase] = useState<Phase | null>(null);
+  // Pernyataan-paham (DESIGN §7 `AckCheckbox`). Tombol destruktif terkunci sampai ini true.
+  const [acknowledged, setAcknowledged] = useState(false);
 
   // State efektif diturunkan saat render. Begitu `phase` terisi, ia menang atas preview —
   // itulah yang mencegah modal "mundur" ke step1 saat query di-invalidate pasca-close.
@@ -114,7 +123,9 @@ export function FinalizePeriodModal({
   const handleDismiss = useCallback(() => {
     if (isBusy) return;
     // Reset saat menutup dari terminal state, supaya modal fresh saat dibuka lagi.
+    // `acknowledged` ikut di-reset — pernyataan-paham tidak boleh "lengket" ke sesi berikutnya.
     setPhase(null);
+    setAcknowledged(false);
     onClose();
   }, [isBusy, onClose]);
 
@@ -237,11 +248,30 @@ export function FinalizePeriodModal({
                 dibekukan dan periode ditutup. Setelah dikunci, periode ini tidak dapat dibuka
                 kembali dari aplikasi dan Manual Override tidak bisa lagi diubah.
               </Text>
+              {/* AckCheckbox (DESIGN §7): pernyataan-paham terpisah dari aksi. Glyph ✓/○ =
+                  sinyal non-warna wajib (§4 rule 2); teks boleh wrap karena untuk dibaca. */}
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acknowledged }}
+                accessibilityLabel={ACK_LABEL}
+                onPress={() => setAcknowledged((v) => !v)}
+                className={`min-h-[44px] flex-row items-start gap-3 rounded-xl border px-3 py-2 ${
+                  acknowledged
+                    ? 'border-brand-dark bg-blue-50 dark:bg-blue-950/30'
+                    : 'border-neutral-300 dark:border-neutral-700'
+                }`}>
+                <Text className="text-base font-semibold text-brand-dark dark:text-blue-300">
+                  {acknowledged ? '✓' : '○'}
+                </Text>
+                <Text className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
+                  {ACK_LABEL}
+                </Text>
+              </Pressable>
               <Button
                 label={CONFIRM_LABEL}
                 accessibilityLabel={CONFIRM_LABEL}
                 onPress={runFinalize}
-                disabled={calc.isPending || close.isPending}
+                disabled={!acknowledged || calc.isPending || close.isPending}
                 loading={calc.isPending || close.isPending}
               />
               <Button
