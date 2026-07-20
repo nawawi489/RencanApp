@@ -316,7 +316,9 @@ Tujuan:
 
 ### 7.7 Card Periode Lewat
 
-Card periode yang sudah lewat dibuat redup secara visual.
+Card periode yang sudah lewat ditandai dengan badge teks "Periode lewat".
+
+> Dim visual dicabut oleh owner decision 2026-07-03 (gagal kontras AA saat bersarang). Lihat §44 AC-9.
 
 Rule:
 
@@ -528,7 +530,7 @@ Saat panel dibuka:
 
 Jika user memilih atau melihat periode lewat:
 
-1. Card tampil redup.
+1. Card menampilkan badge teks "Periode lewat". (Dim visual dicabut 2026-07-03 — lihat §44 AC-9.)
 2. Label Archive muncul.
 3. Detail tetap bisa dibuka.
 4. Tombol tambah turunan dinonaktifkan dengan popup.
@@ -1738,7 +1740,7 @@ Frontend dianggap sesuai V1.83 jika:
 6. Performance dan Development punya pola UI yang sama.
 7. Periode aktif default bulan berjalan.
 8. User dapat memilih Bulan atau Quarter.
-9. Card periode lewat tampil redup dan tidak bisa dibuat turunan baru.
+9. Card periode lewat tampil redup dan tidak bisa dibuat turunan baru. — **Bagian "tampil redup" DICABUT (owner decision 2026-07-03).** Kartu periode-lewat tidak lagi didim di layer manapun; sinyal periode-lewat adalah badge teks "Periode lewat". Alasan: dim `opacity-50` bersarang jatuh ke 0.125 di level-3 dan gagal kontras AA (DESIGN §4) — lihat [[ui-prototype-gap]] UI-S-W08. Bacaan ini yang berlaku, mengalahkan §7.7 dan §11.3; §37 ("boleh diberi visual redup") konsisten dengannya. Larangan membuat turunan baru TETAP mengikat.
 10. Goal bersifat tahunan.
 11. Strategy mengikuti Goal tahunan.
 12. Strategy punya pecahan target Quarter dan Bulan total 100%.
