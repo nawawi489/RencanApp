@@ -1,49 +1,82 @@
 ---
 type: concept
-tags: [backlog, feature-gap, governance, ui]
+tags: [backlog, gap-analysis, prd-conformance, triage]
 updated: 2026-07-20
 sources: 0
 ---
 
-# Feature Gap Backlog
+# Feature Gap Backlog — item di bawah ambang P-slot
 
-Ledger ber-ID (`BL-NN`) untuk gap fitur di bawah ambang P-slot: temuan audit **app vs PRD** yang terlalu kecil untuk jadi P-slot sendiri, tapi terlalu nyata untuk dibiarkan tak tercatat.
+Kumpulan gap yang **belum layak menempati P-slot** (bukan blocker rilis, bukan pengalaman inti yang rusak) tapi harus tercatat supaya tidak hilang. Berbeda dari [[ui-prototype-gap]] yang membandingkan app vs prototype `design.html`: daftar ini adalah **gap app vs PRD** plus inkonsistensi perilaku yang ditemukan saat audit fitur.
 
-Berbeda dari [[ui-prototype-gap]] (gap `mobile/` vs `design.html` — app vs *prototype*) dan [[workspace-lock-audit]] (temuan `WSA-NN` khusus Workspace).
+Aturan pakai sama: setiap item punya ID stabil (`BL-##`), setiap PR yang menutup item mencantumkan ID-nya, item selesai dicoret + tanggal lalu diringkas ke `log.md`.
 
-## Konvensi
+Ukuran: **XS** = satu file/satu patch · **S** = satu layar + test · **M** = beberapa layar/hook · **L** = butuh spec sendiri.
 
-- ID `BL-NN` naik monoton; ID tidak pernah dipakai ulang meski row dihapus.
-- Status: `OPEN` · `IN PROGRESS` · `DONE` · `WONTFIX`.
-- Row `DONE` tetap tinggal di tabel dengan catatan penutup — ledger ini historis, bukan papan kerja.
-- Ukuran: `XS` (layak langsung jadi chip task) · `S` · butuh scoping.
+---
 
-> [!warning] Halaman ini direkonstruksi, bukan asli
-> Entry log `[2026-07-20] update | Backlog fitur di bawah ambang P-slot dicatat` mencatat `Pages created: concepts/feature-gap-backlog.md`, tapi file-nya **tidak pernah masuk ke branch mana pun** (`main` maupun `staging`) — hanya `index.md` yang menautkannya, sehingga wikilink menggantung sejak saat itu.
->
-> Tabel di bawah direkonstruksi dari entry log tersebut, satu-satunya sumber yang tersisa. Entry itu menyebut **9 dari 12** ID secara eksplisit; **BL-04, BL-05, BL-06 tidak dapat dipulihkan** dan sengaja dibiarkan kosong daripada dikarang. Deskripsi row hasil rekonstruksi seringkas sumbernya.
+## 1. Daftar item
 
-## Backlog
+Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2026-07-20**. Kolom Status: ✅ CONFIRMED (gap nyata), ⚠️ terkoreksi, ❌ bukan gap, ✅ DONE (sudah merged).
 
-| ID | Gap | Ukuran | Status | Catatan |
+> [!note] Halaman ini menggantikan versi rekonstruksi
+> Antara pencatatan awal dan commit ini, sebuah sesi lain sempat membangun ulang halaman ini dari entri log karena file aslinya belum masuk repo (merged lewat #117). Rekonstruksi itu menandai BL-04/05/06 sebagai "tidak terpulihkan" dan seluruh baris lain ber-`[?]`. Tabel di bawah adalah hasil audit sebenarnya, jadi rekonstruksi tersebut digantikan seluruhnya — **kecuali** §BL-12 dan §BL-13 di bawah, yang bukan tebakan melainkan analisis terverifikasi dari sesi tersebut dan dipertahankan utuh.
+
+| ID | Area | Gap (setelah verifikasi) | Ukuran | Status |
 |---|---|---|---|---|
-| BL-01 | Ranking tie — perilaku saat skor seri belum ditentukan `[?]` | XS | OPEN | Kandidat chip task. |
-| BL-02 | `strategy/new` mengekspos `DateRangeField`; seharusnya mewarisi periode Goal (AC-11 FAIL) `[?]` | S | OPEN | **Paling dekat ambang P-slot.** |
-| BL-03 | Periode lampau tidak di-dim `[?]` | XS | OPEN | Kandidat chip task. |
-| BL-04 | *Tidak terpulihkan — tidak disebut di entry log sumber* | S `[?]` | UNKNOWN | Perlu audit ulang app vs PRD. |
-| BL-05 | *Tidak terpulihkan — tidak disebut di entry log sumber* | S `[?]` | UNKNOWN | Perlu audit ulang app vs PRD. |
-| BL-06 | *Tidak terpulihkan — tidak disebut di entry log sumber* | S `[?]` | UNKNOWN | Perlu audit ulang app vs PRD. |
-| BL-07 | Notifikasi PRD §28 belum lengkap `[?]` | butuh scoping | OPEN | |
-| BL-08 | Aksi "Catatan" belum ada `[?]` | XS | OPEN | Kandidat chip task. |
-| BL-09 | Archive — **bukan satu bug**: tiga penyebab berbeda dalam satu row `[?]` | butuh scoping | OPEN | Salah satunya bug diam: invalidate query key salah → restore berhasil tapi list tidak menyegar. Wajib dipecah sebelum dikerjakan. |
-| BL-10 | Search PRD §38 belum lengkap `[?]` | butuh scoping | OPEN | |
-| BL-11 | Ikon notifikasi di header `[?]` | XS | OPEN | Kandidat chip task. |
-| BL-12 | `violation_type` dirender sebagai `snake_case` mentah (mis. `self_approval_attempt`) tanpa peta label manusiawi | XS | DONE (2026-07-20) | Peta label Indonesia + fallback aman. Detail di bawah. |
-| BL-13 | `violation_type` tidak punya sumber kebenaran; peta label client duplikasi manual dari literal PL/pgSQL, tanpa gate sinkronisasi | butuh scoping | OPEN | Utang tersisa dari BL-12. Detail di bawah. |
+| **BL-01** | People | **Ranking tie tidak konsisten**. `people-profile/[id].tsx:222` render `rank_number` dari DB; `people.tsx:94-104` membuang `rank_number` (padahal `listRanking` sudah `select('*')`) lalu me-derive `rank += 1` per orang. DB memakai *competition ranking* (skor sama → rank sama, berikutnya melompat — migrasi 0013 D11), list memakai 1,2,3 berurutan → tie tampil beda | XS | ✅ |
+| **BL-02** | Strategy period | **AC-11 FAIL**. `strategy/new.tsx:254-259` render `DateRangeField` editable; `parentQ.data` hanya dipakai untuk `goal_template_id` + `pic_id`, `period_start/end` Goal tidak pernah dibaca. PRD §12.1 (baris 540-544): *"Strategy tidak punya masa berlaku sendiri karena mengikuti Goal tahunan"* | S | ✅ |
+| **BL-03** | Past-period dim | ~~AC-9 parsial~~ **BUKAN GAP KODE — keputusan owner 2026-07-03**. `PastDim` sempat ada (fix single-layer 2026-07-02) lalu **dicabut owner** sehari kemudian; kini nol layer dim, dikunci tes `[W08·1]`/`[W08·2]` (`countOpacityHalf === 0`). **Tapi PRD masih mewajibkan dim** — §44 AC-9 "tampil redup", diulang normatif di §7.7 & §11.3 (§37 permisif, tak konflik). Konflik spec-vs-kode ini yang melahirkan ulang temuan, bukan bug | — | ❌ kode · ⚠️ spec |
+| **BL-04** | MBR add-button | **Terkoreksi**: bukan "hanya strategy→initiative yang di-guard". Dari 6 tombol tambah di `workspace-screen.tsx`, **hanya 1** yang ter-guard — `initiative→action_plan` (baris 521-531) — dan itu memakai data kepatuhan `strategy→initiative` (cascade `blokir_akses_turunan`, WSA-04). Tombol `+ Inisiatif` milik strategy sendiri **tidak** ter-guard. `goal/[id].tsx` nol pemakaian MBR | S | ⚠️ |
+| **BL-05** | Evaluation | **2 dari 6 field §26 hilang di UI**: `success_factors`, `failure_factors`. Kolom DB ada (0046:1882-1893), RPC `record_evaluation` menerimanya, lib `governance-admin.ts:110-124` sudah mem-forward — hanya form `evaluation.tsx` yang tidak mengirim. **Nol migrasi** | S | ✅ |
+| **BL-06** | Task Repeat | Field **"Zona waktu" §23** (item 5 dari 10) hilang. `action_plan_repeat_rules` tidak punya kolom timezone; satu-satunya ada di `organizations.timezone`, dibaca `coalesce(o.timezone,'Asia/Jakarta')` di seluruh perhitungan deadline. **Butuh migrasi** + ubah logika deadline | S→M | ✅ |
+| **BL-07** | Notifications | **Terkoreksi**: §28 mendefinisikan **9** tipe, 5 sudah jalan. Yang absen: **Bukti dikirim** (dikonflasi jadi `review_request`), **Deadline lewat one-time** (`instance_missed` hanya untuk repeat; task one-time tak pernah masuk state missed), **Permission berubah** (nihil), **MBR warning** (nihil). 3 dari 4 belum ada di CHECK constraint 13-tipe (0038). Gap 100% server-side — `lib/notifications.ts` sudah mirror tepat | M | ⚠️ |
+| **BL-08** | Review | **Aksi "Catatan" §24.3 hilang**. `review-submission-panel.tsx:10` hanya `'approve' \| 'reject'`. Kedua RPC (`review_task_submission`, `review_task_instance_submission`) hard-reject nilai ketiga: `if p_decision not in ('approve','reject') then raise`. **Butuh migrasi** — bukan XS | XS→S | ⚠️ |
+| **BL-09** | Archive | **Pecah 3, satu klaim gugur**: (a) ❌ `includeArchived` **sudah** di-pass (`settings-archive.tsx:32`); (b) ✅ row tanpa `onPress` (bandingkan `search.tsx:58-60`) — **masih terbuka**; ~~(c) invalidate key salah~~ ✅ **SELESAI 2026-07-20** — `['search']` → `['cards_search']`, dikunci tes `[F8-UI-28]` | (b) S | ⚠️ |
+| **BL-10** | Search | **7 dari 14 scope §38 hilang** (persis seperti diklaim) + **tanpa grouping** (`search.tsx:70-79` FlatList datar, padahal §38 mewajibkan pengelompokan). `CardEntityType` hanya 7 tipe lewat satu RPC `search_cards`. RPC `search_chat_messages` sudah ada tapi hanya dipakai Inbox, tak pernah di-import layar Search | L | ✅ |
+| **BL-11** | Header | ~~Ikon Notifications §7.2 hilang~~ ✅ **SELESAI** — merged #115 (UI-G-016); `notifications-outline` + badge unread via `useUnreadCount()`, badge disembunyikan saat loading/error (bukan fail-silent ke "0"), jumlah masuk `accessibilityLabel` | XS | ✅ DONE |
+| **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
+| **BL-13** | Governance Violation | **Tidak ada sumber kebenaran `violation_type`** — literal PL/pgSQL tersebar di 11 migrasi, peta label client salinan manual, nol gate sinkronisasi → drift lolos semua CI dan muncul sebagai degradasi diam-diam. Utang tersisa dari BL-12. Detail §BL-13 di bawah | butuh scoping | ✅ (dari #117) |
 
-Row `BL-01..BL-11` menyandang `[?]`: entry log sumber menyatakan item **belum diverifikasi ulang terhadap `mobile/src/`** saat pencatatan. Konfirmasi gap sebelum mengerjakan — sebagian mungkin sudah tertutup oleh pekerjaan setelah 2026-07-20.
+---
 
-BL-12 adalah satu-satunya row yang sudah diverifikasi terhadap kode.
+## 2. Triage (pasca-verifikasi)
+
+**XS murni — nol migrasi, nol keputusan produk:**
+~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; BL-12 label map, BL-11 ikon header, BL-01 `rank_number`.
+
+**S — satu layar + test, nol migrasi:**
+BL-02, BL-05, BL-09(b).
+
+**Butuh migrasi DB** (jadi bukan tiket sepele sekalipun UI-nya kecil):
+BL-06 (kolom timezone di `action_plan_repeat_rules` + ubah semua perhitungan deadline yang kini membaca `organizations.timezone`), BL-08 (longgarkan CHECK `p_decision` di 2 RPC, atau RPC "tambah catatan" terpisah).
+
+**Butuh scoping/spec dulu:**
+BL-04 (putuskan dulu: MBR menjaga *tombol tambah* di setiap level, atau hanya cascade satu level ke bawah seperti sekarang — ini keputusan produk, bukan bug), BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped).
+
+**Ditutup tanpa dikerjakan:** BL-03 — keputusan desain, bukan gap.
+
+> [!warning] BL-03 jangan dikerjakan sebagai bug
+> Menambahkan kembali dim opacity akan **memerahkan test** `[W08·1]`/`[W08·2]` (`countOpacityHalf === 0`) dan membalik keputusan owner 2026-07-03.
+>
+> Akar masalahnya **dokumentasi, bukan kode**: keputusan pencabutan tidak pernah masuk PRD, sehingga §44 AC-9 masih berbunyi "tampil redup" dan setiap audit app-vs-PRD akan melahirkan ulang temuan ini. Tutup dengan mencatat pencabutan di PRD, bukan dengan menyentuh `mobile/`.
+>
+> Catatan teknis untuk kalau redup visual suatu saat diinginkan lagi: alasan pencabutan adalah `opacity-50` bersarang jatuh ke 0.125 di level-3 (gagal AA). Itu argumen melawan *penumpukan*, bukan melawan dim per se — DESIGN §4 melarang opacity jadi *satu-satunya* sinyal, dan dim + badge teks berdampingan tetap patuh.
+
+> [!warning] BL-09 bukan satu bug
+> Klaim (a) "tidak tercari di Search" **gugur** — `includeArchived: true` sudah di-pass. Tersisa (b) row mati dan (c) invalidate key salah. (c) adalah **bug diam**: restore sukses, list tidak menyegar, user mengira gagal lalu mengulang. Item paling untung-per-baris di seluruh daftar.
+
+**Paling dekat ke ambang P-slot:** BL-09(c) (bug diam, perbaikan satu baris) dan BL-02 (satu-satunya pelanggaran AC harfiah terhadap PRD).
+
+---
+
+## 3. Status verifikasi
+
+Diverifikasi **2026-07-20** terhadap `mobile/src/`, `supabase/migrations/`, dan `PRD.md` (4 agen paralel; bukti file:line ada di tabel §1). Hasil: **7 CONFIRMED apa adanya · 4 terkoreksi · 1 gugur**.
+
+Efek samping verifikasi: baris **UI-S-W08** di [[ui-prototype-gap]] berbunyi "PastDim single-layer IMPLEMENTED" padahal kode kini nol layer dim. Klaim itu **benar untuk satu hari** — `PastDim` shipped 2026-07-02, dicabut owner 2026-07-03 (`log.md` [2026-07-03]) — lalu tidak pernah dimutakhirkan. Koreksinya ditangani terpisah bersama amandemen PRD §44 AC-9.
+
+---
 
 ## BL-12 — Label Indonesia untuk violation type
 
