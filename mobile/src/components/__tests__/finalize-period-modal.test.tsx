@@ -32,7 +32,7 @@ const activePeriod = {
 
 // Copy terkunci spec §6.4. Pernyataan-paham kini di checkbox body (DESIGN §7 `AckCheckbox`),
 // bukan di label tombol — tombol destruktif terkunci sampai checkbox dicentang.
-const CONFIRM_LABEL = 'Finalisasi Periode & Peringkat';
+const CONFIRM_LABEL = 'Finalisasi Periode';
 const ACK_LABEL = 'Saya paham periode ini tidak dapat dibuka kembali.';
 
 /**

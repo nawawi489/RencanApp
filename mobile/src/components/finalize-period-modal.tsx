@@ -22,6 +22,7 @@
 //
 // Copy Indonesia konsisten "pengguna" (bukan "user"); label utama menyebut nama periode.
 
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
 import { Modal } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
@@ -31,6 +32,7 @@ import {
   useClosePeriod,
   usePreviewFinalization,
 } from '@/hooks/use-people-score';
+import { useThemePreference } from '@/providers/theme-provider';
 
 import { Button } from './ui';
 
@@ -65,7 +67,9 @@ type State =
 // tombol 302px di viewport 390 → wrap 2 baris. Selain itu kalimat panjang DI DALAM tombol
 // cenderung dilewati mata (dibaca sebagai "tombol biru", bukan sebagai pernyataan).
 // Checkbox terpisah memaksa satu tindakan sadar sebelum aksi ireversibel.
-const CONFIRM_LABEL = 'Finalisasi Periode & Peringkat';
+// Ringkas — konteks "peringkat" sudah dibawa judul modal + paragraf body, jadi tidak perlu
+// diulang di tombol. Ini juga menjaga label tetap satu baris di layar sempit.
+const CONFIRM_LABEL = 'Finalisasi Periode';
 const ACK_LABEL = 'Saya paham periode ini tidak dapat dibuka kembali.';
 const CONCURRENT_COPY =
   'Perhitungan sedang berjalan di sesi lain. Muat ulang halaman dan coba lagi.';
@@ -100,6 +104,10 @@ export function FinalizePeriodModal({
   const [phase, setPhase] = useState<Phase | null>(null);
   // Pernyataan-paham (DESIGN §7 `AckCheckbox`). Tombol destruktif terkunci sampai ini true.
   const [acknowledged, setAcknowledged] = useState(false);
+  // Ionicons tak menerima class NativeWind untuk `color` → hex eksplisit per tema (pola
+  // brandIconColor di notifications.tsx). Amber-600/400 agar kontras di kedua latar.
+  const { effective } = useThemePreference();
+  const warningIconColor = effective === 'dark' ? '#fbbf24' : '#b45309';
 
   // State efektif diturunkan saat render. Begitu `phase` terisi, ia menang atas preview —
   // itulah yang mencegah modal "mundur" ke step1 saat query di-invalidate pasca-close.
@@ -236,12 +244,24 @@ export function FinalizePeriodModal({
                   Override aktif akan efektif.
                 </Text>
               ) : (
-                <Text
+                /* Ikon peringatan menarik mata ke informasi kritis lebih dulu. Ikon DEKORATIF
+                   (aria-hidden) — teks tetap satu-satunya pembawa makna, jadi pembaca layar
+                   tidak mendengar "warning" dua kali dan §4 rule 2 tetap terpenuhi. */
+                <View
                   accessibilityRole="alert"
-                  className="rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                  Belum ada pengguna dengan template role terpetakan untuk periode ini. Melanjutkan
-                  berarti mengunci periode tanpa peringkat.
-                </Text>
+                  className="flex-row items-start gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950">
+                  <Ionicons
+                    name="warning"
+                    size={18}
+                    color={warningIconColor}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
+                  <Text className="flex-1 text-sm font-semibold text-amber-900 dark:text-amber-200">
+                    Belum ada pengguna dengan template role terpetakan untuk periode ini.
+                    Melanjutkan berarti mengunci periode tanpa peringkat.
+                  </Text>
+                </View>
               )}
               <Text className="text-sm text-neutral-600 dark:text-neutral-300">
                 Skor setiap pengguna akan dihitung ulang berdasar formula aktif, lalu peringkat
@@ -249,17 +269,16 @@ export function FinalizePeriodModal({
                 kembali dari aplikasi dan Manual Override tidak bisa lagi diubah.
               </Text>
               {/* AckCheckbox (DESIGN §7): pernyataan-paham terpisah dari aksi. Glyph ✓/○ =
-                  sinyal non-warna wajib (§4 rule 2); teks boleh wrap karena untuk dibaca. */}
+                  sinyal non-warna wajib (§4 rule 2); teks boleh wrap karena untuk dibaca.
+                  SENGAJA TANPA border/latar kotak — dengan bingkai penuh ia terbaca sebagai
+                  "tombol ketiga" di antara Finalisasi & Batal. Bentuknya baris pilihan:
+                  glyph + teks, area tap tetap ≥44px lewat min-h + py. */}
               <Pressable
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: acknowledged }}
                 accessibilityLabel={ACK_LABEL}
                 onPress={() => setAcknowledged((v) => !v)}
-                className={`min-h-[44px] flex-row items-start gap-3 rounded-xl border px-3 py-2 ${
-                  acknowledged
-                    ? 'border-brand-dark bg-blue-50 dark:bg-blue-950/30'
-                    : 'border-neutral-300 dark:border-neutral-700'
-                }`}>
+                className="min-h-[44px] flex-row items-start gap-3 py-2">
                 <Text className="text-base font-semibold text-brand-dark dark:text-blue-300">
                   {acknowledged ? '✓' : '○'}
                 </Text>
