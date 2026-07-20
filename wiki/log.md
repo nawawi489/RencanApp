@@ -1796,3 +1796,28 @@ Modal `done` state (menampilkan "N pengguna masuk peringkat" + footer escape hat
   - **AC-14 auth-provider** dari lahir GREEN karena existing `queryClient.clear()` sudah cover — critic F4 pindah ke Wave 5.2 sebagai regression pin (bukan red-green wave 3).
   - Grill critic 8 finding all-adopt; adjudikasi lengkap di plan §10.
 - Next: eksekutor bisa mulai dari §0 preflight checklist di plan.
+
+## [2026-07-19] fix | Deploy staging gagal karena flake CI — bukan bug kode
+
+Setelah PR #111 (settings-consumers) merge, workflow **Deploy Staging** untuk `5e85bd6` gagal. Job `Lint, types & tests` merah di step **`npm run test:ci`**; akibatnya step `Export & deploy to EAS Hosting` **di-skip** — staging diam-diam tertinggal satu commit.
+
+**Terbukti flake, bukan bug.** Empat bukti independen:
+
+| Bukti | Hasil |
+|---|---|
+| CI di PR #111 sebelum merge (isi identik) | pass (7m19s) |
+| `npm run test:ci` lokal di commit `5e85bd6` persis | **1504/1504 lulus** (127 suite, 247s) |
+| CI pasca-merge ke staging | gagal (6m12s) |
+| `gh run rerun --failed`, nol perubahan kode | **pass** → deploy lanjut sukses |
+
+Juga diverifikasi bahwa ini **bukan efek PR #110**: `git diff 8c5b38a 5e85bd6` tidak menyentuh satu pun file jembatan Score/Ranking (score-formula, people-score, finalize-modal).
+
+**Hipotesis penyebab (belum terbukti):** run yang gagal justru lebih cepat (6m12s) daripada yang lulus (7m19s). Assertion gagal biasanya tetap menuntaskan seluruh suite, jadi durasi lebih pendek mengarah ke proses jest berhenti di tengah — kandidat utama tekanan memori/worker crash di runner. Tidak bisa dipastikan: log CI gagal diunduh (timeout berulang ke `results-receiver.actions.githubusercontent.com`).
+
+**Diagnosis tanpa log** (berhasil, layak diulang): `gh api .../actions/runs/<id>/jobs` untuk step yang gagal + timing tiap step, lalu bandingkan dengan `gh pr checks <pr>` dan reproduksi lokal di SHA yang sama.
+
+**Kalau berulang** — perlakukan sebagai masalah nyata, jangan re-run terus: naikkan `NODE_OPTIONS=--max-old-space-size` pada step `test:ci`, lalu cari suite terberat. `--runInBand` sudah aktif, jadi paralelisme bukan penyebab.
+
+**Pelajaran operasional:** gate test merah ⇒ deploy di-skip ⇒ **merge ≠ live**. Digabung dengan fakta CI tidak menjalankan `db push`, sempat muncul kondisi **migrasi 0078 sudah live di DB staging tapi client-nya belum ter-deploy**. Setelah merge PR yang menyentuh DB + client, cek dua hal terpisah: run Deploy Staging hijau, DAN migrasi benar-benar ter-apply. Detail di memori `ci-flake-test-ci` + [[score-period-immutability]] konteks migrasi.
+
+Pasca re-run: ketiga job hijau, staging ter-deploy `5e85bd6`, dan verifikasi regresi ringan lolos — tombol "Finalisasi Periode & Peringkat" tetap utuh, console bersih.
