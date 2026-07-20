@@ -1892,3 +1892,10 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 **Catatan kalibrasi:** beban CPU ekstrem (12 proses, durasi suite 146–218s vs 37–49s) membuat **semua** anggaran jebol termasuk yang 30s — di titik itu pengukuran berhenti diskriminatif. Pakai beban sedang saat menguji flake timeout, bukan beban maksimum.
 
 `--runInBand` di `test:ci` memang mematikan paralelisme jest, tapi tidak menolong: runner CI tetap lambat per-render, dan anggaran 1000ms-lah yang jebol.
+## [2026-07-20] update | BL-11 / UI-G-016: icon Notifications di header global (PRD §7.2 #3)
+
+- Pages updated: [[ui-prototype-gap]] (baris baru UI-G-016, dipetakan = BL-11, + ringkasan status), [[prototype-prd-conformance]] (penyimpangan kecil #1 ditandai ditutup di app).
+- > [!warning] `concepts/feature-gap-backlog.md` **tidak ada di repo** meski entri log 2026-07-20 mencatatnya sebagai "Pages created" dan [[index]] baris 34 menautkannya. Baris BL-11 karena itu tidak bisa diperbarui di tempatnya — status ditulis di UI-G-016. Halaman backlog perlu dibuat ulang (BL-01..BL-12) oleh yang memegang hasil audit aslinya; jangan direkonstruksi dari tebakan.
+- Kode: `mobile/src/components/app-header.tsx` — Ionicons `notifications-outline` (22px) di antara search pill dan avatar, tap → `router.push('/(app)/(tabs)/notifications')`, target sentuh `min-h-[44px] min-w-[44px]`, warna brand-dark `#1564b3` / blue-300 `#93c5fd` (DESIGN §10/§12). Variabel `searchIconColor` di-rename `brandIconColor` karena kini dipakai dua ikon.
+- Badge unread masuk scope karena hook `useUnreadCount()` sudah ada: badge merah `bg-red-700` clamp `99+`, disembunyikan saat `isLoading`/`isError` (hook sengaja meng-surface keduanya supaya badge tidak fail-silent jadi "0"). Jumlah unread ikut masuk `accessibilityLabel` — warna bukan satu-satunya sinyal (DESIGN §4).
+- Test: 7 kasus baru di `src/components/__tests__/app-header.test.tsx` (tampil selalu, koeksistensi dengan back, badge angka, clamp 99+, tanpa badge saat 0, loading, error). Suite 16/16 hijau; `tsc --noEmit` + eslint bersih.

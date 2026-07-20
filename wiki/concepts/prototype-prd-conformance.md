@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [prd, prototype, conformance, design, v1.82]
-updated: 2026-06-29
+updated: 2026-07-20
 sources: 1
 ---
 
@@ -41,7 +41,7 @@ Tidak ada Feed, Company News, Announcement, Watcher, Routine, Checklist Routine,
 
 ## Penyimpangan kecil
 
-1. **Header global tanpa Icon Notifications** — PRD §7.2 #3 menyebut header = logo + search pill + **icon Notifications** + avatar. Prototype hanya logo + pill "Cari" + avatar (:5343); notifikasi diakses lewat bottom nav "Notif". Penyimpangan paling nyata, tapi minor.
+1. **Header global tanpa Icon Notifications** — PRD §7.2 #3 menyebut header = logo + search pill + **icon Notifications** + avatar. Prototype hanya logo + pill "Cari" + avatar (:5343); notifikasi diakses lewat bottom nav "Notif". Penyimpangan paling nyata, tapi minor. ✅ **Ditutup di app 2026-07-20** — `components/app-header.tsx` kini punya icon Notifications + badge unread (lihat [[ui-prototype-gap]] UI-G-016); prototype `design.html` sendiri belum menyusul.
 2. **Tab People "Q3 2026"** sementara periode aktif seed = Q2 (Juni 2026) (:6912). Cocok teks literal PRD §32, tapi PRD-nya sendiri inkonsisten (harusnya Q2). Perlu diluruskan saat implementasi.
 3. **Kata "bobot" di Score Formula** — *"Total bobot aktif harus 100%"* (:7089) = bobot komponen score (sah), bukan "Bobot planning card" terlarang §6 #21. Tidak melanggar, hanya berpotensi membingungkan penamaan.
 
