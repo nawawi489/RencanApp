@@ -29,6 +29,25 @@ Runner GitHub Actions milik sendiri untuk repo `nawawi489/RencanApp`, dipasang k
 > [!warning] Konsekuensi aktif
 > Selama kuota hosted terblokir, `db-contract` **tidak jalan**. Ia tergating ke perubahan `supabase/**`, jadi PR non-DB tidak terpengaruh — tapi **perubahan DB butuh verifikasi manual** sampai kuota pulih atau job ini diisolasi ke port/project id terpisah.
 
+## Gate DB di `deploy-staging.yml`
+
+Workflow deploy memakai gate yang **dipertajam, bukan dilonggarkan**. Maksud aslinya tetap: *staging tidak boleh deploy di atas DB contract yang merah*. Yang ditambahkan hanya kemampuan membedakan "tak relevan" dari "gagal":
+
+| Kondisi push | `db-contract` | Deploy |
+|---|---|---|
+| Tidak menyentuh `supabase/**` | `skipped` | **lanjut** |
+| Menyentuh DB, contract hijau | success | **lanjut** |
+| Menyentuh DB, contract merah | failure | **tertahan** |
+| Menyentuh DB, hosted terblokir | failure | **tertahan** (perilaku yang benar) |
+
+Dua jebakan di kondisi `if` job `deploy` yang wajib dipertahankan:
+
+1. `always()` **wajib** — tanpa itu satu `needs` yang `skipped` membuat deploy ikut `skipped`.
+2. Karena `always()` mem-bypass gerbang bawaan `needs`, `quality` **harus** dicek eksplisit (`needs.quality.result == 'success'`). Tanpa baris itu deploy bisa jalan di atas test merah.
+3. `changes` juga dicek — bila job itu gagal, `db-contract` ter-skip karena output kosong, dan gate DB akan lenyap diam-diam justru saat kita paling tidak tahu apa yang berubah.
+
+Job `deploy` jalan di runner self-hosted, artinya secret `EXPO_TOKEN` dan `STAGING_SUPABASE_ANON_KEY` **dieksekusi di mesin developer**. Ini konsekuensi lain dari kenapa repo tidak boleh publik.
+
 ## Keputusan keamanan
 
 1. **User `runner` TIDAK diberi sudo tanpa password.** Itu akan membuat workflow apa pun bisa jadi root di mesin developer. `ripgrep` dan `postgresql-client` dipasang sekali di distro; step ripgrep memakai yang sudah ada dan hanya jatuh ke `apt-get` sebagai fallback.

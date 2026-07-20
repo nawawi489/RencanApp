@@ -13,17 +13,60 @@ defaults:
     working-directory: mobile
 
 jobs:
+  # Menentukan apakah push ini menyentuh DB. Dipakai untuk membedakan
+  # "db-contract di-skip karena tak relevan" dari "db-contract gagal" — beda yang
+  # menentukan apakah deploy boleh lanjut (lihat kondisi di job `deploy`).
+  #
+  # Arah gagalnya sengaja "anggap menyentuh DB": kalau base sha tak terjangkau,
+  # `db` di-set true sehingga gate DB tetap dipasang. Menahan deploy lebih aman
+  # daripada melepasnya diam-diam.
+  changes:
+    name: Detect changed areas
+    runs-on: [self-hosted, wsl-ubuntu]
+    defaults:
+      run:
+        working-directory: .
+    outputs:
+      db: ${{ steps.filter.outputs.db }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Filter changed paths
+        id: filter
+        env:
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          BASE="$PUSH_BASE"
+          if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            echo "base sha tidak terjangkau ($BASE) → anggap menyentuh DB"
+            echo "db=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES=$(git diff --name-only "$BASE" HEAD)
+          echo "File berubah:"; echo "$FILES" | sed 's/^/  /'
+
+          if echo "$FILES" | grep -qE '^(supabase/|scripts/ci/|\.github/)'; then DB=true; else DB=false; fi
+          echo "db=$DB" >> "$GITHUB_OUTPUT"
+          echo "→ db-contract=$DB"
+
   quality:
     name: Lint, types & tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, wsl-ubuntu]
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          # `cache: npm` sengaja tidak dipakai di runner self-hosted — step simpan
+          # cache mengunggah ~/.npm (177 MB) ke layanan cache GitHub dan teramati
+          # menggantung sampai run harus dibatalkan. Di mesin yang sama ~/.npm sudah
+          # persisten antar-run. Lihat wiki/entities/self-hosted-runner.md.
 
       - run: npm install --no-audit --no-fund
 
@@ -33,6 +76,13 @@ jobs:
 
   db-contract:
     name: DB contract tests (Postgres)
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
+    # TETAP di runner GitHub, tidak dipindah ke self-hosted. Job ini menjalankan
+    # `supabase start` lalu `supabase stop --no-backup`, sementara runner self-hosted
+    # berbagi daemon Docker dengan mesin developer yang biasanya menjalankan stack
+    # Supabase lokal di port sama (54321/54322) — memindahkannya bisa merobohkan
+    # stack dev developer sendiri.
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -66,8 +116,29 @@ jobs:
 
   deploy:
     name: Export & deploy to EAS Hosting
-    needs: [quality, db-contract]
-    runs-on: ubuntu-latest
+    needs: [changes, quality, db-contract]
+    # Gate DB TIDAK dilonggarkan — hanya dipertajam supaya membedakan "tak relevan"
+    # dari "gagal":
+    #   - push tidak menyentuh DB   → db-contract `skipped` → deploy lanjut
+    #   - push menyentuh DB & hijau → deploy lanjut
+    #   - push menyentuh DB & merah → deploy TERTAHAN (termasuk ketika merahnya
+    #     karena menit hosted terblokir — menahan deploy memang perilaku yang benar
+    #     di situ; jangan dilonggarkan demi "biar jalan")
+    #
+    # `always()` wajib, sebab tanpa itu satu `needs` yang skipped ikut membuat job
+    # ini skipped. Tapi `always()` juga mem-bypass gerbang bawaan `needs`, jadi
+    # `quality` HARUS dicek eksplisit — tanpa baris itu deploy bisa jalan di atas
+    # test yang merah.
+    # `changes` juga wajib sukses: bila ia gagal, `db-contract` ikut ter-skip karena
+    # output-nya kosong — dan tanpa cek ini gate DB akan lenyap diam-diam persis
+    # ketika kita paling tidak tahu apa yang berubah.
+    if: |
+      always()
+      && needs.changes.result == 'success'
+      && needs.quality.result == 'success'
+      && needs.db-contract.result != 'failure'
+      && needs.db-contract.result != 'cancelled'
+    runs-on: [self-hosted, wsl-ubuntu]
     env:
       EXPO_PUBLIC_APP_ENV: staging
       EXPO_PUBLIC_SUPABASE_URL: https://fhnqwytqprsptjshoxfn.supabase.co
@@ -78,8 +149,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          # Lihat catatan cache di job `quality`.
 
       - run: npm install --no-audit --no-fund
 
