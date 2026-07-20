@@ -21,6 +21,7 @@ import {
   listChatMessages,
   listChatRooms,
   markChatMessagesRead,
+  postReviewNote,
   searchChatMessages,
   sendChatMessage,
   toggleChatReaction,
@@ -562,5 +563,118 @@ describe('listChatMessages — attachments (0059)', () => {
     mockFrom.mockReturnValue(builder);
     const msgs = await listChatMessages('r1');
     expect(msgs[0].attachments).toEqual(atts);
+  });
+});
+
+// ---------------------------------------------------------------- BL-08 / PRD §24.3 "Catatan"
+//
+// Aksi review ke-3, NON-TERMINAL: postReviewNote resolve room Rencana Aksi lalu kirim
+// pesan biasa ber-konteks Tugas. Yang dikunci di sini adalah properti non-terminal itu
+// sendiri — tidak ada RPC review/status yang boleh ikut terpanggil.
+
+/** `.select().eq().maybeSingle()` — builder chainable pendek untuk getRoomIdForActionPlan. */
+function makeMaybeSingleThenable(result: { data: unknown; error: unknown }) {
+  const builder: Record<string, unknown> = {};
+  for (const m of ['select', 'eq']) builder[m] = jest.fn(() => builder);
+  builder.maybeSingle = jest.fn(() => Promise.resolve(result));
+  return builder;
+}
+
+describe('postReviewNote (BL-08, PRD §24.3 aksi "Catatan")', () => {
+  it('[NOTE-1] resolve room dari action_plan_id lalu kirim pesan ber-konteks task_id', async () => {
+    mockFrom.mockReturnValue(makeMaybeSingleThenable({ data: { id: 'room-9' }, error: null }));
+    mockRpc.mockResolvedValue({ data: 'msg-1', error: null });
+
+    const id = await postReviewNote({ taskId: 'task-1', actionPlanId: 'ap-1', body: 'Tolong lampirkan invoice.' });
+
+    expect(mockFrom).toHaveBeenCalledWith('chat_rooms');
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', {
+      p_room: 'room-9',
+      p_body: 'Tolong lampirkan invoice.',
+      p_mentions: [],
+      p_attachments: undefined,
+      p_context_action_plan: 'task-1',
+      p_reply_to: undefined,
+    });
+    expect(id).toBe('msg-1');
+  });
+
+  it('[NOTE-2] NON-TERMINAL: tidak memanggil RPC review mana pun', async () => {
+    mockFrom.mockReturnValue(makeMaybeSingleThenable({ data: { id: 'room-9' }, error: null }));
+    mockRpc.mockResolvedValue({ data: 'msg-2', error: null });
+
+    await postReviewNote({ taskId: 'task-1', actionPlanId: 'ap-1', body: 'catatan' });
+
+    const rpcNames = mockRpc.mock.calls.map((c) => c[0]);
+    expect(rpcNames).toEqual(['send_chat_message']);
+    expect(rpcNames).not.toContain('review_task_submission');
+    expect(rpcNames).not.toContain('review_task_instance_submission');
+  });
+
+  it('[NOTE-3] body di-trim sebelum dikirim', async () => {
+    mockFrom.mockReturnValue(makeMaybeSingleThenable({ data: { id: 'room-9' }, error: null }));
+    mockRpc.mockResolvedValue({ data: 'msg-3', error: null });
+
+    await postReviewNote({ taskId: 't', actionPlanId: 'ap', body: '  spasi  ' });
+
+    expect(mockRpc).toHaveBeenCalledWith('send_chat_message', expect.objectContaining({ p_body: 'spasi' }));
+  });
+
+  it('[NOTE-4] body kosong/whitespace → tolak sebelum menyentuh jaringan', async () => {
+    await expect(postReviewNote({ taskId: 't', actionPlanId: 'ap', body: '   ' })).rejects.toThrow(
+      'Catatan tidak boleh kosong.',
+    );
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  // Guard 0056: send_chat_message menolak konteks lintas-AP
+  // (`a.action_plan_id = v_room.action_plan_id`). postReviewNote menerima taskId dan
+  // actionPlanId terpisah, jadi kontrak "actionPlanId HARUS induk dari taskId" dikunci
+  // di sini — room di-resolve dari actionPlanId, konteks dari taskId.
+  it('[NOTE-4b] room di-resolve dari actionPlanId, konteks dari taskId (invariant 0056)', async () => {
+    const builder = makeMaybeSingleThenable({ data: { id: 'room-ap-7' }, error: null });
+    mockFrom.mockReturnValue(builder);
+    mockRpc.mockResolvedValue({ data: 'msg-x', error: null });
+
+    await postReviewNote({ taskId: 'task-42', actionPlanId: 'ap-7', body: 'catatan' });
+
+    // Lookup room memakai actionPlanId — BUKAN taskId.
+    expect(builder.eq).toHaveBeenCalledWith('action_plan_id', 'ap-7');
+    // Konteks pesan memakai taskId — BUKAN actionPlanId.
+    expect(mockRpc).toHaveBeenCalledWith(
+      'send_chat_message',
+      expect.objectContaining({ p_room: 'room-ap-7', p_context_action_plan: 'task-42' }),
+    );
+  });
+
+  it.each([
+    ['string kosong (induk belum termuat)', ''],
+    ['null (Tugas jalur Development, induk = Problem Statement)', null],
+    ['undefined (query induk belum resolve)', undefined],
+  ])('[NOTE-4c] actionPlanId %s → pesan non-izin, tanpa menyentuh jaringan', async (_label, apId) => {
+    await expect(
+      postReviewNote({ taskId: 't', actionPlanId: apId as string | null | undefined, body: 'catatan' }),
+    ).rejects.toThrow('Tugas ini belum terhubung ke Diskusi Rencana Aksi.');
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('[NOTE-5] reviewer bukan anggota room (RLS → null) → pesan jelas, tanpa kirim', async () => {
+    mockFrom.mockReturnValue(makeMaybeSingleThenable({ data: null, error: null }));
+
+    await expect(postReviewNote({ taskId: 't', actionPlanId: 'ap', body: 'catatan' })).rejects.toThrow(
+      'Diskusi Rencana Aksi tidak tersedia untuk Anda.',
+    );
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('[NOTE-6] propagasi error dari send_chat_message', async () => {
+    mockFrom.mockReturnValue(makeMaybeSingleThenable({ data: { id: 'room-9' }, error: null }));
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'ditolak' } });
+
+    await expect(postReviewNote({ taskId: 't', actionPlanId: 'ap', body: 'catatan' })).rejects.toEqual({
+      message: 'ditolak',
+    });
   });
 });

@@ -10,7 +10,7 @@ import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { SubmissionCard } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useRepeatInstances } from '@/hooks/use-repeat-instances';
-import { getRoomIdForActionPlan } from '@/lib/inbox';
+import { getRoomIdForActionPlan, postReviewNote } from '@/lib/inbox';
 import { computeTaskProgress } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -373,6 +373,12 @@ export function LiveTaskDetailScreen() {
     onSuccess: refresh,
     onError: (e) => alertFriendlyError('Gagal', e, 'Kesalahan.'),
   });
+  // PRD §24.3 "Catatan" — non-terminal, jadi TIDAK memanggil refresh(): tidak ada status
+  // yang berubah dan invalidate hanya membuat layar berkedip tanpa sebab.
+  const noteM = useMutation({
+    mutationFn: (body: string) => postReviewNote({ taskId: id, actionPlanId: ap?.action_plan_id, body }),
+    onError: (e) => alertFriendlyError('Catatan gagal dikirim', e, 'Kesalahan.'),
+  });
   // UI-S-AP3 — "Buka Chat": resolve room Rencana Aksi tugas ini (RLS member-gated). Bukan anggota
   // / gagal → fallback ke tab Inbox generik (perilaku lama), jadi tombol tetap berguna.
   const openChatM = useMutation({
@@ -526,7 +532,12 @@ export function LiveTaskDetailScreen() {
             ) : null}
 
             {ap.status === 'submitted' && isReviewer ? (
-              <ReviewSubmissionPanel onDecide={(args) => reviewM.mutate(args)} isPending={reviewM.isPending} />
+              <ReviewSubmissionPanel
+                onDecide={(args) => reviewM.mutate(args)}
+                isPending={reviewM.isPending}
+                onNote={(body) => noteM.mutateAsync(body)}
+                isNotePending={noteM.isPending}
+              />
             ) : null}
 
             {ap.status === 'submitted' && isPic ? (
