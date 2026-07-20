@@ -31,6 +31,20 @@ IMAGE="${RENCAN_CI_DB_IMAGE:-public.ecr.aws/supabase/postgres:17.6.1.143}"
 # All progress goes to stderr; stdout carries only the container name.
 log() { echo "$@" >&2; }
 
+# Preflight. Di runner WSL, `docker` di PATH bisa jadi hanya binary Windows lewat
+# interop (/mnt/c/Program Files/Docker/...) yang MENOLAK jalan sampai "WSL
+# integration" diaktifkan di Docker Desktop. `command -v docker` lolos dalam kasus
+# itu — jadi yang dites daemonnya, bukan keberadaan CLI-nya. Tanpa cek ini
+# kegagalannya nyaris tak terbaca: step mati exit 1 tanpa pesan.
+if ! docker info >/dev/null 2>&1; then
+  log "FATAL: daemon Docker tak terjangkau dari sini."
+  log "       Pesan mentah dari CLI:"
+  docker info 2>&1 | head -5 | sed 's/^/       /' >&2 || true
+  log "       Di runner WSL: aktifkan Docker Desktop → Settings → Resources →"
+  log "       WSL integration untuk distro runner, lalu jalankan ulang job."
+  exit 1
+fi
+
 log "==> Starting $IMAGE as $NAME (no published port)"
 docker rm -f "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" -e POSTGRES_PASSWORD=postgres "$IMAGE" >/dev/null
