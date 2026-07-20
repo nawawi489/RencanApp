@@ -35,7 +35,7 @@ jobs:
   # perlu dijaga olehnya. Biayanya 0,3 menit; tidak sepadan untuk dioptimasi.
   changes:
     name: Detect changed areas
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, wsl-ubuntu]
     defaults:
       run:
         working-directory: .
@@ -81,7 +81,7 @@ jobs:
 
   no-old-names:
     name: Rename guard (V1.8.3)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, wsl-ubuntu]
     defaults:
       run:
         # Run at repo root, not mobile/, since the guard scans multiple trees.
@@ -91,7 +91,11 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install ripgrep
-        run: sudo apt-get install -y ripgrep
+        # Di runner self-hosted `rg` sudah terpasang di image distro, dan user `runner`
+        # SENGAJA tidak diberi sudo tanpa password — memberi root tanpa password berarti
+        # workflow apa pun bisa jadi root di mesin developer. Jadi: pakai yang sudah ada,
+        # apt-get hanya sebagai fallback (mis. bila job ini kembali ke runner GitHub).
+        run: command -v rg >/dev/null || sudo apt-get install -y ripgrep
 
       - name: Grep-guard legacy identifiers
         # Fails if kpi_area_id, kpi_areas, action_plan_instances, KpiArea, etc.
@@ -103,7 +107,7 @@ jobs:
     name: Lint, types & tests
     needs: changes
     if: needs.changes.outputs.mobile == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, wsl-ubuntu]
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -138,6 +142,19 @@ jobs:
     name: DB contract tests (Postgres)
     needs: changes
     if: needs.changes.outputs.db == 'true'
+    # SENGAJA tetap di runner GitHub, TIDAK dipindah ke self-hosted.
+    #
+    # Job ini menjalankan `supabase start` lalu `supabase stop --no-backup`. Runner
+    # self-hosted berbagi daemon Docker dengan mesin developer, yang biasanya sedang
+    # menjalankan stack Supabase lokal di port yang sama (54321/54322). Memindahkannya
+    # ke sini berarti: bentrok port saat start, dan `supabase stop` berpotensi
+    # merobohkan stack dev developer sendiri — berisiko terhadap data lokalnya.
+    #
+    # Konsekuensi yang harus disadari: selama menit GitHub-hosted terblokir, job ini
+    # TIDAK jalan. Ia hanya tergating ke perubahan supabase/** (lihat job `changes`),
+    # jadi PR yang tidak menyentuh DB tidak terpengaruh. Perubahan DB tetap butuh
+    # verifikasi manual sampai kuota pulih atau job ini diisolasi (port/project id
+    # terpisah).
     runs-on: ubuntu-latest
     defaults:
       run:
