@@ -35,7 +35,9 @@ export default function SettingsArchiveScreen() {
     mutationFn: (args: { entityType: CardEntityType; entityId: string }) =>
       restoreCard(args.entityType, args.entityId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['search'] });
+      // BL-09(c): key harus cocok dgn useSearchCards (['cards_search', ...]). ['search'] tidak
+      // dipakai query mana pun → invalidate no-op, list tetap menampilkan card yang sudah dipulihkan.
+      qc.invalidateQueries({ queryKey: ['cards_search'] });
       Alert.alert('Dipulihkan', 'Card kembali ke status Draft. Verifikasi lalu Aktifkan kembali.');
     },
     onError: (e) => alertFriendlyError('Gagal pulihkan', e, 'Kesalahan.'),
