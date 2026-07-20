@@ -50,7 +50,14 @@ jobs:
           FILES=$(git diff --name-only "$BASE" HEAD)
           echo "File berubah:"; echo "$FILES" | sed 's/^/  /'
 
-          if echo "$FILES" | grep -qE '^(supabase/|scripts/ci/|\.github/)'; then DB=true; else DB=false; fi
+          # `.github/**` SENGAJA TIDAK ikut memicu gate DB di sini — berbeda dari
+          # ci.yml. Di ci.yml alasannya kuat: perubahan workflow harus diuji oleh
+          # workflow itu sendiri. Di workflow deploy, memicu DB contract karena edit
+          # workflow memberi NOL manfaat keamanan (edit YAML tidak bisa menyebabkan
+          # regresi RLS) tetapi memblokir deploy — dan selama menit hosted terblokir
+          # itu berarti perbaikan workflow tidak akan pernah bisa ter-deploy, termasuk
+          # perbaikan ini sendiri. Gate hanya untuk yang benar-benar mengubah kontrak DB.
+          if echo "$FILES" | grep -qE '^(supabase/|scripts/ci/)'; then DB=true; else DB=false; fi
           echo "db=$DB" >> "$GITHUB_OUTPUT"
           echo "→ db-contract=$DB"
 
