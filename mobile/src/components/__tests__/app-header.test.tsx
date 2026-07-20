@@ -20,6 +20,13 @@ jest.mock('@/hooks/use-profile', () => ({
   useProfile: () => ({ profile: { id: 'u1', full_name: 'Citra Wibawa' }, isLoading: false }),
 }));
 
+// Badge unread ikon Notifikasi — default "tidak ada unread"; test per-kasus meng-override.
+let mockUnread = { count: 0, isLoading: false, isError: false };
+jest.mock('@/hooks/use-notifications', () => ({
+  __esModule: true,
+  useUnreadCount: () => mockUnread,
+}));
+
 jest.mock('@/providers/theme-provider', () => ({
   __esModule: true,
   useThemePreference: () => ({ effective: 'light' }),
@@ -55,6 +62,7 @@ describe('AppHeader — back button (pola seragam tab-stack)', () => {
     mockBack.mockClear();
     mockCanGoBack.mockReset();
     mockSegments = ['(app)', '(tabs)', 'home'];
+    mockUnread = { count: 0, isLoading: false, isError: false };
   });
 
   it('root tab (no history, no subroute) → TIDAK tampilkan tombol Kembali', async () => {
@@ -123,5 +131,64 @@ describe('AppHeader — back button (pola seragam tab-stack)', () => {
     await render(<AppHeader />, { wrapper });
     fireEvent.press(screen.getByLabelText('Buka profil saya'));
     expect(mockPush).toHaveBeenCalledWith('/people-profile/u1');
+  });
+});
+
+// PRD §7.2 #3 — icon Notifications wajib ada di header global, bukan hanya di bottom nav.
+describe('AppHeader — icon Notifikasi (PRD §7.2 #3)', () => {
+  beforeEach(() => {
+    mockPush.mockClear();
+    mockCanGoBack.mockReset();
+    mockCanGoBack.mockReturnValue(false);
+    mockSegments = ['(app)', '(tabs)', 'home'];
+    mockUnread = { count: 0, isLoading: false, isError: false };
+  });
+
+  it('selalu tampil dan tap → push tab Notifikasi', async () => {
+    await render(<AppHeader />, { wrapper });
+    fireEvent.press(screen.getByLabelText('Notifikasi'));
+    expect(mockPush).toHaveBeenCalledWith('/(app)/(tabs)/notifications');
+  });
+
+  it('tetap tampil di sub-route (berdampingan dengan tombol Kembali)', async () => {
+    mockCanGoBack.mockReturnValue(true);
+    mockSegments = ['(app)', '(tabs)', 'workspace', 'performance'];
+    await render(<AppHeader />, { wrapper });
+    expect(screen.getByLabelText('Kembali ke Workspace')).toBeTruthy();
+    expect(screen.getByLabelText('Notifikasi')).toBeTruthy();
+  });
+
+  it('unread > 0 → badge angka + label a11y menyebut jumlah (warna ≠ satu-satunya sinyal)', async () => {
+    mockUnread = { count: 3, isLoading: false, isError: false };
+    await render(<AppHeader />, { wrapper });
+    expect(screen.getByLabelText('Notifikasi, 3 belum dibaca')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+  });
+
+  it('unread > 99 → badge di-clamp "99+"', async () => {
+    mockUnread = { count: 128, isLoading: false, isError: false };
+    await render(<AppHeader />, { wrapper });
+    expect(screen.getByText('99+')).toBeTruthy();
+    expect(screen.getByLabelText('Notifikasi, 99+ belum dibaca')).toBeTruthy();
+  });
+
+  it('unread = 0 → tanpa badge', async () => {
+    await render(<AppHeader />, { wrapper });
+    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.getByLabelText('Notifikasi')).toBeTruthy();
+  });
+
+  it('isLoading → badge disembunyikan (jangan flash "0")', async () => {
+    mockUnread = { count: 0, isLoading: true, isError: false };
+    await render(<AppHeader />, { wrapper });
+    expect(screen.getByLabelText('Notifikasi')).toBeTruthy();
+  });
+
+  it('isError → badge disembunyikan, ikon tetap bisa ditekan', async () => {
+    mockUnread = { count: 5, isLoading: false, isError: true };
+    await render(<AppHeader />, { wrapper });
+    expect(screen.queryByText('5')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Notifikasi'));
+    expect(mockPush).toHaveBeenCalledWith('/(app)/(tabs)/notifications');
   });
 });

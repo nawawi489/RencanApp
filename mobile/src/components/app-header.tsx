@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/ui';
 import { BrandLogo } from '@/components/brand-logo';
 import { useProfile } from '@/hooks/use-profile';
+import { useUnreadCount } from '@/hooks/use-notifications';
 import { useThemePreference } from '@/providers/theme-provider';
 
 /** Topbar app: logo + wordmark + kicker per-layar + avatar (→ profil sendiri).
@@ -21,9 +22,13 @@ export function AppHeader({ kicker }: { kicker?: string }) {
   const segments = useSegments() as string[];
   const { profile } = useProfile();
   const { effective } = useThemePreference();
+  // Badge unread di ikon Notifikasi (PRD §7.2 #3). Saat loading/error → badge disembunyikan,
+  // bukan ditampilkan "0" (hook sengaja meng-surface isLoading/isError untuk ini).
+  const { count: unreadCount, isLoading: unreadLoading, isError: unreadError } = useUnreadCount();
+  const showUnread = !unreadLoading && !unreadError && unreadCount > 0;
   // Ikon di atas pill bg-neutral-50/dark:bg-neutral-900 — brand-dark kontras di terang,
   // blue-300 di gelap (pola IconTile info, DESIGN §12: warna eksplisit via tema efektif).
-  const searchIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
+  const brandIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
   // Back chevron: blue-300 di gelap mengikuti pola brand-dark, brand-dark di terang.
   const backIconColor = effective === 'dark' ? '#93c5fd' : '#145ebc';
   const name = profile?.full_name?.trim() || profile?.email || 'Pengguna';
@@ -95,8 +100,31 @@ export function AppHeader({ kicker }: { kicker?: string }) {
             onPress={() => router.push('/(app)/search')}
             accessibilityRole="button"
             accessibilityLabel="Cari">
-            <Ionicons name="search-outline" size={18} color={searchIconColor} />
+            <Ionicons name="search-outline" size={18} color={brandIconColor} />
             <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Cari</Text>
+          </Pressable>
+          {/* PRD §7.2 #3: icon Notifications di header global — jalur cepat ke tab Notif dari
+              layar mana pun. Badge = jumlah unread (warna + angka, bukan warna saja: DESIGN §4).
+              Min 44×44 touch (DESIGN §4). */}
+          <Pressable
+            className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
+            onPress={() => router.push('/(app)/(tabs)/notifications')}
+            accessibilityRole="button"
+            accessibilityLabel={
+              showUnread
+                ? `Notifikasi, ${unreadCount > 99 ? '99+' : unreadCount} belum dibaca`
+                : 'Notifikasi'
+            }>
+            <View>
+              <Ionicons name="notifications-outline" size={22} color={brandIconColor} />
+              {showUnread ? (
+                <View className="absolute -right-2 -top-1 min-w-[18px] items-center rounded-full bg-red-700 px-1.5">
+                  <Text className="text-xs font-bold text-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </Pressable>
           {/* Avatar → profil sendiri (bukan hub /settings lama — pengaturan kini hidup di tab
               Menu; hub lama duplikat stale dan dijadwalkan pensiun). */}
