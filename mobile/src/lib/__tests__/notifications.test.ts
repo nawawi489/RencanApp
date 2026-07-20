@@ -85,6 +85,8 @@ describe('notificationTypesForTab', () => {
       'deadline_reminder',
       'deadline_change_approved',
       'deadline_change_rejected',
+      // B-1: pengingat periode berbasis tanggal → muncul di tab deadline juga.
+      'period_closing_reminder',
     ]);
     expect(notificationTypesForTab('terlewat')).toEqual(['instance_missed']);
     expect(notificationTypesForTab('repeat')).toEqual(['repeat_due']);
@@ -96,6 +98,8 @@ describe('notificationTypesForTab', () => {
       'mention',
       'deadline_change_requested',
       'deadline_change_revision_requested',
+      // B-1: butuh aksi admin (tekan Finalisasi), bukan sekadar informasi.
+      'period_closing_reminder',
     ]);
   });
 

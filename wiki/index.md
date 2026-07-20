@@ -37,6 +37,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[prototype-prd-conformance]] — Prototype `design.html` vs PRD V1.82: 46/46 screen + 28 AC terpenuhi; penyimpangan kecil (header notif, tab People Q3)
 - [[score-open-period-ui]] — Tombol "Buka Periode" + modal konfirmasi dua langkah; menutup NG-2 (RPC `open_period_snapshot` sebelumnya nol caller UI); nol migrasi
+- [[score-period-end-nudge]] — Pengingat H-7/H-3/H-1 + harian saat terlambat, tipe notif `period_closing_reminder` + pg_cron harian; menutup B-1 (tanpa ini gejala bug lama bisa kambuh tanpa ada bug)
 - [[score-period-immutability]] — ADR: periode skoring closed tidak dapat dibuka kembali dari aplikasi; koreksi = periode berikutnya (owner 2026-07-19, MERGE-BLOCKER Fase 4)
 - [[scope-guardrails]] — Batas scope V1.83: fitur masuk vs ditolak (anti-scope-creep); §18 Satuan opsional TETAP diizinkan
 - [[settings-consumers-spec]] — Bundled SDD spec §34.5 + §34.6: tutup config black-hole (writer → tabel dedicated `card_completion_rules` + `card_guidance_contents`; hardcoded core + admin layer); v2 + D-8 amendment (governance_violations emit deferred, single-tx rollback bug); target migrasi 0078 post-rebase
