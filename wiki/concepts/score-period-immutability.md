@@ -53,6 +53,12 @@ buka-periode tersedia."`).
 - **Manual Override sebelum close**: Modal step 1 menampilkan pratinjau angka
   `activeOverrides` supaya user tidak menekan "Finalisasi" sambil lupa override
   yang tertunda. Setelah close, `override_user_score` server E1.
+- **Friksi dua tindakan sadar** (amandemen 2026-07-20): step 1 mensyaratkan centang
+  `AckCheckbox` "Saya paham periode ini tidak dapat dibuka kembali." sebelum tombol
+  destruktif lepas dari `disabled`. Sebelumnya pernyataan itu menjadi label tombol,
+  tetapi kalimat panjang di dalam tombol cenderung dibaca sebagai "tombol biru" —
+  bukan sebagai pernyataan. Memisahkannya membuat penerimaan risiko menjadi tindakan
+  tersendiri, bukan efek samping menekan tombol. Token: DESIGN §7 `AckCheckbox`.
 - **Koreksi via periode berikutnya**: skor bulan/kuartal berikutnya menggunakan
   formula (mungkin di-adjust) yang berlaku prospektif. Riwayat lama tetap terlihat
   di halaman History user (`useUserScoreHistory`).

@@ -22,15 +22,17 @@
 //
 // Copy Indonesia konsisten "pengguna" (bukan "user"); label utama menyebut nama periode.
 
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
 import { Modal } from 'react-native';
-import { Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 import {
   useCalculatePeriodScores,
   useClosePeriod,
   usePreviewFinalization,
 } from '@/hooks/use-people-score';
+import { useThemePreference } from '@/providers/theme-provider';
 
 import { Button } from './ui';
 
@@ -59,7 +61,16 @@ type State =
   | Phase;
 
 // Copy §6.4 (verified spec). Sengaja diletakkan sebagai konstanta agar mudah refactor ke i18n.
-const CONFIRM_LABEL = 'Saya paham, finalisasi periode & kunci peringkat';
+//
+// Pernyataan-paham dipindah dari label tombol ke checkbox body (DESIGN §7 `AckCheckbox`):
+// label lama "Saya paham, finalisasi periode & kunci peringkat" = 351px, melebihi ruang
+// tombol 302px di viewport 390 → wrap 2 baris. Selain itu kalimat panjang DI DALAM tombol
+// cenderung dilewati mata (dibaca sebagai "tombol biru", bukan sebagai pernyataan).
+// Checkbox terpisah memaksa satu tindakan sadar sebelum aksi ireversibel.
+// Ringkas — konteks "peringkat" sudah dibawa judul modal + paragraf body, jadi tidak perlu
+// diulang di tombol. Ini juga menjaga label tetap satu baris di layar sempit.
+const CONFIRM_LABEL = 'Finalisasi Periode';
+const ACK_LABEL = 'Saya paham periode ini tidak dapat dibuka kembali.';
 const CONCURRENT_COPY =
   'Perhitungan sedang berjalan di sesi lain. Muat ulang halaman dan coba lagi.';
 const MISMATCH_COPY =
@@ -91,6 +102,12 @@ export function FinalizePeriodModal({
   // Hanya fase pasca-konfirmasi yang disimpan. `null` = user belum menekan tombol konfirmasi,
   // sehingga tampilan mengikuti status query preview.
   const [phase, setPhase] = useState<Phase | null>(null);
+  // Pernyataan-paham (DESIGN §7 `AckCheckbox`). Tombol destruktif terkunci sampai ini true.
+  const [acknowledged, setAcknowledged] = useState(false);
+  // Ionicons tak menerima class NativeWind untuk `color` → hex eksplisit per tema (pola
+  // brandIconColor di notifications.tsx). Amber-600/400 agar kontras di kedua latar.
+  const { effective } = useThemePreference();
+  const warningIconColor = effective === 'dark' ? '#fbbf24' : '#b45309';
 
   // State efektif diturunkan saat render. Begitu `phase` terisi, ia menang atas preview —
   // itulah yang mencegah modal "mundur" ke step1 saat query di-invalidate pasca-close.
@@ -114,7 +131,9 @@ export function FinalizePeriodModal({
   const handleDismiss = useCallback(() => {
     if (isBusy) return;
     // Reset saat menutup dari terminal state, supaya modal fresh saat dibuka lagi.
+    // `acknowledged` ikut di-reset — pernyataan-paham tidak boleh "lengket" ke sesi berikutnya.
     setPhase(null);
+    setAcknowledged(false);
     onClose();
   }, [isBusy, onClose]);
 
@@ -225,23 +244,53 @@ export function FinalizePeriodModal({
                   Override aktif akan efektif.
                 </Text>
               ) : (
-                <Text
+                /* Ikon peringatan menarik mata ke informasi kritis lebih dulu. Ikon DEKORATIF
+                   (aria-hidden) — teks tetap satu-satunya pembawa makna, jadi pembaca layar
+                   tidak mendengar "warning" dua kali dan §4 rule 2 tetap terpenuhi. */
+                <View
                   accessibilityRole="alert"
-                  className="rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                  Belum ada pengguna dengan template role terpetakan untuk periode ini. Melanjutkan
-                  berarti mengunci periode tanpa peringkat.
-                </Text>
+                  className="flex-row items-start gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950">
+                  <Ionicons
+                    name="warning"
+                    size={18}
+                    color={warningIconColor}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
+                  <Text className="flex-1 text-sm font-semibold text-amber-900 dark:text-amber-200">
+                    Belum ada pengguna dengan template role terpetakan untuk periode ini.
+                    Melanjutkan berarti mengunci periode tanpa peringkat.
+                  </Text>
+                </View>
               )}
               <Text className="text-sm text-neutral-600 dark:text-neutral-300">
                 Skor setiap pengguna akan dihitung ulang berdasar formula aktif, lalu peringkat
                 dibekukan dan periode ditutup. Setelah dikunci, periode ini tidak dapat dibuka
                 kembali dari aplikasi dan Manual Override tidak bisa lagi diubah.
               </Text>
+              {/* AckCheckbox (DESIGN §7): pernyataan-paham terpisah dari aksi. Glyph ✓/○ =
+                  sinyal non-warna wajib (§4 rule 2); teks boleh wrap karena untuk dibaca.
+                  SENGAJA TANPA border/latar kotak — dengan bingkai penuh ia terbaca sebagai
+                  "tombol ketiga" di antara Finalisasi & Batal. Bentuknya baris pilihan:
+                  glyph + teks, area tap tetap ≥44px lewat min-h + py. */}
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acknowledged }}
+                accessibilityLabel={ACK_LABEL}
+                onPress={() => setAcknowledged((v) => !v)}
+                className="min-h-[44px] flex-row items-start gap-3 py-2">
+                <Text className="text-base font-semibold text-brand-dark dark:text-blue-300">
+                  {acknowledged ? '✓' : '○'}
+                </Text>
+                <Text className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
+                  {ACK_LABEL}
+                </Text>
+              </Pressable>
               <Button
                 label={CONFIRM_LABEL}
                 accessibilityLabel={CONFIRM_LABEL}
                 onPress={runFinalize}
-                disabled={calc.isPending || close.isPending}
+                disabled={!acknowledged || calc.isPending || close.isPending}
                 loading={calc.isPending || close.isPending}
               />
               <Button

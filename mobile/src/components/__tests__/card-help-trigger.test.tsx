@@ -48,7 +48,13 @@ describe('CardHelpTrigger', () => {
   it('render org-specific guidance saat tap (AC-5)', async () => {
     mockGetGuidance.mockResolvedValue({ title: 'Inisiatif X', body: 'Custom body' });
     await render(<CardHelpTrigger topic="initiative" />, { wrapper: wrapper() });
-    const btn = await screen.findByRole('button');
+    // Tunggu query settle SEBELUM tap. Komponen sengaja fallback ke glossary selama
+    // loading (lihat docstring CardHelpTrigger), jadi menekan tombol lebih awal memang
+    // memunculkan glossary default — bukan bug produk, tapi race di test: mesin cepat
+    // kebetulan lulus, runner CI yang lebih lambat gagal.
+    // `accessibilityLabel` berubah 'Bantuan' → 'Bantuan {title}' hanya saat `data` ada,
+    // sehingga menunggu label ini sekaligus menegaskan kontrak anti-flash AC-7.
+    const btn = await screen.findByLabelText('Bantuan Inisiatif X');
     fireEvent.press(btn);
     await waitFor(() =>
       expect(Alert.alert).toHaveBeenCalledWith('Inisiatif X', 'Custom body'),
