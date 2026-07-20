@@ -17,6 +17,7 @@ import {
   usePlaceholderColor,
 } from '@/components/ui';
 import { FinalizePeriodModal } from '@/components/finalize-period-modal';
+import { OpenPeriodModal } from '@/components/open-period-modal';
 import {
   useActivePeriod,
   useFormulaActions,
@@ -435,6 +436,10 @@ export default function SettingsScoreFormulaScreen() {
   // kalau modal digate oleh `period` langsung, ia ter-unmount SEBELUM user sempat melihat state
   // `done` (ditemukan via smoke test manual Fase 5 — race antara query refetch vs modal state).
   const [finalizingPeriod, setFinalizingPeriod] = useState<PeriodSnapshot | null>(null);
+  // Boolean (bukan snapshot period seperti finalizingPeriod): tak ada entitas yang perlu
+  // dibekukan — modal membangun periode baru dari input, dan setelah sukses `period` berubah
+  // dari null menjadi terisi, yang justru state yang ingin kita tampilkan.
+  const [openingPeriod, setOpeningPeriod] = useState(false);
 
   if (profileLoading) return <SkeletonCard />;
 
@@ -499,13 +504,26 @@ export default function SettingsScoreFormulaScreen() {
               />
             </View>
           ) : (
-            // Copy state-kosong TIDAK menjanjikan "Buka periode" (tak ada UI open-period, WS-5 close-only).
-            <GuidanceNote
-              title="Belum ada periode aktif"
-              body="Tidak ada periode skoring yang sedang berjalan. Ranking menampilkan hasil periode terakhir yang ditutup."
-            />
+            // NG-2 ditutup: open_period_snapshot kini punya jalan masuk UI. Tombol hanya muncul
+            // di cabang ini — periode aktif ada → guard satu-aktif-per-org membuat buka jadi
+            // mustahil; isError → status periode tak diketahui, jangan tawarkan aksi ireversibel.
+            <View className="gap-3">
+              <GuidanceNote
+                title="Belum ada periode aktif"
+                body="Tidak ada periode skoring yang sedang berjalan. Ranking menampilkan hasil periode terakhir yang ditutup."
+              />
+              <Button
+                label="Buka Periode"
+                accessibilityLabel="Buka periode skoring baru"
+                onPress={() => setOpeningPeriod(true)}
+              />
+            </View>
           )}
         </SectionCard>
+
+        {openingPeriod ? (
+          <OpenPeriodModal visible onClose={() => setOpeningPeriod(false)} />
+        ) : null}
 
         {finalizingPeriod ? (
           <FinalizePeriodModal

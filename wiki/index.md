@@ -31,9 +31,11 @@ Master index of all wiki pages. Updated on every ingest.
 - [[execution-loop]] — Bukti → Nilai Hasil → Review; submission versioning & evidence locking
 - [[fase6-spec]] — Spec eksekutabel Fase 6 Development Workspace (AC, data contract, non-goals, TDD handoff)
 - [[fase6-tdd-plan]] — Rencana TDD red→green→refactor Fase 6 + addendum kritik (missing cases & concerns)
+- [[feature-gap-backlog]] — Backlog di bawah ambang P-slot (BL-01..BL-12): gap app vs PRD + inkonsistensi perilaku; triage XS/S/M/L + kandidat chip task
 - [[minimum-breakdown-rule]] — Jumlah minimal card turunan (label UI "Aturan Pecah Target"); V1.83 opsional 3 mode (Nonaktif/Peringatan/Blokir), angka konfigurabel admin
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[prototype-prd-conformance]] — Prototype `design.html` vs PRD V1.82: 46/46 screen + 28 AC terpenuhi; penyimpangan kecil (header notif, tab People Q3)
+- [[score-open-period-ui]] — Tombol "Buka Periode" + modal konfirmasi dua langkah; menutup NG-2 (RPC `open_period_snapshot` sebelumnya nol caller UI); nol migrasi
 - [[score-period-immutability]] — ADR: periode skoring closed tidak dapat dibuka kembali dari aplikasi; koreksi = periode berikutnya (owner 2026-07-19, MERGE-BLOCKER Fase 4)
 - [[scope-guardrails]] — Batas scope V1.83: fitur masuk vs ditolak (anti-scope-creep); §18 Satuan opsional TETAP diizinkan
 - [[settings-consumers-spec]] — Bundled SDD spec §34.5 + §34.6: tutup config black-hole (writer → tabel dedicated `card_completion_rules` + `card_guidance_contents`; hardcoded core + admin layer); v2 + D-8 amendment (governance_violations emit deferred, single-tx rollback bug); target migrasi 0078 post-rebase

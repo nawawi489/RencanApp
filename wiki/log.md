@@ -1821,3 +1821,23 @@ Juga diverifikasi bahwa ini **bukan efek PR #110**: `git diff 8c5b38a 5e85bd6` t
 **Pelajaran operasional:** gate test merah ⇒ deploy di-skip ⇒ **merge ≠ live**. Digabung dengan fakta CI tidak menjalankan `db push`, sempat muncul kondisi **migrasi 0078 sudah live di DB staging tapi client-nya belum ter-deploy**. Setelah merge PR yang menyentuh DB + client, cek dua hal terpisah: run Deploy Staging hijau, DAN migrasi benar-benar ter-apply. Detail di memori `ci-flake-test-ci` + [[score-period-immutability]] konteks migrasi.
 
 Pasca re-run: ketiga job hijau, staging ter-deploy `5e85bd6`, dan verifikasi regresi ringan lolos — tombol "Finalisasi Periode & Peringkat" tetap utuh, console bersih.
+
+## [2026-07-20] update | Buka Periode UI — menutup NG-2 jembatan finalisasi
+
+- Pages created: `concepts/score-open-period-ui.md`
+- Pages updated: `concepts/score-period-immutability.md` (escape hatch kini nyata, bukan janji bersyarat), `index.md`
+- Konteks: `open_period_snapshot` hidup di DB sejak migrasi 0013 tapi nol caller UI — organisasi tanpa periode hasil seed tidak bisa memasuki Score/Ranking sama sekali. Jembatan finalisasi (PR #110) menyelesaikan setengah siklus; ini setengah lainnya.
+- Keputusan owner: modal dua langkah (form → konfirmasi verbatim), bukan satu langkah. Alasan: membuka periode ireversibel dari dua arah — trigger BEFORE DELETE menolak penghapusan, dan guard satu-aktif-per-org membuat salah tanggal memblokir periode yang benar.
+- Cakupan: nol migrasi, nol perubahan signature RPC. `useOpenPeriod` (invalidate TEPAT `['active_period']`), `OpenPeriodModal`, wiring empty-state `settings-score-formula.tsx`.
+- Validasi klien menutup lubang server: `period_name` menerima string kosong/spasi di DB (hanya NOT NULL); periode 1 hari sah karena CHECK-nya `period_end >= period_start`.
+- Test: 5 hook + 16 modal + 5 wiring screen. Satu test lama dibalik kontraknya — `[ex WS5-UI-02]` sebelumnya mengunci KETIADAAN UI buka-periode.
+
+## [2026-07-20] update | Backlog fitur di bawah ambang P-slot dicatat
+
+- Pages created: `concepts/feature-gap-backlog.md`
+- Pages updated: `index.md`
+- 12 item diberi ID stabil `BL-01..BL-12` dari audit fitur (gap app vs PRD, bukan app vs prototype — [[ui-prototype-gap]] tetap terpisah).
+- Triage per ukuran: 5 XS layak langsung jadi chip task (BL-01 ranking tie, BL-03 dim past-period, BL-08 aksi "Catatan", BL-11 ikon notifikasi header, BL-12 label governance violation); 4 S; 3 butuh scoping (BL-07 notifikasi §28, BL-09 archive, BL-10 search §38).
+- Dua yang paling dekat ambang P-slot: **BL-02** (AC-11 FAIL — `strategy/new` expose DateRangeField, seharusnya inherit periode Goal) dan bagian **invalidate query key salah** di BL-09 (bug diam: restore berhasil tapi list tidak menyegar).
+- BL-09 sengaja ditandai "bukan satu bug" — tiga penyebab berbeda dalam satu baris backlog, harus dipecah sebelum dikerjakan.
+- Status: item belum diverifikasi ulang terhadap `mobile/src/` saat pencatatan `[?]`; konfirmasi gap sebelum mengerjakan.

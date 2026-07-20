@@ -43,8 +43,14 @@ NG-9 + Keputusan Putaran 2 #6): koreksi dilakukan **di periode berikutnya**, buk
 lewat reopen. Modal `FinalizePeriodModal` menyatakan hal ini eksplisit di step 1
 (`"Setelah dikunci, periode ini tidak dapat dibuka kembali dari aplikasi dan
 Manual Override tidak bisa lagi diubah."`) dan menampilkan soft escape hatch di state
-`done` (`"Butuh mengoreksi? Buat periode berikutnya di menu ini setelah UI
-buka-periode tersedia."`).
+`done` (`"Butuh mengoreksi? Buka periode berikutnya lewat tombol “Buka Periode” di
+layar ini."`).
+
+Escape hatch itu kini nyata, bukan janji. Sejak `[[score-open-period-ui]]` mendarat,
+tombol "Buka Periode" ada di empty-state `settings-score-formula.tsx` — sehingga
+"koreksi di periode berikutnya" bisa dieksekusi pengguna sendiri tanpa seed SQL.
+Immutability periode yang sudah ditutup TIDAK berubah: yang bertambah hanyalah jalan
+masuk ke periode baru.
 
 ## Konsekuensi
 

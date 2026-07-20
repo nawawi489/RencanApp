@@ -75,8 +75,10 @@ const CONCURRENT_COPY =
   'Perhitungan sedang berjalan di sesi lain. Muat ulang halaman dan coba lagi.';
 const MISMATCH_COPY =
   'Perhitungan selesai tapi peringkat tidak tersimpan (0 baris). Hubungi admin.';
+// NG-2 ditutup — OpenPeriodModal sudah mendarat, jadi janji bersyarat di copy lama
+// ("setelah UI buka-periode tersedia") kini menyesatkan: tombolnya ada di layar ini.
 const FOOTER_ESCAPE =
-  'Butuh mengoreksi? Buat periode berikutnya di menu ini setelah UI buka-periode tersedia.';
+  'Butuh mengoreksi? Buka periode berikutnya lewat tombol “Buka Periode” di layar ini.';
 
 // PostgREST error mapping. Bila server mengirim PG code 23505 (unique_violation dari race
 // yang berhasil melewati advisory lock — mis. bug atau flag statement_timeout), tampilkan

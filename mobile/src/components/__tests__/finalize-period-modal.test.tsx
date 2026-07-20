@@ -342,13 +342,18 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     ).toBeNull();
   });
 
-  it('[T-M-16] done state menampilkan footer "Butuh mengoreksi?"', async () => {
+  // Copy diperbarui saat NG-2 ditutup: footer lama berbunyi "…setelah UI buka-periode
+  // tersedia", janji bersyarat yang kini menyesatkan karena tombolnya sudah ada di layar
+  // yang sama. Escape hatch berubah dari rencana menjadi instruksi konkret.
+  it('[T-M-16] done state menampilkan footer escape hatch yang menunjuk tombol Buka Periode', async () => {
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
     await konfirmasi();
     await waitFor(() =>
       expect(
-        screen.getByText(/Butuh mengoreksi\?.*Buat periode berikutnya/i),
+        screen.getByText(/Butuh mengoreksi\?.*Buka periode berikutnya.*Buka Periode/i),
       ).toBeTruthy(),
     );
+    // Janji bersyarat lama tidak boleh tersisa.
+    expect(screen.queryByText(/setelah UI buka-periode tersedia/i)).toBeNull();
   });
 });
