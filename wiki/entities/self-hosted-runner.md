@@ -52,8 +52,47 @@ Skrip itu menjalankan Docker Desktop bila prosesnya belum ada, lalu menunggu sam
 
 Alternatif resmi: Docker Desktop → Settings → General → *"Start Docker Desktop when you sign in"*. Bila itu diaktifkan, file `.vbs` di atas boleh dihapus — konfigurasi Docker sendiri sengaja tidak disentuh agar kedua mekanisme tidak bentrok.
 
-> [!warning] Belum teruji melewati login
-> Sama seperti keepalive runner, mekanisme Startup folder ini baru terbukti saat dijalankan manual (exit 0 dalam 2 detik dengan Docker hidup). Verifikasi sebenarnya baru terjadi setelah logout/restart pertama: cek `wsl -l -v` memuat `docker-desktop` `Running` tanpa intervensi.
+**Atribusi terverifikasi (2026-07-21).** VBS disingkirkan sementara lalu mesin di-restart. Hasilnya: pada boot+4,4 menit Docker Desktop **nol proses** — bukan "hidup tapi error", melainkan tidak pernah diluncurkan. Entri HKCU Run `Docker Desktop` ada tapi tidak efektif, konsisten dengan `AutoStart=False`. Kontrol positifnya: Chrome dari entri Run yang sama start di boot+21 detik, jadi mekanisme Run memang berjalan di login itu. Kesimpulan: skrip ini *load-bearing*, bukan pelengkap.
+
+Keepalive runner ikut terverifikasi pada reboot yang sama: runner kembali `online` dan service `active` tanpa intervensi.
+
+> [!warning] Autostart tidak menjamin daemon siap
+> Yang ditutup skrip ini hanya penyebab **"tidak diluncurkan"**. Penyebab **"gagal start"** di bawah tetap bisa merobohkan daemon meski autostart bekerja sempurna.
+
+### Socket AF_UNIX yatim setelah mati mendadak
+
+Reboot mendadak meninggalkan file socket yang Docker sendiri tidak bisa hapus, dan aplikasinya menutup diri saat start:
+
+```
+starting services: initializing Inference manager:
+remove …\Docker\run\dockerInference: The file cannot be accessed by the system
+→ "Docker Desktop encountered an unexpected error and needs to close"
+```
+
+Dialognya hanya menawarkan **Quit** atau **Reset to factory defaults**.
+
+> [!danger] Jangan pilih "Reset to factory defaults"
+> Reset menghapus container dan volume — termasuk stack Supabase dev di mesin ini. Masalahnya bisa diselesaikan tanpa itu.
+
+Yang **tidak** berhasil: `File.Delete`, `del /f`, maupun path mentah `\\?\`. Semuanya membalas *"The file cannot be accessed by the system"*. Yang berhasil hanya **menyingkirkan folder induknya**.
+
+Tiap percobaan start yang gagal meninggalkan bangkai baru yang memblokir percobaan berikutnya, dan lokasinya berpindah — teramati di `%LOCALAPPDATA%\Docker\run` lalu `%LOCALAPPDATA%\docker-secrets-engine`. Karena itu bersihkan **keduanya sekaligus**, bukan satu per satu:
+
+```powershell
+Get-Process 'Docker Desktop','com.docker.backend' -EA SilentlyContinue | Stop-Process -Force
+foreach ($d in @("$env:LOCALAPPDATA\Docker\run", "$env:LOCALAPPDATA\docker-secrets-engine")) {
+  if (Test-Path $d) { [System.IO.Directory]::Move($d, "$d.stale-$(Get-Random -Maximum 99999)") }
+}
+Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+```
+
+Verifikasi **dengan menjalankan perintah**, bukan membaca log — log memuat error dari percobaan sebelumnya sementara daemon sudah sehat, dan itu sempat menyesatkan diagnosis:
+
+```bash
+wsl -d Ubuntu -u runner -- docker info --format 'server={{.ServerVersion}}'
+```
+
+Di CI, mode kegagalan ini muncul hanya sebagai `FATAL: daemon Docker tak terjangkau dari sini` — tidak ada petunjuk soal socket. Kalau pesan itu muncul setelah mesin mati mendadak, mulai dari sini.
 
 > [!warning] Grup `docker` setara root
 > Anggota grup itu bisa `docker run -v /:/host` dan efektif menjadi root di mesin developer — melewati pagar "user `runner` tanpa sudo" di bawah. Ini **menguatkan**, bukan menggantikan, larangan menjadikan repo publik.
@@ -153,6 +192,7 @@ wsl -d Ubuntu -u runner -- docker ps --filter name=rencan-ci-db
 | Job gagal dengan `steps=0` | Kuota/billing — job tak pernah mulai, bukan bug kode |
 | `FATAL: daemon Docker tak terjangkau` | Engine Docker mati (cek distro `docker-desktop`, bukan proses aplikasinya) atau WSL integration non-aktif |
 | `/usr/bin/docker: Input/output error` | Mount `cli-tools` basi setelah Docker Desktop restart |
+| `FATAL: daemon Docker…` **sesudah mesin mati mendadak** | Socket AF_UNIX yatim — Docker gagal start, lihat bagian di atas |
 
 Alasan `steps=0` hanya terbaca lewat `gh api repos/<o>/<r>/check-runs/<id>/annotations` — log job-nya kosong.
 
