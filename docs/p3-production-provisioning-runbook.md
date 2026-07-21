@@ -158,9 +158,10 @@ Berlaku untuk **staging (`preview`) dan production**. Per go-public repo,
 1. EAS Dashboard → Project → **Environment Variables** → scope **`preview`**:
    - `EXPO_PUBLIC_SUPABASE_URL` = staging Project URL
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY` = staging anon (publishable) key
-2. `mobile/eas.json` `build.preview.env` **wajib** menyimpan kedua kunci
-   sebagai `""` (string kosong). Kalau field-nya hilang, Expo tidak akan
-   inject dari dashboard.
+2. `mobile/eas.json` `build.preview.env` **jangan** menyimpan kedua kunci
+   (bukan `""`, bukan placeholder — hapus key-nya sama sekali). EAS CLI menolak
+   `env` value kosong (`"is not allowed to be empty"`), dan bila key ada di
+   file dengan nilai apapun, nilai file akan **override** dashboard.
 3. Untuk GH Actions (`deploy-staging.yml`): pastikan job pull env via
    `EAS_ENVIRONMENT=preview` (bukan hardcode URL) dan set
    `STAGING_SUPABASE_URL` di GitHub Secrets, bukan checked-in.

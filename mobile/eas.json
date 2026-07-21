@@ -19,8 +19,6 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "staging",
-        "EXPO_PUBLIC_SUPABASE_URL": "",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
