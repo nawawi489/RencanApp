@@ -13,7 +13,13 @@ export type CardType =
   | 'task'
   | 'development_area'
   | 'problem_statement'
-  // Alias legacy dari seed DB 0011: `kpi_area` = level Strategi (rename V1.8.3, DESIGN.md §2).
+  // Alias legacy seed DB 0011, PENSIUN sejak migrasi 0080 (BL-04) yang memindahkan baris aturan
+  // ke penamaan sekarang. Dipertahankan HANYA sebagai pertahanan untuk environment yang belum
+  // menerima 0080 — jangan pakai untuk pemetaan baru.
+  //
+  // Peringatan: `kpi_area` menandakan level Strategi hanya di bawah penamaan PRA-0046. RPC
+  // sekarang (`check_minimum_breakdown_compliance`) tidak mengenalnya sama sekali dan memakai
+  // 'strategy' untuk level Strategi. Pemetaan cascade ada di `mbr-cascade.ts`.
   | 'kpi_area';
 
 /** 4 mode enforcement kanonik (§34.4). Tone & gating UI bergantung mode. */
@@ -77,8 +83,10 @@ export const CARD_TYPE_LABEL: Record<CardType, string> = {
   task: 'Tugas',
   development_area: 'Development Area',
   problem_statement: 'Problem Statement',
-  // Legacy DB value; UI menampilkan sebagai "Strategi" (rename V1.8.3).
-  kpi_area: 'Strategi',
+  // Nilai legacy pra-0046 (lihat CardType). Label dibedakan dari 'strategy' agar Settings tidak
+  // pernah lagi merender dua kartu aturan yang sama-sama berbunyi "Strategi → Strategi" —
+  // gejala yang tampak sebelum migrasi 0080 memindahkan baris-baris ini.
+  kpi_area: 'Strategi (aturan lama)',
 };
 
 /**

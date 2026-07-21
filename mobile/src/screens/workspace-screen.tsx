@@ -43,7 +43,8 @@ import { useProfile } from '@/hooks/use-profile';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useArchiveActions } from '@/hooks/use-governance-admin';
 import { mbrBreakdownGuardMessage } from '@/lib/activation-check';
-import type { MbrCompliance } from '@/lib/settings-mbr';
+import { isMbrCascadeBlocked } from '@/lib/mbr-cascade';
+import { CARD_TYPE_LABEL, type CardType, type MbrCompliance } from '@/lib/settings-mbr';
 import type { CardEntityType } from '@/lib/governance-admin';
 import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 import { alertFriendlyError } from '@/lib/errors';
@@ -483,17 +484,28 @@ function useTreeRowActions(
 }
 
 /**
+ * Props cascade MBR yang dipakai setiap sub-row ber-tombol-tambah (BL-04).
+ * Aturan `X → Y` menahan tombol di kartu `Y` yang membuat `Z`; jadi yang diteruskan ke bawah adalah
+ * kepatuhan INDUK (`X`), bukan kepatuhan kartu itu sendiri. Lihat `lib/mbr-cascade.ts`.
+ */
+type MbrCascadeProps = {
+  /** Kepatuhan kartu induk (`X`). Undefined → fail-open (tombol normal). */
+  parentCompliance?: MbrCompliance;
+  /** Jenis kartu induk (`X`) — hanya untuk kalimat guard. Penamaan sekarang, bukan alias legacy. */
+  parentCardType: CardType;
+};
+
+/**
  * Sub-row level 3: Inisiatif di bawah satu Strategi. WSA-01: expandable → Rencana Aksi (level 4).
  * "+ Rencana Aksi" gated `create_action_plan`, past-period lock, guard MBR strategy→initiative.
  */
 const InitiativeSubRow = memo(function InitiativeSubRow({
   initiative,
   parentCompliance,
+  parentCardType,
   progress,
-}: {
+}: MbrCascadeProps & {
   initiative: Inisiatif;
-  /** Kepatuhan MBR strategy→initiative (parent). Non-compliant → "+ Rencana Aksi" ter-guard (WSA-04). */
-  parentCompliance?: MbrCompliance;
   progress: number | null;
 }) {
   const router = useRouter();
@@ -506,6 +518,9 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
     [expanded, action_plans],
   );
   const { progressOf: initProgressOf } = useCardProgress(actionPlanIds);
+  // BL-04 — kepatuhan initiative→action_plan milik Inisiatif ini; diteruskan ke Rencana Aksi anak
+  // untuk menjaga tombol "+ Plan" (cucu = Tugas). Fetch hanya saat expanded.
+  const { compliance: ownCompliance } = useMbrCompliance(expanded ? 'initiative' : '', initiative.id);
   const { focus, now } = usePeriodFocus();
   const past = isAddLocked(initiative, focus, now);
   const canAddInit = can('create_action_plan');
@@ -517,8 +532,9 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
     contribution: initiative.contribution_pct == null ? null : `${initiative.contribution_pct}%`,
     risk: initiative.main_risk,
   });
-  // WSA-04 — guard MBR: fail-open saat data belum ada (undefined); guard hanya saat tahu non-compliant.
-  const mbrGuarded = !!parentCompliance && !parentCompliance.is_compliant;
+  // WSA-04 — guard MBR: fail-open saat data belum ada (undefined); hanya mode blokir_akses_turunan
+  // yang menahan tombol (BL-04 — sebelumnya mode apa pun ikut menahan asal non-compliant).
+  const mbrGuarded = isMbrCascadeBlocked(parentCompliance);
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -529,7 +545,11 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const retryChildren = useCallback(() => refetch(), [refetch]);
   const onAddActionPlan = useCallback(() => {
     if (mbrGuarded && parentCompliance) {
-      const { title, message } = mbrBreakdownGuardMessage('Strategi', parentCompliance, 'Rencana Aksi');
+      const { title, message } = mbrBreakdownGuardMessage(
+        CARD_TYPE_LABEL[parentCardType],
+        parentCompliance,
+        'Rencana Aksi',
+      );
       Alert.alert(title, message);
       return;
     }
@@ -538,7 +558,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
       return;
     }
     router.push(`/action-plan/new?initiativeId=${initiative.id}`);
-  }, [mbrGuarded, parentCompliance, past, router, initiative.id, initiative.name]);
+  }, [mbrGuarded, parentCompliance, parentCardType, past, router, initiative.id]);
   // Tombol redup bila past ATAU ter-guard MBR (spec §11: tetap terlihat, tapi redup).
   const addDimmed = past || mbrGuarded;
 
@@ -600,6 +620,8 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
                 <ActionPlanSubRow
                   key={i.id}
                   item={i}
+                  parentCompliance={ownCompliance}
+                  parentCardType="initiative"
                   progress={initProgressOf(i.id)}
                 />
               ))}
@@ -623,9 +645,11 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
  */
 const StrategySubRow = memo(function StrategySubRow({
   kpi,
+  parentCompliance,
+  parentCardType,
   progress,
   isMeasured = false,
-}: {
+}: MbrCascadeProps & {
   kpi: Strategi;
   progress: number | null;
   isMeasured?: boolean;
@@ -661,10 +685,25 @@ const StrategySubRow = memo(function StrategySubRow({
     () => router.push(`/strategy/${kpi.id}`),
     [router, kpi.id],
   );
-  const addInitiative = useCallback(
-    () => router.push(`/initiative/new?strategyId=${kpi.id}`),
-    [router, kpi.id],
-  );
+  // BL-04 — cascade goal→strategy: Goal yang belum cukup Strategi mengunci "+ Inisiatif" di setiap
+  // Strategi miliknya (bukan mengunci pembuatan Strategi itu sendiri — lihat mbr-cascade.ts).
+  const mbrGuarded = isMbrCascadeBlocked(parentCompliance);
+  const addInitiative = useCallback(() => {
+    if (mbrGuarded && parentCompliance) {
+      const { title, message } = mbrBreakdownGuardMessage(
+        CARD_TYPE_LABEL[parentCardType],
+        parentCompliance,
+        'Inisiatif',
+      );
+      Alert.alert(title, message);
+      return;
+    }
+    if (past) {
+      showPastPeriodAlert();
+      return;
+    }
+    router.push(`/initiative/new?strategyId=${kpi.id}`);
+  }, [mbrGuarded, parentCompliance, parentCardType, past, router, kpi.id]);
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
@@ -699,7 +738,8 @@ const StrategySubRow = memo(function StrategySubRow({
             onDetail={openDetail}
             onMore={openMenu}
             past={past}
-            onAdd={canAddInitiative ? addInitiative : undefined}
+            onAddPress={canAddInitiative ? addInitiative : undefined}
+            addDimmed={past || mbrGuarded}
             addLabel={`Tambah Inisiatif ke ${kpi.name}`}
             addButtonLabel="+ Inisiatif"
           />
@@ -722,6 +762,7 @@ const StrategySubRow = memo(function StrategySubRow({
                   key={s.id}
                   initiative={s}
                   parentCompliance={mbrCompliance}
+                  parentCardType="strategy"
                   progress={stratProgressOf(s.id)}
                 />
               ))}
@@ -759,6 +800,8 @@ const GoalRow = memo(function GoalRow({
   // WSA-15 — orb capaian anak (Strategi) di level kontainer (1 RPC per Goal expanded, bukan per row).
   const kpiIds = useMemo(() => (expanded ? strategies.map((k) => k.id) : EMPTY_IDS), [expanded, strategies]);
   const { progressOf: kpiProgressOf, measuredOf: kpiMeasuredOf } = useCardProgress(kpiIds);
+  // BL-04 — kepatuhan goal→strategy; menjaga "+ Inisiatif" di Strategi anak. Fetch hanya saat expanded.
+  const { compliance: mbrCompliance } = useMbrCompliance(expanded ? 'goal' : '', goal.id);
 
   const count = kpiCountOf(goal);
   const past = isAddLocked(goal, focus, now);
@@ -843,6 +886,8 @@ const GoalRow = memo(function GoalRow({
                 <StrategySubRow
                   key={k.id}
                   kpi={k}
+                  parentCompliance={mbrCompliance}
+                  parentCardType="goal"
                   progress={kpiProgressOf(k.id)}
                   isMeasured={kpiMeasuredOf(k.id)}
                 />
@@ -939,8 +984,10 @@ const TaskSubRow = memo(function TaskSubRow({
 const ActionPlanSubRow = memo(function ActionPlanSubRow({
   item,
   level = 4,
+  parentCompliance,
+  parentCardType,
   progress,
-}: {
+}: MbrCascadeProps & {
   item: ActionPlan;
   /** Level tree Rencana Aksi: 4 di Performance (bawah Inisiatif), 3 di Development (bawah PS). */
   level?: 3 | 4;
@@ -969,10 +1016,25 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
     () => router.push(`/action-plan/${item.id}`),
     [router, item.id],
   );
-  const addPlan = useCallback(
-    () => router.push(`/task/new?actionPlanId=${item.id}`),
-    [router, item.id],
-  );
+  // BL-04 — cascade initiative→action_plan (Performance) atau problem_statement→action_plan
+  // (Development): induk yang belum cukup Rencana Aksi mengunci "+ Plan" di tiap Rencana Aksi-nya.
+  const mbrGuarded = isMbrCascadeBlocked(parentCompliance);
+  const addPlan = useCallback(() => {
+    if (mbrGuarded && parentCompliance) {
+      const { title, message } = mbrBreakdownGuardMessage(
+        CARD_TYPE_LABEL[parentCardType],
+        parentCompliance,
+        'Plan',
+      );
+      Alert.alert(title, message);
+      return;
+    }
+    if (past) {
+      showPastPeriodAlert();
+      return;
+    }
+    router.push(`/task/new?actionPlanId=${item.id}`);
+  }, [mbrGuarded, parentCompliance, parentCardType, past, router, item.id]);
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
@@ -1010,7 +1072,8 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
             onDetail={openDetail}
             onMore={openMenu}
             past={past}
-            onAdd={canAddPlan ? addPlan : undefined}
+            onAddPress={canAddPlan ? addPlan : undefined}
+            addDimmed={past || mbrGuarded}
             addLabel={`Tambah Tugas ke ${item.name}`}
             addButtonLabel="+ Plan"
           />
@@ -1051,8 +1114,10 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
  */
 const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
   ps,
+  parentCompliance,
+  parentCardType,
   progress,
-}: {
+}: MbrCascadeProps & {
   ps: ProblemStatement;
   progress: number | null;
 }) {
@@ -1066,6 +1131,8 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
     [expanded, action_plans],
   );
   const { progressOf: initProgressOf } = useCardProgress(actionPlanIds);
+  // BL-04 — kepatuhan problem_statement→action_plan milik PS ini; menjaga "+ Plan" di Rencana Aksi anak.
+  const { compliance: ownCompliance } = useMbrCompliance(expanded ? 'problem_statement' : '', ps.id);
   const { focus, now } = usePeriodFocus();
   const past = isAddLocked(ps, focus, now);
   const canAddInit = can('create_action_plan');
@@ -1084,10 +1151,25 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
     () => router.push(`/problem-statement/${ps.id}`),
     [router, ps.id],
   );
-  const addActionPlan = useCallback(
-    () => router.push(`/action-plan/new?problemStatementId=${ps.id}`),
-    [router, ps.id],
-  );
+  // BL-04 — cascade development_area→problem_statement: Development Area yang belum cukup Problem
+  // Statement mengunci "+ Rencana Aksi" di tiap PS miliknya.
+  const mbrGuarded = isMbrCascadeBlocked(parentCompliance);
+  const addActionPlan = useCallback(() => {
+    if (mbrGuarded && parentCompliance) {
+      const { title, message } = mbrBreakdownGuardMessage(
+        CARD_TYPE_LABEL[parentCardType],
+        parentCompliance,
+        'Rencana Aksi',
+      );
+      Alert.alert(title, message);
+      return;
+    }
+    if (past) {
+      showPastPeriodAlert();
+      return;
+    }
+    router.push(`/action-plan/new?problemStatementId=${ps.id}`);
+  }, [mbrGuarded, parentCompliance, parentCardType, past, router, ps.id]);
   const retryChildren = useCallback(() => refetch(), [refetch]);
 
   return (
@@ -1120,7 +1202,8 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
             onDetail={openDetail}
             onMore={openMenu}
             past={past}
-            onAdd={canAddInit ? addActionPlan : undefined}
+            onAddPress={canAddInit ? addActionPlan : undefined}
+            addDimmed={past || mbrGuarded}
             addLabel={`Tambah Rencana Aksi ke ${ps.name}`}
             addButtonLabel="+ Rencana Aksi"
           />
@@ -1143,6 +1226,8 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
                   key={i.id}
                   item={i}
                   level={3}
+                  parentCompliance={ownCompliance}
+                  parentCardType="problem_statement"
                   progress={initProgressOf(i.id)}
                 />
               ))}
@@ -1182,6 +1267,11 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
     [expanded, problemStatements],
   );
   const { progressOf: psProgressOf } = useCardProgress(problemStatementIds);
+  // BL-04 — kepatuhan development_area→problem_statement; menjaga "+ Rencana Aksi" di PS anak.
+  const { compliance: mbrCompliance } = useMbrCompliance(
+    expanded ? 'development_area' : '',
+    devArea.id,
+  );
 
   const count = problemCountOf(devArea);
   const past = isAddLocked(devArea, focus, now);
@@ -1264,7 +1354,13 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
             <View className="gap-2" style={{ position: 'relative' }}>
               <SiblingTreeLine offsetLeft={TREE_LEVEL_INDENT[2] - 10} />
               {problemStatements.map((p) => (
-                <ProblemStatementSubRow key={p.id} ps={p} progress={psProgressOf(p.id)} />
+                <ProblemStatementSubRow
+                  key={p.id}
+                  ps={p}
+                  parentCompliance={mbrCompliance}
+                  parentCardType="development_area"
+                  progress={psProgressOf(p.id)}
+                />
               ))}
             </View>
           )
