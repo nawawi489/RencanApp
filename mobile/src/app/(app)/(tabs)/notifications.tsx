@@ -56,6 +56,7 @@ const TYPE_ICON: Record<NotificationType, ComponentProps<typeof Ionicons>['name'
   deadline_change_approved: 'checkmark-circle-outline',
   deadline_change_rejected: 'close-circle-outline',
   deadline_change_revision_requested: 'refresh-outline',
+  period_closing_reminder: 'trophy-outline',
 };
 
 /** Waktu relatif ringkas (id-ID). Graceful pada tanggal invalid: string kosong. */
@@ -84,6 +85,13 @@ function inlineAction(item: Notification): { label: string; href: Href | null } 
   const detail: Href = (et === 'task_instance'
     ? `/task/instance/${item.entity_id}`
     : `/task/${item.entity_id}`) as Href;
+  // B-1: notif periode skoring mengarah ke layar Score Formula, BUKAN /task/{id}.
+  // Diletakkan paling atas karena `detail` di atas mengasumsikan entitas Task —
+  // termasuk cabang `resolved_at` di bawah. Ini alasan tipe baru dibuat, bukan
+  // reuse `deadline_reminder` (lihat migrasi 0080 §1).
+  if (et === 'period_snapshot') {
+    return { label: 'Buka Score Formula', href: '/settings-score-formula' as Href };
+  }
   if (item.resolved_at) return { label: 'Lihat Detail', href: detail };
   if (et === 'task_instance') {
     return { label: 'Buka Instance', href: detail };
