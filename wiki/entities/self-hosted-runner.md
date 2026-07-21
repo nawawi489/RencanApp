@@ -1,7 +1,7 @@
 ---
 type: entity
-tags: [ci, infrastructure, github-actions, wsl]
-updated: 2026-07-20
+tags: [ci, infrastructure, github-actions, wsl, docker]
+updated: 2026-07-21
 sources: 0
 ---
 
@@ -22,12 +22,41 @@ Runner GitHub Actions milik sendiri untuk repo `nawawi489/RencanApp`, dipasang k
 
 ## Job yang memakainya
 
-`changes`, `no-old-names`, `quality` → `runs-on: [self-hosted, wsl-ubuntu]`.
+Seluruh job CI — `changes`, `no-old-names`, `quality`, dan sejak 2026-07-21 juga `db-contract` — memakai `runs-on: [self-hosted, wsl-ubuntu]`.
 
-`db-contract` **tetap di `ubuntu-latest`** dan sengaja tidak dipindah. Job itu menjalankan `supabase start` lalu `supabase stop --no-backup`, sementara runner berbagi daemon Docker dengan mesin developer yang biasanya menjalankan stack Supabase lokal di port sama (54321/54322). Memindahkannya = bentrok port saat start, dan `stop` berpotensi merobohkan stack dev developer sendiri.
+`db-contract` sempat tertinggal di `ubuntu-latest` karena `supabase start` mem-boot sembilan container dan mengikat port `54321/54322`, sementara runner berbagi daemon Docker dengan mesin developer yang menjalankan stack dev di port sama — `supabase stop` akan merobohkannya. Selama itu job tersebut **tidak pernah jalan** (gagal dengan `steps=0`, bukan merah), sehingga perubahan DB masuk tanpa verifikasi.
 
-> [!warning] Konsekuensi aktif
-> Selama kuota hosted terblokir, `db-contract` **tidak jalan**. Ia tergating ke perubahan `supabase/**`, jadi PR non-DB tidak terpengaruh — tapi **perubahan DB butuh verifikasi manual** sampai kuota pulih atau job ini diisolasi ke port/project id terpisah.
+Jalan keluarnya bukan memindahkan `supabase start`, melainkan menggantinya: **satu** container `supabase/postgres` **tanpa port ter-publish** (psql lewat `docker exec`), sehingga bentrok port mustahil secara struktural. Entry point `scripts/ci/start-db-container.sh`, dipakai CI maupun repro lokal. Yang tidak dibawa image itu ditambal `scripts/ci/db-bootstrap.sql` — `auth.users` bentuk GoTrue, tabel `storage`, `auth.uid()` yang membaca `request.jwt.claims`, dan default privileges yang sudah diperketat. Ketiganya gagal **senyap** bila hilang; yang terakhir bahkan membuat kontrak ACL lolos palsu.
+
+Baseline yang harus dipertahankan: **29 passed, 0 failed** — sama dengan run `supabase start` hijau terakhir. Durasi **1 m 52 s** vs 2 m 54 s versi hosted lama (satu container, bukan sembilan).
+
+## Prasyarat Docker (dua-duanya pernah menggagalkan job)
+
+1. **WSL integration Docker Desktop aktif** untuk distro `Ubuntu`. Tanpa itu `docker` di PATH hanyalah binary Windows lewat interop yang menolak jalan. `command -v docker` tetap lolos dalam kasus ini — karena itu preflight di `start-db-container.sh` menguji `docker info`, bukan keberadaan CLI-nya.
+2. **User `runner` anggota grup `docker`** (`usermod -aG docker runner`, lalu **restart** service runner — keanggotaan grup hanya terbaca proses yang start sesudahnya).
+
+Yang **tidak** perlu diulang setelah restart: `IntegratedWslDistros = Ubuntu` tersimpan permanen di `%APPDATA%\Docker\settings-store.json`, jadi WSL integration bertahan. Keanggotaan grup `docker` juga permanen.
+
+> [!warning] Kelemahan struktural yang tersisa
+> Gate DB kini bergantung pada **daemon Docker yang sedang melayani** di mesin developer. Bila mati, `db-contract` gagal di preflight tanpa sinyal apa pun ke GitHub sampai job-nya benar-benar jalan. Gejalanya: `FATAL: daemon Docker tak terjangkau dari sini`.
+>
+> **Yang harus dicek adalah engine, bukan aplikasinya.** Proses `Docker Desktop.exe` bisa berjalan (bahkan enam proses) sementara engine WSL-nya mati — teramati langsung 2026-07-21. Konfirmasi yang benar: distro **`docker-desktop`** berstatus `Running` di `wsl -l -v`, atau `docker info` dijawab dari dalam distro runner.
+
+### Autostart Docker Desktop
+
+Setting internal `AutoStart` bernilai `False`, sehingga aplikasi tidak nyala saat login. Penahannya `rencanapp-docker-autostart.vbs` di Startup folder user — bersebelahan dengan keepalive runner:
+
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
+
+Skrip itu menjalankan Docker Desktop bila prosesnya belum ada, lalu menunggu sampai `docker info` **dijawab dari dalam distro sebagai user `runner`** — bukan berhenti pada "proses aplikasinya ada", karena justru itu yang terbukti menyesatkan. Ia **pemanas saat login, bukan pengawas**: berhenti begitu daemon siap, atau menyerah setelah 5 menit. Looping abadi ala keepalive tidak dipakai di sini karena tidak ada yang perlu dilawan setelah daemon hidup.
+
+Alternatif resmi: Docker Desktop → Settings → General → *"Start Docker Desktop when you sign in"*. Bila itu diaktifkan, file `.vbs` di atas boleh dihapus — konfigurasi Docker sendiri sengaja tidak disentuh agar kedua mekanisme tidak bentrok.
+
+> [!warning] Belum teruji melewati login
+> Sama seperti keepalive runner, mekanisme Startup folder ini baru terbukti saat dijalankan manual (exit 0 dalam 2 detik dengan Docker hidup). Verifikasi sebenarnya baru terjadi setelah logout/restart pertama: cek `wsl -l -v` memuat `docker-desktop` `Running` tanpa intervensi.
+
+> [!warning] Grup `docker` setara root
+> Anggota grup itu bisa `docker run -v /:/host` dan efektif menjadi root di mesin developer — melewati pagar "user `runner` tanpa sudo" di bawah. Ini **menguatkan**, bukan menggantikan, larangan menjadikan repo publik.
 
 ## Gate DB di `deploy-staging.yml`
 
@@ -76,6 +105,56 @@ Sekitar **35% lebih lambat**. Yang dibeli adalah *ketersediaan* (jalan sama seka
 ## Cache npm Actions dicabut
 
 `cache: npm` di `setup-node` dihapus untuk job self-hosted. Step `Post Setup Node` mengunggah `~/.npm` (177 MB) ke layanan cache GitHub dan **menggantung sampai run harus dibatalkan**, dengan load average runner hanya 0,33 — bukan CPU-bound, melainkan menunggu layanan yang ikut terdampak blokir billing. Di mesin yang selalu sama, `~/.npm` memang sudah persisten antar-run, jadi perjalanan ke cache GitHub murni overhead. Kembalikan bila job ini pindah lagi ke runner hosted.
+
+## Memantau status secara manual
+
+Empat lapisan; tiga di antaranya tidak terlihat dari GitHub.
+
+**1. Runner hidup atau tidak** — penyebab tersering "job menggantung".
+
+```bash
+gh api repos/:owner/:repo/actions/runners \
+  -q '.runners[] | "\(.name) status=\(.status) busy=\(.busy)"'
+```
+
+UI: repo → Settings → Actions → Runners.
+
+**2. Service di dalam WSL** — dipakai bila lapisan 1 melaporkan `offline`.
+
+```bash
+wsl -d Ubuntu -u root -- systemctl is-active actions.runner.nawawi489-RencanApp.rencanapp-wsl.service
+wsl -d Ubuntu -u root -- journalctl -u actions.runner.nawawi489-RencanApp.rencanapp-wsl.service -n 50 --no-pager
+```
+
+Log mentah per job: `/home/runner/actions-runner/_diag/Worker_*.log` (file terbaru = job terakhir).
+
+**3. Antrean dan job**
+
+```bash
+gh run list --limit 5
+gh run view <run-id> --json jobs -q '.jobs[] | "\(.name): \(.status) \(.conclusion)"'
+gh run watch <run-id>
+gh run view --job <job-id> --log
+```
+
+**4. Khusus `db-contract`** — container hanya ada selama job berjalan:
+
+```bash
+wsl -d Ubuntu -u runner -- docker ps --filter name=rencan-ci-db
+```
+
+### Membaca gejalanya
+
+| Yang terlihat | Artinya |
+|---|---|
+| Job `queued` lama, runner `offline` | Distro/WSL mati; keepalive belum memulihkan |
+| Job `queued` tapi runner `busy=true` | Normal — runner tunggal, job berjalan berurutan |
+| `Checkout: cancelled` di tengah step | Distro mati saat job berjalan |
+| Job gagal dengan `steps=0` | Kuota/billing — job tak pernah mulai, bukan bug kode |
+| `FATAL: daemon Docker tak terjangkau` | Engine Docker mati (cek distro `docker-desktop`, bukan proses aplikasinya) atau WSL integration non-aktif |
+| `/usr/bin/docker: Input/output error` | Mount `cli-tools` basi setelah Docker Desktop restart |
+
+Alasan `steps=0` hanya terbaca lewat `gh api repos/<o>/<r>/check-runs/<id>/annotations` — log job-nya kosong.
 
 ## Yang belum diuji
 
