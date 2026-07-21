@@ -90,10 +90,14 @@ jobs:
       - checkout
       - run:
           name: Install Supabase CLI
+          # Extract ke /tmp — kalau langsung di working_directory (~/repo),
+          # binary `supabase` tabrakan dengan direktori `supabase/` (migrations)
+          # dan `tar` gagal dengan "Cannot open: File exists".
           command: |
             SUPABASE_VERSION=2.109.1
+            cd /tmp
             wget -qO- "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_linux_amd64.tar.gz" | tar xz
-            sudo mv supabase /usr/local/bin/
+            sudo mv /tmp/supabase /usr/local/bin/
             supabase --version
       - run:
           name: Install psql client
