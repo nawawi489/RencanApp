@@ -1,0 +1,156 @@
+version: 2.1
+
+# CI RencanApp — port dari .github/workflows/ci.yml + deploy-staging.yml.
+# Alasan pindah: GitHub Actions personal quota 2000 min/bulan tembus dengan pola
+# usage bulan ini. CircleCI free tier personal ~6000 min/bulan (Linux), memberi
+# margin luas selama optimasi CI yang sudah landed masih berlaku.
+#
+# Yang di-port:
+#   - quality        (lint + type-check + jest)     ← docker executor (murah)
+#   - rename-guard   (no-old-names.sh scanner)      ← docker executor
+#   - db-contract    (supabase start + contract SQL) ← machine executor (butuh Docker)
+#   - deploy-staging (expo export + eas deploy)      ← docker executor, staging-only
+#
+# Yang TIDAK di-port (di-cut sengaja saat optimasi CI):
+#   - `changes` job (path-filter internal): CircleCI tidak punya `outputs`
+#     lintas job cara GH Actions. Untuk simplicity, semua job jalan setiap
+#     commit — quota masih besar. Kalau perlu, tambahkan `path-filtering` orb
+#     nanti.
+#   - deploy-staging quality/db-contract re-run: sudah sebagai gate PR.
+
+orbs:
+  node: circleci/node@5.3.0
+
+executors:
+  node22:
+    docker:
+      - image: cimg/node:22.11.0
+    working_directory: ~/repo/mobile
+  node22-root:
+    docker:
+      - image: cimg/node:22.11.0
+    working_directory: ~/repo
+  ubuntu-machine:
+    machine:
+      image: ubuntu-2204:current
+    working_directory: ~/repo
+
+commands:
+  checkout-and-install:
+    description: "Checkout repo dan install deps mobile/ dengan cache"
+    steps:
+      - checkout:
+          path: ~/repo
+      - restore_cache:
+          keys:
+            - v1-npm-{{ checksum "package-lock.json" }}
+            - v1-npm-
+      - run:
+          name: Install dependencies
+          # npm install (bukan npm ci) — Expo/RN punya optional dep wasm yang
+          # resolusinya berbeda antar-OS; lock dari Windows tidak lolos `npm ci`
+          # strict di Linux. Sesuai catatan di ci.yml lama.
+          command: npm install --no-audit --no-fund
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-npm-{{ checksum "package-lock.json" }}
+
+jobs:
+  quality:
+    executor: node22
+    steps:
+      - checkout-and-install
+      - run:
+          name: Lint
+          command: npm run lint
+      - run:
+          name: Type-check
+          command: npm run type-check
+      - run:
+          name: Test
+          command: npm run test:ci
+
+  rename-guard:
+    executor: node22-root
+    steps:
+      - checkout
+      - run:
+          name: Install ripgrep
+          command: sudo apt-get update -qq && sudo apt-get install -y ripgrep
+      - run:
+          name: Grep-guard legacy identifiers
+          # Scanner memantau `wiki/`, `specs/`, `DESIGN.md` untuk regresi
+          # rename V1.8.3 (kpi_area_id, kpi_areas, action_plan_instances, etc.).
+          command: bash scripts/ci/no-old-names.sh
+
+  db-contract:
+    executor: ubuntu-machine
+    steps:
+      - checkout
+      - run:
+          name: Install Supabase CLI
+          command: |
+            SUPABASE_VERSION=2.109.1
+            wget -qO- "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_linux_amd64.tar.gz" | tar xz
+            sudo mv supabase /usr/local/bin/
+            supabase --version
+      - run:
+          name: Install psql client
+          command: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+      - run:
+          name: Start Supabase stack
+          # `supabase start` boots Postgres + auth schema dan apply semua
+          # migrations di supabase/migrations/ secara urut. Kontrak DB di
+          # supabase/tests/*.sql dieksekusi oleh runner script.
+          command: supabase start
+      - run:
+          name: Run DB contract suite
+          environment:
+            DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          command: bash scripts/ci/run-db-contract-tests.sh
+      - run:
+          name: Stop Supabase stack
+          command: supabase stop --no-backup
+          when: always
+
+  deploy-staging:
+    executor: node22
+    environment:
+      EXPO_PUBLIC_APP_ENV: staging
+    steps:
+      - checkout-and-install
+      - run:
+          name: Install EAS CLI
+          command: sudo npm install -g eas-cli
+      - run:
+          name: Export web bundle
+          environment:
+            # STAGING_SUPABASE_URL + STAGING_SUPABASE_ANON_KEY di-set di
+            # CircleCI project env vars (Settings → Environment Variables).
+            EXPO_PUBLIC_SUPABASE_URL: $STAGING_SUPABASE_URL
+            EXPO_PUBLIC_SUPABASE_ANON_KEY: $STAGING_SUPABASE_ANON_KEY
+          command: npx expo export --platform web
+      - run:
+          name: Deploy to EAS Hosting (staging alias)
+          command: eas deploy --alias staging --non-interactive
+
+workflows:
+  version: 2
+
+  # CI pada setiap push ke branch mana pun. CircleCI tidak punya konsep
+  # `pull_request` trigger native seperti GH Actions — semua push masuk workflow.
+  # Deploy-staging di-filter branches: only staging.
+  ci:
+    jobs:
+      - quality
+      - rename-guard
+      - db-contract
+      - deploy-staging:
+          requires:
+            - quality
+            - rename-guard
+            - db-contract
+          filters:
+            branches:
+              only: staging

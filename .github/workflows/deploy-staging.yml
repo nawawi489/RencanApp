@@ -1,17 +1,20 @@
 name: Deploy Staging
 
-# Trigger di-scope ke path yang benar-benar mengubah bundle web / migrasi DB.
-# Edit dokumentasi (wiki/, docs/, specs/, prd/, *.md di root) TIDAK men-deploy —
-# bundle web-nya identik sebelum & sesudah edit dokumen. Menghemat ~13 menit
-# per commit doc-only.
+# ⚠️ WORKFLOW DIJEDA — sejak 2026-07-21 deploy dipindahkan ke CircleCI
+# (`.circleci/config.yml` job `deploy-staging`). Trigger di-set ke
+# `workflow_dispatch` saja untuk jaga-jaga bisa deploy manual dari sini.
+#
+# Baris asli (untuk restore cepat):
+# on:
+#   push:
+#     branches: [staging]
+#     paths:
+#       - 'mobile/**'
+#       - 'supabase/**'
+#       - 'scripts/ci/**'
+#       - '.github/workflows/deploy-staging.yml'
 on:
-  push:
-    branches: [staging]
-    paths:
-      - 'mobile/**'
-      - 'supabase/**'
-      - 'scripts/ci/**'
-      - '.github/workflows/deploy-staging.yml'
+  workflow_dispatch:
 
 concurrency:
   group: deploy-staging

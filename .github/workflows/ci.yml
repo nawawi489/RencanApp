@@ -1,13 +1,20 @@
 name: CI
 
-# Trigger dihapus untuk `push: main`: setiap merge PR sudah lewat gate CI
-# yang identik pada `pull_request`, sehingga re-run di merge commit hanya
-# memverifikasi ulang isi yang sudah verified. Menghemat ~10 menit/PR.
-# Force-push ke main (rare) tetap tidak ter-CI — sesuai desain sebelumnya
-# juga (push trigger tidak menjalankan CI pada force-push tanpa base).
+# ⚠️ WORKFLOW DIJEDA — sejak 2026-07-21 CI dipindahkan ke CircleCI
+# (`.circleci/config.yml`) karena kuota GitHub Actions personal habis dan
+# opsi berbayar tidak fit untuk budget. Trigger di-set ke `workflow_dispatch`
+# saja supaya:
+#   - Tidak burn kuota di setiap PR/push
+#   - Bisa run manual dari UI Actions kalau perlu (Actions → CI → Run workflow)
+#   - Anda tetap bisa cepat aktifkan lagi cukup uncomment blok `pull_request`
+#     di bawah + hapus `workflow_dispatch`.
+#
+# Baris asli (untuk restore cepat):
+# on:
+#   pull_request:
+#     branches: [main, staging]
 on:
-  pull_request:
-    branches: [main, staging]
+  workflow_dispatch:
 
 permissions:
   contents: read
