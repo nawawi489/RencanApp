@@ -1,8 +1,11 @@
 name: CI
 
+# Trigger dihapus untuk `push: main`: setiap merge PR sudah lewat gate CI
+# yang identik pada `pull_request`, sehingga re-run di merge commit hanya
+# memverifikasi ulang isi yang sudah verified. Menghemat ~10 menit/PR.
+# Force-push ke main (rare) tetap tidak ter-CI — sesuai desain sebelumnya
+# juga (push trigger tidak menjalankan CI pada force-push tanpa base).
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main, staging]
 
