@@ -1179,6 +1179,146 @@ describe('WorkspaceScreen', () => {
     });
   });
 
+  // BL-04 — cascade MBR untuk SETIAP aturan, bukan hanya strategy→initiative.
+  // Aturan `X → Y` yang belum patuh mengunci tombol yang membuat `Z` di bawah `Y`; tombol yang
+  // membuat `Y` sendiri tidak tersentuh (keputusan owner: cascade satu tingkat, PR #139).
+  describe('[BL-04] cascade MBR per aturan', () => {
+    const G = { id: 'g1', name: 'Goal Aktif', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' };
+    const K = { id: 'k1', name: 'KPI Penjualan', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' };
+    const I = { id: 's1', name: 'Akuisisi Lewat Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' };
+    const AP = { id: 'i1', name: 'Campaign Meta Ads', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' };
+    const D = { id: 'd1', name: 'Development Area Ops', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' };
+    const P = { id: 'p1', name: 'Problem WA respon lambat', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' };
+    const DAP = { id: 'i1', name: 'Auto-reply WA jam sibuk', status: 'active', period_start: '2026-01-01', period_end: '2026-12-31' };
+
+    /**
+     * Kepatuhan hanya untuk SATU jenis induk; sisanya undefined (fail-open). Ini yang membuat tes
+     * peka terhadap salah-arah: kalau guard membaca induk yang keliru, ia tidak akan menahan apa pun.
+     */
+    function mbrFor(parentType: string, mode: string, compliant: boolean, childType: string) {
+      mockUseMbrCompliance.mockImplementation((p: string) =>
+        p === parentType
+          ? {
+              compliance: {
+                child_card_type: childType,
+                child_count: compliant ? 3 : 1,
+                min_count: 3,
+                enforcement_mode: mode,
+                is_compliant: compliant,
+              },
+              isCompliant: compliant,
+            }
+          : { compliance: undefined, isCompliant: true },
+      );
+    }
+
+    async function expandPerformance(depth: 1 | 2 | 3) {
+      mockCan.mockReturnValue(true);
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [G] }));
+      mockUseStrategies.mockReturnValue(kpiResult({ strategies: [K] }));
+      mockUseInitiatives.mockReturnValue(initiativesResult({ initiatives: [I] }));
+      mockUseInitiativeActionPlans.mockReturnValue(stratInitResult({ action_plans: [AP] }));
+      await renderScreen();
+      fireEvent.press(await screen.findByLabelText('Toggle Strategi Goal Aktif'));
+      await screen.findByText('KPI Penjualan');
+      if (depth === 1) return;
+      fireEvent.press(screen.getByLabelText('Toggle Inisiatif KPI Penjualan'));
+      await screen.findByText('Akuisisi Lewat Meta Ads');
+      if (depth === 2) return;
+      fireEvent.press(screen.getByLabelText('Toggle Rencana Aksi Akuisisi Lewat Meta Ads'));
+      await screen.findByText('Campaign Meta Ads');
+    }
+
+    async function expandDevelopment(depth: 1 | 2) {
+      mockCan.mockReturnValue(true);
+      mockUseDevelopmentAreas.mockReturnValue(devResult({ developmentAreas: [D] }));
+      mockUseProblemStatements.mockReturnValue(psResult({ problemStatements: [P] }));
+      mockUseProblemStatementActionPlans.mockReturnValue(psInitResult({ action_plans: [DAP] }));
+      await renderScreen('development');
+      fireEvent.press(await screen.findByLabelText('Toggle Problem Statement Development Area Ops'));
+      await screen.findByText('Problem WA respon lambat');
+      if (depth === 1) return;
+      fireEvent.press(screen.getByLabelText('Toggle Rencana Aksi Problem WA respon lambat'));
+      await screen.findByText('Auto-reply WA jam sibuk');
+    }
+
+    const CASES = [
+      {
+        rule: 'goal→strategy',
+        parentType: 'goal',
+        childType: 'strategy',
+        addLabel: 'Tambah Inisiatif ke KPI Penjualan',
+        route: '/initiative/new',
+        expand: () => expandPerformance(1),
+      },
+      {
+        rule: 'strategy→initiative',
+        parentType: 'strategy',
+        childType: 'initiative',
+        addLabel: 'Tambah Rencana Aksi ke Akuisisi Lewat Meta Ads',
+        route: '/action-plan/new',
+        expand: () => expandPerformance(2),
+      },
+      {
+        rule: 'initiative→action_plan',
+        parentType: 'initiative',
+        childType: 'action_plan',
+        addLabel: 'Tambah Tugas ke Campaign Meta Ads',
+        route: '/task/new',
+        expand: () => expandPerformance(3),
+      },
+      {
+        rule: 'development_area→problem_statement',
+        parentType: 'development_area',
+        childType: 'problem_statement',
+        addLabel: 'Tambah Rencana Aksi ke Problem WA respon lambat',
+        route: '/action-plan/new',
+        expand: () => expandDevelopment(1),
+      },
+      {
+        rule: 'problem_statement→action_plan',
+        parentType: 'problem_statement',
+        childType: 'action_plan',
+        addLabel: 'Tambah Tugas ke Auto-reply WA jam sibuk',
+        route: '/task/new',
+        expand: () => expandDevelopment(2),
+      },
+    ];
+
+    describe.each(CASES)('$rule', ({ parentType, childType, addLabel, route, expand }) => {
+      it('[BL-04·1] blokir_akses_turunan + induk belum patuh → tombol ditahan, Alert, TIDAK push', async () => {
+        mbrFor(parentType, 'blokir_akses_turunan', false, childType);
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        await expand();
+        fireEvent.press(screen.getByLabelText(addLabel));
+        expect(alertSpy).toHaveBeenCalledWith(
+          'Kelengkapan Perencanaan',
+          expect.stringContaining('1 dari 3'),
+        );
+        expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining(route));
+        alertSpy.mockRestore();
+      });
+
+      it('[BL-04·2] blokir_akses_turunan + induk patuh → tombol normal', async () => {
+        mbrFor(parentType, 'blokir_akses_turunan', true, childType);
+        await expand();
+        fireEvent.press(screen.getByLabelText(addLabel));
+        expect(mockPush).toHaveBeenCalledWith(expect.stringContaining(route));
+      });
+
+      // Mode lain tidak boleh menyentuh tombol tambah, sekalipun induk belum patuh.
+      it.each(['nonaktif', 'hanya_peringatan', 'blokir_aktivasi'])(
+        '[BL-04·3] mode %s + induk belum patuh → tombol tetap normal',
+        async (mode) => {
+          mbrFor(parentType, mode, false, childType);
+          await expand();
+          fireEvent.press(screen.getByLabelText(addLabel));
+          expect(mockPush).toHaveBeenCalledWith(expect.stringContaining(route));
+        },
+      );
+    });
+  });
+
   // UI-N-002 (Stage 2) — Hub-card lobby di tab Workspace.
   describe('[UI-N-002 hub-card] Workspace lobby', () => {
     it('[UI-N-002·1] default state = hub view (2 hub-card tampil sebelum dive in)', async () => {
