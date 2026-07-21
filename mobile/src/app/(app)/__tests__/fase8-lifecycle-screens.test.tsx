@@ -314,6 +314,63 @@ describe('evaluation', () => {
     );
   });
 
+  it('[F8-UI-18b] BL-05: faktor berhasil/gagal terkirim sebagai text[] (satu faktor per baris)', async () => {
+    mockParams.current = { actionPlanId: 'i1', picId: 'u-pic', status: 'done' };
+    mockProfile.id = 'u-reviewer';
+    await render(<EvaluationScreen />, { wrapper: wrapper() });
+
+    const success = await screen.findByLabelText('Faktor berhasil');
+    fireEvent.changeText(success, 'tim solid\n  vendor responsif  \n\n');
+    await waitFor(() => expect(success.props.value).toBe('tim solid\n  vendor responsif  \n\n'));
+
+    const failure = screen.getByLabelText('Faktor gagal');
+    fireEvent.changeText(failure, 'budget telat');
+    await waitFor(() => expect(failure.props.value).toBe('budget telat'));
+
+    fireEvent.press(screen.getByLabelText('Simpan Evaluasi'));
+
+    await waitFor(() =>
+      expect(mockRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          successFactors: ['tim solid', 'vendor responsif'],
+          failureFactors: ['budget telat'],
+        }),
+      ),
+    );
+  });
+
+  it('[F8-UI-18c] BL-05: pre-fill text[] existing jadi satu faktor per baris', async () => {
+    mockParams.current = { actionPlanId: 'i1', picId: 'u-pic', status: 'done' };
+    mockProfile.id = 'u-reviewer';
+    mockUseEvaluation.mockReturnValue({
+      evaluation: {
+        id: 'ev1',
+        target_achieved: 'ya',
+        results: 'tercapai',
+        success_factors: ['tim solid', 'vendor responsif'],
+        failure_factors: [],
+        lessons_learned: '',
+      },
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<EvaluationScreen />, { wrapper: wrapper() });
+
+    const success = await screen.findByLabelText('Faktor berhasil');
+    expect(success.props.value).toBe('tim solid\nvendor responsif');
+    expect(screen.getByLabelText('Faktor gagal').props.value).toBe('');
+
+    fireEvent.press(screen.getByLabelText('Simpan Evaluasi'));
+    await waitFor(() =>
+      expect(mockRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          successFactors: ['tim solid', 'vendor responsif'],
+          failureFactors: [],
+        }),
+      ),
+    );
+  });
+
   it('[F8-UI-19] status bukan done/active → prompt evaluasi tidak muncul', async () => {
     mockParams.current = { actionPlanId: 'i1', picId: 'u-pic', status: 'draft' };
     mockProfile.id = 'u-reviewer';

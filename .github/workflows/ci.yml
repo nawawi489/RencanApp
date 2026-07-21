@@ -1,10 +1,20 @@
 name: CI
 
+# ⚠️ WORKFLOW DIJEDA — sejak 2026-07-21 CI dipindahkan ke CircleCI
+# (`.circleci/config.yml`) karena kuota GitHub Actions personal habis dan
+# opsi berbayar tidak fit untuk budget. Trigger di-set ke `workflow_dispatch`
+# saja supaya:
+#   - Tidak burn kuota di setiap PR/push
+#   - Bisa run manual dari UI Actions kalau perlu (Actions → CI → Run workflow)
+#   - Anda tetap bisa cepat aktifkan lagi cukup uncomment blok `pull_request`
+#     di bawah + hapus `workflow_dispatch`.
+#
+# Baris asli (untuk restore cepat):
+# on:
+#   pull_request:
+#     branches: [main, staging]
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main, staging]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,7 +45,7 @@ jobs:
   # perlu dijaga olehnya. Biayanya 0,3 menit; tidak sepadan untuk dioptimasi.
   changes:
     name: Detect changed areas
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: .
@@ -81,7 +91,7 @@ jobs:
 
   no-old-names:
     name: Rename guard (V1.8.3)
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     defaults:
       run:
         # Run at repo root, not mobile/, since the guard scans multiple trees.
@@ -91,10 +101,6 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install ripgrep
-        # Di runner self-hosted `rg` sudah terpasang di image distro, dan user `runner`
-        # SENGAJA tidak diberi sudo tanpa password — memberi root tanpa password berarti
-        # workflow apa pun bisa jadi root di mesin developer. Jadi: pakai yang sudah ada,
-        # apt-get hanya sebagai fallback (mis. bila job ini kembali ke runner GitHub).
         run: command -v rg >/dev/null || sudo apt-get install -y ripgrep
 
       - name: Grep-guard legacy identifiers
@@ -107,7 +113,7 @@ jobs:
     name: Lint, types & tests
     needs: changes
     if: needs.changes.outputs.mobile == 'true'
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -116,21 +122,13 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          # `cache: npm` SENGAJA tidak dipakai di runner self-hosted. Cache Actions
-          # menambah satu langkah simpan di akhir job yang mengunggah ~/.npm (177 MB)
-          # ke layanan cache GitHub — teramati menggantung sampai job harus dibatalkan,
-          # sementara load average runner hanya 0,33 (bukan CPU-bound, melainkan
-          # menunggu layanan yang ikut terdampak blokir billing).
-          #
-          # Di mesin yang sama sepanjang waktu, ~/.npm memang sudah persisten antar-run,
-          # jadi perjalanan pulang-pergi ke cache GitHub murni overhead. Bila job ini
-          # suatu saat kembali ke runner GitHub, kembalikan `cache: npm` +
-          # `cache-dependency-path: mobile/package-lock.json`.
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
 
       # Catatan anggaran: meng-cache node_modules pernah dipertimbangkan dan DITOLAK.
-      # Diukur di runner: `Install dependencies` hanya 18 detik, sementara restore cache
+      # Diukur: `Install dependencies` hanya ~18 detik, sementara restore cache
       # node_modules Expo (ratusan MB) berpotensi lebih lama dari itu. Biaya job ini
-      # ada di step Test (361 detik), bukan di install.
+      # ada di step Test, bukan di install.
       - name: Install dependencies
         # npm install (bukan npm ci): proyek Expo/RN punya optional dep wasm (@emnapi/*,
         # lightningcss) yang resolusinya berbeda antar-OS, sehingga lock yang digenerate di
@@ -150,48 +148,38 @@ jobs:
     name: DB contract tests (Postgres)
     needs: changes
     if: needs.changes.outputs.db == 'true'
-    # Jalan di runner self-hosted TANPA `supabase start`.
-    #
-    # `supabase start` tidak bisa dipakai di sini: ia mem-boot sembilan container dan
-    # mengikat port 54321/54322 di host, sementara daemon Docker runner dibagi dengan
-    # mesin developer yang biasanya sedang menjalankan stack dev di port yang sama —
-    # `supabase stop` akan merobohkan stack itu berikut datanya.
-    #
-    # Gantinya: SATU container `supabase/postgres` tanpa port ter-publish sama sekali
-    # (psql lewat `docker exec`), jadi mustahil bentrok. Yang tidak dibawa oleh image —
-    # `auth.users` versi GoTrue, tabel `storage`, auth.uid() bentuk baru, dan default
-    # privileges yang sudah diperketat — dipasang oleh scripts/ci/db-bootstrap.sql;
-    # lihat file itu untuk alasan tiap bagian. Hasilnya diverifikasi identik dengan
-    # baseline `supabase start` terakhir yang hijau: 29 passed, 0 failed.
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     defaults:
       run:
         # supabase/ and scripts/ live at the repo root, not in mobile/.
         working-directory: .
-    env:
-      # Satu container per run+attempt agar dua run paralel tidak saling menghapus.
-      RENCAN_CI_DB_NAME: rencan-ci-db-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Start Postgres + replay schema
-        # Boots the container, applies the platform bootstrap, then replays every
-        # supabase/migrations/*.sql in filename order — the same order
-        # `supabase db reset` uses. No seed runs (there is no supabase/seed.sql);
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        with:
+          version: 2.109.1
+
+      - name: Start Supabase stack
+        # `supabase start` boots the local stack (Postgres + auth schema) and
+        # applies every migration in supabase/migrations in order — the same
+        # path `db reset` uses. No seed runs (there is no supabase/seed.sql);
         # the contract runner applies supabase/tests/_fixtures.sql itself.
-        # This is where the ADR's "thick database" is exercised by CI.
-        run: bash scripts/ci/start-db-container.sh
+        # This is where the ADR's "thick database" is finally exercised by CI.
+        run: supabase start
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Run DB contract suite
         # Fails the job if any *.sql contract fails (ON_ERROR_STOP). Quarantined
         # *.wip.sql files are skipped — see supabase/tests/WIP_REPAIR_BACKLOG.md.
-        # `psql` dipanggil DI DALAM container (RENCAN_DB_CONTAINER), jadi runner
-        # tidak perlu punya postgresql-client terpasang.
         env:
-          RENCAN_DB_CONTAINER: ${{ env.RENCAN_CI_DB_NAME }}
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: bash scripts/ci/run-db-contract-tests.sh
 
-      - name: Remove Postgres container
+      - name: Stop Supabase stack
         if: always()
-        run: docker rm -f "$RENCAN_CI_DB_NAME" || true
+        run: supabase stop --no-backup

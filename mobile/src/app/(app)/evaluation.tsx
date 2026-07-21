@@ -1,6 +1,7 @@
 // Fase 8 — Evaluation Rencana Aksi (opsional, setelah selesai). Anti-self (PIC ≠ evaluator).
 // UPSERT: pre-fill bila evaluation sudah ada. Prompt hanya saat status 'done'/'active'.
 // UI-S-EV1: tambah checklist "Perlu jadi SOP?" + "Perlu rollout?" (loop balik ke Development) + catatan rollout.
+// BL-05: "Faktor berhasil" + "Faktor gagal" (PRD §26 field 3-4) — text[] diisi satu faktor per baris.
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
@@ -10,6 +11,22 @@ import { EVALUATION_TARGET_LABEL } from '@/lib/governance-admin';
 import { useEvaluation, useEvaluationActions } from '@/hooks/use-governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 const TARGETS = ['ya', 'sebagian', 'tidak'] as const;
+
+/**
+ * `success_factors`/`failure_factors` bertipe `text[]` di DB. UI mengumpulkannya sebagai satu
+ * textarea "satu faktor per baris" — tiap baris non-kosong jadi satu elemen array, bukan satu blok
+ * teks yang dibungkus jadi array satu elemen. Jadi struktur list-nya benar-benar tersimpan.
+ */
+function toFactorList(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function fromFactorList(list: string[] | null | undefined): string {
+  return (list ?? []).join('\n');
+}
 
 /** Checkbox sederhana dengan touch target ≥44px (a11y) dan state visual jelas. */
 function CheckboxRow({
@@ -61,6 +78,8 @@ export function LiveEvaluationScreen() {
     () => (evaluation?.target_achieved as (typeof TARGETS)[number] | null) ?? null,
   );
   const [results, setResults] = useState(() => evaluation?.results ?? '');
+  const [successFactors, setSuccessFactors] = useState(() => fromFactorList(evaluation?.success_factors));
+  const [failureFactors, setFailureFactors] = useState(() => fromFactorList(evaluation?.failure_factors));
   const [lessons, setLessons] = useState(() => evaluation?.lessons_learned ?? '');
   const [shouldBecomeSop, setShouldBecomeSop] = useState(() => evaluation?.should_become_sop ?? false);
   const [rolloutNeeded, setRolloutNeeded] = useState(() => evaluation?.rollout_needed ?? false);
@@ -73,6 +92,8 @@ export function LiveEvaluationScreen() {
     if (evaluation) {
       setTarget((evaluation.target_achieved as (typeof TARGETS)[number] | null) ?? null);
       setResults(evaluation.results ?? '');
+      setSuccessFactors(fromFactorList(evaluation.success_factors));
+      setFailureFactors(fromFactorList(evaluation.failure_factors));
       setLessons(evaluation.lessons_learned ?? '');
       setShouldBecomeSop(evaluation.should_become_sop ?? false);
       setRolloutNeeded(evaluation.rollout_needed ?? false);
@@ -93,6 +114,8 @@ export function LiveEvaluationScreen() {
       actionPlanId,
       targetAchieved: target,
       results: results.trim(),
+      successFactors: toFactorList(successFactors),
+      failureFactors: toFactorList(failureFactors),
       lessonsLearned: lessons.trim(),
       shouldBecomeSop,
       rolloutNeeded,
@@ -141,6 +164,20 @@ export function LiveEvaluationScreen() {
             })}
           </View>
           <LabeledInput label="Hasil tercapai atau belum" value={results} onChangeText={setResults} multiline />
+          <LabeledInput
+            label="Faktor berhasil"
+            value={successFactors}
+            onChangeText={setSuccessFactors}
+            multiline
+            placeholder="Satu faktor per baris."
+          />
+          <LabeledInput
+            label="Faktor gagal"
+            value={failureFactors}
+            onChangeText={setFailureFactors}
+            multiline
+            placeholder="Satu faktor per baris."
+          />
           <LabeledInput label="Lesson learned" value={lessons} onChangeText={setLessons} multiline />
 
           <View className="gap-2">

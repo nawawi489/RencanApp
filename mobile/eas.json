@@ -19,8 +19,6 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "staging",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://fhnqwytqprsptjshoxfn.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_X2vs--I2zijaTf4UXPX1Aw_ytcaggRq",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },

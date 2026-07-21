@@ -83,6 +83,37 @@ stack. Do not proceed otherwise.
 
 ---
 
+## P3-B2 · Staging seed password rotation (before every apply)
+
+`supabase/seed_staging.sql` di-commit dengan literal `__STAGING_SEED_PASSWORD__` (bukan
+password asli). Sebelum meng-apply seed atau menambah user seed baru, rotate:
+
+1. Generate password acak (jangan reuse antar rotasi):
+   ```bash
+   openssl rand -base64 18            # macOS/Linux/WSL
+   ```
+   ```powershell
+   $b = New-Object byte[] 18; (New-Object System.Security.Cryptography.RNGCryptoServiceProvider).GetBytes($b); [Convert]::ToBase64String($b) -replace '[+/=]',''
+   ```
+2. Simpan hasilnya di password manager. Distribusikan ke QA out-of-band.
+3. Salin isi `seed_staging.sql` ke editor sementara, find-replace
+   `__STAGING_SEED_PASSWORD__` → nilai asli, paste ke Supabase MCP `execute_sql`
+   / psql. **Jangan save-as** — file yang berisi password asli tidak boleh
+   tersentuh git.
+4. Untuk rotasi cepat tanpa full seed:
+   ```sql
+   UPDATE auth.users
+   SET encrypted_password = extensions.crypt('<new-password>', extensions.gen_salt('bf'))
+   WHERE email LIKE '%@nyantuy.staging'
+      OR email LIKE '%@mitralogistik.staging'
+      OR email LIKE '%@karyadigital.staging';
+   ```
+
+> Pola yang sama berlaku untuk akun manual (non-seed) — jangan pernah commit
+> password plaintext ke repo.
+
+---
+
 ## P3-C · Seed & bootstrap (production must have NO dummy data)
 
 - [ ] **Do not** run `supabase/seed_staging.sql` — it contains staging-only users
@@ -115,12 +146,27 @@ stack. Do not proceed otherwise.
 
 ---
 
-## P3-D · Wire env vars into EAS (do not commit prod secrets)
+## P3-D · Wire env vars into EAS (do not commit prod/staging secrets)
 
 **Chosen pattern (enforce it): secrets live in the EAS Dashboard, not `eas.json`.**
-Today the staging path is mixed — `deploy-staging.yml:73` hardcodes the URL while
-`:74` reads the anon key from `secrets.STAGING_SUPABASE_ANON_KEY`, and
-`eas.json` commits the same anon key in plaintext. For prod, pick one and hold it.
+Berlaku untuk **staging (`preview`) dan production**. Per go-public repo,
+`eas.json` sudah dibersihkan — kedua profil menyimpan string kosong untuk
+`EXPO_PUBLIC_SUPABASE_URL` + `_ANON_KEY`, dan nilai asli hidup di dashboard.
+
+### Untuk profil `preview` (staging)
+
+1. EAS Dashboard → Project → **Environment Variables** → scope **`preview`**:
+   - `EXPO_PUBLIC_SUPABASE_URL` = staging Project URL
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY` = staging anon (publishable) key
+2. `mobile/eas.json` `build.preview.env` **jangan** menyimpan kedua kunci
+   (bukan `""`, bukan placeholder — hapus key-nya sama sekali). EAS CLI menolak
+   `env` value kosong (`"is not allowed to be empty"`), dan bila key ada di
+   file dengan nilai apapun, nilai file akan **override** dashboard.
+3. Untuk GH Actions (`deploy-staging.yml`): pastikan job pull env via
+   `EAS_ENVIRONMENT=preview` (bukan hardcode URL) dan set
+   `STAGING_SUPABASE_URL` di GitHub Secrets, bukan checked-in.
+
+### Untuk profil `production`
 
 1. EAS Dashboard → Project → **Environment Variables** → scope **`production`**:
    - `EXPO_PUBLIC_SUPABASE_URL` = prod Project URL
