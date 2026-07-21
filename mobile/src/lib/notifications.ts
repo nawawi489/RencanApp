@@ -18,6 +18,8 @@ export const NOTIFICATION_TYPES = [
   'deadline_change_approved',
   'deadline_change_rejected',
   'deadline_change_revision_requested',
+  // B-1 score-period-end-nudge (migrasi 0081) — pengingat periode skoring akan/sudah berakhir.
+  'period_closing_reminder',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -63,6 +65,7 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   deadline_change_approved: 'Perubahan Deadline Disetujui',
   deadline_change_rejected: 'Perubahan Deadline Ditolak',
   deadline_change_revision_requested: 'Perubahan Deadline Perlu Revisi',
+  period_closing_reminder: 'Periode Skoring',
 };
 
 export const NOTIFICATION_TYPE_TONE: Record<
@@ -82,6 +85,9 @@ export const NOTIFICATION_TYPE_TONE: Record<
   deadline_change_approved: 'success',
   deadline_change_rejected: 'danger',
   deadline_change_revision_requested: 'warn',
+  // 'warn', bukan 'danger': periode terlambat memang mendesak tapi bisa diperbaiki kapan saja
+  // dengan menekan Finalisasi — bukan kondisi rusak.
+  period_closing_reminder: 'warn',
 };
 
 // ---------------------------------------------------------------- tabs
@@ -114,6 +120,8 @@ export function notificationTypesForTab(tab?: NotificationTab): NotificationType
         'mention',
         'deadline_change_requested',
         'deadline_change_revision_requested',
+        // Butuh aksi admin (tekan Finalisasi) — bukan sekadar informasi.
+        'period_closing_reminder',
       ];
     case 'review':
       return ['review_request', 'approved', 'rejected'];
@@ -122,6 +130,8 @@ export function notificationTypesForTab(tab?: NotificationTab): NotificationType
         'deadline_reminder',
         'deadline_change_approved',
         'deadline_change_rejected',
+        // Berbasis tanggal → wajar dicari di tab ini juga.
+        'period_closing_reminder',
       ];
     case 'komentar':
       return ['comment', 'mention'];
