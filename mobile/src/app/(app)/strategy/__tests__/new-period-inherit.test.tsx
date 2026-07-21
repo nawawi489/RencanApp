@@ -90,8 +90,8 @@ async function typeInto(label: string, text: string) {
 describe('NewStrategyScreen — periode mengikuti Goal (BL-02 / AC-11)', () => {
   it('[BL02-1] tidak merender input tanggal; periode Goal tampil read-only', async () => {
     // `await render` (pola [E0] inbox/[roomId].test.tsx): `screen` belum terikat sampai tick
-  // berikutnya di setup ini — akses langsung melempar "render function has not been called".
-  await render(createElement(LiveNewStrategyScreen), { wrapper: wrapper() });
+    // berikutnya di setup ini — akses langsung melempar "render function has not been called".
+    await render(createElement(LiveNewStrategyScreen), { wrapper: wrapper() });
     // findBy*, BUKAN waitFor(getGoal dipanggil): "dipanggil" hanya berarti query start —
     // periode baru terender setelah datanya resolve. Tanpa ini test balapan dgn query.
     expect(await screen.findByText('2026-01-01 → 2026-12-31')).toBeTruthy();
@@ -119,6 +119,35 @@ describe('NewStrategyScreen — periode mengikuti Goal (BL-02 / AC-11)', () => {
     fireEvent.press(screen.getByLabelText('Simpan sebagai Draft'));
 
     await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith('Periode Goal belum diisi', expect.any(String)));
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  // BL02-4/5 memisahkan dua sebab blokir yang sebelumnya berbagi satu kalimat. Keduanya
+  // sama-sama memblokir, tapi perbaikannya beda: yang satu isi periode di Goal, yang satu
+  // soal akses/rute. Ditemukan saat menjalankan layar ini di app lokal — Goal seed berada
+  // di org lain sehingga RLS memulangkan null, dan copy-nya menuduh "belum punya periode".
+  it('[BL02-4] Goal tak terbaca (RLS/dihapus) → copy "tidak ditemukan", BUKAN "belum punya periode"', async () => {
+    mockGetGoal.mockResolvedValue(null); // getGoal maybeSingle → null saat RLS menyaring habis
+    await renderAndFill('Goal induk tidak ditemukan');
+
+    expect(screen.queryByText('Goal induk belum punya periode')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Simpan sebagai Draft'));
+
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith('Goal induk tidak ditemukan', expect.stringContaining('di luar akses')),
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('[BL02-5] query Goal gagal → copy "gagal dimuat", tidak menuduh data Goal kosong', async () => {
+    mockGetGoal.mockRejectedValue(new Error('network'));
+    await renderAndFill('Gagal memuat Goal induk');
+
+    expect(screen.queryByText('Goal induk belum punya periode')).toBeNull();
+    expect(screen.queryByText('Goal induk tidak ditemukan')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Simpan sebagai Draft'));
+
+    await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith('Goal induk gagal dimuat', expect.any(String)));
     expect(mockCreate).not.toHaveBeenCalled();
   });
 });

@@ -126,6 +126,60 @@ function StrategyTemplatePicker({
   );
 }
 
+/**
+ * Kondisi periode warisan. Empat state ini SENGAJA dipisah: "Goal tidak terbaca" dan "Goal
+ * terbaca tapi periodenya kosong" sama-sama memblokir simpan, tapi perbaikannya berbeda —
+ * yang satu soal akses/rute, yang satu soal data Goal. Menyatukan keduanya jadi satu kalimat
+ * mengirim user memperbaiki hal yang salah.
+ */
+type PeriodState = 'loading' | 'error' | 'unreachable' | 'no-period' | 'ok';
+
+const PERIOD_COPY: Record<PeriodState, { label: string; hint: string; blockTitle: string; blockBody: string }> = {
+  loading: {
+    label: 'Memuat periode Goal…',
+    hint: 'Periode Strategi mengikuti Goal induk.',
+    blockTitle: 'Periode Goal belum termuat',
+    blockBody: 'Tunggu sebentar sampai periode Goal induk tampil, lalu simpan lagi.',
+  },
+  error: {
+    label: 'Gagal memuat Goal induk',
+    hint: 'Periode Strategi mengikuti Goal induk, jadi Strategi belum bisa disimpan. Periksa koneksi lalu buka ulang layar ini.',
+    blockTitle: 'Goal induk gagal dimuat',
+    blockBody: 'Periode Strategi diturunkan dari Goal induk, dan Goal itu gagal dimuat. Periksa koneksi lalu buka ulang layar ini.',
+  },
+  unreachable: {
+    label: 'Goal induk tidak ditemukan',
+    hint: 'Goal mungkin sudah dihapus atau di luar akses Anda. Buka layar ini lewat tombol tambah di Goal-nya.',
+    blockTitle: 'Goal induk tidak ditemukan',
+    blockBody:
+      'Periode Strategi diturunkan dari Goal induk, tetapi Goal itu tidak ditemukan atau di luar akses Anda. Buka layar ini lewat tombol tambah di Goal-nya.',
+  },
+  'no-period': {
+    label: 'Goal induk belum punya periode',
+    hint: 'Isi periode di Goal induk dulu; Strategi tidak bisa diaktifkan tanpa periode.',
+    blockTitle: 'Periode Goal belum diisi',
+    blockBody: 'Strategi mengikuti periode Goal induk. Isi dulu periode Goal, lalu buat Strategi ini kembali.',
+  },
+  ok: {
+    label: '',
+    hint: 'Strategi tidak punya masa berlaku sendiri — periode diturunkan dari Goal induk.',
+    blockTitle: '',
+    blockBody: '',
+  },
+};
+
+function periodStateOf(
+  q: { isLoading: boolean; isError: boolean; data?: unknown },
+  start: string | null,
+  end: string | null,
+): PeriodState {
+  if (q.isLoading) return 'loading';
+  if (q.isError) return 'error';
+  // getGoal memakai maybeSingle → null saat id tak ada ATAU RLS menyaringnya habis.
+  if (!q.data) return 'unreachable';
+  return start && end ? 'ok' : 'no-period';
+}
+
 export function LiveNewStrategyScreen() {
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
   const router = useRouter();
@@ -150,11 +204,8 @@ export function LiveNewStrategyScreen() {
   // `activate_strategy` mem-gate keduanya NOT NULL), bukan dibaca ulang dari Goal saat render.
   const inheritedStart = parentQ.data?.period_start ?? null;
   const inheritedEnd = parentQ.data?.period_end ?? null;
-  const inheritedPeriodLabel = parentQ.isLoading
-    ? 'Memuat periode Goal…'
-    : inheritedStart && inheritedEnd
-      ? `${inheritedStart} → ${inheritedEnd}`
-      : 'Goal induk belum punya periode';
+  const periodState = periodStateOf(parentQ, inheritedStart, inheritedEnd);
+  const periodCopy = PERIOD_COPY[periodState];
 
   async function submit() {
     if (!name.trim()) {
@@ -169,15 +220,12 @@ export function LiveNewStrategyScreen() {
       Alert.alert('Belum lengkap', 'Ekspektasi Hasil Strategi wajib diisi.');
       return;
     }
-    // Periode warisan tidak bisa "diperbaiki" dari layar ini. Kalau Goal induk belum punya periode,
-    // menyimpan Strategy dengan periode NULL menghasilkan Draft yang TIDAK PERNAH bisa diaktifkan
-    // (`activate_strategy` 0078 mem-gate period_start/period_end NOT NULL) — errornya baru muncul
-    // jauh dari penyebabnya. Blokir di sini, tunjuk perbaikannya di Goal.
-    if (!inheritedStart || !inheritedEnd) {
-      Alert.alert(
-        'Periode Goal belum diisi',
-        'Strategi mengikuti periode Goal induk. Isi dulu periode Goal, lalu buat Strategi ini kembali.',
-      );
+    // Periode warisan tidak bisa "diperbaiki" dari layar ini. Menyimpan Strategy dengan periode
+    // NULL menghasilkan Draft yang TIDAK PERNAH bisa diaktifkan (`activate_strategy` 0078 mem-gate
+    // period_start/period_end NOT NULL) — errornya baru muncul jauh dari penyebabnya. Blokir di
+    // sini, dan sebutkan perbaikan yang TEPAT untuk state-nya (lihat PERIOD_COPY).
+    if (periodState !== 'ok' || !inheritedStart || !inheritedEnd) {
+      Alert.alert(periodCopy.blockTitle, periodCopy.blockBody);
       return;
     }
     let targetNumericVal: number | null = null;
@@ -269,12 +317,10 @@ export function LiveNewStrategyScreen() {
             label="Periode (mengikuti Goal)"
             value={
               <View className="gap-0.5">
-                <Text className="text-base text-black dark:text-white">{inheritedPeriodLabel}</Text>
-                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {inheritedStart && inheritedEnd
-                    ? 'Strategi tidak punya masa berlaku sendiri — periode diturunkan dari Goal induk.'
-                    : 'Isi periode di Goal induk dulu; Strategi tidak bisa diaktifkan tanpa periode.'}
+                <Text className="text-base text-black dark:text-white">
+                  {periodState === 'ok' ? `${inheritedStart} → ${inheritedEnd}` : periodCopy.label}
                 </Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">{periodCopy.hint}</Text>
               </View>
             }
           />
