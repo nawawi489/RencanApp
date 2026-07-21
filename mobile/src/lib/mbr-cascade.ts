@@ -13,7 +13,7 @@
 // action_plan = Rencana Aksi, task = Tugas.
 //
 // Alias legacy `kpi_area` TIDAK dipakai di sini. Baris aturan yang masih memakainya sudah
-// dipindahkan oleh migrasi 0080; komentar lama di `settings-mbr.ts` yang menyamakan `kpi_area`
+// dipindahkan oleh migrasi 0082; komentar lama di `settings-mbr.ts` yang menyamakan `kpi_area`
 // dengan level Strategi menggambarkan keadaan SEBELUM 0046 dan tidak berlaku untuk pemetaan ini.
 // Karena itu pemetaan ditulis eksplisit di bawah dan dikunci tes — bukan dicocokkan dari string.
 import type { CardType, MbrCompliance } from './settings-mbr';

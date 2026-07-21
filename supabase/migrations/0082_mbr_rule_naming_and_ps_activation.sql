@@ -51,8 +51,8 @@ BEGIN
   ) THEN
     -- Fase A — ke nilai sentinel (tidak mungkin bertabrakan dengan nilai final mana pun).
     UPDATE public.minimum_breakdown_rules
-    SET parent_card_type = 'mig0080__' || v.new_parent,
-        child_card_type  = 'mig0080__' || v.new_child
+    SET parent_card_type = 'mig0082__' || v.new_parent,
+        child_card_type  = 'mig0082__' || v.new_child
     FROM (VALUES
       ('goal',              'kpi_area',          'goal',              'strategy'),
       ('kpi_area',          'strategy',          'strategy',          'initiative'),
@@ -67,7 +67,7 @@ BEGIN
     UPDATE public.minimum_breakdown_rules
     SET parent_card_type = substring(parent_card_type from 10),
         child_card_type  = substring(child_card_type  from 10)
-    WHERE parent_card_type LIKE 'mig0080\_\_%';
+    WHERE parent_card_type LIKE 'mig0082\_\_%';
   END IF;
 END;
 $$;

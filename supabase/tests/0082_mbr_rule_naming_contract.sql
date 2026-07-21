@@ -1,4 +1,4 @@
--- Migration 0080 contract test — BL-04.
+-- Migration 0082 contract test — BL-04.
 -- Yang dijaga di sini adalah invariant yang selama ini TIDAK dijaga siapa pun: isi
 -- `minimum_breakdown_rules` harus memakai penamaan yang sama dengan yang dibaca
 -- `check_minimum_breakdown_compliance`. Sejak rename 0045 keduanya berbeda diam-diam, dan tidak
@@ -6,9 +6,9 @@
 --
 -- Pola: `raise notice 'PASS'` bila lolos, `raise exception 'FAIL: ...'` bila gagal.
 -- Jalankan:
---   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0080_mbr_rule_naming_contract.sql
+--   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0082_mbr_rule_naming_contract.sql
 
--- ============================================================ 0080-DB-1: nol alias legacy tersisa
+-- ============================================================ 0082-DB-1: nol alias legacy tersisa
 do $$
 declare v_legacy int;
 begin
@@ -16,12 +16,12 @@ begin
   where parent_card_type = 'kpi_area' or child_card_type = 'kpi_area';
 
   if v_legacy > 0 then
-    raise exception 'FAIL 0080-DB-1: % baris aturan masih memakai alias legacy kpi_area', v_legacy;
+    raise exception 'FAIL 0082-DB-1: % baris aturan masih memakai alias legacy kpi_area', v_legacy;
   end if;
-  raise notice 'PASS 0080-DB-1';
+  raise notice 'PASS 0082-DB-1';
 end $$;
 
--- ============================================================ 0080-DB-2: tiap cabang RPC menemukan aturannya
+-- ============================================================ 0082-DB-2: tiap cabang RPC menemukan aturannya
 -- Inilah tes yang akan merah kalau seseorang menambah level kartu baru / mengganti nama lagi tanpa
 -- ikut memindahkan baris aturan. Pasangan di bawah = persis cabang di
 -- check_minimum_breakdown_compliance.
@@ -49,12 +49,12 @@ begin
   end loop;
 
   if fails <> '' then
-    raise exception 'FAIL 0080-DB-2: %', fails;
+    raise exception 'FAIL 0082-DB-2: %', fails;
   end if;
-  raise notice 'PASS 0080-DB-2';
+  raise notice 'PASS 0082-DB-2';
 end $$;
 
--- ============================================================ 0080-DB-3: CHECK menolak penamaan legacy
+-- ============================================================ 0082-DB-3: CHECK menolak penamaan legacy
 do $$
 declare v_rejected boolean := false;
 begin
@@ -69,12 +69,12 @@ begin
     -- Bersihkan bila ternyata lolos, supaya kegagalan ini tidak mengotori DB tes berikutnya.
     delete from public.minimum_breakdown_rules
     where organization_id is null and parent_card_type = 'kpi_area';
-    raise exception 'FAIL 0080-DB-3: CHECK masih menerima parent_card_type kpi_area';
+    raise exception 'FAIL 0082-DB-3: CHECK masih menerima parent_card_type kpi_area';
   end if;
-  raise notice 'PASS 0080-DB-3';
+  raise notice 'PASS 0082-DB-3';
 end $$;
 
--- ============================================================ 0080-DB-4: activate_problem_statement menghitung tabel yang benar
+-- ============================================================ 0082-DB-4: activate_problem_statement menghitung tabel yang benar
 -- Turunan Problem Statement adalah Rencana Aksi (`action_plans.problem_statement_id`). Versi lama
 -- menghitung `public.initiatives` — tabel yang tidak punya kolom itu — sehingga aktivasi PS mati
 -- dengan 42703 begitu aturannya diset blokir_aktivasi.
@@ -95,12 +95,12 @@ begin
   end if;
 
   if fails <> '' then
-    raise exception 'FAIL 0080-DB-4: %', fails;
+    raise exception 'FAIL 0082-DB-4: %', fails;
   end if;
-  raise notice 'PASS 0080-DB-4';
+  raise notice 'PASS 0082-DB-4';
 end $$;
 
--- ============================================================ 0080-DB-5: ACL check_minimum_breakdown_compliance
+-- ============================================================ 0082-DB-5: ACL check_minimum_breakdown_compliance
 -- authenticated HARUS bisa (klien memanggilnya langsung untuk indikator Kelengkapan Perencanaan);
 -- anon/PUBLIC tidak. PUBLIC EXECUTE-nya adalah sisa DROP ... CASCADE di 0046 (pola yang sama
 -- dengan yang dijaga contract 0066).
@@ -117,7 +117,7 @@ begin
   end if;
 
   if fails <> '' then
-    raise exception 'FAIL 0080-DB-5: %', fails;
+    raise exception 'FAIL 0082-DB-5: %', fails;
   end if;
-  raise notice 'PASS 0080-DB-5';
+  raise notice 'PASS 0082-DB-5';
 end $$;
