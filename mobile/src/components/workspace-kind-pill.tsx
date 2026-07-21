@@ -17,7 +17,20 @@ export const WORKSPACE_KIND_BORDER: Record<
   problem_statement: '#c2410c',
 };
 
-/** Level tree → margin kiri compact untuk mobile (§8). Level 0 = root (0px). */
+/**
+ * Level tree → margin kiri compact untuk mobile (§8). Level 0 = root (0px).
+ *
+ * PENTING: nilai ini DELTA per level, BUKAN indent absolut dari tepi kontainer. Kartu anak
+ * dirender DI DALAM kontainer ber-marginLeft milik induk (lihat workspace-screen.tsx), jadi
+ * margin bertumpuk: indent nyata sebuah kartu = jumlah nilai sepanjang rantai leluhurnya.
+ * Rantai terdalam Performance (Goal→Strategi→Inisiatif→Rencana Aksi→Tugas) = 0+10+12+12+14
+ * = 48px, bukan 14px.
+ *
+ * Angka-angka di atas SUDAH dipilih dengan memperhitungkan penumpukan itu (karena itu ia
+ * "naik pelan lalu mendatar" — lihat workspace-kind-pill.test.tsx). Jangan membacanya sebagai
+ * nilai absolut lalu "memperbaiki" penumpukannya: mengubah agar kumulatif = nilai di tabel ini
+ * membuat level 5 hanya 14px dan pohonnya nyaris rata.
+ */
 export const TREE_LEVEL_INDENT: Record<0 | 1 | 2 | 3 | 4 | 5, number> = {
   0: 0,
   1: 6,
