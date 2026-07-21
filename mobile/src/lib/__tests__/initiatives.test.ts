@@ -21,7 +21,7 @@ import { activateInitiative, createInitiative, getInitiative, listInitiatives } 
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'order', 'insert', 'single']) {
+  for (const m of ['select', 'eq', 'order', 'insert', 'single', 'maybeSingle']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -37,9 +37,11 @@ function makeProfilesBuilder(organizationId: string) {
   const builder: Record<string, unknown> = {};
   builder.select = jest.fn(() => builder);
   builder.eq = jest.fn(() => builder);
-  builder.single = jest.fn(() =>
-    Promise.resolve({ data: { organization_id: organizationId }, error: null }),
-  );
+  // getOrgContext memakai maybeSingle (profil 0 baris → null, bukan 406).
+  const resolveProfile = () =>
+    Promise.resolve({ data: { organization_id: organizationId }, error: null });
+  builder.single = jest.fn(resolveProfile);
+  builder.maybeSingle = jest.fn(resolveProfile);
   return builder;
 }
 
@@ -138,13 +140,13 @@ describe('listInitiatives', () => {
 });
 
 describe('getInitiative', () => {
-  it('[8] eq(id) + single() mengembalikan baris', async () => {
+  it('[8] eq(id) + maybeSingle() mengembalikan baris', async () => {
     const { builder, calls } = makeQueryThenable({ data: { id: 's1' }, error: null });
     mockFrom.mockReturnValue(builder);
     const row = await getInitiative('s1');
     expect(mockFrom).toHaveBeenCalledWith('initiatives');
     expect(calls.eq).toEqual(['id', 's1']);
-    expect(builder.single).toHaveBeenCalled();
+    expect(builder.maybeSingle).toHaveBeenCalled();
     expect(row).toEqual({ id: 's1' });
   });
 

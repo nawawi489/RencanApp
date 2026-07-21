@@ -81,14 +81,16 @@ export async function listInstances(taskId: string): Promise<InstanceWithSubmiss
   return data as unknown as InstanceWithSubmissions[];
 }
 
-export async function getInstance(id: string): Promise<InstanceWithSubmissions> {
+export async function getInstance(id: string): Promise<InstanceWithSubmissions | null> {
+  // maybeSingle, BUKAN single: id di luar akses/tidak ada → RLS menyaring jadi 0 baris.
+  // single() membalas 406 dan React Query terus retry → skeleton tak pernah selesai.
   const { data, error } = await supabase
     .from('task_instances')
     .select(INSTANCE_SELECT)
     .eq('id', id)
-    .single();
+    .maybeSingle();
   if (error) throw error;
-  return data as unknown as InstanceWithSubmissions;
+  return data as unknown as InstanceWithSubmissions | null;
 }
 
 // Inventory layar Settings > Repeat Setting (PRD §31). Read-only daftar seluruh repeat-rule

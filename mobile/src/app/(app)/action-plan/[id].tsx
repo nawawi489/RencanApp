@@ -248,8 +248,17 @@ export function LiveActionPlanDetailScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: action_plan?.name ?? 'Rencana Aksi' }} />
       <View className="gap-5 p-5">
-        {actionPlanQ.isLoading || !action_plan ? (
+        {actionPlanQ.isLoading ? (
           <SkeletonList count={3} />
+        ) : actionPlanQ.isError ? (
+          // Sebelumnya error pun jatuh ke SkeletonList — layar terkunci tanpa jalan keluar.
+          <ErrorState onRetry={() => actionPlanQ.refetch()} />
+        ) : !action_plan ? (
+          // null (bukan error): getActionPlan maybeSingle → id di luar akses/tidak ada.
+          <EmptyState
+            title="Card tidak ditemukan"
+            description="Card ini tidak ada atau Anda tidak memiliki akses untuk melihatnya."
+          />
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">

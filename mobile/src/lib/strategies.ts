@@ -26,8 +26,10 @@ export async function listStrategies(goalId: string): Promise<Strategi[]> {
   return data;
 }
 
-export async function getStrategy(id: string): Promise<Strategi> {
-  const { data, error } = await supabase.from('strategies').select('*').eq('id', id).single();
+export async function getStrategy(id: string): Promise<Strategi | null> {
+  // maybeSingle, BUKAN single: id di luar akses/tidak ada → RLS menyaring jadi 0 baris.
+  // single() membalas 406 dan React Query terus retry → skeleton tak pernah selesai.
+  const { data, error } = await supabase.from('strategies').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data;
 }

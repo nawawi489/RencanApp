@@ -49,7 +49,9 @@ type InstanceLike = { pic_id: string | null; reviewer_id: string | null; status:
 
 type ReviewableInstance = { task_id: string; current_submission_id: string | null };
 
-export function useInstanceReview(inst: ReviewableInstance | undefined, instanceId: string) {
+// `null` diterima selain `undefined`: getInstance memakai maybeSingle, jadi instance di luar
+// akses/tidak ada bernilai null (bukan lempar 406). Mutasi tetap di-guard oleh `enabled`/UI.
+export function useInstanceReview(inst: ReviewableInstance | null | undefined, instanceId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: { decision: 'approve' | 'reject'; reason: string | null }) =>

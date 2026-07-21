@@ -60,8 +60,14 @@ export function LiveGoalDetailScreen() {
       <View className="gap-5 p-5">
         {goalQ.isLoading ? (
           <SkeletonList count={3} />
-        ) : goalQ.isError || !goal ? (
+        ) : goalQ.isError ? (
           <ErrorState onRetry={() => goalQ.refetch()} />
+        ) : !goal ? (
+          // null (bukan error): getGoal maybeSingle → id di luar akses/tidak ada. Retry tak menolong.
+          <EmptyState
+            title="Card tidak ditemukan"
+            description="Card ini tidak ada atau Anda tidak memiliki akses untuk melihatnya."
+          />
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">

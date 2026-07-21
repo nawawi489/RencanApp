@@ -21,7 +21,7 @@ import { activateStrategy, createStrategy, getStrategy, listStrategies } from '.
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'order', 'limit']) {
+  for (const m of ['select', 'eq', 'order', 'limit', 'maybeSingle']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -45,10 +45,15 @@ function makeTerminatedBuilder(
       return builder;
     });
   }
-  builder[terminator] = jest.fn((...args: unknown[]) => {
-    calls[terminator] = args;
-    return Promise.resolve(result);
-  });
+  // Kedua terminator disediakan: getter detail memakai maybeSingle (baris tersaring RLS →
+  // null, bukan 406) sementara INSERT ... select().single() tetap single. `terminator`
+  // hanya menentukan mana yang direkam di `calls` untuk di-assert.
+  for (const m of ['single', 'maybeSingle']) {
+    builder[m] = jest.fn((...args: unknown[]) => {
+      if (m === terminator) calls[terminator] = args;
+      return Promise.resolve(result);
+    });
+  }
   return { builder, calls };
 }
 
@@ -148,7 +153,7 @@ describe('listStrategies', () => {
 });
 
 describe('getStrategy', () => {
-  it('[8] eq(id) + single → row', async () => {
+  it('[8] eq(id) + maybeSingle → row', async () => {
     const { builder, calls } = makeTerminatedBuilder({ data: { id: 'k1' }, error: null });
     mockFrom.mockReturnValue(builder);
     const row = await getStrategy('k1');

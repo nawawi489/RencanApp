@@ -235,12 +235,17 @@ export function LiveStrategyDetailScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: strategy?.name ?? 'Strategi' }} />
       <View className="gap-5 p-5">
-        {strategyQ.isLoading || !strategy ? (
-          strategyQ.isError ? (
-            <ErrorState onRetry={() => strategyQ.refetch()} />
-          ) : (
-            <SkeletonList count={3} />
-          )
+        {strategyQ.isLoading ? (
+          <SkeletonList count={3} />
+        ) : strategyQ.isError ? (
+          <ErrorState onRetry={() => strategyQ.refetch()} />
+        ) : !strategy ? (
+          // null (bukan error): getStrategy maybeSingle → id di luar akses/tidak ada. Sebelumnya
+          // cabang ini jatuh ke SkeletonList dan terkunci di sana selamanya.
+          <EmptyState
+            title="Card tidak ditemukan"
+            description="Card ini tidak ada atau Anda tidak memiliki akses untuk melihatnya."
+          />
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">

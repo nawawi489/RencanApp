@@ -29,7 +29,7 @@ import {
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'order', 'single']) {
+  for (const m of ['select', 'eq', 'order', 'single', 'maybeSingle']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -45,9 +45,11 @@ function makeProfilesBuilder(orgId: string | null) {
   const builder: Record<string, unknown> = {};
   builder.select = jest.fn(() => builder);
   builder.eq = jest.fn(() => builder);
-  builder.single = jest.fn(() =>
-    Promise.resolve({ data: { organization_id: orgId }, error: null }),
-  );
+  // getOrgContext memakai maybeSingle (profil 0 baris → null, bukan 406); `single` tetap
+  // disediakan agar builder ini juga dipakai pemanggil lain tanpa berubah perilaku.
+  const resolveProfile = () => Promise.resolve({ data: { organization_id: orgId }, error: null });
+  builder.single = jest.fn(resolveProfile);
+  builder.maybeSingle = jest.fn(resolveProfile);
   return builder;
 }
 
