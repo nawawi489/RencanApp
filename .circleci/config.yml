@@ -151,14 +151,33 @@ jobs:
 workflows:
   version: 2
 
-  # CI pada setiap push ke branch mana pun. CircleCI tidak punya konsep
-  # `pull_request` trigger native seperti GH Actions — semua push masuk workflow.
-  # Deploy-staging di-filter branches: only staging.
+  # CI hanya jalan di branch `main` + `staging` untuk hemat kuota. Feature
+  # branch push (WIP, spike, exploration) tidak trigger CircleCI — validasi
+  # pre-merge di-serahkan ke pre-push hook lokal (.git/hooks/pre-push).
+  #
+  # Rasional: CircleCI tidak punya native `pull_request` trigger — build hanya
+  # bisa di-tune per-branch. Untuk solo dev disiplin (test lokal + PR flow),
+  # gate post-merge di CircleCI + gate pre-push di lokal cukup.
+  #
+  # Kalau nanti ada teammate atau PR flow lebih formal, pertimbangkan enable
+  # "Only build pull requests" di CircleCI Advanced settings (butuh GitHub App
+  # integration).
+  #
+  # deploy-staging: subset filter (staging only), tidak jalan di push ke main.
   ci:
     jobs:
-      - quality
-      - rename-guard
-      - db-contract
+      - quality:
+          filters:
+            branches:
+              only: [main, staging]
+      - rename-guard:
+          filters:
+            branches:
+              only: [main, staging]
+      - db-contract:
+          filters:
+            branches:
+              only: [main, staging]
       - deploy-staging:
           requires:
             - quality
