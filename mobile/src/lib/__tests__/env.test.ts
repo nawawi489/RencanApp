@@ -79,8 +79,8 @@ describe('env guard (AC-CFG01-3)', () => {
   });
 
   it('[7] tidak throw untuk nilai staging asli (sb_publishable_ + host nyata)', () => {
-    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://fhnqwytqprsptjshoxfn.supabase.co';
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_X2vs--I2zijaTf4UXPX1Aw_ytcaggRq';
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://staging-project-ref-fixture.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_fixture_value_for_env_test_only';
     expect(() =>
       jest.isolateModules(() => {
         require('../env');

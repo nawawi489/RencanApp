@@ -141,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_APP_ENV: staging
-      EXPO_PUBLIC_SUPABASE_URL: https://fhnqwytqprsptjshoxfn.supabase.co
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v7
