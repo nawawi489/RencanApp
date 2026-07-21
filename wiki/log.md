@@ -1970,3 +1970,13 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - **Koreksi klaim sebelumnya:** entri 2026-07-21 terdahulu menyiratkan autostart menutup masalah "Docker mati". Itu terlalu cepat — autostart hanya menutup penyebab *tidak diluncurkan*; penyebab *gagal start* di atas tetap terbuka dan mengalahkan autostart.
 - **Jebakan diagnosis yang sempat menyesatkan:** log Docker memuat error dari percobaan sebelumnya sementara daemon sudah sehat. Verifikasi harus dengan menjalankan `docker info` dari distro, bukan membaca log.
 - Pages updated: [[self-hosted-runner]] (atribusi terverifikasi menggantikan callout "belum teruji", bagian socket yatim + resep pemulihan, baris tabel gejala baru).
+
+## [2026-07-21] update | Dua mode kegagalan pasca-reboot lagi: port disita Hyper-V + `winnat` menjatuhkan daemon
+
+- **Pemicu:** stack Supabase dev gagal dinyalakan setelah reboot. Docker Desktop menolak dengan `ports are not available: exposing port TCP 0.0.0.0:54322 … status: 500`.
+- **Penyebab (bukan Docker):** Hyper-V/WSL memesan blok port dinamis `54282–54381` setelah reboot, menelan 54321–54324 (kong/db/studio/inbucket). Menyesatkan karena `Get-NetTCPConnection` melaporkan port **bebas** — tidak ada proses pemakai, port hanya *dicadangkan*. Perbaikan permanen: `netsh int ipv4 add excludedportrange … store=persistent` (butuh Administrator); `net stop/start winnat` saja hanya bertahan sampai restart berikutnya.
+- **Efek samping yang menyusul:** `net stop winnat` memutus jaringan Docker → engine berhenti dan `/var/run/docker.sock` hilang dari distro. Percobaan menyalakan stack sesudahnya gagal dengan `dial unix /var/run/docker.sock: no such file or directory` — mudah disalahartikan sebagai Docker rusak lagi. Urutan benar: perbaiki port → restart Docker → nyalakan stack.
+- **Jalur menyalakan stack juga dicatat:** Supabase CLI tidak terpasang di mesin ini dan tombol Start Docker Desktop gagal (`no container found for project "supabase"`) karena container dibuat CLI, bukan `docker compose`. Nyalakan langsung via `docker start`, DB dulu sampai `pg_isready`.
+- **Hasil:** 9 container `Up` (8 healthy), DB menjawab 57 tabel di `public` — tidak ada data hilang; container hanya `Exited`, volume utuh.
+- **CI kebal terhadap kelas kegagalan ini:** container `db-contract` tidak mem-publish port sama sekali. Keputusan yang semula diambil untuk menghindari bentrok dengan stack dev ternyata juga menutup penyitaan port.
+- Pages updated: [[self-hosted-runner]] (dua bagian baru + 2 baris tabel gejala).

@@ -94,6 +94,64 @@ wsl -d Ubuntu -u runner -- docker info --format 'server={{.ServerVersion}}'
 
 Di CI, mode kegagalan ini muncul hanya sebagai `FATAL: daemon Docker tak terjangkau dari sini` — tidak ada petunjuk soal socket. Kalau pesan itu muncul setelah mesin mati mendadak, mulai dari sini.
 
+### Port stack dev disita Hyper-V setelah reboot
+
+Gejalanya di stack dev, bukan di CI:
+
+```
+Error response from daemon: ports are not available:
+exposing port TCP 0.0.0.0:54322 -> 127.0.0.1:0:
+/forwards/expose returned unexpected status: 500
+```
+
+Menyesatkan karena port-nya **terlihat bebas** — `Get-NetTCPConnection -LocalPort 54322` kosong, tidak ada proses yang memakainya. Yang terjadi: setelah reboot, Hyper-V/WSL memesan blok port dinamis yang kebetulan menelan rentang Supabase. Teramati 2026-07-21: blok `54282–54381` mencakup 54321 (kong), 54322 (db), 54323 (studio), 54324 (inbucket).
+
+Diagnosis:
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+Perbaikan permanen — butuh **PowerShell Administrator**. Mencadangkan rentang itu atas nama sendiri supaya Hyper-V tidak merebutnya lagi di reboot berikutnya:
+
+```powershell
+net stop winnat
+netsh int ipv4 add excludedportrange protocol=tcp startport=54321 numberofports=8 store=persistent
+net start winnat
+```
+
+`net stop/start winnat` saja menyembuhkan sampai restart berikutnya; tanpa baris `add excludedportrange`, masalahnya kembali secara acak.
+
+> [!warning] `net stop winnat` menjatuhkan daemon Docker
+> Ia memutus jaringan Docker: engine berhenti dan `/var/run/docker.sock` **hilang dari distro**, sehingga perintah berikutnya gagal dengan `dial unix /var/run/docker.sock: no such file or directory` — gejala yang mudah disalahartikan sebagai Docker rusak lagi.
+>
+> Urutan yang benar: **perbaiki port → restart Docker (resep socket yatim di atas) → baru nyalakan stack.** Bukan langsung menyalakan stack setelah `winnat` dicabut.
+
+**CI tidak terpengaruh mode kegagalan ini.** Container `db-contract` sengaja tidak mem-publish port apa pun, jadi ia kebal terhadap penyitaan port. Keputusan yang semula diambil untuk menghindari bentrok dengan stack dev ternyata juga menutup kelas kegagalan ini.
+
+### Menyalakan stack dev setelah reboot
+
+Supabase CLI **tidak terpasang** di mesin ini, dan tombol Start di Docker Desktop gagal:
+
+```
+Cannot start Docker Compose application. Reason: compose [start] exit status 1.
+no container found for project "supabase": not found
+```
+
+Container-nya dibuat Supabase CLI, bukan `docker compose`, jadi jalur compose tidak menemukannya. Nyalakan langsung — DB dulu sampai `pg_isready`, baru sisanya:
+
+```bash
+wsl -d Ubuntu -u runner -- docker start supabase_db_supabase
+# tunggu pg_isready, lalu:
+for c in pg_meta auth rest realtime storage inbucket kong studio; do
+  wsl -d Ubuntu -u runner -- docker start supabase_${c}_supabase
+done
+```
+
+`supabase_edge_runtime_supabase` tidak ikut secara default — di mesin ini ia sudah lama `Exited (255)` dan tidak dibutuhkan kecuali sedang mengerjakan Edge Function.
+
+Container yang `Exited` **tidak kehilangan data** — volume `supabase_db_supabase` tetap ada. Verifikasi setelah naik: `docker exec supabase_db_supabase psql -U postgres -Atc "select count(*) from pg_tables where schemaname='public'"` (2026-07-21: 57 tabel).
+
 > [!warning] Grup `docker` setara root
 > Anggota grup itu bisa `docker run -v /:/host` dan efektif menjadi root di mesin developer — melewati pagar "user `runner` tanpa sudo" di bawah. Ini **menguatkan**, bukan menggantikan, larangan menjadikan repo publik.
 
@@ -193,6 +251,8 @@ wsl -d Ubuntu -u runner -- docker ps --filter name=rencan-ci-db
 | `FATAL: daemon Docker tak terjangkau` | Engine Docker mati (cek distro `docker-desktop`, bukan proses aplikasinya) atau WSL integration non-aktif |
 | `/usr/bin/docker: Input/output error` | Mount `cli-tools` basi setelah Docker Desktop restart |
 | `FATAL: daemon Docker…` **sesudah mesin mati mendadak** | Socket AF_UNIX yatim — Docker gagal start, lihat bagian di atas |
+| `ports are not available … status: 500` (stack dev) | Blok port disita Hyper-V pasca-reboot; port terlihat bebas tapi sudah dicadangkan sistem |
+| `dial unix /var/run/docker.sock: no such file` | Daemon jatuh — biasanya sesudah `net stop winnat`; restart Docker dulu |
 
 Alasan `steps=0` hanya terbaca lewat `gh api repos/<o>/<r>/check-runs/<id>/annotations` — log job-nya kosong.
 
