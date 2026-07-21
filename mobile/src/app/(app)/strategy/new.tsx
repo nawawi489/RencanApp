@@ -4,11 +4,9 @@ import { useMemo, useState } from 'react';
 import { Alert, Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, EmptyState, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
-import { DateRangeField } from '@/components/date-range-field';
+import { Button, EmptyState, Field, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
-import { periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
 import { getGoal, listStrategyTemplates, type StrategyTemplate } from '@/lib/goals';
 import type { PersonRef } from '@/lib/strategies';
@@ -143,10 +141,20 @@ export function LiveNewStrategyScreen() {
   const [targetUnit, setTargetUnit] = useState('');
   // UI-S-K03 — PRD §18 wajib "Ekspektasi Hasil".
   const [expectedOutcome, setExpectedOutcome] = useState('');
-  const [periodStart, setPeriodStart] = useState('');
-  const [periodEnd, setPeriodEnd] = useState('');
   const [description, setDescription] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
+
+  // PRD §12.1 (baris 540-544): "Strategy tidak punya masa berlaku sendiri karena mengikuti Goal
+  // tahunan." Periode DITURUNKAN dari Goal induk, tidak pernah diketik user (§44 AC-11).
+  // Warisan disalin saat pembuatan (kolom `strategies.period_start/end` tetap material karena
+  // `activate_strategy` mem-gate keduanya NOT NULL), bukan dibaca ulang dari Goal saat render.
+  const inheritedStart = parentQ.data?.period_start ?? null;
+  const inheritedEnd = parentQ.data?.period_end ?? null;
+  const inheritedPeriodLabel = parentQ.isLoading
+    ? 'Memuat periode Goal…'
+    : inheritedStart && inheritedEnd
+      ? `${inheritedStart} → ${inheritedEnd}`
+      : 'Goal induk belum punya periode';
 
   async function submit() {
     if (!name.trim()) {
@@ -161,9 +169,15 @@ export function LiveNewStrategyScreen() {
       Alert.alert('Belum lengkap', 'Ekspektasi Hasil Strategi wajib diisi.');
       return;
     }
-    const dateErr = periodError(periodStart, periodEnd);
-    if (dateErr) {
-      Alert.alert('Tanggal tidak valid', dateErr);
+    // Periode warisan tidak bisa "diperbaiki" dari layar ini. Kalau Goal induk belum punya periode,
+    // menyimpan Strategy dengan periode NULL menghasilkan Draft yang TIDAK PERNAH bisa diaktifkan
+    // (`activate_strategy` 0078 mem-gate period_start/period_end NOT NULL) — errornya baru muncul
+    // jauh dari penyebabnya. Blokir di sini, tunjuk perbaikannya di Goal.
+    if (!inheritedStart || !inheritedEnd) {
+      Alert.alert(
+        'Periode Goal belum diisi',
+        'Strategi mengikuti periode Goal induk. Isi dulu periode Goal, lalu buat Strategi ini kembali.',
+      );
       return;
     }
     let targetNumericVal: number | null = null;
@@ -185,8 +199,8 @@ export function LiveNewStrategyScreen() {
         target_unit: targetUnit.trim() || null,
         expected_outcome: expectedOutcome.trim(),
         pic_id: (pic ?? inheritedPic)?.id ?? null,
-        period_start: periodStart || null,
-        period_end: periodEnd || null,
+        period_start: inheritedStart,
+        period_end: inheritedEnd,
       });
       router.replace(`/strategy/${created.id}` as Href);
     } catch (e) {
@@ -251,11 +265,18 @@ export function LiveNewStrategyScreen() {
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
-          <DateRangeField
-            startValue={periodStart}
-            endValue={periodEnd}
-            onStartChange={setPeriodStart}
-            onEndChange={setPeriodEnd}
+          <Field
+            label="Periode (mengikuti Goal)"
+            value={
+              <View className="gap-0.5">
+                <Text className="text-base text-black dark:text-white">{inheritedPeriodLabel}</Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {inheritedStart && inheritedEnd
+                    ? 'Strategi tidak punya masa berlaku sendiri — periode diturunkan dari Goal induk.'
+                    : 'Isi periode di Goal induk dulu; Strategi tidak bisa diaktifkan tanpa periode.'}
+                </Text>
+              </View>
+            }
           />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
         </SectionCard>
