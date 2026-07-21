@@ -90,14 +90,23 @@ jobs:
       - checkout
       - run:
           name: Install Supabase CLI
-          # Extract ke /tmp — kalau langsung di working_directory (~/repo),
-          # binary `supabase` tabrakan dengan direktori `supabase/` (migrations)
-          # dan `tar` gagal dengan "Cannot open: File exists".
+          # Sejak v2 Supabase CLI ship SEBAGAI DUA binary co-located:
+          #   - `supabase` (shim, forwards)
+          #   - `supabase-go` (actual Go CLI)
+          # Shim mencari supabase-go di $SUPABASE_GO_BINARY atau di
+          # `/usr/local/bin/supabase-go`. Kalau cuma satu yang di-move,
+          # shim error "Could not find the supabase-go binary".
+          #
+          # Extract ke direktori sendiri (bukan working_directory ~/repo yang
+          # sudah ada folder `supabase/` untuk migrations), lalu install
+          # keduanya ke /usr/local/bin agar shim ketemu backend-nya.
           command: |
             SUPABASE_VERSION=2.109.1
-            cd /tmp
-            wget -qO- "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_linux_amd64.tar.gz" | tar xz
-            sudo mv /tmp/supabase /usr/local/bin/
+            EXTRACT_DIR=/tmp/supabase-cli
+            mkdir -p "$EXTRACT_DIR"
+            wget -qO- "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_linux_amd64.tar.gz" | tar xz -C "$EXTRACT_DIR"
+            sudo install -m 0755 "$EXTRACT_DIR/supabase" /usr/local/bin/supabase
+            sudo install -m 0755 "$EXTRACT_DIR/supabase-go" /usr/local/bin/supabase-go
             supabase --version
       - run:
           name: Install psql client
