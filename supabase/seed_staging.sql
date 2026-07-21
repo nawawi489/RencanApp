@@ -3,11 +3,30 @@
 -- =============================================================================
 -- 3 organisasi, ~16 user, hirarki card lengkap, data eksekusi.
 -- Dijalankan via Supabase MCP execute_sql (remote staging).
--- Password semua user staging: "staging123"
 --
 -- Org 1: Nyantuy Group     (existing, F&B/retail)  — 6 user
 -- Org 2: PT Mitra Logistik (new, logistics)        — 6 user
 -- Org 3: Karya Digital     (new, tech agency)       — 4 user
+--
+-- =============================================================================
+-- ⚠️  PASSWORD HANDLING — READ BEFORE RUNNING
+-- =============================================================================
+-- Semua auth password di file ini adalah placeholder: `__STAGING_SEED_PASSWORD__`.
+-- File ini AMAN untuk di-commit ke public repo — placeholder tidak bisa dipakai
+-- login sampai di-substitusi dengan nilai asli SAAT apply.
+--
+-- Cara pakai (jangan pernah simpan versi yang sudah di-substitusi ke disk):
+--   1. Generate password acak, contoh:
+--        openssl rand -base64 18   # Linux/macOS/WSL
+--        (New-Object byte[] 18 | ForEach-Object { ... })  # PowerShell
+--   2. Salin isi file ini ke clipboard/editor sementara.
+--   3. Find-and-replace `__STAGING_SEED_PASSWORD__` → password yang tadi.
+--   4. Paste hasilnya ke Supabase MCP execute_sql / psql. JANGAN save-as.
+--   5. Simpan password itu di password manager, sebarkan via channel aman.
+--
+-- Rotasi password: jalankan hanya PART 2 (auth.users) atau langsung UPDATE
+-- auth.users SET encrypted_password = extensions.crypt('<new>', extensions.gen_salt('bf'))
+-- WHERE email LIKE '%@nyantuy.staging' OR '%@mitralogistik.staging' OR '%@karyadigital.staging'.
 -- =============================================================================
 
 -- ============================================================================
@@ -83,81 +102,81 @@ INSERT INTO auth.users (
   -- === ORG 1 (Nyantuy) new users ===
   ('a1000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'coo@nyantuy.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Bayu Pratama"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a1000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'mgr.ops@nyantuy.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Eko Saputro"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a1000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'staff.finance@nyantuy.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Gita Maharani"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   -- === ORG 2 (PT Mitra Logistik) ===
   ('a2000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'ceo@mitralogistik.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Andi Wijaya"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'cfo@mitralogistik.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Sari Dewi"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'mgr.warehouse@mitralogistik.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Budi Hartono"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'mgr.fleet@mitralogistik.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Rini Susanti"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'staff.admin@mitralogistik.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Dimas Prasetyo"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'driver@mitralogistik.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Teguh Prasetya"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   -- === ORG 3 (Karya Digital Indonesia) ===
   ('a3000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'ceo@karyadigital.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Rizki Maulana"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a3000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'cto@karyadigital.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Ayu Lestari"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a3000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'pm@karyadigital.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Hendra Gunawan"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a3000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'dev@karyadigital.staging',
-   extensions.crypt('staging123', extensions.gen_salt('bf')),
+   extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Nisa Putri"}'::jsonb, now(), now(), '', '', '', '', false, false)
 ON CONFLICT (id) DO NOTHING;

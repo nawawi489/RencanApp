@@ -1,5 +1,5 @@
--- Kontrak B-1 score-period-end-nudge (migrasi 0080).
--- Jalankan: docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0080_period_closing_reminder_contract.sql
+-- Kontrak B-1 score-period-end-nudge (migrasi 0081).
+-- Jalankan: docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0081_period_closing_reminder_contract.sql
 -- Pola: `begin; do $$..$$; rollback;` per blok. RAISE NOTICE 'PASS' / RAISE EXCEPTION 'FAIL: …'.
 -- Fixture standar CI: supabase/tests/_fixtures.sql (org 52b0ebe1-…b70, CEO 11111111-…001).
 --

@@ -124,8 +124,14 @@ export async function listActionPlansByProblemStatementIds(ids: string[]): Promi
   return data;
 }
 
-export async function getActionPlan(id: string): Promise<ActionPlan> {
-  const { data, error } = await supabase.from('action_plans').select('*').eq('id', id).single();
+export async function getActionPlan(id: string): Promise<ActionPlan | null> {
+  // maybeSingle, BUKAN single: id di luar akses/tidak ada → RLS menyaring jadi 0 baris.
+  // single() membalas 406 dan React Query terus retry → skeleton tak pernah selesai.
+  const { data, error } = await supabase
+    .from('action_plans')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
   if (error) throw error;
   return data;
 }

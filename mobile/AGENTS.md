@@ -34,6 +34,23 @@ Run from `mobile/`:
 
 Run tests and type-check before considering a change complete.
 
+## Git hooks (auto-installed via `npm install`)
+
+Repo memakai custom hooks path `.githooks/` (bukan `.git/hooks/`). `npm install`
+di `mobile/` menjalankan `postinstall` yang set `git config core.hooksPath .githooks`
+otomatis — jadi begitu Anda `cd mobile && npm install`, hook aktif.
+
+Hook aktif saat ini:
+
+- `pre-push` — jalankan type-check + lint + `jest --onlyChanged` kalau ada
+  perubahan di `mobile/`. Skip otomatis kalau push hanya docs/wiki/CI.
+
+Emergency bypass: `git push --no-verify` (skip hook lokal saja; CircleCI post-merge
+tetap gate).
+
+Verifikasi manual: `git config --get core.hooksPath` harus keluarin `.githooks`.
+Kalau kosong, jalankan `git config core.hooksPath .githooks` sekali.
+
 ## Notes
 
 - `mobile/CLAUDE.md` just re-exports this file (`@AGENTS.md`) — edit here, not there.

@@ -18,7 +18,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[action-plan]] — Unit eksekusi konkret; One Time vs Repeat, Instance, Progress/Capaian/Compliance
 - [[card-model]] — Hierarki card dua workspace, makna & field wajib tiap card, Kelengkapan Card
 - [[database-blueprint]] — 53 tabel Postgres, tabel yang dibuang, relationship rules
-- [[self-hosted-runner]] — Runner CI `rencanapp-wsl` (Ubuntu/WSL2) sebagai jalan keluar dari blokir kuota Actions; keputusan keamanan + keepalive wajib
+- [[self-hosted-runner]] — **DICABUT 2026-07-21.** Runner CI `rencanapp-wsl` (Ubuntu/WSL2) yang sempat dipakai saat kuota Actions terblokir; disimpan sebagai catatan jebakan bila jalur ini dipertimbangkan lagi
 - [[score-formula]] — Penilaian performa berbobot per level (Staff/Management/C-Level/CEO); V1.83 Admin Lanjutan only, tidak tampil di UI utama staff
 - [[surfaces]] — Bottom nav V1.83: Home (Fokus Task), Notifications, Workspace, Inbox (Diskusi Rencana Aksi), **Menu** (People de-scoring + Admin Lanjutan gated)
 - [[workspace]] — Performance vs Development workspace dan hierarki card masing-masing
@@ -32,7 +32,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[execution-loop]] — Bukti → Nilai Hasil → Review; submission versioning & evidence locking
 - [[fase6-spec]] — Spec eksekutabel Fase 6 Development Workspace (AC, data contract, non-goals, TDD handoff)
 - [[fase6-tdd-plan]] — Rencana TDD red→green→refactor Fase 6 + addendum kritik (missing cases & concerns)
-- [[feature-gap-backlog]] — Backlog di bawah ambang P-slot (BL-01..BL-13): gap app vs PRD + inkonsistensi perilaku; halaman direkonstruksi dari log (BL-04/05/06 hilang), BL-12 DONE, BL-13 baru
+- [[feature-gap-backlog]] — Backlog di bawah ambang P-slot (BL-01..BL-13): gap app vs PRD + inkonsistensi perilaku, tiap baris berbukti `file:line`; BL-08/09(c)/11/12 DONE, BL-03 ditutup sebagai keputusan owner, BL-13 utang terbuka
 - [[minimum-breakdown-rule]] — Jumlah minimal card turunan (label UI "Aturan Pecah Target"); V1.83 opsional 3 mode (Nonaktif/Peringatan/Blokir), angka konfigurabel admin
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[prototype-prd-conformance]] — Prototype `design.html` vs PRD V1.82: 46/46 screen + 28 AC terpenuhi; penyimpangan kecil (header notif, tab People Q3)

@@ -1899,6 +1899,89 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - Kode: `mobile/src/components/app-header.tsx` — Ionicons `notifications-outline` (22px) di antara search pill dan avatar, tap → `router.push('/(app)/(tabs)/notifications')`, target sentuh `min-h-[44px] min-w-[44px]`, warna brand-dark `#1564b3` / blue-300 `#93c5fd` (DESIGN §10/§12). Variabel `searchIconColor` di-rename `brandIconColor` karena kini dipakai dua ikon.
 - Badge unread masuk scope karena hook `useUnreadCount()` sudah ada: badge merah `bg-red-700` clamp `99+`, disembunyikan saat `isLoading`/`isError` (hook sengaja meng-surface keduanya supaya badge tidak fail-silent jadi "0"). Jumlah unread ikut masuk `accessibilityLabel` — warna bukan satu-satunya sinyal (DESIGN §4).
 - Test: 7 kasus baru di `src/components/__tests__/app-header.test.tsx` (tampil selalu, koeksistensi dengan back, badge angka, clamp 99+, tanpa badge saat 0, loading, error). Suite 16/16 hijau; `tsc --noEmit` + eslint bersih.
+## [2026-07-20] update | BL-01 ditutup — daftar People konsumsi `rank_number` dari DB
+
+- Gap dikonfirmasi ulang terhadap `mobile/src/` (status `[?]` pada entri backlog di atas kini terjawab untuk BL-01): `people.tsx` menurunkan angka rank dari counter berjalan atas roster terurut (1,2,3…), sedangkan `people-profile/[id].tsx` menampilkan `ranking_snapshots.rank_number` dari DB. Keputusan D11 menetapkan rank kembar (1,1,3), jadi kedua layar menampilkan angka berbeda untuk orang yang sama begitu ada seri.
+- Perbaikan: `rankByUser` dibangun langsung dari `useRanking(...)` → `Map<user_id, rank_number>`. Urutan tampilan roster (score DESC, lalu nama A→Z) tidak berubah; hanya angka badge yang kini bersumber dari DB.
+- Test: 1 test tie baru di `src/app/(app)/__tests__/people.test.tsx` (rank_number 1,1,3 → dua badge "Peringkat 1", satu "Peringkat 3", nol "Peringkat 2"). Suite people/ranking 20/20 pass.
+- **Inkonsistensi wiki ditemukan** `[?]`: `wiki/concepts/feature-gap-backlog.md` dirujuk oleh `index.md` dan entri log `[2026-07-20] update | Backlog fitur di bawah ambang P-slot` ("Pages created"), tetapi file-nya tidak ada di `origin/staging`, `origin/main`, maupun branch remote mana pun. Isi BL-01..BL-12 (termasuk triage XS/S/M/L) karenanya tidak dapat dipulihkan dari repo; baris BL-01 belum bisa dicoret di halaman aslinya. Perlu keputusan pemilik: buat ulang halaman atau cabut rujukannya dari `index.md`.
+## [2026-07-20] update | Verifikasi 12 item backlog terhadap kode
+
+- Pages updated: `concepts/feature-gap-backlog.md` (tabel §1 diganti hasil verifikasi + bukti file:line; triage §2 ditulis ulang), `concepts/ui-prototype-gap.md` (koreksi UI-S-W08)
+- Metode: 4 agen paralel membaca `mobile/src/`, `supabase/migrations/`, `PRD.md`. Hasil: **7 CONFIRMED apa adanya · 4 terkoreksi · 1 gugur**.
+- **Menggantikan rekonstruksi entry `[2026-07-20] BL-12 dikerjakan + halaman backlog direkonstruksi`.** Halaman hasil audit asli (yang saat itu belum ter-commit) kini masuk repo, jadi tabel rekonstruksi diganti seluruhnya: BL-04/05/06 yang ditandai UNKNOWN terisi, dan `[?]` di BL-01..BL-11 dicabut karena semuanya sudah punya bukti `file:line`. §BL-12 + §BL-13 dari rekonstruksi **dipertahankan utuh** — keduanya analisis terverifikasi, bukan tebakan. Peringatan "jangan direkonstruksi dari tebakan" di entry BL-11 dengan ini terjawab.
+- **BL-03 gugur sebagai bug kode** — dim past-period dihapus SELURUHNYA dan dikunci tes `[W08·1..2]` `countOpacityHalf === 0`. Koreksi atas draf pertama entri ini: `PastDim` **memang pernah ada** (shipped 2026-07-02), lalu dicabut owner 2026-07-03 — bukan "tidak pernah ada di source". Baris UI-S-W08 karenanya bukan salah-tulis melainkan tidak dimutakhirkan setelah pencabutan.
+- **Akar BL-03 = dokumentasi.** PRD §44 AC-9 masih mewajibkan "tampil redup" (diulang §7.7 + §11.3; §37 permisif dan tidak konflik), sementara kode sengaja tidak. Selama PRD tidak dimutakhirkan, setiap audit app-vs-PRD akan melahirkan ulang temuan ini.
+- **BL-09(a) gugur** — `includeArchived: true` sudah di-pass (`settings-archive.tsx:32`). Sisa (b) row tanpa onPress dan (c) invalidate key salah: `['search']` vs key asli `['cards_search', ...]`; tidak ada query mana pun ber-key `['search']` → no-op total, restore tidak pernah menyegarkan list.
+- **BL-04 terkoreksi** — bukan "hanya strategy→initiative di-guard". Hanya 1 dari 6 tombol tambah ter-guard (`initiative→action_plan`), dan itu memakai data kepatuhan strategy→initiative sebagai cascade (WSA-04). Tombol `+ Inisiatif` milik strategy sendiri tidak ter-guard; `goal/[id].tsx` nol pemakaian MBR. Perlu keputusan produk dulu, bukan bug.
+- **BL-07 terkoreksi** — §28 mendefinisikan 9 tipe (bukan 4 yang hilang dari daftar tak-bernomor); 5 jalan, 4 absen. 3 dari 4 belum ada di CHECK constraint 13-tipe (0038) → butuh migrasi. Gap 100% server-side; `lib/notifications.ts` sudah mirror tepat.
+- **BL-08 naik ukuran XS→S** — kedua RPC review hard-reject decision ketiga (`if p_decision not in ('approve','reject') then raise`), jadi butuh migrasi, bukan patch UI. → **DIKOREKSI 2026-07-20 oleh chip task BL-08 (branch `claude/pensive-goodall-42169f`): temuan RPC benar, kesimpulan "butuh migrasi" tidak berlaku.** Ia hanya mengikat bila Catatan = nilai `decision` ketiga; owner memutuskan non-terminal, sehingga Catatan tidak pernah masuk jalur RPC review. Sudah SELESAI dengan nol migrasi. Kenaikan XS→S tetap tepat (butuh keputusan produk + fungsi data layer, bukan sekadar tombol).
+- **BL-06** juga butuh migrasi (`action_plan_repeat_rules` tanpa kolom timezone; deadline dihitung dari `organizations.timezone`).
+- Chip task: BL-03 sudah terlanjur dijalankan user sebelum verifikasi selesai — perlu dibatalkan supaya tidak memerahkan tes W08.
+
+## [2026-07-20] update | BL-09(c) selesai — restore arsip meng-invalidate key yang benar
+
+- Pages updated: `concepts/feature-gap-backlog.md` (BL-09(c) dicoret)
+- Kode: `mobile/src/app/(app)/settings-archive.tsx` — `qc.invalidateQueries({queryKey:['search']})` → `['cards_search']`, cocok dengan key `useSearchCards` (`['cards_search', trimmed, entityTypes, includeArchived]`). Prefix-match react-query kini kena; sebelumnya nol query ber-key `['search']` sehingga invalidate no-op total dan daftar arsip tidak pernah menyegar setelah restore sukses.
+- Test: `[F8-UI-28]` di `fase8-settings-screens.test.tsx` — spy `QueryClient.invalidateQueries`, jalankan tombol "Pulihkan" dari dialog konfirmasi, assert key `['cards_search']`. Red check dilakukan: dengan key lama test GAGAL, dengan key baru LULUS.
+- `npm run type-check` bersih.
+- BL-09(b) (row arsip tanpa `onPress`) masih terbuka; BL-09(a) sudah gugur saat verifikasi.
+## [2026-07-20] update | BL-08 — aksi review ke-3 "Catatan" (PRD §24.3)
+
+- **Pages updated:** [[ui-prototype-gap]] — item baru **UI-G-017** (alias BL-08) di §2 + §2.2 baru untuk sisa yang ter-defer.
+- **Temuan awal:** halaman `wiki/concepts/feature-gap-backlog.md` yang dirujuk task **tidak ada**, dan ID `BL-08` tidak muncul di mana pun di repo. Backlog ber-ID satu-satunya = [[ui-prototype-gap]] (`UI-G-###`/`UI-S-###`), jadi item didaftarkan di sana dengan alias BL-08.
+- **Semantik "Catatan" tidak tersurat di PRD.** `PRD.md` §24.3 hanya menuliskan tiga nama aksi + "Jika Minta Revisi, alasan wajib" — tidak menyebut apakah Catatan menulis comment, submission note, atau activity_log, maupun apakah ia terminal. Diangkat ke owner; **putusan: NON-TERMINAL** (kirim umpan balik tanpa menyetujui/menolak).
+- **DB tidak mendukung aksi ke-3** (diverifikasi sebelum menulis kode): `reviews.decision` CHECK `('approve','reject')` (`0005:140`), `task_submissions.review_status` CHECK `('pending','approved','rejected')` (`0005:97`), dan guard RPC `if p_decision not in ('approve','reject') then raise` (`0046:1976`). Karena putusannya non-terminal, ketiganya **tidak disentuh** — tidak ada migrasi.
+- **Implementasi (chat-only, nol perubahan DB):**
+  - `lib/inbox.ts::postReviewNote` — resolve room Rencana Aksi (`getRoomIdForActionPlan`, RLS member-gated) lalu `send_chat_message` dengan `p_context_action_plan` = id Tugas yang direview. Guard body kosong + pesan jelas saat reviewer bukan anggota room.
+  - `components/review-submission-panel.tsx` — mode ketiga "Catatan". Aksi terminal disembunyikan saat form terbuka (cegah tap tak sengaja); `onNote` async sehingga form **hanya reset saat kirim berhasil** — teks tidak hilang bila jaringan gagal.
+  - Ter-wire di `task/[id].tsx` + `task/instance/[id].tsx`. Mutasi Catatan sengaja **tidak** memanggil `refresh()` — tidak ada status yang berubah.
+- **Test:** 8 test komponen baru (`review-submission-panel.test.tsx`, termasuk assert non-terminal `onDecide` tidak terpanggil + teks bertahan saat gagal) + 10 test data layer (`inbox.test.ts` — termasuk assert hanya `send_chat_message` yang dipanggil, tiga varian `actionPlanId` kosong, dan invariant lintas-AP 0056). **Jest 1573/1573, 129 suite, tsc bersih, lint 0 error** — diverifikasi setelah rebase ke `staging` (angka lama 1419/119 diukur pada base yang tertinggal 106 commit, jadi tidak lagi berlaku).
+- **Ter-defer (butuh migrasi 0080+):** entri Activity Log. `write_activity` dicabut dari `authenticated` di `0062` (anti audit-log palsu) → hanya bisa lewat RPC SECURITY DEFINER baru. Rinci di [[ui-prototype-gap]] §2.2, termasuk pertanyaan terbuka "siapa yang boleh meninggalkan Catatan".
+
+## [2026-07-20] update | Rekonsiliasi dim "periode lewat": PRD AC-9 vs owner decision 2026-07-03
+
+- **Pemicu:** audit gap app-vs-PRD memunculkan item BL-03 ("AC-9 parsial: label teks ada, redup visual tidak ter-apply"). Investigasi menunjukkan ini **bukan bug** — dim memang sengaja dihapus owner decision 2026-07-03 — tetapi wiki + PRD tidak pernah mencatat pencabutannya, sehingga setiap audit baru akan melahirkan ulang temuan yang sama.
+- **Akar masalah dokumentasi:** baris [[ui-prototype-gap]] UI-S-W08 masih berbunyi "IMPLEMENTED 2026-07-02 — `PastDim` single-layer", padahal `PastDim` dihapus sehari sesudahnya. Audit membaca baris itu sebagai kontrak yang berlaku, mengecek `mobile/src`, dan mencatat selisihnya.
+- **Konflik nyata yang ditemukan:** `PRD.md` §44 **AC-9** mensyaratkan "Card periode lewat **tampil redup**". Owner decision 2026-07-03 melanggar AC tertulis ini, bukan sekadar menyimpang dari halaman wiki. §7.7 dan §11.3 mengulang syarat yang sama; §37 justru permisif ("boleh diberi visual redup") — jadi PRD tidak konsisten dengan dirinya sendiri.
+- **Keputusan owner (2026-07-20):** dim tetap tidak dipasang; decision 2026-07-03 berlaku. Dokumen yang disesuaikan ke keputusan, bukan sebaliknya. Kode `mobile/` **tidak disentuh**.
+- Pages updated: [[ui-prototype-gap]] (UI-S-W08 → RESOLVED-BY-DECISION + rujukan silang ke PRD AC-9).
+- Files updated: `PRD.md` — catatan pencabutan kanonik di §44 AC-9 (menegaskan larangan tambah-turunan TETAP mengikat); §7.7 + §11.3 diubah dari "redup" ke badge teks + pointer ke AC-9.
+- **Sinyal periode-lewat yang berlaku:** badge teks "Periode lewat" (`WS_TREE_COMPACT_COPY.periodState`). DESIGN §4 terpenuhi lewat teks, bukan warna/opacity. Tes [W08·1..2] menjaga arah ini (`countOpacityHalf === 0`) — dim tidak bisa masuk kembali tanpa mematahkan tes.
+- **Tindak lanjut BL-03 (selesai):** saat entri ini pertama ditulis, `wiki/concepts/feature-gap-backlog.md` masih **untracked** di checkout utama sehingga baris BL-03 tak bisa ditutup di tempatnya. Halaman itu kini sudah ter-commit lewat PR #119 dengan BL-03 ditandai "BUKAN GAP KODE — keputusan owner 2026-07-03" beserta riwayat `PastDim` yang benar. Sempat ada rekonstruksi halaman yang sama dari sesi lain (merged lewat #117, baris BL-03 masih `OPEN`) — versi terverifikasi dari #119 yang berlaku; catatan penutup ditinggalkan di #117.
+
+## [2026-07-21] update | `db-contract` pindah ke runner self-hosted + panduan pemantauan CI
+
+- **Pemicu:** `db-contract` satu-satunya job yang tersisa di runner GitHub-hosted. Sejak kuota terblokir ia tidak pernah jalan — dan gagalnya berbentuk `steps=0`, bukan merah, sehingga terbaca seperti skip yang wajar. Akibatnya perubahan DB masuk tanpa verifikasi kontrak sama sekali.
+- **Keberatan lama tetap valid:** `supabase start` mem-boot sembilan container dan mengikat 54321/54322 di host yang sama dengan stack dev. Yang diganti stack-nya, bukan runner-nya: satu container `supabase/postgres` tanpa port ter-publish (psql lewat `docker exec`), sehingga bentrok port mustahil secara struktural.
+- **Tiga tambalan wajib** (`scripts/ci/db-bootstrap.sql`), semuanya gagal senyap bila hilang: tabel `storage` (normalnya dibuat storage-api) → replay mati di `0005`; `auth.users` bentuk GoTrue (image hanya punya skeleton 2017) → fixtures mati di INSERT user pertama; `auth.uid()` yang membaca `request.jwt.claims` + default privileges diperketat — yang pertama membuat ~20 kontrak gagal "tidak berwenang", yang kedua membuat kontrak ACL `0078` **lolos palsu**.
+- **Baseline:** 29 passed / 0 failed, identik dengan run `supabase start` hijau terakhir; 1 m 52 s vs 2 m 54 s versi hosted (satu container, bukan sembilan).
+- **Prasyarat lingkungan yang ditemukan lewat kegagalan nyata:** WSL integration Docker Desktop harus aktif untuk distro `Ubuntu` (tanpa itu `docker` cuma binary Windows lewat interop — `command -v` tetap lolos, karena itu preflight menguji `docker info`), dan user `runner` harus anggota grup `docker` disertai restart service.
+- Pages updated: [[self-hosted-runner]] (bagian `db-contract` dikoreksi, prasyarat Docker, panduan pemantauan 4 lapisan + tabel gejala), [[index]].
+- **Risiko yang dicatat, bukan ditutup:** gate DB kini bergantung pada Docker Desktop yang sedang berjalan di mesin developer; bila mati, `db-contract` gagal di preflight tanpa sinyal apa pun ke GitHub. Grup `docker` juga setara root — menguatkan larangan menjadikan repo publik.
+- **Autostart Docker (susulan):** `AutoStart` internal Docker Desktop bernilai `False`, jadi dipasang `rencanapp-docker-autostart.vbs` di Startup folder. Yang ditunggu skrip itu adalah `docker info` dijawab dari dalam distro sebagai user `runner`, BUKAN keberadaan proses aplikasi — teramati proses `Docker Desktop.exe` berjalan sementara engine WSL-nya mati, dan job CI melihat engine. Belum teruji melewati login sungguhan.
+
+## [2026-07-21] update | Jalur CI self-hosted dicabut — kembali ke `ubuntu-latest`
+
+- **Keputusan owner:** cabut seluruh jalur self-hosted. Alasannya kecepatan dan biaya perawatan, **bukan** kegagalan teknis — jalurnya sendiri terbukti bekerja (30 kontrak DB hijau di runner sendiri, 1 m 52 s).
+- **Biaya yang jadi penentu:** `quality` 9,3 mnt vs 6,9 mnt hosted (~35% lebih lambat), dan dalam satu hari pemakaian jalur ini menuntut perhatian berkali-kali — WSL integration, grup `docker`, socket AF_UNIX yatim pasca-reboot, port disita Hyper-V, NAT WSL roboh setelah `net stop winnat`. Waktu merawat runner melampaui menit CI yang dihemat.
+- **Yang dikembalikan:** semua job (`changes`, `no-old-names`, `quality`, `db-contract`, `deploy`) → `ubuntu-latest`; `db-contract` kembali memakai `supabase start`; `cache: npm` dipulihkan.
+- **Yang DIPERTAHANKAN dengan sengaja:** job gating `changes`. Ia bukan bagian dari self-hosted dan justru makin bernilai di runner berbayar — memutuskan job mahal mana yang perlu jalan.
+- **Yang dihapus:** `scripts/ci/start-db-container.sh`, `scripts/ci/db-bootstrap.sql`, registrasi runner, service systemd, keepalive + autostart VBS, keanggotaan grup `docker`.
+- **Konsekuensi yang harus disadari:** kuota Actions masih terblokir, jadi job hosted **tidak jalan sama sekali** (`steps=0`, bukan merah). CI efektif mati sampai ada solusi lain. PR revert ini sendiri pun tidak bisa diverifikasi CI.
+- Pages updated: [[self-hosted-runner]] (ditandai DICABUT + alasan; isi teknis dipertahankan sebagai catatan sejarah agar jebakannya tidak ditemukan ulang), [[index]].
+
+## [2026-07-21] update | BL-05 selesai — dua field faktor §26 masuk form Evaluasi
+
+- **Pemicu:** [[feature-gap-backlog]] BL-05 — PRD §26 mendefinisikan 6 field evaluasi, form `evaluation.tsx` hanya mengumpulkan 4. `success_factors` dan `failure_factors` tidak pernah dikirim. `lessons_learned` yang sudah ada adalah field berbeda, bukan substitusi keduanya.
+- **Jalur backend sudah lengkap sejak awal:** kolom `evaluations.success_factors`/`.failure_factors` bertipe `text[]` (`0046:1882-1893`), RPC `record_evaluation` sudah menerima `p_success_factors`/`p_failure_factors` (`0046:1857`), `lib/governance-admin.ts:110-124` sudah mem-forward. Yang putus hanya satu lapis: form tidak mengisinya. **Nol migrasi.**
+- **Keputusan desain (list vs blok teks):** kolomnya `text[]`, jadi UI mengumpulkan list sungguhan — satu textarea per field dengan konvensi **satu faktor per baris**, tiap baris non-kosong jadi satu elemen array. Bukan satu blok teks yang dibungkus jadi array satu elemen: konsumen hilir (laporan/agregasi) harus bisa menghitung faktor, dan itu mustahil bila seluruh isian menumpuk di satu elemen.
+- **Chip/tag editor dinamis ditolak sengaja.** Ia menambah N tombol hapus yang masing-masing wajib ≥44px + label screen reader (DESIGN §4.1, §4.4) untuk keuntungan yang tidak nyata pada teks pendek, sementara `LabeledInput multiline` sudah menjadi idiom form di layar yang sama (Hasil, Lesson learned, Catatan rollout) dan tidak mengunci tinggi kontainer teks (DESIGN §4.5).
+- **Urutan field mengikuti PRD §26:** Target → Hasil → Faktor berhasil → Faktor gagal → tindak lanjut (SOP/rollout). Pre-fill UPSERT round-trip lewat `join('\n')` / `split('\n')`.
+- **Jebakan tes yang muncul:** `fireEvent.changeText` lalu langsung `fireEvent.press` menghasilkan `record()` dengan array kosong — press mendahului flush state, sama bentuknya dengan race di [[ci-flake-test-ci]]. Perbaikannya menunggu `input.props.value` lebih dulu, pola yang sudah dipakai `[F8-UI-18]`. Tanpa itu tes gagal sekaligus menyeret tes tetangga (`F8-UI-19`, dua tes `search`) ikut merah — kegagalan berantai, bukan regresi nyata di layar-layar itu.
+- Files updated: `mobile/src/app/(app)/evaluation.tsx`, `mobile/src/app/(app)/__tests__/fase8-lifecycle-screens.test.tsx` (`[F8-UI-18b]` kirim, `[F8-UI-18c]` pre-fill round-trip).
+- Pages updated: [[feature-gap-backlog]] (BL-05 → DONE, PR #138).
+- **Verifikasi:** `npm test` 130 suite / 1591 tes hijau; `npm run type-check` bersih. PR #138 → `staging`.
 ## [2026-07-20] update | B-1 score-period-end-nudge — pengingat periode skoring
 
 Menutup backlog **B-1** dari [[score-ranking-finalization-bridge]] §11.2 (dulu NG-8). Melengkapi trio: [[score-open-period-ui]] (jalan masuk) → finalisasi (jalan keluar) → **nudge** (yang mengingatkan agar jalan keluar benar-benar ditempuh).
@@ -1918,7 +2001,7 @@ Alasan #1: `inlineAction()` di `notifications.tsx` men-hardcode href `/task/...`
 
 Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenario yang melahirkan bug asli. Berhenti mengingatkan di `period_end` meninggalkan lubang tepat di titik paling berbahaya.
 
-**Implementasi** — migrasi `0080_period_closing_reminder.sql`, meniru preseden `emit_deadline_notifications` (`0008:973`):
+**Implementasi** — migrasi `0081_period_closing_reminder.sql`, meniru preseden `emit_deadline_notifications` (`0008:973`):
 - Constraint `notifications_type_check` diperluas (superset 0038 + 1 tipe).
 - `emit_period_closing_reminders()` SECURITY DEFINER: loop periode `active`, hitung `period_end - org_today(org)`, kirim bila selisih ∈ {7,3,1} atau < 0. Penerima = pemegang `manage_score_formula` (CEO by role ATAU delegasi `user_permissions`), mengikuti semantik `has_permission` (`0016:41-53`).
 - **Anti-duplikat**: `dedupe_date = org_today(org)` + partial unique `uq_notifications_dedupe` (`0008:145`) → satu notif per penerima per periode per hari, berapa kali pun cron jalan. Tanggal selalu dihitung server (CF-3).
@@ -1927,6 +2010,6 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 
 **Sengaja tidak**: menyentuh periode `draft`; auto-finalisasi (ireversibel per [[score-period-immutability]], tidak boleh dipicu timer); eskalasi ke atasan; kanal email/WA.
 
-**Verifikasi**: kontrak `0080_period_closing_reminder_contract.sql` **7/7 PASS** — termasuk T-N-2 (memicu di H-7/H-3/H-1, **diam** di H-5/H-2), T-N-4 (3× panggil → tetap 1 baris), T-N-5 (draft & closed tidak di-nudge), T-N-6 (staff tanpa izin tidak menerima), T-N-7 (ACL emitter + regresi whitelist push). `tsc` bersih, lint 0 error.
+**Verifikasi**: kontrak `0081_period_closing_reminder_contract.sql` **7/7 PASS** — termasuk T-N-2 (memicu di H-7/H-3/H-1, **diam** di H-5/H-2), T-N-4 (3× panggil → tetap 1 baris), T-N-5 (draft & closed tidak di-nudge), T-N-6 (staff tanpa izin tidak menerima), T-N-7 (ACL emitter + regresi whitelist push). `tsc` bersih, lint 0 error.
 
 **Gotcha menambah tipe notifikasi** (9 titik, semuanya wajib): constraint DB → `NOTIFICATION_TYPES` → `NOTIFICATION_TYPE_LABEL` → `NOTIFICATION_TYPE_TONE` → `notificationTypesForTab` (jangan biarkan orphan) → `TYPE_ICON` → `inlineAction` → `is_push_worthy` + `PUSH_WORTHY_TYPES` → test. Tiga `Record<NotificationType, …>` membuat `tsc` menangkap yang terlewat, tetapi tab-mapping dan `inlineAction` **tidak** — keduanya gagal diam-diam.

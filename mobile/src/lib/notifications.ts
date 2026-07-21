@@ -18,7 +18,7 @@ export const NOTIFICATION_TYPES = [
   'deadline_change_approved',
   'deadline_change_rejected',
   'deadline_change_revision_requested',
-  // B-1 score-period-end-nudge (migrasi 0080) — pengingat periode skoring akan/sudah berakhir.
+  // B-1 score-period-end-nudge (migrasi 0081) — pengingat periode skoring akan/sudah berakhir.
   'period_closing_reminder',
 ] as const;
 

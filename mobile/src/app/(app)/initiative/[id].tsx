@@ -68,12 +68,17 @@ export function LiveInitiativeDetailScreen() {
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: initiative?.name ?? 'Inisiatif' }} />
       <View className="gap-5 p-5">
-        {initiativeQ.isLoading || !initiative ? (
-          initiativeQ.isError ? (
-            <ErrorState onRetry={() => initiativeQ.refetch()} />
-          ) : (
-            <SkeletonList count={3} />
-          )
+        {initiativeQ.isLoading ? (
+          <SkeletonList count={3} />
+        ) : initiativeQ.isError ? (
+          <ErrorState onRetry={() => initiativeQ.refetch()} />
+        ) : !initiative ? (
+          // null (bukan error): getInitiative maybeSingle → id di luar akses/tidak ada. Sebelumnya
+          // cabang ini jatuh ke SkeletonList dan terkunci di sana selamanya.
+          <EmptyState
+            title="Card tidak ditemukan"
+            description="Card ini tidak ada atau Anda tidak memiliki akses untuk melihatnya."
+          />
         ) : (
           <>
             <View className="gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">

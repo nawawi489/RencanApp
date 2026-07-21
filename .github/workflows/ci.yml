@@ -1,10 +1,20 @@
 name: CI
 
+# ⚠️ WORKFLOW DIJEDA — sejak 2026-07-21 CI dipindahkan ke CircleCI
+# (`.circleci/config.yml`) karena kuota GitHub Actions personal habis dan
+# opsi berbayar tidak fit untuk budget. Trigger di-set ke `workflow_dispatch`
+# saja supaya:
+#   - Tidak burn kuota di setiap PR/push
+#   - Bisa run manual dari UI Actions kalau perlu (Actions → CI → Run workflow)
+#   - Anda tetap bisa cepat aktifkan lagi cukup uncomment blok `pull_request`
+#     di bawah + hapus `workflow_dispatch`.
+#
+# Baris asli (untuk restore cepat):
+# on:
+#   pull_request:
+#     branches: [main, staging]
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main, staging]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,7 +45,7 @@ jobs:
   # perlu dijaga olehnya. Biayanya 0,3 menit; tidak sepadan untuk dioptimasi.
   changes:
     name: Detect changed areas
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: .
@@ -81,7 +91,7 @@ jobs:
 
   no-old-names:
     name: Rename guard (V1.8.3)
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     defaults:
       run:
         # Run at repo root, not mobile/, since the guard scans multiple trees.
@@ -91,10 +101,6 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install ripgrep
-        # Di runner self-hosted `rg` sudah terpasang di image distro, dan user `runner`
-        # SENGAJA tidak diberi sudo tanpa password — memberi root tanpa password berarti
-        # workflow apa pun bisa jadi root di mesin developer. Jadi: pakai yang sudah ada,
-        # apt-get hanya sebagai fallback (mis. bila job ini kembali ke runner GitHub).
         run: command -v rg >/dev/null || sudo apt-get install -y ripgrep
 
       - name: Grep-guard legacy identifiers
@@ -107,7 +113,7 @@ jobs:
     name: Lint, types & tests
     needs: changes
     if: needs.changes.outputs.mobile == 'true'
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -116,21 +122,13 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          # `cache: npm` SENGAJA tidak dipakai di runner self-hosted. Cache Actions
-          # menambah satu langkah simpan di akhir job yang mengunggah ~/.npm (177 MB)
-          # ke layanan cache GitHub — teramati menggantung sampai job harus dibatalkan,
-          # sementara load average runner hanya 0,33 (bukan CPU-bound, melainkan
-          # menunggu layanan yang ikut terdampak blokir billing).
-          #
-          # Di mesin yang sama sepanjang waktu, ~/.npm memang sudah persisten antar-run,
-          # jadi perjalanan pulang-pergi ke cache GitHub murni overhead. Bila job ini
-          # suatu saat kembali ke runner GitHub, kembalikan `cache: npm` +
-          # `cache-dependency-path: mobile/package-lock.json`.
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
 
       # Catatan anggaran: meng-cache node_modules pernah dipertimbangkan dan DITOLAK.
-      # Diukur di runner: `Install dependencies` hanya 18 detik, sementara restore cache
+      # Diukur: `Install dependencies` hanya ~18 detik, sementara restore cache
       # node_modules Expo (ratusan MB) berpotensi lebih lama dari itu. Biaya job ini
-      # ada di step Test (361 detik), bukan di install.
+      # ada di step Test, bukan di install.
       - name: Install dependencies
         # npm install (bukan npm ci): proyek Expo/RN punya optional dep wasm (@emnapi/*,
         # lightningcss) yang resolusinya berbeda antar-OS, sehingga lock yang digenerate di
@@ -150,19 +148,6 @@ jobs:
     name: DB contract tests (Postgres)
     needs: changes
     if: needs.changes.outputs.db == 'true'
-    # SENGAJA tetap di runner GitHub, TIDAK dipindah ke self-hosted.
-    #
-    # Job ini menjalankan `supabase start` lalu `supabase stop --no-backup`. Runner
-    # self-hosted berbagi daemon Docker dengan mesin developer, yang biasanya sedang
-    # menjalankan stack Supabase lokal di port yang sama (54321/54322). Memindahkannya
-    # ke sini berarti: bentrok port saat start, dan `supabase stop` berpotensi
-    # merobohkan stack dev developer sendiri — berisiko terhadap data lokalnya.
-    #
-    # Konsekuensi yang harus disadari: selama menit GitHub-hosted terblokir, job ini
-    # TIDAK jalan. Ia hanya tergating ke perubahan supabase/** (lihat job `changes`),
-    # jadi PR yang tidak menyentuh DB tidak terpengaruh. Perubahan DB tetap butuh
-    # verifikasi manual sampai kuota pulih atau job ini diisolasi (port/project id
-    # terpisah).
     runs-on: ubuntu-latest
     defaults:
       run:

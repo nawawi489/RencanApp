@@ -32,12 +32,14 @@ export async function listDevelopmentAreas(): Promise<DevelopmentAreaWithProblem
   return data as unknown as DevelopmentAreaWithProblemCount[];
 }
 
-export async function getDevelopmentArea(id: string): Promise<DevelopmentArea> {
+export async function getDevelopmentArea(id: string): Promise<DevelopmentArea | null> {
+  // maybeSingle, BUKAN single: id di luar akses/tidak ada → RLS menyaring jadi 0 baris.
+  // single() membalas 406 dan React Query terus retry → skeleton tak pernah selesai.
   const { data, error } = await supabase
     .from('development_areas')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 }

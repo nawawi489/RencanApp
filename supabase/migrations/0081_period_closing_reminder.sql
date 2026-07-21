@@ -60,7 +60,7 @@ begin
 
   -- Fail-closed: whitelist Fase 1 terkode (revision_requested BUKAN NotificationType — copy
   -- semantik "perlu revisi" di-cover oleh tipe 'rejected' + kolom resolution='revision_requested').
-  -- 0080: + period_closing_reminder (B-1) — admin jarang membuka app tanpa alasan, sedangkan
+  -- 0081: + period_closing_reminder (B-1) — admin jarang membuka app tanpa alasan, sedangkan
   -- pemicu membuka app justru sering kali notifikasinya sendiri.
   return p_type = any (array[
     'review_request',
