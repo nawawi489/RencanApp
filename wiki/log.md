@@ -1982,3 +1982,10 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - Files updated: `mobile/src/app/(app)/evaluation.tsx`, `mobile/src/app/(app)/__tests__/fase8-lifecycle-screens.test.tsx` (`[F8-UI-18b]` kirim, `[F8-UI-18c]` pre-fill round-trip).
 - Pages updated: [[feature-gap-backlog]] (BL-05 → DONE, PR #138).
 - **Verifikasi:** `npm test` 130 suite / 1591 tes hijau; `npm run type-check` bersih. PR #138 → `staging`.
+
+## [2026-07-22] update | Rekonsiliasi slot migrasi 0080–0082 (PR #118 / #120 / #141)
+
+- **Masalah:** tiga PR terbuka sama-sama menomori migrasinya `0080`. Slot dibagi ulang menurut umur PR: **#118 → `0080`** (revoke anon/PUBLIC 4 RPC submit/review), **#120 → `0081`** (pengingat periode skoring, B-1), **#141 → `0082`** (penamaan baris aturan MBR + aktivasi PS, BL-04). Urutan merge mengikuti nomor.
+- **Jebakan saat menggeser #141:** migrasinya memakai prefiks sentinel dua fase `mig0080__`, dan Fase B membuangnya lewat `substring(... from 10)` — offset hardcoded. `mig0082__` sama-sama 9 karakter sehingga offset tetap sahih; prefiks dengan panjang berbeda akan merusak seluruh nama baris aturan tanpa error. ID assertion kontrak ikut digeser ke `0082-DB-1..5`.
+- **Rujukan "butuh migrasi 0080+"** untuk utang Activity Log (RPC `post_review_note`, lihat [[ui-prototype-gap]] §2.2) sudah usang begitu slot 0080–0082 terpakai — diperbarui jadi **`0083+`** di [[feature-gap-backlog]] dan [[ui-prototype-gap]]. Entri log lama sengaja **tidak** diubah: log ini append-only, dan klaim itu benar pada saat ditulis.
+- **Catatan CI:** ketiga PR ini tidak mendapat sinyal otomatis — GitHub Actions berhenti jalan sejak 2026-07-21 (kuota) dan `.circleci/config.yml` memfilter semua job ke `only: [main, staging]`, sehingga branch fitur tidak terjamah. `mergeStateStatus=CLEAN` berarti "tidak ada required check", bukan "check hijau". Verifikasi ketiganya dilakukan lokal (migrasi + contract test di Postgres nyata, `jest`, `tsc`, `lint`).
