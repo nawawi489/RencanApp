@@ -27,7 +27,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-01** | People | **Ranking tie tidak konsisten**. `people-profile/[id].tsx:222` render `rank_number` dari DB; `people.tsx:94-104` membuang `rank_number` (padahal `listRanking` sudah `select('*')`) lalu me-derive `rank += 1` per orang. DB memakai *competition ranking* (skor sama → rank sama, berikutnya melompat — migrasi 0013 D11), list memakai 1,2,3 berurutan → tie tampil beda | XS | ✅ |
 | **BL-02** | Strategy period | **AC-11 FAIL**. `strategy/new.tsx:254-259` render `DateRangeField` editable; `parentQ.data` hanya dipakai untuk `goal_template_id` + `pic_id`, `period_start/end` Goal tidak pernah dibaca. PRD §12.1 (baris 540-544): *"Strategy tidak punya masa berlaku sendiri karena mengikuti Goal tahunan"* | S | ✅ |
 | **BL-03** | Past-period dim | ~~AC-9 parsial~~ **BUKAN GAP KODE — keputusan owner 2026-07-03**. `PastDim` sempat ada (fix single-layer 2026-07-02) lalu **dicabut owner** sehari kemudian; kini nol layer dim, dikunci tes `[W08·1]`/`[W08·2]` (`countOpacityHalf === 0`). **Tapi PRD masih mewajibkan dim** — §44 AC-9 "tampil redup", diulang normatif di §7.7 & §11.3 (§37 permisif, tak konflik). Konflik spec-vs-kode ini yang melahirkan ulang temuan, bukan bug | — | ❌ kode · ⚠️ spec |
-| **BL-04** | MBR add-button | **Terkoreksi**: bukan "hanya strategy→initiative yang di-guard". Dari 6 tombol tambah di `workspace-screen.tsx`, **hanya 1** yang ter-guard — `initiative→action_plan` (baris 521-531) — dan itu memakai data kepatuhan `strategy→initiative` (cascade `blokir_akses_turunan`, WSA-04). Tombol `+ Inisiatif` milik strategy sendiri **tidak** ter-guard. `goal/[id].tsx` nol pemakaian MBR | S | ⚠️ |
+| **BL-04** | MBR add-button | **Terkoreksi + diputuskan owner 2026-07-20: cascade satu tingkat, BUKAN per-level.** Semantik `blokir_akses_turunan` sudah benar arahnya — kepatuhan rule `X→Y` menahan tombol tambah di level `Y→Z`, bukan tombol `X→Y` itu sendiri. Masalahnya cakupan: dari **6 rule** di `minimum_breakdown_rules`, cascade-nya hanya terpasang untuk `strategy→initiative` (`workspace-screen.tsx:521-531`). Untuk 5 rule lain, memilih mode `blokir_akses_turunan` di Settings **tidak melakukan apa pun** — lihat catatan di bawah tabel | S | ⚠️ |
 | **BL-05** | Evaluation | **2 dari 6 field §26 hilang di UI**: `success_factors`, `failure_factors`. Kolom DB ada (0046:1882-1893), RPC `record_evaluation` menerimanya, lib `governance-admin.ts:110-124` sudah mem-forward — hanya form `evaluation.tsx` yang tidak mengirim. **Nol migrasi** | S | ✅ |
 | **BL-06** | Task Repeat | Field **"Zona waktu" §23** (item 5 dari 10) hilang. `task_repeat_rules` tidak punya kolom timezone; satu-satunya ada di `organizations.timezone`, dibaca `coalesce(o.timezone,'Asia/Jakarta')` di seluruh perhitungan deadline. **Butuh migrasi** + ubah logika deadline | S→M | ✅ |
 | **BL-07** | Notifications | **Terkoreksi**: §28 mendefinisikan **9** tipe, 5 sudah jalan. Yang absen: **Bukti dikirim** (dikonflasi jadi `review_request`), **Deadline lewat one-time** (`instance_missed` hanya untuk repeat; task one-time tak pernah masuk state missed), **Permission berubah** (nihil), **MBR warning** (nihil). 3 dari 4 belum ada di CHECK constraint 13-tipe (0038). Gap 100% server-side — `lib/notifications.ts` sudah mirror tepat | M | ⚠️ |
@@ -55,7 +55,7 @@ BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline y
 > Rekomendasi awal "longgarkan CHECK `p_decision` di 2 RPC" **jangan dieksekusi** — ia mengasumsikan Catatan sebagai keputusan review ketiga, sedangkan owner memutuskan non-terminal. Melonggarkan CHECK `decision` sekarang akan menambah nilai yang tidak dipakai siapa pun sekaligus melemahkan invariant state machine review. Yang tersisa dari BL-08 hanyalah entri Activity Log (RPC SECURITY DEFINER baru, **bukan** perubahan CHECK) — rinci di branch `claude/pensive-goodall-42169f`, `ui-prototype-gap.md` §2.2.
 
 **Butuh scoping/spec dulu:**
-BL-04 (putuskan dulu: MBR menjaga *tombol tambah* di setiap level, atau hanya cascade satu level ke bawah seperti sekarang — ini keputusan produk, bukan bug), BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped).
+~~BL-04 (putuskan dulu: per-level atau cascade)~~ — **diputuskan 2026-07-20, lihat §4**; BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped).
 
 **Ditutup tanpa dikerjakan:** BL-03 — keputusan desain, bukan gap.
 
@@ -78,6 +78,30 @@ BL-04 (putuskan dulu: MBR menjaga *tombol tambah* di setiap level, atau hanya ca
 Diverifikasi **2026-07-20** terhadap `mobile/src/`, `supabase/migrations/`, dan `PRD.md` (4 agen paralel; bukti file:line ada di tabel §1). Hasil: **7 CONFIRMED apa adanya · 4 terkoreksi · 1 gugur**.
 
 Efek samping verifikasi: baris **UI-S-W08** di [[ui-prototype-gap]] berbunyi "PastDim single-layer IMPLEMENTED" padahal kode kini nol layer dim. Klaim itu **benar untuk satu hari** — `PastDim` shipped 2026-07-02, dicabut owner 2026-07-03 (`log.md` [2026-07-03]) — lalu tidak pernah dimutakhirkan. Koreksinya ditangani terpisah bersama amandemen PRD §44 AC-9.
+
+---
+
+## 4. BL-04 — Keputusan owner: cascade satu tingkat
+
+**Keputusan (2026-07-20).** MBR menahan tombol tambah **satu tingkat di bawah** rule yang dilanggar, bukan tombol tambah di setiap level. Kepatuhan rule `X→Y` menahan pembuatan `Z` di bawah `Y`; ia tidak menahan pembuatan `Y` itu sendiri. Ini persis semantik mode `blokir_akses_turunan` ("Blokir Akses Turunan"), jadi arah implementasi yang ada sudah benar — yang salah hanya cakupannya.
+
+**Sisa pekerjaan bukan "tambah guard di 5 tombol".** `minimum_breakdown_rules` (seed migrasi 0011) berisi 6 rule:
+
+| Rule | Mode default |
+|---|---|
+| `goal → kpi_area` | `blokir_aktivasi` |
+| `kpi_area → strategy` | `hanya_peringatan` |
+| `strategy → initiative` | `hanya_peringatan` |
+| `initiative → action_plan` | `hanya_peringatan` |
+| `development_area → problem_statement` | `hanya_peringatan` |
+| `problem_statement → initiative` | `hanya_peringatan` |
+
+Tidak satu pun default-nya `blokir_akses_turunan` — mode itu **opt-in per organisasi** lewat Settings. Dan cascade-nya baru terpasang untuk satu rule (`strategy→initiative`).
+
+> [!warning] Konsekuensi sebenarnya: opsi Settings yang diam-diam tidak berfungsi
+> Admin yang menyetel salah satu dari **5 rule lain** ke "Blokir Akses Turunan" tidak mendapat apa pun. Tidak ada error, tidak ada tombol yang tertahan — pilihan itu tersimpan dan tidak berefek. Ini lebih buruk daripada guard yang hilang: guard hilang cuma berarti aturan tidak ditegakkan, sedangkan ini **menjanjikan penegakan yang tidak pernah terjadi**, dan admin tidak punya cara tahu selain mengujinya sendiri.
+
+Karena itu ruang lingkup penutupan BL-04 = terapkan pola cascade yang sama untuk 5 rule sisanya, sehingga setiap rule benar-benar menghormati mode-nya. Catatan implementasi: nama di DB memakai alias legacy — `kpi_area` = level **Strategi** (rename V1.8.3), jadi pemetaan rule→UI tidak bisa lewat pencocokan nama mentah.
 
 ---
 
