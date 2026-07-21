@@ -1971,6 +1971,18 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - **Konsekuensi yang harus disadari:** kuota Actions masih terblokir, jadi job hosted **tidak jalan sama sekali** (`steps=0`, bukan merah). CI efektif mati sampai ada solusi lain. PR revert ini sendiri pun tidak bisa diverifikasi CI.
 - Pages updated: [[self-hosted-runner]] (ditandai DICABUT + alasan; isi teknis dipertahankan sebagai catatan sejarah agar jebakannya tidak ditemukan ulang), [[index]].
 
+## [2026-07-21] update | BL-05 selesai — dua field faktor §26 masuk form Evaluasi
+
+- **Pemicu:** [[feature-gap-backlog]] BL-05 — PRD §26 mendefinisikan 6 field evaluasi, form `evaluation.tsx` hanya mengumpulkan 4. `success_factors` dan `failure_factors` tidak pernah dikirim. `lessons_learned` yang sudah ada adalah field berbeda, bukan substitusi keduanya.
+- **Jalur backend sudah lengkap sejak awal:** kolom `evaluations.success_factors`/`.failure_factors` bertipe `text[]` (`0046:1882-1893`), RPC `record_evaluation` sudah menerima `p_success_factors`/`p_failure_factors` (`0046:1857`), `lib/governance-admin.ts:110-124` sudah mem-forward. Yang putus hanya satu lapis: form tidak mengisinya. **Nol migrasi.**
+- **Keputusan desain (list vs blok teks):** kolomnya `text[]`, jadi UI mengumpulkan list sungguhan — satu textarea per field dengan konvensi **satu faktor per baris**, tiap baris non-kosong jadi satu elemen array. Bukan satu blok teks yang dibungkus jadi array satu elemen: konsumen hilir (laporan/agregasi) harus bisa menghitung faktor, dan itu mustahil bila seluruh isian menumpuk di satu elemen.
+- **Chip/tag editor dinamis ditolak sengaja.** Ia menambah N tombol hapus yang masing-masing wajib ≥44px + label screen reader (DESIGN §4.1, §4.4) untuk keuntungan yang tidak nyata pada teks pendek, sementara `LabeledInput multiline` sudah menjadi idiom form di layar yang sama (Hasil, Lesson learned, Catatan rollout) dan tidak mengunci tinggi kontainer teks (DESIGN §4.5).
+- **Urutan field mengikuti PRD §26:** Target → Hasil → Faktor berhasil → Faktor gagal → tindak lanjut (SOP/rollout). Pre-fill UPSERT round-trip lewat `join('\n')` / `split('\n')`.
+- **Jebakan tes yang muncul:** `fireEvent.changeText` lalu langsung `fireEvent.press` menghasilkan `record()` dengan array kosong — press mendahului flush state, sama bentuknya dengan race di [[ci-flake-test-ci]]. Perbaikannya menunggu `input.props.value` lebih dulu, pola yang sudah dipakai `[F8-UI-18]`. Tanpa itu tes gagal sekaligus menyeret tes tetangga (`F8-UI-19`, dua tes `search`) ikut merah — kegagalan berantai, bukan regresi nyata di layar-layar itu.
+- Files updated: `mobile/src/app/(app)/evaluation.tsx`, `mobile/src/app/(app)/__tests__/fase8-lifecycle-screens.test.tsx` (`[F8-UI-18b]` kirim, `[F8-UI-18c]` pre-fill round-trip).
+- Pages updated: [[feature-gap-backlog]] (BL-05 → DONE, PR #138).
+- **Verifikasi:** `npm test` 130 suite / 1591 tes hijau; `npm run type-check` bersih. PR #138 → `staging`.
+
 ## [2026-07-21] update | BL-04 — cascade MBR menyeluruh + rekonsiliasi penamaan baris aturan
 
 - **Temuan yang mengubah bentuk tiket.** BL-04 masuk sebagai "cakupan guard UI kurang" (1 dari 6 tombol ter-guard). Verifikasi terhadap DB staging menunjukkan akarnya di lapisan data: rename `0045` menggeser nama tabel kartu, `0046`/`0065` menulis ulang RPC ke penamaan baru, tapi isi `minimum_breakdown_rules` tidak pernah ikut dipindah. Hasilnya **3 dari 6 cabang** `check_minimum_breakdown_compliance` tidak menemukan baris aturannya (`goal→strategy`, `action_plan→task`, `problem_statement→action_plan`) dan fail-open permanen — memasang guard UI saja akan menghasilkan no-op senyap yang sama persis dengan yang dilaporkan.
