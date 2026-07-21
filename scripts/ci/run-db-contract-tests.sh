@@ -13,13 +13,9 @@
 # under `ON_ERROR_STOP=1`); success is silent / a NOTICE. No pgTAP needed.
 #
 # USAGE
-#   CI (and a faithful local repro — throwaway container, no port published):
-#                       NAME=$(scripts/ci/start-db-container.sh)
-#                       RENCAN_DB_CONTAINER="$NAME" scripts/ci/run-db-contract-tests.sh
-#                       docker rm -f "$NAME"
-#   Docker (local dev): RENCAN_DB_CONTAINER=supabase_db_supabase \
+#   Host psql (CI):     DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
 #                       scripts/ci/run-db-contract-tests.sh
-#   Host psql:          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+#   Docker (local dev): RENCAN_DB_CONTAINER=supabase_db_supabase \
 #                       scripts/ci/run-db-contract-tests.sh
 #
 # EXCLUDED from the loop:

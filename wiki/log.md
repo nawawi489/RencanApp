@@ -1960,3 +1960,13 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - Pages updated: [[self-hosted-runner]] (bagian `db-contract` dikoreksi, prasyarat Docker, panduan pemantauan 4 lapisan + tabel gejala), [[index]].
 - **Risiko yang dicatat, bukan ditutup:** gate DB kini bergantung pada Docker Desktop yang sedang berjalan di mesin developer; bila mati, `db-contract` gagal di preflight tanpa sinyal apa pun ke GitHub. Grup `docker` juga setara root — menguatkan larangan menjadikan repo publik.
 - **Autostart Docker (susulan):** `AutoStart` internal Docker Desktop bernilai `False`, jadi dipasang `rencanapp-docker-autostart.vbs` di Startup folder. Yang ditunggu skrip itu adalah `docker info` dijawab dari dalam distro sebagai user `runner`, BUKAN keberadaan proses aplikasi — teramati proses `Docker Desktop.exe` berjalan sementara engine WSL-nya mati, dan job CI melihat engine. Belum teruji melewati login sungguhan.
+
+## [2026-07-21] update | Jalur CI self-hosted dicabut — kembali ke `ubuntu-latest`
+
+- **Keputusan owner:** cabut seluruh jalur self-hosted. Alasannya kecepatan dan biaya perawatan, **bukan** kegagalan teknis — jalurnya sendiri terbukti bekerja (30 kontrak DB hijau di runner sendiri, 1 m 52 s).
+- **Biaya yang jadi penentu:** `quality` 9,3 mnt vs 6,9 mnt hosted (~35% lebih lambat), dan dalam satu hari pemakaian jalur ini menuntut perhatian berkali-kali — WSL integration, grup `docker`, socket AF_UNIX yatim pasca-reboot, port disita Hyper-V, NAT WSL roboh setelah `net stop winnat`. Waktu merawat runner melampaui menit CI yang dihemat.
+- **Yang dikembalikan:** semua job (`changes`, `no-old-names`, `quality`, `db-contract`, `deploy`) → `ubuntu-latest`; `db-contract` kembali memakai `supabase start`; `cache: npm` dipulihkan.
+- **Yang DIPERTAHANKAN dengan sengaja:** job gating `changes`. Ia bukan bagian dari self-hosted dan justru makin bernilai di runner berbayar — memutuskan job mahal mana yang perlu jalan.
+- **Yang dihapus:** `scripts/ci/start-db-container.sh`, `scripts/ci/db-bootstrap.sql`, registrasi runner, service systemd, keepalive + autostart VBS, keanggotaan grup `docker`.
+- **Konsekuensi yang harus disadari:** kuota Actions masih terblokir, jadi job hosted **tidak jalan sama sekali** (`steps=0`, bukan merah). CI efektif mati sampai ada solusi lain. PR revert ini sendiri pun tidak bisa diverifikasi CI.
+- Pages updated: [[self-hosted-runner]] (ditandai DICABUT + alasan; isi teknis dipertahankan sebagai catatan sejarah agar jebakannya tidak ditemukan ulang), [[index]].
