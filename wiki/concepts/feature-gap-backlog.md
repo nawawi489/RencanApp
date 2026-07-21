@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [backlog, gap-analysis, prd-conformance, triage]
-updated: 2026-07-20
+updated: 2026-07-22
 sources: 0
 ---
 
@@ -25,7 +25,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | ID | Area | Gap (setelah verifikasi) | Ukuran | Status |
 |---|---|---|---|---|
 | **BL-01** | People | **Ranking tie tidak konsisten**. `people-profile/[id].tsx:222` render `rank_number` dari DB; `people.tsx:94-104` membuang `rank_number` (padahal `listRanking` sudah `select('*')`) lalu me-derive `rank += 1` per orang. DB memakai *competition ranking* (skor sama → rank sama, berikutnya melompat — migrasi 0013 D11), list memakai 1,2,3 berurutan → tie tampil beda | XS | ✅ |
-| **BL-02** | Strategy period | **AC-11 FAIL**. `strategy/new.tsx:254-259` render `DateRangeField` editable; `parentQ.data` hanya dipakai untuk `goal_template_id` + `pic_id`, `period_start/end` Goal tidak pernah dibaca. PRD §12.1 (baris 540-544): *"Strategy tidak punya masa berlaku sendiri karena mengikuti Goal tahunan"* | S | ✅ |
+| **BL-02** | Strategy period | ~~**AC-11 FAIL**. `strategy/new.tsx:254-259` render `DateRangeField` editable; `parentQ.data` hanya dipakai untuk `goal_template_id` + `pic_id`, `period_start/end` Goal tidak pernah dibaca~~ ✅ **SELESAI 2026-07-22 — merged #140, nol migrasi. PRD §44 AC-11 kini PASS.** `DateRangeField` dicabut; periode disalin dari Goal induk saat submit dan tampil **read-only** (token `Field`) sebagai konteks — periode yang ditetapkan diam-diam tak bisa ditelusuri saat aktivasi ditolak. Goal induk tanpa periode → simpan **diblokir** menunjuk Goal, bukan kirim NULL (`activate_strategy` 0078 mem-gate `period_start/end` NOT NULL → Draft ber-periode NULL tak pernah bisa aktif). Dikunci tes `[BL02-1..3]`. **Nol permukaan lain** yang mengedit periode Strategy (`DraftCompletion` di `[id].tsx` hanya target+PIC), jadi AC tertutup penuh | S | ✅ DONE |
 | **BL-03** | Past-period dim | ~~AC-9 parsial~~ **BUKAN GAP KODE — keputusan owner 2026-07-03**. `PastDim` sempat ada (fix single-layer 2026-07-02) lalu **dicabut owner** sehari kemudian; kini nol layer dim, dikunci tes `[W08·1]`/`[W08·2]` (`countOpacityHalf === 0`). **Tapi PRD masih mewajibkan dim** — §44 AC-9 "tampil redup", diulang normatif di §7.7 & §11.3 (§37 permisif, tak konflik). Konflik spec-vs-kode ini yang melahirkan ulang temuan, bukan bug | — | ❌ kode · ⚠️ spec |
 | **BL-04** | MBR add-button | **Terkoreksi**: bukan "hanya strategy→initiative yang di-guard". Dari 6 tombol tambah di `workspace-screen.tsx`, **hanya 1** yang ter-guard — `initiative→action_plan` (baris 521-531) — dan itu memakai data kepatuhan `strategy→initiative` (cascade `blokir_akses_turunan`, WSA-04). Tombol `+ Inisiatif` milik strategy sendiri **tidak** ter-guard. `goal/[id].tsx` nol pemakaian MBR | S | ⚠️ |
 | **BL-05** | Evaluation | **2 dari 6 field §26 hilang di UI**: `success_factors`, `failure_factors`. Kolom DB ada (0046:1882-1893), RPC `record_evaluation` menerimanya, lib `governance-admin.ts:110-124` sudah mem-forward — hanya form `evaluation.tsx` yang tidak mengirim. **Nol migrasi** | S | ✅ |
@@ -46,7 +46,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 ~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; BL-12 label map, BL-11 ikon header, BL-01 `rank_number`.
 
 **S — satu layar + test, nol migrasi:**
-BL-02, BL-05, BL-09(b).
+~~BL-02~~ ✅ **selesai 2026-07-22 (#140)**; BL-05, BL-09(b).
 
 **Butuh migrasi DB** (jadi bukan tiket sepele sekalipun UI-nya kecil):
 BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline yang kini membaca `organizations.timezone`).
@@ -69,7 +69,7 @@ BL-04 (putuskan dulu: MBR menjaga *tombol tambah* di setiap level, atau hanya ca
 > [!warning] BL-09 bukan satu bug
 > Klaim (a) "tidak tercari di Search" **gugur** — `includeArchived: true` sudah di-pass. Tersisa (b) row mati dan (c) invalidate key salah. (c) adalah **bug diam**: restore sukses, list tidak menyegar, user mengira gagal lalu mengulang. Item paling untung-per-baris di seluruh daftar.
 
-**Paling dekat ke ambang P-slot:** BL-09(c) (bug diam, perbaikan satu baris) dan BL-02 (satu-satunya pelanggaran AC harfiah terhadap PRD).
+**Paling dekat ke ambang P-slot:** BL-09(c) (bug diam, perbaikan satu baris) dan BL-02 (satu-satunya pelanggaran AC harfiah terhadap PRD) — **keduanya kini selesai**. Tidak ada lagi pelanggaran AC harfiah yang tercatat di daftar ini.
 
 ---
 
