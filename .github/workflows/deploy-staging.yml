@@ -22,7 +22,7 @@ jobs:
   # daripada melepasnya diam-diam.
   changes:
     name: Detect changed areas
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: .
@@ -63,17 +63,15 @@ jobs:
 
   quality:
     name: Lint, types & tests
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          # `cache: npm` sengaja tidak dipakai di runner self-hosted — step simpan
-          # cache mengunggah ~/.npm (177 MB) ke layanan cache GitHub dan teramati
-          # menggantung sampai run harus dibatalkan. Di mesin yang sama ~/.npm sudah
-          # persisten antar-run. Lihat wiki/entities/self-hosted-runner.md.
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
 
       - run: npm install --no-audit --no-fund
 
@@ -85,34 +83,36 @@ jobs:
     name: DB contract tests (Postgres)
     needs: changes
     if: needs.changes.outputs.db == 'true'
-    # Self-hosted TANPA `supabase start`: satu container Postgres tanpa port
-    # ter-publish, jadi tidak bisa bentrok dengan stack dev di mesin yang sama
-    # (54321/54322). Detail alasan + bagian yang harus ditambal ada di
-    # scripts/ci/db-bootstrap.sql. Sama persis dengan job db-contract di ci.yml.
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     defaults:
       run:
         # supabase/ and scripts/ live at the repo root, not in mobile/.
         working-directory: .
-    env:
-      RENCAN_CI_DB_NAME: rencan-deploy-db-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Start Postgres + replay schema
-        # Applies every migration in order on top of the platform bootstrap. No
-        # seed runs; the runner applies supabase/tests/_fixtures.sql. Staging must
-        # not deploy on a red DB contract (0049/0067-class RLS regressions, etc.).
-        run: bash scripts/ci/start-db-container.sh
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        with:
+          version: 2.109.1
+
+      - name: Start Supabase stack
+        # Applies every migration in order + creates the auth schema. No seed
+        # runs; the runner applies supabase/tests/_fixtures.sql. Staging must not
+        # deploy on a red DB contract (0049/0067-class RLS regressions, etc.).
+        run: supabase start
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Run DB contract suite
         env:
-          RENCAN_DB_CONTAINER: ${{ env.RENCAN_CI_DB_NAME }}
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: bash scripts/ci/run-db-contract-tests.sh
 
-      - name: Remove Postgres container
+      - name: Stop Supabase stack
         if: always()
-        run: docker rm -f "$RENCAN_CI_DB_NAME" || true
+        run: supabase stop --no-backup
 
   deploy:
     name: Export & deploy to EAS Hosting
@@ -138,7 +138,7 @@ jobs:
       && needs.quality.result == 'success'
       && needs.db-contract.result != 'failure'
       && needs.db-contract.result != 'cancelled'
-    runs-on: [self-hosted, wsl-ubuntu]
+    runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_APP_ENV: staging
       EXPO_PUBLIC_SUPABASE_URL: https://fhnqwytqprsptjshoxfn.supabase.co

@@ -1,13 +1,22 @@
 ---
 type: entity
-tags: [ci, infrastructure, github-actions, wsl, docker]
+tags: [ci, infrastructure, github-actions, wsl, docker, retired]
 updated: 2026-07-21
 sources: 0
 ---
 
-# Self-hosted Runner `rencanapp-wsl`
+# Self-hosted Runner `rencanapp-wsl` (DICABUT)
 
-Runner GitHub Actions milik sendiri untuk repo `nawawi489/RencanApp`, dipasang karena menit GitHub-hosted terblokir (repo privat + paket Free = 2.000 menit/bulan, terpakai habis). Menit self-hosted **tidak dihitung** terhadap kuota itu — sudah dibuktikan: job self-hosted jalan normal saat semua job hosted menolak start.
+> [!warning] Jalur ini sudah dicabut — 2026-07-21
+> Seluruh job kembali ke `ubuntu-latest`, runner di-uninstall, keepalive + autostart Docker dihapus, dan `scripts/ci/start-db-container.sh` + `db-bootstrap.sql` dihapus dari repo.
+>
+> **Alasannya kecepatan dan biaya perawatan, bukan kegagalan teknis.** `quality` 9,3 mnt vs 6,9 mnt hosted (~35% lebih lambat), dan dalam satu hari pemakaian jalur ini menuntut perhatian berkali-kali: WSL integration, keanggotaan grup `docker`, socket AF_UNIX yatim pasca-reboot, port disita Hyper-V, sampai NAT WSL yang roboh. Waktu yang dihabiskan merawat runner melebihi menit CI yang dihemat.
+>
+> **Konsekuensi yang harus disadari:** selama kuota Actions masih terblokir, job hosted **tidak jalan sama sekali** — gagal dengan `steps=0`, bukan merah. Jadi CI efektif mati sampai ada solusi lain (kuota dipulihkan, repo dijadikan publik, atau penyedia CI lain).
+>
+> Halaman ini **dipertahankan sebagai catatan sejarah**: kalau jalur self-hosted dipertimbangkan lagi, seluruh jebakan di bawah masih berlaku dan tidak perlu ditemukan ulang lewat kegagalan.
+
+Runner GitHub Actions milik sendiri untuk repo `nawawi489/RencanApp`, dipasang 2026-07-20 karena menit GitHub-hosted terblokir (repo privat + paket Free = 2.000 menit/bulan, terpakai habis). Menit self-hosted **tidak dihitung** terhadap kuota itu — terbukti: job self-hosted jalan normal saat semua job hosted menolak start.
 
 ## Spesifikasi
 
