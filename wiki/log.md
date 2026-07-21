@@ -1987,3 +1987,29 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - Pages updated: [[feature-gap-backlog]] (BL-02 → dicoret + DONE #140; §2 triage; catatan ambang P-slot).
 - Files updated: `mobile/src/app/(app)/strategy/new.tsx`, `mobile/src/app/(app)/strategy/__tests__/new-period-inherit.test.tsx` (baru).
 - **Verifikasi:** `npm test` 131 suite / 1592 tes hijau · `npm run type-check` bersih · `npm run lint` 0 error. PR #140 → `staging`. Nol migrasi.
+
+## [2026-07-22] update | BL-02 dijalankan live — copy periode dipecah jadi 4 state
+
+- **Pemicu:** menjalankan layar `strategy/new` di app lokal (Expo web + Supabase lokal), bukan hanya jest. Dua temuan yang tidak mungkin muncul dari unit test.
+- **Temuan 1 — copy menuduh hal yang salah.** Form menampilkan "Goal induk belum punya periode" padahal Goal-nya punya periode; yang terjadi RLS menyaringnya habis. `getGoal` memakai `maybeSingle()` sehingga **Goal tak terbaca dan Goal berperiode kosong sama-sama pulang sebagai `null`** — indistinguishable kecuali `data` diperiksa terpisah dari `data.period_*`.
+- **Perbaikan:** state periode dipecah eksplisit (`PeriodState` + tabel `PERIOD_COPY`): `loading` · `error` (koneksi, bukan data Goal) · `unreachable` (dihapus / di luar akses) · `no-period` (isi periode di Goal). Keempatnya tetap memblokir simpan — yang berubah hanya perbaikan yang ditunjuk. Judul + isi `Alert` membaca tabel yang sama supaya teks layar dan dialog tidak bisa lepas sinkron.
+- Tes `[BL02-4]` (`getGoal → null`) dan `[BL02-5]` (`getGoal` reject) mengunci keduanya, **berikut assert negatif** bahwa copy "belum punya periode" tidak muncul di kedua state itu.
+- **Temuan 2** — akar penyebab tampilan salah itu ternyata seed lokal, dicatat terpisah di entri berikutnya.
+- **Verifikasi:** `npm test` 131 suite / **1594** tes hijau · type-check bersih · lint 0 error. Ketiga state reachable dicek langsung di app.
+- Files updated: `mobile/src/app/(app)/strategy/new.tsx`, `mobile/src/app/(app)/strategy/__tests__/new-period-inherit.test.tsx`. PR #140.
+
+## [2026-07-22] fix | Seed lokal: profil & data terpisah org — dua aturan pemilihan org yang bertabrakan
+
+- **Gejala:** login `ceo@rencan.local` berhasil, tapi Workspace **kosong** dan layar turunan melaporkan Goal tidak ditemukan. Bukan bug app dan bukan bug RLS — profil CEO memang berada di org berbeda dari Goal-nya. Kegagalan **senyap total**: nol error, data hanya tampak hilang.
+- **Akar masalah — dua aturan yang tidak pernah disepakati:**
+  - Baris data seed memakai `(select id from public.organizations limit 1)` **tanpa `order by`** → non-deterministik begitu ada lebih dari satu org (51× di `seed_dummy.sql`, 14× di `seed_scenario_close.sql`).
+  - Profil **tidak lewat ekspresi itu sama sekali** — dibuat trigger `handle_new_user` yang memakai `order by created_at limit 1` (org **tertua**).
+- **Pemicu yang membuatnya meledak:** DB contract tests menyuntikkan `Contract Fixtures Org` + `DCR-05 Fixtures Org` dengan `created_at` **epoch 1970**. Org fixture otomatis MENANG aturan "tertua", jadi setiap profil yang dibuat sesudah contract test dijalankan mendarat di org fixture, sementara data seed mendarat di tempat lain.
+- **Perbaikan:** satu temp table `_seed_org` (`on commit drop`) me-resolve org **sekali**, deterministik — `Nyantuy Group` (org kanonik migrasi 0001, satu-satunya dengan set `role_templates` lengkap `ceo/c_level/management/staff`), fallback org tertua, `raise` bila nihil. Semua 65 call-site membacanya.
+- **Dua detail yang ikut menentukan benar/tidaknya:**
+  - `seed_dummy.sql` kini **ikut men-set `profiles.organization_id`** — menyamakan profil dengan datanya sekaligus **memperbaiki profil yang terlanjur salah org** dari run lama. File tetap idempoten, jadi menjalankan ulang = obatnya.
+  - `role_template_id` diturunkan dari `_seed_org`, **bukan** `p.organization_id`; kalau tidak ia tetap menunjuk role_template milik org lama setelah profil dipindah.
+  - `seed_scenario_close.sql` mencerminkan org dari profil CEO dummy agar otomatis mengikuti ke mana pun `seed_dummy` menaruhnya — bukan menurunkan sendiri.
+- **Sengaja TIDAK disentuh:** `seed_staging.sql` (sudah memakai id org eksplisit); `supabase/tests/*` yang juga memakai `limit 1` tanpa urutan — fixture memang berhak punya org sendiri; dan `handle_new_user` — aturan "org tertua" miliknya adalah perilaku app, hanya salah karena fixture mem-backdate `created_at`. Mengubahnya di sini akan melebar dari perbaikan seed. **Utang terbuka**, layak ditinjau terpisah.
+- **Verifikasi:** `seed_dummy.sql` jalan 2× (idempoten) → 6 profil `@rencan.local` semuanya di Nyantuy Group dengan level role benar; goals/strategies/tasks/profiles satu org; `seed_scenario_close.sql` jalan bersih sampai `close_period_snapshot`. Di app, `ceo@rencan.local` kini melihat 2 Goal + 4 Strategi (sebelumnya kosong).
+- Files updated: `supabase/seed_dummy.sql`, `supabase/seed_scenario_close.sql`. Nol migrasi, nol perubahan `mobile/`. PR #140.

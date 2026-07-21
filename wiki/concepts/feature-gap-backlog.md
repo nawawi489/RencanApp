@@ -37,6 +37,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-11** | Header | ~~Ikon Notifications §7.2 hilang~~ ✅ **SELESAI** — merged #115 (UI-G-016); `notifications-outline` + badge unread via `useUnreadCount()`, badge disembunyikan saat loading/error (bukan fail-silent ke "0"), jumlah masuk `accessibilityLabel` | XS | ✅ DONE |
 | **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
 | **BL-13** | Governance Violation | **Tidak ada sumber kebenaran `violation_type`** — literal PL/pgSQL tersebar di 11 migrasi, peta label client salinan manual, nol gate sinkronisasi → drift lolos semua CI dan muncul sebagai degradasi diam-diam. Utang tersisa dari BL-12. Detail §BL-13 di bawah | butuh scoping | ✅ (dari #117) |
+| **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`, migrasi 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. Terbukti nyata di DB lokal: org fixture contract test ber-`created_at` epoch 1970 memenangkan aturan "tertua" dan menelan profil seed (ditutup di sisi seed lewat #140, **trigger-nya belum**). Perlu keputusan produk dulu: V1 memang single-org, atau signup harus lewat undangan/`raw_app_meta_data.organization_id`? `[?]` apakah ada jalur signup publik di produksi | butuh scoping | ⚠️ terbuka |
 
 ---
 
@@ -55,7 +56,7 @@ BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline y
 > Rekomendasi awal "longgarkan CHECK `p_decision` di 2 RPC" **jangan dieksekusi** — ia mengasumsikan Catatan sebagai keputusan review ketiga, sedangkan owner memutuskan non-terminal. Melonggarkan CHECK `decision` sekarang akan menambah nilai yang tidak dipakai siapa pun sekaligus melemahkan invariant state machine review. Yang tersisa dari BL-08 hanyalah entri Activity Log (RPC SECURITY DEFINER baru, **bukan** perubahan CHECK) — rinci di branch `claude/pensive-goodall-42169f`, `ui-prototype-gap.md` §2.2.
 
 **Butuh scoping/spec dulu:**
-BL-04 (putuskan dulu: MBR menjaga *tombol tambah* di setiap level, atau hanya cascade satu level ke bawah seperti sekarang — ini keputusan produk, bukan bug), BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped).
+BL-04 (putuskan dulu: MBR menjaga *tombol tambah* di setiap level, atau hanya cascade satu level ke bawah seperti sekarang — ini keputusan produk, bukan bug), BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped), BL-14 (putuskan dulu apakah V1 memang single-org; kalau ya, trigger boleh tetap begitu asal didokumentasikan sebagai asumsi mengikat — kalau tidak, butuh jalur org eksplisit saat signup).
 
 **Ditutup tanpa dikerjakan:** BL-03 — keputusan desain, bukan gap.
 
