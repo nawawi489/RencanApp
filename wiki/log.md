@@ -1982,3 +1982,34 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - Files updated: `mobile/src/app/(app)/evaluation.tsx`, `mobile/src/app/(app)/__tests__/fase8-lifecycle-screens.test.tsx` (`[F8-UI-18b]` kirim, `[F8-UI-18c]` pre-fill round-trip).
 - Pages updated: [[feature-gap-backlog]] (BL-05 → DONE, PR #138).
 - **Verifikasi:** `npm test` 130 suite / 1591 tes hijau; `npm run type-check` bersih. PR #138 → `staging`.
+## [2026-07-20] update | B-1 score-period-end-nudge — pengingat periode skoring
+
+Menutup backlog **B-1** dari [[score-ranking-finalization-bridge]] §11.2 (dulu NG-8). Melengkapi trio: [[score-open-period-ui]] (jalan masuk) → finalisasi (jalan keluar) → **nudge** (yang mengingatkan agar jalan keluar benar-benar ditempuh).
+
+**Masalah**: finalisasi dan buka-periode keduanya manual, dan tidak ada yang memberi tahu admin bahwa periode akan/sudah berakhir. Tanpa pengingat, gejala bug lama bisa muncul kembali **tanpa ada bug**: periode berlalu, tombol tak ditekan, ranking tak terbit — dari sisi pengguna tak bisa dibedakan dari kerusakan.
+
+**Keputusan owner (2026-07-20):**
+
+| # | Isu | Keputusan |
+|---|---|---|
+| 1 | Tipe notif | Tipe **baru** `period_closing_reminder`, bukan reuse `deadline_reminder` |
+| 2 | Kadens | **H-7, H-3, H-1** |
+| 3 | Setelah `period_end` lewat | **Terus ingatkan harian** sampai difinalisasi, copy dibedakan |
+| 4 | Kanal | **In-app + push** |
+
+Alasan #1: `inlineAction()` di `notifications.tsx` men-hardcode href `/task/...`. Reuse memang nol perubahan, tapi CTA akan membuang admin ke layar yang salah — penghematan yang menyamarkan bug UX. Dengan `entity_type='period_snapshot'`, CTA kini "Buka Score Formula".
+
+Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenario yang melahirkan bug asli. Berhenti mengingatkan di `period_end` meninggalkan lubang tepat di titik paling berbahaya.
+
+**Implementasi** — migrasi `0081_period_closing_reminder.sql`, meniru preseden `emit_deadline_notifications` (`0008:973`):
+- Constraint `notifications_type_check` diperluas (superset 0038 + 1 tipe).
+- `emit_period_closing_reminders()` SECURITY DEFINER: loop periode `active`, hitung `period_end - org_today(org)`, kirim bila selisih ∈ {7,3,1} atau < 0. Penerima = pemegang `manage_score_formula` (CEO by role ATAU delegasi `user_permissions`), mengikuti semantik `has_permission` (`0016:41-53`).
+- **Anti-duplikat**: `dedupe_date = org_today(org)` + partial unique `uq_notifications_dedupe` (`0008:145`) → satu notif per penerima per periode per hari, berapa kali pun cron jalan. Tanggal selalu dihitung server (CF-3).
+- `is_push_worthy` fallback + `PUSH_WORTHY_TYPES` client diperluas — keduanya **harus sinkron**, kalau tidak push diam-diam tak terkirim; ditegakkan lewat assertion di `push-notifications.test.ts`.
+- pg_cron `emit-period-closing-reminders` `0 7 * * *` UTC (14:00 WIB); slot 06:00/20:00/03:00/00:05 sudah terpakai. Pola unschedule-dulu agar idempoten.
+
+**Sengaja tidak**: menyentuh periode `draft`; auto-finalisasi (ireversibel per [[score-period-immutability]], tidak boleh dipicu timer); eskalasi ke atasan; kanal email/WA.
+
+**Verifikasi**: kontrak `0081_period_closing_reminder_contract.sql` **7/7 PASS** — termasuk T-N-2 (memicu di H-7/H-3/H-1, **diam** di H-5/H-2), T-N-4 (3× panggil → tetap 1 baris), T-N-5 (draft & closed tidak di-nudge), T-N-6 (staff tanpa izin tidak menerima), T-N-7 (ACL emitter + regresi whitelist push). `tsc` bersih, lint 0 error.
+
+**Gotcha menambah tipe notifikasi** (9 titik, semuanya wajib): constraint DB → `NOTIFICATION_TYPES` → `NOTIFICATION_TYPE_LABEL` → `NOTIFICATION_TYPE_TONE` → `notificationTypesForTab` (jangan biarkan orphan) → `TYPE_ICON` → `inlineAction` → `is_push_worthy` + `PUSH_WORTHY_TYPES` → test. Tiga `Record<NotificationType, …>` membuat `tsc` menangkap yang terlewat, tetapi tab-mapping dan `inlineAction` **tidak** — keduanya gagal diam-diam.

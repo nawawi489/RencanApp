@@ -21,14 +21,17 @@ beforeEach(() => {
 });
 
 describe('PUSH_WORTHY_TYPES', () => {
-  it('[PN-DATA-1] berisi tepat 6 tipe Fase 1', () => {
-    expect(PUSH_WORTHY_TYPES).toHaveLength(6);
+  it('[PN-DATA-1] berisi 6 tipe Fase 1 + period_closing_reminder (B-1)', () => {
+    expect(PUSH_WORTHY_TYPES).toHaveLength(7);
     expect(PUSH_WORTHY_TYPES).toContain('review_request');
     expect(PUSH_WORTHY_TYPES).toContain('approved');
     expect(PUSH_WORTHY_TYPES).toContain('rejected');
     expect(PUSH_WORTHY_TYPES).toContain('deadline_reminder');
     expect(PUSH_WORTHY_TYPES).toContain('repeat_due');
     expect(PUSH_WORTHY_TYPES).toContain('instance_missed');
+    // Harus sinkron dengan fallback `is_push_worthy` di migrasi 0080 — kalau salah satu
+    // berubah tanpa yang lain, push diam-diam tidak terkirim (atau terkirim tak terduga).
+    expect(PUSH_WORTHY_TYPES).toContain('period_closing_reminder');
   });
 
   it('[PN-DATA-2] setiap elemen valid terhadap NOTIFICATION_TYPES', () => {

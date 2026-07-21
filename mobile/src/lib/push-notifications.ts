@@ -23,6 +23,8 @@ export const PUSH_WORTHY_TYPES = [
   'deadline_reminder',
   'repeat_due',
   'instance_missed',
+  // B-1 (migrasi 0080): harus sinkron dengan fallback `is_push_worthy` di DB.
+  'period_closing_reminder',
 ] as const satisfies readonly NotificationType[];
 
 export type PushWorthyType = (typeof PUSH_WORTHY_TYPES)[number];
@@ -38,6 +40,12 @@ const PUSH_COPY: Record<PushWorthyType, { title: string; body: string }> = {
   deadline_reminder: { title: 'Deadline Mendekat',      body: 'Deadline Action Plan Anda semakin dekat.' },
   repeat_due:        { title: 'Tugas Rutin Jatuh Tempo', body: 'Ada tugas rutin yang perlu diselesaikan.' },
   instance_missed:   { title: 'Tugas Terlewat',         body: 'Ada tugas rutin yang terlewat.' },
+  // Copy push generik (tanpa nama periode/jumlah hari) — payload push tidak membawa detail,
+  // dan judul notifikasi in-app sudah memuatnya. Netral untuk kedua situasi: akan & sudah berakhir.
+  period_closing_reminder: {
+    title: 'Periode Skoring',
+    body: 'Ada periode skoring yang menunggu difinalisasi.',
+  },
 };
 
 const PUSH_COPY_FALLBACK = { title: 'Pembaruan baru', body: 'Ada pembaruan yang perlu ditinjau.' };
