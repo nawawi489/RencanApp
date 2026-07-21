@@ -85,41 +85,34 @@ jobs:
     name: DB contract tests (Postgres)
     needs: changes
     if: needs.changes.outputs.db == 'true'
-    # TETAP di runner GitHub, tidak dipindah ke self-hosted. Job ini menjalankan
-    # `supabase start` lalu `supabase stop --no-backup`, sementara runner self-hosted
-    # berbagi daemon Docker dengan mesin developer yang biasanya menjalankan stack
-    # Supabase lokal di port sama (54321/54322) — memindahkannya bisa merobohkan
-    # stack dev developer sendiri.
-    runs-on: ubuntu-latest
+    # Self-hosted TANPA `supabase start`: satu container Postgres tanpa port
+    # ter-publish, jadi tidak bisa bentrok dengan stack dev di mesin yang sama
+    # (54321/54322). Detail alasan + bagian yang harus ditambal ada di
+    # scripts/ci/db-bootstrap.sql. Sama persis dengan job db-contract di ci.yml.
+    runs-on: [self-hosted, wsl-ubuntu]
     defaults:
       run:
         # supabase/ and scripts/ live at the repo root, not in mobile/.
         working-directory: .
+    env:
+      RENCAN_CI_DB_NAME: rencan-deploy-db-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
-        with:
-          version: 2.109.1
-
-      - name: Start Supabase stack
-        # Applies every migration in order + creates the auth schema. No seed
-        # runs; the runner applies supabase/tests/_fixtures.sql. Staging must not
-        # deploy on a red DB contract (0049/0067-class RLS regressions, etc.).
-        run: supabase start
-
-      - name: Install psql client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Start Postgres + replay schema
+        # Applies every migration in order on top of the platform bootstrap. No
+        # seed runs; the runner applies supabase/tests/_fixtures.sql. Staging must
+        # not deploy on a red DB contract (0049/0067-class RLS regressions, etc.).
+        run: bash scripts/ci/start-db-container.sh
 
       - name: Run DB contract suite
         env:
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          RENCAN_DB_CONTAINER: ${{ env.RENCAN_CI_DB_NAME }}
         run: bash scripts/ci/run-db-contract-tests.sh
 
-      - name: Stop Supabase stack
+      - name: Remove Postgres container
         if: always()
-        run: supabase stop --no-backup
+        run: docker rm -f "$RENCAN_CI_DB_NAME" || true
 
   deploy:
     name: Export & deploy to EAS Hosting

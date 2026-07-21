@@ -150,51 +150,48 @@ jobs:
     name: DB contract tests (Postgres)
     needs: changes
     if: needs.changes.outputs.db == 'true'
-    # SENGAJA tetap di runner GitHub, TIDAK dipindah ke self-hosted.
+    # Jalan di runner self-hosted TANPA `supabase start`.
     #
-    # Job ini menjalankan `supabase start` lalu `supabase stop --no-backup`. Runner
-    # self-hosted berbagi daemon Docker dengan mesin developer, yang biasanya sedang
-    # menjalankan stack Supabase lokal di port yang sama (54321/54322). Memindahkannya
-    # ke sini berarti: bentrok port saat start, dan `supabase stop` berpotensi
-    # merobohkan stack dev developer sendiri — berisiko terhadap data lokalnya.
+    # `supabase start` tidak bisa dipakai di sini: ia mem-boot sembilan container dan
+    # mengikat port 54321/54322 di host, sementara daemon Docker runner dibagi dengan
+    # mesin developer yang biasanya sedang menjalankan stack dev di port yang sama —
+    # `supabase stop` akan merobohkan stack itu berikut datanya.
     #
-    # Konsekuensi yang harus disadari: selama menit GitHub-hosted terblokir, job ini
-    # TIDAK jalan. Ia hanya tergating ke perubahan supabase/** (lihat job `changes`),
-    # jadi PR yang tidak menyentuh DB tidak terpengaruh. Perubahan DB tetap butuh
-    # verifikasi manual sampai kuota pulih atau job ini diisolasi (port/project id
-    # terpisah).
-    runs-on: ubuntu-latest
+    # Gantinya: SATU container `supabase/postgres` tanpa port ter-publish sama sekali
+    # (psql lewat `docker exec`), jadi mustahil bentrok. Yang tidak dibawa oleh image —
+    # `auth.users` versi GoTrue, tabel `storage`, auth.uid() bentuk baru, dan default
+    # privileges yang sudah diperketat — dipasang oleh scripts/ci/db-bootstrap.sql;
+    # lihat file itu untuk alasan tiap bagian. Hasilnya diverifikasi identik dengan
+    # baseline `supabase start` terakhir yang hijau: 29 passed, 0 failed.
+    runs-on: [self-hosted, wsl-ubuntu]
     defaults:
       run:
         # supabase/ and scripts/ live at the repo root, not in mobile/.
         working-directory: .
+    env:
+      # Satu container per run+attempt agar dua run paralel tidak saling menghapus.
+      RENCAN_CI_DB_NAME: rencan-ci-db-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
-        with:
-          version: 2.109.1
-
-      - name: Start Supabase stack
-        # `supabase start` boots the local stack (Postgres + auth schema) and
-        # applies every migration in supabase/migrations in order — the same
-        # path `db reset` uses. No seed runs (there is no supabase/seed.sql);
+      - name: Start Postgres + replay schema
+        # Boots the container, applies the platform bootstrap, then replays every
+        # supabase/migrations/*.sql in filename order — the same order
+        # `supabase db reset` uses. No seed runs (there is no supabase/seed.sql);
         # the contract runner applies supabase/tests/_fixtures.sql itself.
-        # This is where the ADR's "thick database" is finally exercised by CI.
-        run: supabase start
-
-      - name: Install psql client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+        # This is where the ADR's "thick database" is exercised by CI.
+        run: bash scripts/ci/start-db-container.sh
 
       - name: Run DB contract suite
         # Fails the job if any *.sql contract fails (ON_ERROR_STOP). Quarantined
         # *.wip.sql files are skipped — see supabase/tests/WIP_REPAIR_BACKLOG.md.
+        # `psql` dipanggil DI DALAM container (RENCAN_DB_CONTAINER), jadi runner
+        # tidak perlu punya postgresql-client terpasang.
         env:
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          RENCAN_DB_CONTAINER: ${{ env.RENCAN_CI_DB_NAME }}
         run: bash scripts/ci/run-db-contract-tests.sh
 
-      - name: Stop Supabase stack
+      - name: Remove Postgres container
         if: always()
-        run: supabase stop --no-backup
+        run: docker rm -f "$RENCAN_CI_DB_NAME" || true
