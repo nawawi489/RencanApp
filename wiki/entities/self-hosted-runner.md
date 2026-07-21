@@ -35,8 +35,25 @@ Baseline yang harus dipertahankan: **29 passed, 0 failed** — sama dengan run `
 1. **WSL integration Docker Desktop aktif** untuk distro `Ubuntu`. Tanpa itu `docker` di PATH hanyalah binary Windows lewat interop yang menolak jalan. `command -v docker` tetap lolos dalam kasus ini — karena itu preflight di `start-db-container.sh` menguji `docker info`, bukan keberadaan CLI-nya.
 2. **User `runner` anggota grup `docker`** (`usermod -aG docker runner`, lalu **restart** service runner — keanggotaan grup hanya terbaca proses yang start sesudahnya).
 
+Yang **tidak** perlu diulang setelah restart: `IntegratedWslDistros = Ubuntu` tersimpan permanen di `%APPDATA%\Docker\settings-store.json`, jadi WSL integration bertahan. Keanggotaan grup `docker` juga permanen.
+
 > [!warning] Kelemahan struktural yang tersisa
-> Gate DB kini bergantung pada **Docker Desktop yang sedang berjalan** di mesin developer. Bila aplikasi itu mati, `db-contract` gagal di preflight tanpa sinyal apa pun ke GitHub sampai job-nya benar-benar jalan. Gejalanya: `FATAL: daemon Docker tak terjangkau dari sini`. Distro `docker-desktop` berstatus `Stopped` di `wsl -l -v` adalah konfirmasinya.
+> Gate DB kini bergantung pada **daemon Docker yang sedang melayani** di mesin developer. Bila mati, `db-contract` gagal di preflight tanpa sinyal apa pun ke GitHub sampai job-nya benar-benar jalan. Gejalanya: `FATAL: daemon Docker tak terjangkau dari sini`.
+>
+> **Yang harus dicek adalah engine, bukan aplikasinya.** Proses `Docker Desktop.exe` bisa berjalan (bahkan enam proses) sementara engine WSL-nya mati — teramati langsung 2026-07-21. Konfirmasi yang benar: distro **`docker-desktop`** berstatus `Running` di `wsl -l -v`, atau `docker info` dijawab dari dalam distro runner.
+
+### Autostart Docker Desktop
+
+Setting internal `AutoStart` bernilai `False`, sehingga aplikasi tidak nyala saat login. Penahannya `rencanapp-docker-autostart.vbs` di Startup folder user — bersebelahan dengan keepalive runner:
+
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
+
+Skrip itu menjalankan Docker Desktop bila prosesnya belum ada, lalu menunggu sampai `docker info` **dijawab dari dalam distro sebagai user `runner`** — bukan berhenti pada "proses aplikasinya ada", karena justru itu yang terbukti menyesatkan. Ia **pemanas saat login, bukan pengawas**: berhenti begitu daemon siap, atau menyerah setelah 5 menit. Looping abadi ala keepalive tidak dipakai di sini karena tidak ada yang perlu dilawan setelah daemon hidup.
+
+Alternatif resmi: Docker Desktop → Settings → General → *"Start Docker Desktop when you sign in"*. Bila itu diaktifkan, file `.vbs` di atas boleh dihapus — konfigurasi Docker sendiri sengaja tidak disentuh agar kedua mekanisme tidak bentrok.
+
+> [!warning] Belum teruji melewati login
+> Sama seperti keepalive runner, mekanisme Startup folder ini baru terbukti saat dijalankan manual (exit 0 dalam 2 detik dengan Docker hidup). Verifikasi sebenarnya baru terjadi setelah logout/restart pertama: cek `wsl -l -v` memuat `docker-desktop` `Running` tanpa intervensi.
 
 > [!warning] Grup `docker` setara root
 > Anggota grup itu bisa `docker run -v /:/host` dan efektif menjadi root di mesin developer — melewati pagar "user `runner` tanpa sudo" di bawah. Ini **menguatkan**, bukan menggantikan, larangan menjadikan repo publik.
@@ -134,7 +151,7 @@ wsl -d Ubuntu -u runner -- docker ps --filter name=rencan-ci-db
 | Job `queued` tapi runner `busy=true` | Normal — runner tunggal, job berjalan berurutan |
 | `Checkout: cancelled` di tengah step | Distro mati saat job berjalan |
 | Job gagal dengan `steps=0` | Kuota/billing — job tak pernah mulai, bukan bug kode |
-| `FATAL: daemon Docker tak terjangkau` | Docker Desktop mati atau WSL integration non-aktif |
+| `FATAL: daemon Docker tak terjangkau` | Engine Docker mati (cek distro `docker-desktop`, bukan proses aplikasinya) atau WSL integration non-aktif |
 | `/usr/bin/docker: Input/output error` | Mount `cli-tools` basi setelah Docker Desktop restart |
 
 Alasan `steps=0` hanya terbaca lewat `gh api repos/<o>/<r>/check-runs/<id>/annotations` — log job-nya kosong.
