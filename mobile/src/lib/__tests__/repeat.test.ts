@@ -133,19 +133,19 @@ describe('listInstances', () => {
 });
 
 describe('getInstance', () => {
-  it('[7] memakai .single() dengan filter id dan mengembalikan satu instance', async () => {
+  it('[7] memakai .maybeSingle() dengan filter id dan mengembalikan satu instance', async () => {
     const row = { id: 'i1', pic: null, reviewer: null, task_submissions: [] };
     const { builder, calls } = makeQuery({ data: row, error: null });
     mockFrom.mockReturnValue(builder);
     const out = await getInstance('i1');
     expect(mockFrom).toHaveBeenCalledWith('task_instances');
     // WS-3c: getInstance memakai INSTANCE_SELECT yang sama — embed submissions harus
-    // ber-FK eksplisit agar `.single()` tidak gagal 300 (layar instance blank).
+    // ber-FK eksplisit agar `.maybeSingle()` tidak gagal 300 (layar instance blank).
     expect(String(calls.select?.[0])).toContain(
       'task_submissions!task_submissions_task_instance_id_fkey',
     );
     expect(calls.eq).toEqual(['id', 'i1']);
-    expect(builder.single).toHaveBeenCalled();
+    expect(builder.maybeSingle).toHaveBeenCalled();
     expect(out).toBe(row);
   });
 });

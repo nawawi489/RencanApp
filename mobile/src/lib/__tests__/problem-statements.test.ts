@@ -22,7 +22,7 @@ import {
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
   const calls: Record<string, unknown[]> = {};
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'order']) {
+  for (const m of ['select', 'eq', 'order', 'maybeSingle']) {
     builder[m] = jest.fn((...args: unknown[]) => {
       calls[m] = args;
       return builder;
@@ -42,7 +42,9 @@ function makeSingleBuilder(result: { data: unknown; error: unknown }) {
       return builder;
     });
   }
+  // Getter detail memakai maybeSingle (baris tersaring RLS → null, bukan 406); INSERT tetap single.
   builder.single = jest.fn(() => Promise.resolve(result));
+  builder.maybeSingle = jest.fn(() => Promise.resolve(result));
   return { builder, calls };
 }
 
@@ -78,7 +80,7 @@ describe('listProblemStatements — guarded by developmentAreaId', () => {
 });
 
 describe('getProblemStatement', () => {
-  it('[4] select * eq id .single()', async () => {
+  it('[4] select * eq id .maybeSingle()', async () => {
     const { builder, calls } = makeSingleBuilder({ data: { id: 'p1' }, error: null });
     mockFrom.mockReturnValue(builder);
     const row = await getProblemStatement('p1');

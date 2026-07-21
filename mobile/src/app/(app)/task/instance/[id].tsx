@@ -85,11 +85,17 @@ export default function TaskInstanceDetailScreen() {
       <View className="gap-5 p-5">
         {instQ.isLoading ? (
           <SkeletonList count={3} />
-        ) : instQ.isError || !inst ? (
+        ) : instQ.isError ? (
           <ErrorState
             title="Gagal memuat instance"
             description="Tidak bisa mengambil data instance ini."
             onRetry={() => instQ.refetch()}
+          />
+        ) : !inst ? (
+          // null (bukan error): getInstance maybeSingle → id di luar akses/tidak ada. Retry tak menolong.
+          <EmptyState
+            title="Instance tidak ditemukan"
+            description="Instance ini tidak ada atau Anda tidak memiliki akses untuk melihatnya."
           />
         ) : (
           <>
