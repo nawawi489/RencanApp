@@ -1,7 +1,7 @@
 // Fase 8 — Settings > Arsip. Daftar card terarsip + UI-S-AR1: filter chip per entity type
 // + tombol "Pulihkan" per row (RPC restore_card → status 'draft'). TIDAK ada hapus permanen.
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
@@ -9,6 +9,7 @@ import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
 import { Button, EmptyState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
 import { getArchiveMetadata } from '@/lib/activity-governance';
+import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 import { alertFriendlyError } from '@/lib/errors';
 import { restoreCard, type CardEntityType } from '@/lib/governance-admin';
 import { CARD_TYPE_LABEL, type CardType } from '@/lib/settings-mbr';
@@ -26,6 +27,7 @@ const FILTER_CHIPS: { key: 'semua' | CardEntityType; label: string }[] = [
 
 export default function SettingsArchiveScreen() {
   const qc = useQueryClient();
+  const router = useRouter();
   const placeholderColor = usePlaceholderColor();
   const [query, setQuery] = useState('');
   const [chip, setChip] = useState<'semua' | CardEntityType>('semua');
@@ -96,13 +98,45 @@ export default function SettingsArchiveScreen() {
                   timeStyle: 'short',
                 })
               : null;
+            // BL-09(b): baris arsip harus bisa dibuka utk memeriksa isi card sebelum dipulihkan.
+            // Pola sama dgn search.tsx — `undefined` bila tipe tak punya segmen rute, supaya kartu
+            // tetap non-pressable alih-alih push path rusak. Layar detail (7 tipe) sudah menangani
+            // status 'archived': badge "Diarsipkan", CTA aksi hanya muncul saat status 'draft'.
+            const segment = ENTITY_ROUTE_SEGMENT[r.entity_type as CardEntityType];
+            const typeLabel = CARD_TYPE_LABEL[r.entity_type as CardType] ?? r.entity_type;
             return (
-            <SectionCard key={`${r.entity_type}:${r.id}`}>
+            <SectionCard
+              key={`${r.entity_type}:${r.id}`}
+              accessibilityLabel={`Buka detail ${r.name}, ${typeLabel}, diarsipkan`}
+              onPress={segment ? () => router.push(`/${segment}/${r.id}` as Href) : undefined}
+              actions={
+                // Slot `actions`, BUKAN children: tombol tak boleh bersarang di dalam region
+                // pressable atau VoiceOver kehilangan fokus terpisah untuknya (lihat SectionCard).
+                <Button
+                  label="Pulihkan ke Draft"
+                  variant="secondary"
+                  loading={restoreM.isPending}
+                  onPress={() =>
+                    Alert.alert(
+                      'Pulihkan card?',
+                      `Mengembalikan "${r.name}" ke status Draft. Anda perlu verifikasi & Aktifkan ulang.`,
+                      [
+                        { text: 'Tutup', style: 'cancel' },
+                        {
+                          text: 'Pulihkan',
+                          onPress: () =>
+                            restoreM.mutate({ entityType: r.entity_type as CardEntityType, entityId: r.id }),
+                        },
+                      ],
+                    )
+                  }
+                />
+              }>
               <View className="flex-row items-start justify-between gap-2">
                 <View className="flex-1 gap-0.5">
                   <Text className="text-base font-semibold text-black dark:text-white">{r.name}</Text>
                   <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {CARD_TYPE_LABEL[r.entity_type as CardType] ?? r.entity_type} · Diarsipkan
+                    {typeLabel} · Diarsipkan
                   </Text>
                   {archivedAtLabel ? (
                     <Text className="text-xs text-neutral-400">
@@ -111,25 +145,6 @@ export default function SettingsArchiveScreen() {
                   ) : null}
                 </View>
               </View>
-              <Button
-                label="Pulihkan ke Draft"
-                variant="secondary"
-                loading={restoreM.isPending}
-                onPress={() =>
-                  Alert.alert(
-                    'Pulihkan card?',
-                    `Mengembalikan "${r.name}" ke status Draft. Anda perlu verifikasi & Aktifkan ulang.`,
-                    [
-                      { text: 'Tutup', style: 'cancel' },
-                      {
-                        text: 'Pulihkan',
-                        onPress: () =>
-                          restoreM.mutate({ entityType: r.entity_type as CardEntityType, entityId: r.id }),
-                      },
-                    ],
-                  )
-                }
-              />
             </SectionCard>
             );
           })

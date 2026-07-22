@@ -120,6 +120,7 @@ Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line bo
 3. **Solid + teks putih → pakai `brand-dark` `#1564b3`**, bukan `brand` `#208aef` (gagal AA pada teks normal). ✅ `Button` primary sudah `bg-brand-dark`.
 4. **Label screen reader.** `accessibilityRole` + `accessibilityLabel` + `accessibilityState` (`busy`/`disabled`) di tiap kontrol. Sudah di `Button`, `Skeleton`, `ErrorState`, `Avatar`.
 5. **Dynamic Type.** Layout harus selamat saat font sistem diperbesar (hindari tinggi fixed pada kontainer teks).
+6. **Jangan sarangkan kontrol di dalam kontainer yang bisa ditekan.** `Pressable` RN default `accessible={true}`; di iOS itu meleburkan seluruh anaknya jadi **satu** elemen a11y, sehingga tombol/input di dalamnya berhenti bisa difokus VoiceOver dan aksinya tak terjangkau (aturan 4 gagal secara diam-diam — tetap bisa di-tap dengan jari, jadi lolos QA visual). Kontrol harus jadi **sibling** region pressable, bukan keturunannya. `SectionCard` menyediakan prop `actions` untuk ini; pola yang sama berlaku untuk kontainer pressable buatan sendiri.
 
 ---
 
@@ -149,7 +150,7 @@ Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line bo
 | Komponen | Token kunci | Lokasi |
 |---|---|---|
 | `Button` | `min-h-[44px] rounded-xl px-4 py-3`; variant primary/secondary/danger/success | [`ui.tsx`](mobile/src/components/ui.tsx) |
-| `SectionCard` | `rounded-2xl border p-4 gap-2` | `ui.tsx` |
+| `SectionCard` | `rounded-2xl border p-4 gap-2`. Kartu yang bisa ditekan: `onPress` + `accessibilityLabel` opsional. Kontrol sendiri (tombol/input) WAJIB lewat prop `actions`, bukan `children` — lihat §4 aturan 6 | `ui.tsx` |
 | `Badge`/chip | `rounded-full px-2.5 py-1 text-xs font-semibold`; tone §2 | `ui.tsx` |
 | `LabeledInput` | `rounded-xl border px-4 py-3`; `*` wajib merah | `ui.tsx` |
 | `EmptyState` v2 | ikon (ring 64px), tone neutral/success, meta chip, action | `ui.tsx` |

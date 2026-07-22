@@ -1,7 +1,7 @@
 // UI Fase 8 — layar Settings: index SECTIONS, org-structure, activity-log, governance-violation,
 // confidential-access, card-completion-rule, card-guidance, notifications-rule, archive.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
 import { Alert } from 'react-native';
 
@@ -263,5 +263,56 @@ describe('settings-archive', () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['cards_search'] }),
     );
     alertSpy.mockRestore();
+  });
+
+  // BL-09(b) — baris arsip sebelumnya mati: satu-satunya kontrol adalah "Pulihkan ke Draft",
+  // jadi user tak bisa memeriksa isi card sebelum memutuskan. Pola navigasi = search.tsx.
+  it('[F8-UI-29] baris arsip bisa ditekan → push ke rute detail sesuai entity type', async () => {
+    mockUseSearch.mockReturnValue({
+      results: [{ id: 'a1', entity_type: 'action_plan', name: 'Rencana Lama', status: 'archived' }],
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<SettingsArchiveScreen />, { wrapper: wrapper() });
+    // segmen rute action_plan = 'action-plan' (bukan underscore) — ENTITY_ROUTE_SEGMENT.
+    fireEvent.press(await screen.findByLabelText(/^Buka detail Rencana Lama/));
+    expect(mockPush).toHaveBeenCalledWith('/action-plan/a1');
+  });
+
+  // DESIGN §4.4 — tombol Pulihkan tidak boleh bersarang di dalam region pressable kartu:
+  // `Pressable` RN default `accessible={true}`, jadi keturunannya berhenti bisa difokus
+  // VoiceOver dan aksi restore jadi tak terjangkau lewat screen reader.
+  it('[F8-UI-31] tombol Pulihkan tetap target a11y terpisah dari region "Buka detail"', async () => {
+    mockUseSearch.mockReturnValue({
+      results: [{ id: 'a1', entity_type: 'action_plan', name: 'Rencana Lama', status: 'archived' }],
+      isLoading: false,
+      enabled: true,
+    });
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await render(<SettingsArchiveScreen />, { wrapper: wrapper() });
+
+    const openRegion = await screen.findByLabelText(/^Buka detail Rencana Lama/);
+    expect(within(openRegion).queryByLabelText('Pulihkan ke Draft')).toBeNull();
+
+    // dan menekan tombol restore tidak ikut menavigasi.
+    fireEvent.press(screen.getByLabelText('Pulihkan ke Draft'));
+    expect(alertSpy).toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it('[F8-UI-30] entity type tanpa segmen rute → baris tetap non-pressable, tidak push', async () => {
+    mockUseSearch.mockReturnValue({
+      results: [{ id: 'x1', entity_type: 'unknown_type', name: 'Card Asing', status: 'archived' }],
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<SettingsArchiveScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Card Asing')).toBeTruthy();
+    // tanpa segmen → SectionCard render sebagai View biasa, jadi tak ada kontrol "Buka detail".
+    expect(screen.queryByLabelText(/^Buka detail Card Asing/)).toBeNull();
+    // tombol Pulihkan tetap hadir: baris tak bisa dibuka bukan berarti tak bisa dipulihkan.
+    expect(screen.getByLabelText('Pulihkan ke Draft')).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

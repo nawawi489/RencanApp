@@ -243,7 +243,15 @@ function InstanceRow({
   // Reviewer perlu jalan masuk ke detail untuk approve/reject (review tidak inline di sini).
   const needsReview = actions.canReview && inst.status === 'submitted';
   return (
-    <SectionCard onPress={() => onOpen(inst.id)}>
+    <SectionCard
+      onPress={() => onOpen(inst.id)}
+      actions={
+        // Slot `actions`, BUKAN children: Pressable RN default `accessible`, jadi tombol yang
+        // bersarang di dalamnya kehilangan fokus VoiceOver sendiri (lihat SectionCard).
+        actions.canSubmit ? (
+          <Button label="Submit Bukti & Nilai Hasil" onPress={() => onSubmit(inst.id)} />
+        ) : undefined
+      }>
       <View className="flex-row items-center justify-between">
         <Text className="text-sm font-bold text-black dark:text-white">{inst.instance_date}</Text>
         <Badge label={INSTANCE_STATUS_LABEL[inst.status] ?? inst.status} tone={INSTANCE_STATUS_TONE[inst.status]} />
@@ -259,9 +267,7 @@ function InstanceRow({
           Menunggu review Anda — buka detail untuk menyetujui/menolak.
         </Text>
       ) : null}
-      {actions.canSubmit ? (
-        <Button label="Submit Bukti & Nilai Hasil" onPress={() => onSubmit(inst.id)} />
-      ) : (
+      {actions.canSubmit ? null : (
         <Text className="text-xs text-neutral-400">Lihat detail & riwayat ›</Text>
       )}
     </SectionCard>
