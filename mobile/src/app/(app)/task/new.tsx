@@ -14,6 +14,7 @@ import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createTask, getActionPlan, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 import { DATE_HINT, DATE_RE, TIME_RE } from '@/lib/date';
+import { DEFAULT_ORG_TIMEZONE, getOrgTimezone, orgTimezoneLabel } from '@/lib/org-timezone';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
 type Person = NonNullable<PersonRef>;
 
@@ -111,6 +112,31 @@ function ToggleRow({
   );
 }
 
+/**
+ * PRD §23 field 5 "Zona waktu" — TAMPILAN, bukan input. Zona waktu adalah properti
+ * organisasi (`organizations.timezone`, dipakai `org_today()` di engine repeat), sehingga
+ * baris ini hanya menjelaskan "Jam Deadline itu relatif terhadap apa". Tidak ada kontrol
+ * di dalamnya → tidak kena aturan touch target DESIGN §4.
+ */
+function TimezoneNote({ timezone }: { timezone: string }) {
+  const label = orgTimezoneLabel(timezone);
+  return (
+    <View
+      testID="repeat-timezone"
+      accessible
+      accessibilityLabel={`Zona waktu organisasi ${label}. Jam deadline mengikuti zona ini.`}
+      className="gap-0.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-neutral-800 dark:bg-neutral-900">
+      <Text className="text-[11px] font-semibold uppercase text-neutral-500 dark:text-neutral-400">
+        Zona Waktu
+      </Text>
+      <Text className="text-sm font-semibold text-black dark:text-white">{label}</Text>
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+        Jam deadline mengikuti zona waktu organisasi. Diatur di Pengaturan organisasi, bukan per Repeat.
+      </Text>
+    </View>
+  );
+}
+
 export function LiveNewTaskScreen() {
   const { actionPlanId } = useLocalSearchParams<{ actionPlanId: string }>();
   const router = useRouter();
@@ -147,6 +173,10 @@ export function LiveNewTaskScreen() {
   const [repeatEnd, setRepeatEnd] = useState('');
   // Jam deadline tunggal di top-level (PRD §22.9); state repeat-specific "timeOfDay" dihapus —
   // pakai deadlineTime yang sama agar Jam tetap konsisten antara one-time & repeat.
+  // PRD §23 field 5 — zona waktu efektif (org-wide, read-only). Gagal/loading jatuh ke default
+  // supaya field hiasan ini tidak pernah memblokir atau mengosongkan form.
+  const orgTimezoneQ = useQuery({ queryKey: ['org_timezone'], queryFn: getOrgTimezone });
+  const orgTimezone = orgTimezoneQ.data ?? DEFAULT_ORG_TIMEZONE;
   const [missedRule, setMissedRule] = useState<string>('strict');
   const [gracePeriod, setGracePeriod] = useState('');
 
@@ -362,6 +392,7 @@ export function LiveNewTaskScreen() {
                 required
               />
               {/* Jam Deadline diambil dari field top-level (PRD §22.9 — tunggal). */}
+              <TimezoneNote timezone={orgTimezone} />
 
               <ChipSelector
                 label="Aturan Terlewat"
