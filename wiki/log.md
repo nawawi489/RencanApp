@@ -1971,6 +1971,71 @@ Jadi ini **bukan race** (berbeda dari race `card-help-trigger`): tidak ada asser
 - **Konsekuensi yang harus disadari:** kuota Actions masih terblokir, jadi job hosted **tidak jalan sama sekali** (`steps=0`, bukan merah). CI efektif mati sampai ada solusi lain. PR revert ini sendiri pun tidak bisa diverifikasi CI.
 - Pages updated: [[self-hosted-runner]] (ditandai DICABUT + alasan; isi teknis dipertahankan sebagai catatan sejarah agar jebakannya tidak ditemukan ulang), [[index]].
 
+## [2026-07-21] update | BL-05 selesai — dua field faktor §26 masuk form Evaluasi
+
+- **Pemicu:** [[feature-gap-backlog]] BL-05 — PRD §26 mendefinisikan 6 field evaluasi, form `evaluation.tsx` hanya mengumpulkan 4. `success_factors` dan `failure_factors` tidak pernah dikirim. `lessons_learned` yang sudah ada adalah field berbeda, bukan substitusi keduanya.
+- **Jalur backend sudah lengkap sejak awal:** kolom `evaluations.success_factors`/`.failure_factors` bertipe `text[]` (`0046:1882-1893`), RPC `record_evaluation` sudah menerima `p_success_factors`/`p_failure_factors` (`0046:1857`), `lib/governance-admin.ts:110-124` sudah mem-forward. Yang putus hanya satu lapis: form tidak mengisinya. **Nol migrasi.**
+- **Keputusan desain (list vs blok teks):** kolomnya `text[]`, jadi UI mengumpulkan list sungguhan — satu textarea per field dengan konvensi **satu faktor per baris**, tiap baris non-kosong jadi satu elemen array. Bukan satu blok teks yang dibungkus jadi array satu elemen: konsumen hilir (laporan/agregasi) harus bisa menghitung faktor, dan itu mustahil bila seluruh isian menumpuk di satu elemen.
+- **Chip/tag editor dinamis ditolak sengaja.** Ia menambah N tombol hapus yang masing-masing wajib ≥44px + label screen reader (DESIGN §4.1, §4.4) untuk keuntungan yang tidak nyata pada teks pendek, sementara `LabeledInput multiline` sudah menjadi idiom form di layar yang sama (Hasil, Lesson learned, Catatan rollout) dan tidak mengunci tinggi kontainer teks (DESIGN §4.5).
+- **Urutan field mengikuti PRD §26:** Target → Hasil → Faktor berhasil → Faktor gagal → tindak lanjut (SOP/rollout). Pre-fill UPSERT round-trip lewat `join('\n')` / `split('\n')`.
+- **Jebakan tes yang muncul:** `fireEvent.changeText` lalu langsung `fireEvent.press` menghasilkan `record()` dengan array kosong — press mendahului flush state, sama bentuknya dengan race di [[ci-flake-test-ci]]. Perbaikannya menunggu `input.props.value` lebih dulu, pola yang sudah dipakai `[F8-UI-18]`. Tanpa itu tes gagal sekaligus menyeret tes tetangga (`F8-UI-19`, dua tes `search`) ikut merah — kegagalan berantai, bukan regresi nyata di layar-layar itu.
+- Files updated: `mobile/src/app/(app)/evaluation.tsx`, `mobile/src/app/(app)/__tests__/fase8-lifecycle-screens.test.tsx` (`[F8-UI-18b]` kirim, `[F8-UI-18c]` pre-fill round-trip).
+- Pages updated: [[feature-gap-backlog]] (BL-05 → DONE, PR #138).
+- **Verifikasi:** `npm test` 130 suite / 1591 tes hijau; `npm run type-check` bersih. PR #138 → `staging`.
+## [2026-07-20] update | B-1 score-period-end-nudge — pengingat periode skoring
+
+Menutup backlog **B-1** dari [[score-ranking-finalization-bridge]] §11.2 (dulu NG-8). Melengkapi trio: [[score-open-period-ui]] (jalan masuk) → finalisasi (jalan keluar) → **nudge** (yang mengingatkan agar jalan keluar benar-benar ditempuh).
+
+**Masalah**: finalisasi dan buka-periode keduanya manual, dan tidak ada yang memberi tahu admin bahwa periode akan/sudah berakhir. Tanpa pengingat, gejala bug lama bisa muncul kembali **tanpa ada bug**: periode berlalu, tombol tak ditekan, ranking tak terbit — dari sisi pengguna tak bisa dibedakan dari kerusakan.
+
+**Keputusan owner (2026-07-20):**
+
+| # | Isu | Keputusan |
+|---|---|---|
+| 1 | Tipe notif | Tipe **baru** `period_closing_reminder`, bukan reuse `deadline_reminder` |
+| 2 | Kadens | **H-7, H-3, H-1** |
+| 3 | Setelah `period_end` lewat | **Terus ingatkan harian** sampai difinalisasi, copy dibedakan |
+| 4 | Kanal | **In-app + push** |
+
+Alasan #1: `inlineAction()` di `notifications.tsx` men-hardcode href `/task/...`. Reuse memang nol perubahan, tapi CTA akan membuang admin ke layar yang salah — penghematan yang menyamarkan bug UX. Dengan `entity_type='period_snapshot'`, CTA kini "Buka Score Formula".
+
+Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenario yang melahirkan bug asli. Berhenti mengingatkan di `period_end` meninggalkan lubang tepat di titik paling berbahaya.
+
+**Implementasi** — migrasi `0081_period_closing_reminder.sql`, meniru preseden `emit_deadline_notifications` (`0008:973`):
+- Constraint `notifications_type_check` diperluas (superset 0038 + 1 tipe).
+- `emit_period_closing_reminders()` SECURITY DEFINER: loop periode `active`, hitung `period_end - org_today(org)`, kirim bila selisih ∈ {7,3,1} atau < 0. Penerima = pemegang `manage_score_formula` (CEO by role ATAU delegasi `user_permissions`), mengikuti semantik `has_permission` (`0016:41-53`).
+- **Anti-duplikat**: `dedupe_date = org_today(org)` + partial unique `uq_notifications_dedupe` (`0008:145`) → satu notif per penerima per periode per hari, berapa kali pun cron jalan. Tanggal selalu dihitung server (CF-3).
+- `is_push_worthy` fallback + `PUSH_WORTHY_TYPES` client diperluas — keduanya **harus sinkron**, kalau tidak push diam-diam tak terkirim; ditegakkan lewat assertion di `push-notifications.test.ts`.
+- pg_cron `emit-period-closing-reminders` `0 7 * * *` UTC (14:00 WIB); slot 06:00/20:00/03:00/00:05 sudah terpakai. Pola unschedule-dulu agar idempoten.
+
+**Sengaja tidak**: menyentuh periode `draft`; auto-finalisasi (ireversibel per [[score-period-immutability]], tidak boleh dipicu timer); eskalasi ke atasan; kanal email/WA.
+
+**Verifikasi**: kontrak `0081_period_closing_reminder_contract.sql` **7/7 PASS** — termasuk T-N-2 (memicu di H-7/H-3/H-1, **diam** di H-5/H-2), T-N-4 (3× panggil → tetap 1 baris), T-N-5 (draft & closed tidak di-nudge), T-N-6 (staff tanpa izin tidak menerima), T-N-7 (ACL emitter + regresi whitelist push). `tsc` bersih, lint 0 error.
+
+**Gotcha menambah tipe notifikasi** (9 titik, semuanya wajib): constraint DB → `NOTIFICATION_TYPES` → `NOTIFICATION_TYPE_LABEL` → `NOTIFICATION_TYPE_TONE` → `notificationTypesForTab` (jangan biarkan orphan) → `TYPE_ICON` → `inlineAction` → `is_push_worthy` + `PUSH_WORTHY_TYPES` → test. Tiga `Record<NotificationType, …>` membuat `tsc` menangkap yang terlewat, tetapi tab-mapping dan `inlineAction` **tidak** — keduanya gagal diam-diam.
+
+
+## [2026-07-21] update | BL-04 — cascade MBR menyeluruh + rekonsiliasi penamaan baris aturan
+
+- **Temuan yang mengubah bentuk tiket.** BL-04 masuk sebagai "cakupan guard UI kurang" (1 dari 6 tombol ter-guard). Verifikasi terhadap DB staging menunjukkan akarnya di lapisan data: rename `0045` menggeser nama tabel kartu, `0046`/`0065` menulis ulang RPC ke penamaan baru, tapi isi `minimum_breakdown_rules` tidak pernah ikut dipindah. Hasilnya **3 dari 6 cabang** `check_minimum_breakdown_compliance` tidak menemukan baris aturannya (`goal→strategy`, `action_plan→task`, `problem_statement→action_plan`) dan fail-open permanen — memasang guard UI saja akan menghasilkan no-op senyap yang sama persis dengan yang dilaporkan.
+- **Jebakan penamaan ternyata terbalik dari dugaan awal.** Komentar `CardType` di `settings-mbr.ts` ("`kpi_area` = level Strategi") menggambarkan keadaan **pra-0046**; RPC sekarang tidak mengenal `kpi_area` sama sekali dan memakai `strategy` untuk level Strategi. Pemetaan cascade karena itu ditulis eksplisit di `mobile/src/lib/mbr-cascade.ts` dan dikunci tes yang membandingkannya dengan hierarki independen — bukan dicocokkan dari string mentah.
+- **Dua cacat lain tersingkap saat verifikasi.** (a) `activate_problem_statement` menghitung `public.initiatives WHERE problem_statement_id`, kolom yang hanya ada di `action_plans` — dibuktikan di staging dengan `42703`; laten karena mode default tak pernah menyentuh cabang itu, tapi menjadi kegagalan total begitu aturan PS diset `blokir_aktivasi`. (b) `check_minimum_breakdown_compliance` masih memegang PUBLIC EXECUTE, sisa `DROP ... CASCADE` di `0046` — kelas bug yang sama yang melahirkan contract `0066`.
+- **Perbaikan gerbang mode.** Guard cascade lama hanya melihat `is_compliant`, sehingga `hanya_peringatan` dan `blokir_aktivasi` ikut menahan tombol tambah. Kini hanya `blokir_akses_turunan`; ketiga mode lain dikunci tes di kelima aturan.
+- PR: #141
+- Files created: `supabase/migrations/0082_mbr_rule_naming_and_ps_activation.sql`, `supabase/tests/0082_mbr_rule_naming_contract.sql`, `mobile/src/lib/mbr-cascade.ts` + tesnya.
+- Files updated: `mobile/src/screens/workspace-screen.tsx` (4 tombol ter-guard, dari 1), `mobile/src/lib/settings-mbr.ts` (label `kpi_area` dibedakan — Settings sebelumnya merender dua kartu "Strategi → Strategi").
+- Pages updated: [[feature-gap-backlog]] (baris BL-04 → DONE, §2 triage, §4 baru berisi keputusan owner + akar + utang tersisa).
+- **Verifikasi:** `npm test` 1624 passed / 131 suite; `npm run type-check` bersih; migrasi + contract test dijalankan di Postgres lokal nyata (5 blok PASS), termasuk uji idempotensi (re-apply tidak menggeser baris kedua kali).
+- **Utang yang sengaja ditinggalkan (rinci di [[feature-gap-backlog]] §4.5):** penegakan `blokir_akses_turunan` sepenuhnya di klien — trigger `tg_enforce_mbr_block_child` tidak terpasang di tabel mana pun sejak `0046`, **dan** badan fungsinya meleset satu tingkat sehingga akan mengunci dirinya sendiri bila dipasang ulang apa adanya.
+
+
+## [2026-07-22] update | Rekonsiliasi slot migrasi 0080–0082 (PR #118 / #120 / #141)
+
+- **Masalah:** tiga PR terbuka sama-sama menomori migrasinya `0080`. Slot dibagi ulang menurut umur PR: **#118 → `0080`** (revoke anon/PUBLIC 4 RPC submit/review), **#120 → `0081`** (pengingat periode skoring, B-1), **#141 → `0082`** (penamaan baris aturan MBR + aktivasi PS, BL-04). Urutan merge mengikuti nomor.
+- **Jebakan saat menggeser #141:** migrasinya memakai prefiks sentinel dua fase `mig0080__`, dan Fase B membuangnya lewat `substring(... from 10)` — offset hardcoded. `mig0082__` sama-sama 9 karakter sehingga offset tetap sahih; prefiks dengan panjang berbeda akan merusak seluruh nama baris aturan tanpa error. ID assertion kontrak ikut digeser ke `0082-DB-1..5`.
+- **Rujukan "butuh migrasi 0080+"** untuk utang Activity Log (RPC `post_review_note`, lihat [[ui-prototype-gap]] §2.2) sudah usang begitu slot 0080–0082 terpakai — diperbarui jadi **`0083+`** di [[feature-gap-backlog]] dan [[ui-prototype-gap]]. Entri log lama sengaja **tidak** diubah: log ini append-only, dan klaim itu benar pada saat ditulis.
+- **Catatan CI:** ketiga PR ini tidak mendapat sinyal otomatis — GitHub Actions berhenti jalan sejak 2026-07-21 (kuota) dan `.circleci/config.yml` memfilter semua job ke `only: [main, staging]`, sehingga branch fitur tidak terjamah. `mergeStateStatus=CLEAN` berarti "tidak ada required check", bukan "check hijau". Verifikasi ketiganya dilakukan lokal (migrasi + contract test di Postgres nyata, `jest`, `tsc`, `lint`).
+
 ## [2026-07-22] update | BL-02 selesai — Strategi mewarisi periode Goal induk (PRD §44 AC-11 PASS)
 
 - **Pemicu:** BL-02 di [[feature-gap-backlog]] — satu-satunya pelanggaran AC harfiah terhadap PRD yang tersisa. PRD §12.1 (baris 540-544) menyatakan *"Strategy tidak punya masa berlaku sendiri karena mengikuti Goal tahunan"*, tetapi `strategy/new.tsx` merender `DateRangeField` editable dan mengirim ketikan user sebagai `period_start`/`period_end`. Goal induk sudah di-fetch tapi hanya `goal_template_id` + `pic_id` yang dibaca.

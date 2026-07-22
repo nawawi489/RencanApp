@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Pre-push hook — RencanApp
+# ==============================================================================
+# Gate cepat sebelum push agar tidak boros round-trip ke CircleCI.
+# Yang dicek: type-check + lint + jest --onlyChanged (test yang terpengaruh saja).
+#
+# Bypass emergency: `git push --no-verify` (standar git — TIDAK menonaktifkan
+# CircleCI, hanya skip hook lokal).
+#
+# Install: symlink atau copy ke .git/hooks/pre-push
+#   cd .git/hooks && ln -sf ../../.githooks/pre-push pre-push
+# atau di Windows Git Bash:
+#   cp .githooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# ==============================================================================
+
+set -e
+
+# Warna terminal (opsional; fail-safe kalau tidak support)
+RED=$(printf '\033[0;31m' 2>/dev/null || true)
+GREEN=$(printf '\033[0;32m' 2>/dev/null || true)
+YELLOW=$(printf '\033[0;33m' 2>/dev/null || true)
+BOLD=$(printf '\033[1m' 2>/dev/null || true)
+RESET=$(printf '\033[0m' 2>/dev/null || true)
+
+ROOT="$(git rev-parse --show-toplevel)"
+MOBILE="$ROOT/mobile"
+
+if [ ! -d "$MOBILE" ]; then
+  echo "${YELLOW}pre-push: mobile/ tidak ada di root repo, skip.${RESET}"
+  exit 0
+fi
+
+# Kalau tidak ada perubahan di mobile/ dibanding upstream, skip semua check
+# supaya push docs/wiki/spec/CI tidak diblokir hook mobile.
+if git diff --quiet HEAD 2>/dev/null; then
+  BASE=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "")
+else
+  BASE=""
+fi
+
+if [ -n "$BASE" ]; then
+  # Cek apakah ada file di mobile/ yang berubah antara upstream dan HEAD.
+  if ! git diff --name-only "$BASE...HEAD" -- mobile/ 2>/dev/null | grep -q .; then
+    echo "${YELLOW}pre-push: tidak ada perubahan di mobile/ vs $BASE — skip type-check + test.${RESET}"
+    exit 0
+  fi
+fi
+
+cd "$MOBILE"
+
+echo "${BOLD}→ pre-push: type-check${RESET}"
+if ! npm run type-check --silent; then
+  echo "${RED}✗ type-check gagal.${RESET} Push dibatalkan."
+  echo "  Bypass emergency: ${BOLD}git push --no-verify${RESET}"
+  exit 1
+fi
+
+echo "${BOLD}→ pre-push: lint${RESET}"
+if ! npm run lint --silent; then
+  echo "${RED}✗ lint gagal.${RESET} Push dibatalkan."
+  echo "  Bypass emergency: ${BOLD}git push --no-verify${RESET}"
+  exit 1
+fi
+
+echo "${BOLD}→ pre-push: jest --onlyChanged${RESET}"
+if ! npx jest --onlyChanged --passWithNoTests --silent; then
+  echo "${RED}✗ test gagal.${RESET} Push dibatalkan."
+  echo "  Bypass emergency: ${BOLD}git push --no-verify${RESET}"
+  exit 1
+fi
+
+echo "${GREEN}✓ pre-push checks lolos.${RESET}"

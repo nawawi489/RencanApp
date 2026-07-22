@@ -86,6 +86,12 @@ EXCLUDES=(
   # `kpi_area_current_values` to explain the security_invoker regression from
   # 0045. (Was 0061_fix_strategy_current_values before the same renumbering.)
   'supabase/migrations/0064_fix_strategy_current_values'
+  # 0082_mbr_rule_naming_and_ps_activation comments spell out the 0045 rename
+  # CHAIN (kpi_areas → strategies → initiatives → action_plans → tasks) because
+  # the migration's whole purpose is finishing that rename inside
+  # minimum_breakdown_rules — the row contents 0045 left behind. Same class as
+  # the 0062_/0064_ entries above: legacy names in prose, never in DDL.
+  'supabase/migrations/0082_mbr_rule_naming_and_ps_activation'
   # Historical SQL contract tests (fase-N_*_contract.sql, 00NN_*_contract.sql).
   # These document DDL against the schema of their time and are not rewritten.
   'supabase/tests/'
@@ -107,6 +113,12 @@ EXCLUDES=(
   'wiki/concepts/ui-prototype-gap'
   # Scope guardrails concept documents structural separation from legacy tables.
   'wiki/concepts/scope-guardrails'
+  # feature-gap-backlog §4 explains the BL-04 root cause, which REQUIRES naming
+  # the pre-rename tables to describe what 0045 shifted and what it missed.
+  # Trade-off accepted knowingly: this is a live, frequently-edited page, so
+  # excluding it blinds the guard here. Kept because the alternative — writing
+  # the root cause without naming the old tables — makes it unreadable.
+  'wiki/concepts/feature-gap-backlog'
   # Source mirrors of external docs.
   'wiki/sources/'
   # Historical QA/test reports document schema at their time-of-run.
