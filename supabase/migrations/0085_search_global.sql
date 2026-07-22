@@ -60,6 +60,21 @@ begin
   -- Guard biaya — disalin VERBATIM dari 0075_fix_search_chat_messages_limit_clamp.sql:42-48.
   -- Regresi 0060 kehilangan justru blok ini karena `create or replace` penuh; jangan
   -- menyusunnya ulang dari ingatan.
+  -- Validasi BENTUK-REQUEST (FR-19). Ini SATU-SATUNYA exception yang diizinkan di fungsi
+  -- ini, dan ia sah justru karena tidak bergantung pada identitas maupun data aktor:
+  -- pemanggil mana pun dengan request berbentuk sama mendapat galat yang sama, sehingga
+  -- ia tidak dapat dipakai sebagai oracle. Pesannya statis — jangan menyisipkan nilai
+  -- apa pun dari baris atau dari aktor ke dalamnya.
+  --
+  -- Cursor keyset hanya bermakna dalam SATU urutan. Dengan lebih dari satu scope,
+  -- tiap scope punya urutannya sendiri sehingga satu pasang (ts, id) tidak dapat
+  -- menunjuk posisi yang konsisten — diam-diam ia akan melewatkan atau menggandakan baris.
+  if (p_cursor_ts is not null or p_cursor_id is not null)
+     and (p_scopes is null or array_length(p_scopes, 1) is distinct from 1) then
+    raise exception 'cursor hanya sah bila p_scopes berisi tepat satu scope'
+      using errcode = '22023';    -- invalid_parameter_value
+  end if;
+
   q := btrim(coalesce(p_query, ''));
   if length(q) < 2 then
     return;                       -- EARLY RETURN, bukan exception (FR-13: exception = oracle)

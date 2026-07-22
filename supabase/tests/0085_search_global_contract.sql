@@ -283,9 +283,11 @@ begin
     into v_body
   from pg_proc where proname = 'search_global';
 
-  if v_body ilike '%raise exception%' then
-    fails := fails || 'DB-52 ada_raise_exception_di_badan(FR-13: exception = oracle); ';
-  end if;
+  -- Catatan: assertion `raise exception` PINDAH ke Wave 5 dalam bentuk yang dipertajam.
+  -- Larangan mutlak "nol raise exception" benar selama Wave 3 (belum ada cursor), tetapi
+  -- menjadi SALAH begitu FR-19 diimplementasi — FR-13 mengizinkan tepat satu exception:
+  -- error bentuk-request cursor, yang tidak bergantung identitas maupun data aktor.
+  -- Yang diuji di Wave 5 adalah SIFAT exception-nya, bukan jumlahnya nol.
   if v_body ilike '%map_legacy_entity_type%' then
     fails := fails || 'DB-28 action_plan_memakai_map_legacy_entity_type(dilarang 6.4); ';
   end if;
@@ -427,5 +429,218 @@ begin
     raise exception 'FAIL 0085-DB-53b/55: %', fails;
   end if;
   raise notice 'PASS 0085-DB-53b/55: delegasi terbukti (stub kanari terlihat) + truncation 240 milik search_global';
+end $$;
+rollback;
+
+-- ============================================================================
+-- Wave 5 — cursor keyset, anti-oracle, nol-emisi audit, pengunci NG-6
+-- (DB-61..DB-74, plus DB-52 dipertajam)
+-- ============================================================================
+
+begin;
+do $$
+declare
+  v_org  uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';
+  v_ceo  uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
+  fails  text := '';
+  n      int;
+  v_body text;
+  v_ts   timestamptz; v_id uuid;
+  p1 text; p2 text; p3 text;
+  d_nomatch text; d_filtered text;
+  a_before bigint; a_after bigint; g_before bigint; g_after bigint;
+  i int;
+begin
+  -- seed 7 baris untuk uji paging 3 halaman
+  for i in 1..7 loop
+    insert into public.goals (organization_id, name, pic_id, period_start, period_end, status, target_value, created_by)
+    values (v_org, 'bl10w5 page ' || lpad(i::text, 2, '0'), v_ceo,
+            current_date, current_date+30, 'draft', '1', v_ceo);
+  end loop;
+
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- ---- DB-61/62/63 — cursor: HANYA sah bila p_scopes berisi tepat satu scope ----
+  -- Exception di sini adalah error BENTUK-REQUEST (FR-19): tidak bergantung identitas
+  -- maupun data aktor, jadi ia bukan oracle.
+  begin
+    perform * from public.search_global('bl10w5', array['goal','task'], true, 5, now(), gen_random_uuid());
+    fails := fails || 'DB-61 cursor_multi_scope_tidak_ditolak; ';
+  exception when others then null;   -- diharapkan
+  end;
+
+  begin
+    perform * from public.search_global('bl10w5', null, true, 5, now(), gen_random_uuid());
+    fails := fails || 'DB-62 cursor_dgn_scope_null_tidak_ditolak; ';
+  exception when others then null;   -- diharapkan
+  end;
+
+  begin
+    perform * from public.search_global('bl10w5', array['goal'], true, 5, now(), gen_random_uuid());
+  exception when others then
+    fails := fails || 'DB-63 cursor_satu_scope_ditolak(' || sqlerrm || '); ';
+  end;
+
+  -- ---- DB-64 — tiga halaman: tanpa duplikasi, tanpa kehilangan ----
+  select string_agg(title, ',' order by title) into p1
+  from public.search_global('bl10w5 page', array['goal'], true, 3, null, null);
+  select sort_ts, sort_id into v_ts, v_id
+  from public.search_global('bl10w5 page', array['goal'], true, 3, null, null)
+  order by sort_ts asc, sort_id asc limit 1;
+
+  select string_agg(title, ',' order by title) into p2
+  from public.search_global('bl10w5 page', array['goal'], true, 3, v_ts, v_id);
+  select sort_ts, sort_id into v_ts, v_id
+  from public.search_global('bl10w5 page', array['goal'], true, 3, v_ts, v_id)
+  order by sort_ts asc, sort_id asc limit 1;
+
+  select string_agg(title, ',' order by title) into p3
+  from public.search_global('bl10w5 page', array['goal'], true, 3, v_ts, v_id);
+
+  if (select count(*) from (
+        select unnest(string_to_array(coalesce(p1,''), ',')) x
+        union all select unnest(string_to_array(coalesce(p2,''), ','))
+        union all select unnest(string_to_array(coalesce(p3,''), ','))
+      ) s where x <> '') <> 7 then
+    fails := fails || 'DB-64 total_3_halaman_bukan_7(' || coalesce(p1,'') || ' | '
+                   || coalesce(p2,'') || ' | ' || coalesce(p3,'') || '); ';
+  end if;
+  if (select count(distinct x) from (
+        select unnest(string_to_array(coalesce(p1,''), ',')) x
+        union all select unnest(string_to_array(coalesce(p2,''), ','))
+        union all select unnest(string_to_array(coalesce(p3,''), ','))
+      ) s where x <> '') <> 7 then
+    fails := fails || 'DB-64 ada_duplikasi_lintas_halaman; ';
+  end if;
+
+  -- ---- DB-67 — scope tak dikenal = 0 baris, TANPA exception (FR-22) ----
+  begin
+    select count(*) into n from public.search_global('bl10w5', array['scope_tidak_dikenal'], true, 5, null, null);
+    if n <> 0 then fails := fails || 'DB-67 scope_tak_dikenal_mengembalikan_baris(' || n || '); '; end if;
+  exception when others then
+    fails := fails || 'DB-67 scope_tak_dikenal_melempar_exception(' || sqlerrm || '); ';
+  end;
+
+  -- ---- DB-68/69 — ANTI-ORACLE setara-byte ----
+  -- (i) tidak match apa pun  vs  (ii) match baris yang seluruhnya tersaring otorisasi.
+  -- Keduanya WAJIB menghasilkan payload identik dan tidak melempar apa pun.
+  select coalesce(md5(string_agg(t::text, '|' order by t::text)), 'KOSONG') into d_nomatch
+  from public.search_global('zzz-tidak-akan-cocok-zzz', array['goal'], false, 5, null, null) t;
+
+  select coalesce(md5(string_agg(t::text, '|' order by t::text)), 'KOSONG') into d_filtered
+  from public.search_global('bl10w5-victim', array['goal'], false, 5, null, null) t;
+
+  if d_nomatch <> d_filtered then
+    fails := fails || 'DB-68 digest_berbeda(nomatch=' || d_nomatch || ' filtered=' || d_filtered || '); ';
+  end if;
+
+  -- ---- DB-70 — nol emisi audit (FR-32) ----
+  execute 'reset role';
+  select count(*) into a_before from public.activity_logs;
+  select count(*) into g_before from public.governance_violations;
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+  for i in 1..25 loop
+    perform * from public.search_global('bl10w5', array['goal'], true, 5, null, null);
+    perform * from public.search_global('zzz', null, true, 5, null, null);
+  end loop;
+  execute 'reset role';
+  select count(*) into a_after from public.activity_logs;
+  select count(*) into g_after from public.governance_violations;
+  if a_after <> a_before then
+    fails := fails || 'DB-70 activity_logs_bertambah(' || (a_after - a_before) || '); ';
+  end if;
+  if g_after <> g_before then
+    fails := fails || 'DB-70 governance_violations_bertambah(' || (g_after - g_before) || '); ';
+  end if;
+
+  -- ---- DB-52 DIPERTAJAM + DB-66 — badan fungsi, komentar dilucuti ----
+  select regexp_replace(
+           regexp_replace(prosrc, '--[^' || chr(10) || ']*', '', 'g'),
+           '/\*.*?\*/', '', 'gs')
+    into v_body
+  from pg_proc where proname = 'search_global';
+
+  -- FR-13 mengizinkan TEPAT SATU exception: error bentuk-request cursor. Yang dilarang
+  -- adalah exception yang bergantung identitas/data aktor. Karena itu assertion diarahkan
+  -- ke SIFATNYA, bukan ke jumlah nol yang akan salah begitu FR-19 diimplementasi.
+  if v_body !~* 'raise exception' then
+    fails := fails || 'DB-52 tidak_ada_validasi_bentuk_request_cursor(FR-19 belum diimplementasi?); ';
+  end if;
+  if v_body ~* 'raise exception[^;]*(auth\.uid|can_access|has_permission|current_user_org)' then
+    fails := fails || 'DB-52 ada_raise_exception_bergantung_identitas(oracle, FR-13); ';
+  end if;
+
+  -- DB-66 — tanpa OFFSET (paging keyset, bukan offset)
+  if v_body ~* '\moffset\M' then
+    fails := fails || 'DB-66 memakai_OFFSET(paging harus keyset); ';
+  end if;
+
+  if fails <> '' then
+    raise exception 'FAIL 0085-DB-52/61..70: %', fails;
+  end if;
+  raise notice 'PASS 0085-DB-52/61..70: cursor bentuk-request + paging 3 halaman + scope tak dikenal + anti-oracle setara-byte + nol emisi audit';
+end $$;
+rollback;
+
+-- ============================================================================
+-- Pengunci NG-6 (DB-72..DB-74) — tiga jaring agar tak ada yang "merapikan" search_cards
+-- ============================================================================
+begin;
+do $$
+declare
+  v_ceo    uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
+  v_org    uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';
+  fails    text := '';
+  v_src    text;
+  n_cards  int;
+  n_global int;
+  v_digest text;
+  -- Baseline P5 (Wave 0). PERINGATAN, bukan penegak — lihat DB-74.
+  c_baseline constant text := 'e8d46e73c3144369b20d872f89e39ad2';
+begin
+  insert into public.goals (organization_id, name, pic_id, period_start, period_end, status, target_value, created_by)
+  values (v_org, 'bl10ng6 wildcard', v_ceo, current_date, current_date+30, 'draft', '1', v_ceo);
+
+  select prosrc into v_src from pg_proc where proname = 'search_cards';
+
+  -- DB-72 — bug FR-6 di search_cards SENGAJA dipertahankan
+  if v_src ilike '%escape%' then
+    fails := fails || 'DB-72 search_cards_kini_memakai_escape(NG-6 dilanggar: jangan perbaiki di PR ini); ';
+  end if;
+
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- DB-73 — PENEGAK UTAMA: perbedaan PERILAKU berpasangan.
+  -- search_cards: '%' masih wildcard hidup (bug dipertahankan) -> ada baris.
+  -- search_global: '%%' literal -> nol baris.
+  select count(*) into n_cards  from public.search_cards('%', null, false);
+  select count(*) into n_global from public.search_global('%%', array['goal'], true, 30, null, null);
+
+  if n_cards = 0 then
+    fails := fails || 'DB-73 search_cards_wildcard_mati(perilakunya berubah -> NG-6 dilanggar); ';
+  end if;
+  if n_global <> 0 then
+    fails := fails || 'DB-73 search_global_wildcard_hidup(' || n_global || ' baris; escaping bocor); ';
+  end if;
+
+  execute 'reset role';
+
+  -- DB-74 — PERINGATAN, bukan penegak (§9.5 Concern #4)
+  select md5(prosrc) into v_digest from pg_proc where proname = 'search_cards';
+  if v_digest <> c_baseline then
+    raise warning 'DB-74: digest search_cards berubah (% -> %); bila ini perbaikan yang disengaja, perbarui baseline P5 — NG-6 sesungguhnya ditegakkan DB-73',
+                  c_baseline, v_digest;
+  end if;
+
+  if fails <> '' then
+    raise exception 'FAIL 0085-DB-72..74: %', fails;
+  end if;
+  raise notice 'PASS 0085-DB-72..74: NG-6 terkunci lewat perbedaan perilaku (digest hanya peringatan)';
 end $$;
 rollback;
