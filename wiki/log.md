@@ -2129,5 +2129,5 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **Tiga opsi didokumentasikan, rekomendasi opsi 2** (jalur eksplisit `raw_app_meta_data.organization_id` + `RAISE` hanya sebagai fallback, lalu prelude + 18 file test disetel eksplisit; ukuran M, mekanis). Opsi 3 (penegakan di luar runtime, assertion `count(*) = 1` terhadap staging/produksi) layak bila lebar diff fixture dinilai terlalu berisiko. Keputusan bentuk = milik owner.
 - **Batas verifikasi.** Analisis ini **statis** — pembacaan `_fixtures.sql` + runner CI; tidak ada database lokal yang jalan di sesi ini, jadi kegagalannya tidak dieksekusi. Jalur baris 87 → baris 100 tidak punya cabang.
 - **Di luar cakupan (sengaja):** tiga lubang kegagalan-diam di `supabase/functions/create-user/index.ts` — dilacak terpisah sebagai bugfix biasa.
-- PR: #146 investigasi; PR ini nol migrasi, nol perubahan runtime — wiki-only.
+- PR: #147 (nol migrasi, nol perubahan runtime — wiki-only); konteks investigasi #146.
 - Pages updated: [[feature-gap-backlog]] (baris BL-14, §2 triage, §5 baru), [[log]].
