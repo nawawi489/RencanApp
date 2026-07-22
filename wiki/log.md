@@ -2035,3 +2035,46 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **Jebakan saat menggeser #141:** migrasinya memakai prefiks sentinel dua fase `mig0080__`, dan Fase B membuangnya lewat `substring(... from 10)` — offset hardcoded. `mig0082__` sama-sama 9 karakter sehingga offset tetap sahih; prefiks dengan panjang berbeda akan merusak seluruh nama baris aturan tanpa error. ID assertion kontrak ikut digeser ke `0082-DB-1..5`.
 - **Rujukan "butuh migrasi 0080+"** untuk utang Activity Log (RPC `post_review_note`, lihat [[ui-prototype-gap]] §2.2) sudah usang begitu slot 0080–0082 terpakai — diperbarui jadi **`0083+`** di [[feature-gap-backlog]] dan [[ui-prototype-gap]]. Entri log lama sengaja **tidak** diubah: log ini append-only, dan klaim itu benar pada saat ditulis.
 - **Catatan CI:** ketiga PR ini tidak mendapat sinyal otomatis — GitHub Actions berhenti jalan sejak 2026-07-21 (kuota) dan `.circleci/config.yml` memfilter semua job ke `only: [main, staging]`, sehingga branch fitur tidak terjamah. `mergeStateStatus=CLEAN` berarti "tidak ada required check", bukan "check hijau". Verifikasi ketiganya dilakukan lokal (migrasi + contract test di Postgres nyata, `jest`, `tsc`, `lint`).
+
+## [2026-07-22] update | BL-02 selesai — Strategi mewarisi periode Goal induk (PRD §44 AC-11 PASS)
+
+- **Pemicu:** BL-02 di [[feature-gap-backlog]] — satu-satunya pelanggaran AC harfiah terhadap PRD yang tersisa. PRD §12.1 (baris 540-544) menyatakan *"Strategy tidak punya masa berlaku sendiri karena mengikuti Goal tahunan"*, tetapi `strategy/new.tsx` merender `DateRangeField` editable dan mengirim ketikan user sebagai `period_start`/`period_end`. Goal induk sudah di-fetch tapi hanya `goal_template_id` + `pic_id` yang dibaca.
+- **Perubahan:** `DateRangeField` + state periode dicabut dari form; periode disalin dari Goal induk saat submit; nilai warisan tampil **read-only** lewat token `Field` (DESIGN §7).
+- **Keputusan desain 1 — tampilkan, jangan sembunyikan.** Periode ikut menentukan status "periode lewat" dan kelayakan aktivasi. Bila ditetapkan diam-diam, user yang aktivasinya ditolak tak punya jalan menghubungkannya ke Goal. Ditampilkan beserta kalimat penjelas asalnya.
+- **Keputusan desain 2 — Goal tanpa periode → blokir, bukan kirim NULL.** `activate_strategy` (0078) mem-gate `period_start`/`period_end` NOT NULL, jadi Strategy ber-periode NULL adalah Draft yang **tidak pernah bisa diaktifkan** dan errornya muncul jauh dari penyebabnya. Simpan diblokir di titik pembuatan dengan pesan yang menunjuk perbaikan sebenarnya.
+- **Keputusan desain 3 — warisan disalin saat pembuatan, bukan dibaca ulang saat render.** Kolom `strategies.period_*` tetap material karena gate aktivasi membacanya dari baris Strategy. Konsekuensi yang **diterima secara sadar**: mengubah periode Goal tidak mem-backfill Strategi yang sudah ada. Itu di luar cakupan AC-11 dan butuh keputusan produk sendiri.
+- **Temuan verifikasi yang layak dicatat:**
+  - `strategies.period_start/end` **nullable** (0010) — hanya ada CHECK urutan. Yang mengikat adalah gate aktivasi, bukan constraint kolom. Jangan mengandalkan NOT NULL yang tidak ada.
+  - `activate_strategy` didefinisi ulang **3×** (0010 → 0024 → **0078 = yang berlaku**). Ketiganya mem-gate periode; membaca 0024 saja memberi gambaran usang (masih memakai `kpi_area_id` pra-reposisi).
+  - **Nol permukaan lain** mengedit periode Strategy: `DraftCompletion` di `strategy/[id].tsx` hanya target + PIC, `[id].tsx:273` cuma menampilkan. Tipe `StrategyPatch` masih mengizinkan `period_*` tapi nol call-site UI — AC tertutup penuh, bukan setengah.
+  - **Nol tes lama dihapus.** Tidak ada file tes untuk `strategy/new.tsx` sebelum ini; `workspace.test.tsx` hanya menguji routing. Tes baru `[BL02-1..3]` yang mengunci kontrak.
+- **Jebakan tes yang ditemukan (berguna untuk file tes layar berikutnya):** di setup ini `screen` belum terikat sampai tick berikutnya — akses langsung setelah `render()` melempar *"render function has not been called"*; pakai `await render(...)` (pola `[E0]` di `inbox/[roomId].test.tsx`). Juga `fireEvent.changeText` butuh flush eksplisit sebelum event berikutnya, kalau tidak submit membaca state kosong. Assert periode wajib `findBy*`, bukan `waitFor(getGoal dipanggil)` — "dipanggil" hanya berarti query start, dan versi pertama tes ini lolos sendirian tapi merah di suite penuh persis karena itu ([[ci-flake-test-ci]]).
+- Pages updated: [[feature-gap-backlog]] (BL-02 → dicoret + DONE #140; §2 triage; catatan ambang P-slot).
+- Files updated: `mobile/src/app/(app)/strategy/new.tsx`, `mobile/src/app/(app)/strategy/__tests__/new-period-inherit.test.tsx` (baru).
+- **Verifikasi:** `npm test` 131 suite / 1592 tes hijau · `npm run type-check` bersih · `npm run lint` 0 error. PR #140 → `staging`. Nol migrasi.
+
+## [2026-07-22] update | BL-02 dijalankan live — copy periode dipecah jadi 4 state
+
+- **Pemicu:** menjalankan layar `strategy/new` di app lokal (Expo web + Supabase lokal), bukan hanya jest. Dua temuan yang tidak mungkin muncul dari unit test.
+- **Temuan 1 — copy menuduh hal yang salah.** Form menampilkan "Goal induk belum punya periode" padahal Goal-nya punya periode; yang terjadi RLS menyaringnya habis. `getGoal` memakai `maybeSingle()` sehingga **Goal tak terbaca dan Goal berperiode kosong sama-sama pulang sebagai `null`** — indistinguishable kecuali `data` diperiksa terpisah dari `data.period_*`.
+- **Perbaikan:** state periode dipecah eksplisit (`PeriodState` + tabel `PERIOD_COPY`): `loading` · `error` (koneksi, bukan data Goal) · `unreachable` (dihapus / di luar akses) · `no-period` (isi periode di Goal). Keempatnya tetap memblokir simpan — yang berubah hanya perbaikan yang ditunjuk. Judul + isi `Alert` membaca tabel yang sama supaya teks layar dan dialog tidak bisa lepas sinkron.
+- Tes `[BL02-4]` (`getGoal → null`) dan `[BL02-5]` (`getGoal` reject) mengunci keduanya, **berikut assert negatif** bahwa copy "belum punya periode" tidak muncul di kedua state itu.
+- **Temuan 2** — akar penyebab tampilan salah itu ternyata seed lokal, dicatat terpisah di entri berikutnya.
+- **Verifikasi:** `npm test` 131 suite / **1594** tes hijau · type-check bersih · lint 0 error. Ketiga state reachable dicek langsung di app.
+- Files updated: `mobile/src/app/(app)/strategy/new.tsx`, `mobile/src/app/(app)/strategy/__tests__/new-period-inherit.test.tsx`. PR #140.
+
+## [2026-07-22] fix | Seed lokal: profil & data terpisah org — dua aturan pemilihan org yang bertabrakan
+
+- **Gejala:** login `ceo@rencan.local` berhasil, tapi Workspace **kosong** dan layar turunan melaporkan Goal tidak ditemukan. Bukan bug app dan bukan bug RLS — profil CEO memang berada di org berbeda dari Goal-nya. Kegagalan **senyap total**: nol error, data hanya tampak hilang.
+- **Akar masalah — dua aturan yang tidak pernah disepakati:**
+  - Baris data seed memakai `(select id from public.organizations limit 1)` **tanpa `order by`** → non-deterministik begitu ada lebih dari satu org (51× di `seed_dummy.sql`, 14× di `seed_scenario_close.sql`).
+  - Profil **tidak lewat ekspresi itu sama sekali** — dibuat trigger `handle_new_user` yang memakai `order by created_at limit 1` (org **tertua**).
+- **Pemicu yang membuatnya meledak:** DB contract tests menyuntikkan `Contract Fixtures Org` + `DCR-05 Fixtures Org` dengan `created_at` **epoch 1970**. Org fixture otomatis MENANG aturan "tertua", jadi setiap profil yang dibuat sesudah contract test dijalankan mendarat di org fixture, sementara data seed mendarat di tempat lain.
+- **Perbaikan:** satu temp table `_seed_org` (`on commit drop`) me-resolve org **sekali**, deterministik — `Nyantuy Group` (org kanonik migrasi 0001, satu-satunya dengan set `role_templates` lengkap `ceo/c_level/management/staff`), fallback org tertua, `raise` bila nihil. Semua 65 call-site membacanya.
+- **Dua detail yang ikut menentukan benar/tidaknya:**
+  - `seed_dummy.sql` kini **ikut men-set `profiles.organization_id`** — menyamakan profil dengan datanya sekaligus **memperbaiki profil yang terlanjur salah org** dari run lama. File tetap idempoten, jadi menjalankan ulang = obatnya.
+  - `role_template_id` diturunkan dari `_seed_org`, **bukan** `p.organization_id`; kalau tidak ia tetap menunjuk role_template milik org lama setelah profil dipindah.
+  - `seed_scenario_close.sql` mencerminkan org dari profil CEO dummy agar otomatis mengikuti ke mana pun `seed_dummy` menaruhnya — bukan menurunkan sendiri.
+- **Sengaja TIDAK disentuh:** `seed_staging.sql` (sudah memakai id org eksplisit); `supabase/tests/*` yang juga memakai `limit 1` tanpa urutan — fixture memang berhak punya org sendiri; dan `handle_new_user` — aturan "org tertua" miliknya adalah perilaku app, hanya salah karena fixture mem-backdate `created_at`. Mengubahnya di sini akan melebar dari perbaikan seed. **Utang terbuka**, layak ditinjau terpisah.
+- **Verifikasi:** `seed_dummy.sql` jalan 2× (idempoten) → 6 profil `@rencan.local` semuanya di Nyantuy Group dengan level role benar; goals/strategies/tasks/profiles satu org; `seed_scenario_close.sql` jalan bersih sampai `close_period_snapshot`. Di app, `ceo@rencan.local` kini melihat 2 Goal + 4 Strategi (sebelumnya kosong).
+- Files updated: `supabase/seed_dummy.sql`, `supabase/seed_scenario_close.sql`. Nol migrasi, nol perubahan `mobile/`. PR #140.

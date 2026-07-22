@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [backlog, gap-analysis, prd-conformance, triage]
-updated: 2026-07-21
+updated: 2026-07-22
 sources: 0
 ---
 
@@ -25,7 +25,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | ID | Area | Gap (setelah verifikasi) | Ukuran | Status |
 |---|---|---|---|---|
 | **BL-01** | People | **Ranking tie tidak konsisten**. `people-profile/[id].tsx:222` render `rank_number` dari DB; `people.tsx:94-104` membuang `rank_number` (padahal `listRanking` sudah `select('*')`) lalu me-derive `rank += 1` per orang. DB memakai *competition ranking* (skor sama → rank sama, berikutnya melompat — migrasi 0013 D11), list memakai 1,2,3 berurutan → tie tampil beda | XS | ✅ |
-| **BL-02** | Strategy period | **AC-11 FAIL**. `strategy/new.tsx:254-259` render `DateRangeField` editable; `parentQ.data` hanya dipakai untuk `goal_template_id` + `pic_id`, `period_start/end` Goal tidak pernah dibaca. PRD §12.1 (baris 540-544): *"Strategy tidak punya masa berlaku sendiri karena mengikuti Goal tahunan"* | S | ✅ |
+| **BL-02** | Strategy period | ~~**AC-11 FAIL**. `strategy/new.tsx:254-259` render `DateRangeField` editable; `parentQ.data` hanya dipakai untuk `goal_template_id` + `pic_id`, `period_start/end` Goal tidak pernah dibaca~~ ✅ **SELESAI 2026-07-22 — merged #140, nol migrasi. PRD §44 AC-11 kini PASS.** `DateRangeField` dicabut; periode disalin dari Goal induk saat submit dan tampil **read-only** (token `Field`) sebagai konteks — periode yang ditetapkan diam-diam tak bisa ditelusuri saat aktivasi ditolak. Goal induk tanpa periode → simpan **diblokir** menunjuk Goal, bukan kirim NULL (`activate_strategy` 0078 mem-gate `period_start/end` NOT NULL → Draft ber-periode NULL tak pernah bisa aktif). Dikunci tes `[BL02-1..3]`. **Nol permukaan lain** yang mengedit periode Strategy (`DraftCompletion` di `[id].tsx` hanya target+PIC), jadi AC tertutup penuh | S | ✅ DONE |
 | **BL-03** | Past-period dim | ~~AC-9 parsial~~ **BUKAN GAP KODE — keputusan owner 2026-07-03**. `PastDim` sempat ada (fix single-layer 2026-07-02) lalu **dicabut owner** sehari kemudian; kini nol layer dim, dikunci tes `[W08·1]`/`[W08·2]` (`countOpacityHalf === 0`). **Tapi PRD masih mewajibkan dim** — §44 AC-9 "tampil redup", diulang normatif di §7.7 & §11.3 (§37 permisif, tak konflik). Konflik spec-vs-kode ini yang melahirkan ulang temuan, bukan bug | — | ❌ kode · ⚠️ spec |
 | **BL-04** | MBR add-button | ~~Cakupan cascade MBR~~ ✅ **SELESAI 2026-07-21 — PR #141, migrasi 0082**. Akar sebenarnya bukan guard UI yang kurang melainkan **penamaan baris aturan yang tertinggal**: rename 0045 menggeser nama tabel, RPC ditulis ulang ke penamaan baru di 0046/0065, tapi isi `minimum_breakdown_rules` tidak pernah ikut dipindah → 3 dari 6 cabang RPC tidak menemukan baris aturannya dan fail-open permanen. Rinci di §4 | S→M | ✅ DONE |
 | **BL-05** | Evaluation | ~~**2 dari 6 field §26 hilang di UI**: `success_factors`, `failure_factors`. Kolom DB ada (0046:1882-1893), RPC `record_evaluation` menerimanya, lib `governance-admin.ts:110-124` sudah mem-forward — hanya form `evaluation.tsx` yang tidak mengirim. **Nol migrasi**~~ ✅ **DONE 2026-07-21 — PR #138, nol migrasi**. Kolom `text[]` → UI mengumpulkan **list sungguhan**: satu textarea per field, konvensi satu faktor per baris, tiap baris non-kosong jadi satu elemen array (bukan blok teks dibungkus array satu elemen). Chip/tag editor ditolak: menambah N tombol hapus ≥44px + label SR tanpa keuntungan nyata, sedangkan `LabeledInput multiline` sudah jadi idiom form di layar itu. Dikunci tes `[F8-UI-18b]` (kirim) + `[F8-UI-18c]` (pre-fill round-trip) | S | ✅ |
@@ -37,6 +37,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-11** | Header | ~~Ikon Notifications §7.2 hilang~~ ✅ **SELESAI** — merged #115 (UI-G-016); `notifications-outline` + badge unread via `useUnreadCount()`, badge disembunyikan saat loading/error (bukan fail-silent ke "0"), jumlah masuk `accessibilityLabel` | XS | ✅ DONE |
 | **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
 | **BL-13** | Governance Violation | **Tidak ada sumber kebenaran `violation_type`** — literal PL/pgSQL tersebar di 11 migrasi, peta label client salinan manual, nol gate sinkronisasi → drift lolos semua CI dan muncul sebagai degradasi diam-diam. Utang tersisa dari BL-12. Detail §BL-13 di bawah | butuh scoping | ✅ (dari #117) |
+| **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`, migrasi 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. Terbukti nyata di DB lokal: org fixture contract test ber-`created_at` epoch 1970 memenangkan aturan "tertua" dan menelan profil seed (ditutup di sisi seed lewat #140, **trigger-nya belum**). Perlu keputusan produk dulu: V1 memang single-org, atau signup harus lewat undangan/`raw_app_meta_data.organization_id`? `[?]` apakah ada jalur signup publik di produksi | butuh scoping | ⚠️ terbuka |
 
 ---
 
@@ -46,7 +47,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 ~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; BL-12 label map, BL-11 ikon header, BL-01 `rank_number`.
 
 **S — satu layar + test, nol migrasi:**
-BL-02, ~~BL-05~~ ✅ **selesai 2026-07-21 (PR #138)**, BL-09(b).
+~~BL-02~~ ✅ **selesai 2026-07-22 (#140)**; ~~BL-05~~ ✅ **selesai 2026-07-21 (PR #138)**; BL-09(b) — satu-satunya yang tersisa di bucket ini.
 
 **Butuh migrasi DB** (jadi bukan tiket sepele sekalipun UI-nya kecil):
 BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline yang kini membaca `organizations.timezone`).
@@ -55,7 +56,7 @@ BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline y
 > Rekomendasi awal "longgarkan CHECK `p_decision` di 2 RPC" **jangan dieksekusi** — ia mengasumsikan Catatan sebagai keputusan review ketiga, sedangkan owner memutuskan non-terminal. Melonggarkan CHECK `decision` sekarang akan menambah nilai yang tidak dipakai siapa pun sekaligus melemahkan invariant state machine review. Yang tersisa dari BL-08 hanyalah entri Activity Log (RPC SECURITY DEFINER baru, **bukan** perubahan CHECK) — rinci di branch `claude/pensive-goodall-42169f`, `ui-prototype-gap.md` §2.2.
 
 **Butuh scoping/spec dulu:**
-~~BL-04~~ ✅ **terjawab + selesai** — owner memutuskan cascade satu tingkat (PR #139), dan implementasinya menyingkap bahwa sisanya bukan keputusan produk melainkan drift data (§4). BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped).
+~~BL-04~~ ✅ **terjawab + selesai** — owner memutuskan cascade satu tingkat (dicatat di PR #139, yang **ditutup tanpa merge 2026-07-22**; konten keputusannya sudah mendarat lewat #141 + migrasi 0082), dan implementasinya menyingkap bahwa sisanya bukan keputusan produk melainkan drift data (§4). BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped), BL-14 (putuskan dulu apakah V1 memang single-org; kalau ya, trigger boleh tetap begitu asal didokumentasikan sebagai asumsi mengikat — kalau tidak, butuh jalur org eksplisit saat signup).
 
 **Ditutup tanpa dikerjakan:** BL-03 — keputusan desain, bukan gap.
 
@@ -69,7 +70,7 @@ BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline y
 > [!warning] BL-09 bukan satu bug
 > Klaim (a) "tidak tercari di Search" **gugur** — `includeArchived: true` sudah di-pass. Tersisa (b) row mati dan (c) invalidate key salah. (c) adalah **bug diam**: restore sukses, list tidak menyegar, user mengira gagal lalu mengulang. Item paling untung-per-baris di seluruh daftar.
 
-**Paling dekat ke ambang P-slot:** BL-09(c) (bug diam, perbaikan satu baris) dan BL-02 (satu-satunya pelanggaran AC harfiah terhadap PRD).
+**Paling dekat ke ambang P-slot:** BL-09(c) (bug diam, perbaikan satu baris) dan BL-02 (satu-satunya pelanggaran AC harfiah terhadap PRD) — **keduanya kini selesai**. Tidak ada lagi pelanggaran AC harfiah yang tercatat di daftar ini.
 
 ---
 
