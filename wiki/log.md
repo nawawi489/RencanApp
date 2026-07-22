@@ -2252,3 +2252,12 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - Files created: `mobile/src/lib/org-timezone.ts`, `mobile/src/lib/__tests__/org-timezone.test.ts`.
 - Files updated: `mobile/src/app/(app)/task/new.tsx`, `mobile/src/app/(app)/task/__tests__/repeat-ui.test.tsx`, `DESIGN.md` (§7 token `TimezoneNote`).
 - Pages updated: [[feature-gap-backlog]] (baris BL-06 → DONE + ukuran dikoreksi, §2 triage dua bucket, §BL-06 baru), [[log]].
+
+## [2026-07-22] update | BL-10 rencana TDD — dua temuan false-green ditutup
+
+- Pages updated: `specs/bl-10-pr1-tdd-plan.md` (§5 langkah 4 `DB-9`, §6.4 langkah 4, §9.4 baru)
+- **Missing #6 (escaping) — kritik aslinya separuh benar.** Verifikasi ulang: assertion negatif `'%%'` SUDAH diskriminatif (escaping dicabut → pola `%%%%` → `Aman` ikut terjaring → merah). Yang tidak diskriminatif adalah assertion **positif** `'0% T'`: pola rusak `%0% T%` dibaca *apa saja · `0` · apa saja · `" T"` · apa saja* sehingga tetap cocok dengan `100% Target` — hijau di kedua dunia. Diganti pasangan diskriminatif per metakarakter (`%`, `_`, `\`) dengan kewajiban assert dua arah. Baris `a\b` menutup arah kegagalan berlawanan: bukan baris salah ikut muncul, melainkan **baris benar justru hilang** karena backslash dimakan sebagai escape.
+- **Missing #2 (reduksi-RLS) — ditutup dengan dua kontrol positif** sebelum uji `EXCEPT`: sisi RLS harus > 0 baris (aktor memang berhak melihat sesuatu) dan sisi RPC harus > 0 baris (RPC benar-benar bekerja untuk aktor itu). Tanpa keduanya, `EXCEPT` kosong tak terbedakan antara "RPC ⊆ RLS" dan "RPC rusak total, nol baris".
+- Pemilihan aktor A2 sekaligus jadi penjaga premis — ia sengaja melihat *sebagian*; bila fixture berubah sehingga A2 tak berhak apa pun, kontrol pertama merah dan menyatakan premisnya bergeser. Pola yang sama dipakai `T-BL14-1`/`T-BL14-3` di kontrak 0083.
+- §9.1 (daftar 20 missing case) **tidak diedit** — dibiarkan sebagai catatan sejarah fase Grill; penutupan dicatat terpisah di §9.4.
+- **Masih terbuka:** tiga kegagalan mekanis (Concern #1 `staleTime` react-query v5, #3 `SET LOCAL` no-op di luar transaksi, #2 kontradiksi `pg_get_functiondef`) + penolakan `md5(prosrc)` sebagai penegak NG-6 (Concern #4).

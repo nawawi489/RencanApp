@@ -162,7 +162,17 @@ grant  execute on function public.search_global(text, text[], boolean, int, time
 | 7 | **green** | migrasi | perbaiki cabang goal sampai hijau |
 | 8 | refactor | kontrak | tulis pola harness sebagai komentar template di kepala berkas |
 
-`DB-9` bentuk konkret: seed `Aman` dan `100% Target`; `search_global('%%', array['goal'])` **tidak** mengembalikan `Aman` (wildcard mati) tetapi `search_global('0% T', …)` mengembalikan `100% Target`.
+`DB-9` bentuk konkret — **direvisi 2026-07-22, lihat §9.4**. Bentuk lama (seed `Aman` + `100% Target`, query `'%%'` lalu `'0% T'`) hanya separuh diskriminatif: assertion `'%%'` memang merah bila escaping dicabut (pola jadi `%%%%` → `Aman` ikut terjaring), tetapi assertion positif `'0% T'` **hijau baik escaping benar maupun rusak** — pola rusak `%0% T%` dibaca sebagai *apa saja · `0` · apa saja · `" T"` · apa saja*, yang tetap cocok dengan `100% Target`.
+
+Bentuk baru memakai **pasangan diskriminatif per metakarakter**. Seed: `ab`, `a%b`, `a_b`, `a\b`.
+
+| Query | Escaping benar | Escaping dicabut | Yang membuatnya merah |
+|---|---|---|---|
+| `a%` | hanya `a%b` | `ab`, `a%b`, `a_b`, `a\b` | `ab` muncul padahal tak punya `%` literal |
+| `a_` | hanya `a_b` | keempat baris | `ab` muncul; `_` jadi wildcard 1-karakter |
+| `a\b` | hanya `a\b` | `ab` (backslash dimakan sebagai escape) | baris yang benar justru HILANG |
+
+Tiap baris tabel wajib meng-assert **dua arah**: himpunan yang muncul **dan** himpunan yang tidak. Assertion satu arah ("`a%b` muncul") lolos pada implementasi tanpa escaping sama sekali.
 
 ---
 
@@ -353,12 +363,23 @@ Enam blok per scope:
 4. **reduksi-RLS (permintaan b)** — bentuk himpunan, tanpa menyalin predikat gate:
 
 ```sql
+-- KONTROL POSITIF dulu — tanpa dua assertion ini, uji EXCEPT di bawah hijau secara vakum
+-- (himpunan kosong EXCEPT apa pun = kosong, termasuk saat RPC rusak total & nol baris).
+select count(*) from public.<tabel> where name ilike pat escape '\'  -- ber-RLS, sebagai A2
+  --> HARUS > 0 : aktor memang berhak melihat sesuatu, jadi premis uji ini hidup
+select count(*) from public.search_global(q, array['<scope>'], true, 30, null, null)
+  --> HARUS > 0 : RPC benar-benar mengembalikan baris untuk aktor ini
+
+-- baru kemudian bentuk himpunannya
 select id from public.search_global(q, array['<scope>'], true, 30, null, null)
 except
 select id from public.<tabel> where name ilike pat escape '\';   -- dijalankan ber-RLS
 ```
 
-   Harus **kosong** (RPC ⊆ RLS). Dijalankan sebagai **A2** — aktor yang RLS-nya benar-benar memotong.
+   `EXCEPT` harus **kosong** (RPC ⊆ RLS). Dijalankan sebagai **A2** — aktor yang RLS-nya benar-benar memotong.
+
+   > [!warning] Kenapa dua kontrol positif itu wajib (§9.4)
+   > `EXCEPT` kosong punya **dua** sebab: RPC benar-benar subset RLS (yang ingin dibuktikan), **atau** RPC mengembalikan nol baris karena rusak. Keduanya tak terbedakan tanpa kontrol positif. Aktor A2 dipilih justru karena ia melihat *sebagian* — kalau suatu saat fixture berubah sehingga A2 tak berhak apa pun, kontrol pertama merah dan memberi tahu bahwa premisnya bergeser, bukan diam-diam lolos.
 5. **fail-closed** — A4 mendapat 0 baris.
 6. **arsip (FR-31)** — baris `status = 'archived'` hanya muncul bila `p_include_archived = true`.
 
@@ -507,3 +528,17 @@ Dua temuan berikut adalah **false-green**: test lulus tanpa menguji apa pun, jad
 Berikutnya, tiga yang kemungkinan besar gagal secara mekanis saat dijalankan: **Concern #1** (react-query v5 tidak menyimpan `staleTime` di `Query.options`), **Concern #3** (`SET LOCAL` di luar transaksi eksplisit = no-op berwarning), dan **Concern #2** (kontradiksi internal antara assertion `pg_get_functiondef` dan kewajiban komentar header migrasi).
 
 **Concern #4** juga layak ditolak sekarang: mengunci NG-6 lewat `md5(prosrc)` akan memerahkan perbaikan keamanan `search_cards` yang sah di masa depan dengan pesan yang membingungkan. Kunci perbedaan perilakunya, bukan digest sumbernya.
+
+### 9.4 Penutupan dua temuan false-green (2026-07-22)
+
+Dua temuan berprioritas tertinggi di §9.3 sudah **ditutup di badan rencana**; §9.1 dibiarkan apa adanya sebagai catatan sejarah fase Grill.
+
+**Missing #6 — escaping (§5 langkah 4, `DB-9`).** Kritik aslinya menyebut DB-9 "hijau tanpa diskriminasi"; pemeriksaan ulang menunjukkan itu **separuh benar**. Assertion negatif `'%%'` sebenarnya sudah diskriminatif — bila escaping dicabut, polanya menjadi `%%%%` dan `Aman` ikut terjaring sehingga test merah. Yang tidak diskriminatif adalah assertion **positif** `'0% T'`: pola rusak `%0% T%` dibaca *apa saja · `0` · apa saja · `" T"` · apa saja* dan tetap cocok dengan `100% Target`, jadi ia hijau di kedua dunia.
+
+Diganti dengan pasangan diskriminatif per metakarakter (`%`, `_`, `\`) dan kewajiban meng-assert dua arah. Baris `a\b` juga menutup arah kegagalan yang berlawanan — bukan "baris salah ikut muncul", melainkan **baris benar justru hilang** karena backslash dimakan sebagai escape.
+
+**Missing #2 — reduksi-RLS (§6.4 langkah 4).** Ditutup dengan dua kontrol positif yang dijalankan **sebelum** uji `EXCEPT`: sisi RLS harus mengembalikan > 0 baris (aktor memang berhak melihat sesuatu) dan sisi RPC harus > 0 baris (RPC benar-benar bekerja untuk aktor itu). Tanpa keduanya, `EXCEPT` kosong tidak dapat dibedakan antara "RPC subset RLS" dan "RPC rusak total, nol baris".
+
+Pilihan aktor A2 sekaligus jadi penjaga premis: ia sengaja aktor yang melihat *sebagian*. Bila fixture berubah sehingga A2 tak berhak apa pun, kontrol pertama merah dan menyatakan premisnya bergeser — pola yang sama dipakai `T-BL14-1`/`T-BL14-3` di kontrak 0083.
+
+**Belum ditutup** — tiga kegagalan mekanis (Concern #1 `staleTime` react-query v5, #3 `SET LOCAL` no-op, #2 kontradiksi `pg_get_functiondef`) dan penolakan `md5(prosrc)` (Concern #4). Semuanya masih berlaku dan harus diselesaikan sebelum wave yang bersangkutan dimulai.
