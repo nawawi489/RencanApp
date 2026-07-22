@@ -1,0 +1,32 @@
+{
+  "feature": "BL-10 Search scope PRD §38 + grouping. Bangun satu RPC multi-scope public.search_global(p_query text, p_scopes text[] default null, p_include_archived boolean default false, p_limit int default 5, p_cursor_ts timestamptz default null, p_cursor_id uuid default null) RETURNS TABLE(scope text, id uuid, parent_id uuid, title text, subtitle text, snippet text, status text, sort_ts timestamptz, sort_id uuid), LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''. Tanpa kolom payload jsonb. Satu cabang UNION per scope, masing-masing membawa predikat gate sendiri (can_access_* / current_user_org / has_permission) karena RLS tidak berlaku di dalam SECURITY DEFINER; gate ada di WHERE dan tidak pernah raise exception untuk otorisasi. Cabang chat MEMANGGIL public.search_chat_messages(q, null, lim, p_cursor_ts, p_cursor_id) di dalam FROM (dilarang menyalin body-nya) dan memotong snippet ke 240 char karena fungsi itu mengembalikan cm.body utuh (0075:57). Guard biaya meniru 0075: btrim, early return length(q)<2, truncate 200 char, escape \\\\ % _ dengan ilike ... escape '\\\\', lim = least(greatest(p_limit,1),30) per scope. Ordering seragam created_at DESC, id DESC untuk 14 scope (semua tabel sumber terverifikasi punya created_at); paging keyset PER GRUP, cursor hanya sah bila p_scopes berisi tepat satu scope (selain itu exception bentuk-request); scope tak dikenal menghasilkan 0 baris tanpa exception. Migrasi wajib revoke execute from public, anon, authenticated lalu grant to authenticated per tanda tangan. search_cards TIDAK disentuh sama sekali. Klien: file baru mobile/src/lib/search.ts (SEARCH_SCOPES, SearchScope, SEARCH_SCOPE_LABEL, SearchHit, searchGlobal), hook useSearchGlobal + useSearchScopePage dengan queryKey baru (JANGAN pakai ['cards_search']), layar search.tsx ditulis ulang memakai SectionList: grup nol-hasil tidak dirender, tanpa count, empty state identik untuk no-match dan silent-filtered, skeleton generik tanpa label scope, debounce 250ms + enabled pada panjang >=2, staleTime 0, baris hasil read-only, baris Log Aktivitas dan Governance Violation tidak dapat ditekan. CardEntityType dan ENTITY_ROUTE_SEGMENT tidak diubah. Pengiriman 4 PR: PR-1 migrasi 0084 (7 scope card + chat + grouping + paging), PR-2 0085 (people + index trgm profiles.full_name), PR-3 0086 (task_instance + comment + evidence + index trgm comments.body, evidence_files.file_name, evidence_files.text_content; bukti draft hanya milik sendiri via task_submissions.status='draft' AND submitted_by=auth.uid()), PR-4 0087 (activity_log + governance_violation, ikut RLS termasuk self-row dengan label netral, difilter confidential fail-closed, prasyarat ekstraksi peta label activity_logs.action). Setiap PR wajib membawa contract test satu-per-guard-per-scope di supabase/tests/ di atas _fixtures.sql dua organisasi, termasuk test reduksi-RLS (hasil RPC subset hasil SELECT ber-RLS), whitelist kolom keluaran, ACL, STABLE, dan nol emisi audit.",
+  "paths": [
+    "supabase/migrations/0084_search_global.sql",
+    "supabase/migrations/0085_search_global_people.sql",
+    "supabase/migrations/0086_search_global_derived.sql",
+    "supabase/migrations/0087_search_global_admin.sql",
+    "supabase/tests/0084_search_global_contract.sql",
+    "supabase/tests/0085_search_global_people_contract.sql",
+    "supabase/tests/0086_search_global_derived_contract.sql",
+    "supabase/tests/0087_search_global_admin_contract.sql",
+    "supabase/tests/_fixtures.sql",
+    "mobile/src/lib/search.ts",
+    "mobile/src/lib/__tests__/search.test.ts",
+    "mobile/src/hooks/use-search-global.ts",
+    "mobile/src/hooks/__tests__/use-search-global.test.tsx",
+    "mobile/src/app/(app)/search.tsx",
+    "mobile/src/app/(app)/__tests__/search.test.tsx",
+    "mobile/src/lib/activity-governance.ts",
+    "mobile/src/lib/database.types.ts",
+    "mobile/src/lib/entity-routes.ts",
+    "mobile/src/lib/governance-admin.ts",
+    "mobile/src/lib/inbox.ts",
+    "mobile/src/app/(app)/settings-activity-log.tsx",
+    "mobile/src/components/activity-log-panel.tsx",
+    "specs/search-pesan-inbox.md",
+    "prd/03-sistem-permission-data-governance.md",
+    "wiki/entities/database-blueprint.md",
+    "wiki/concepts/permission-model.md",
+    "wiki/concepts/feature-gap-backlog.md"
+  ]
+}

@@ -2168,3 +2168,17 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - Files created: `supabase/migrations/0083_handle_new_user_explicit_org.sql`, `supabase/tests/0083_handle_new_user_explicit_org_contract.sql`.
 - Files updated: `supabase/tests/_fixtures.sql` + 18 file contract test, `supabase/seed_dummy.sql`, `supabase/seed_staging.sql`.
 - Pages updated: [[feature-gap-backlog]] (baris BL-14 → DONE, §2 triage, §5.1/5.4 keputusan, §5.6 baru berisi implementasi), [[log]].
+
+## [2026-07-22] update | Spec BL-10 Search §38 (sdd-plan, 14 agen)
+
+- Pages created: `specs/bl-10-search-scope-38.md` + `specs/bl-10-search-scope-38-tdd-handoff.json`
+- Workflow `/sdd-plan` 4 fase (Research → Draft → Grill → Synthesize), 14 agen, nol error.
+- **Keputusan arsitektur (FR-1):** SATU RPC multi-scope `search_global`, bukan fan-out per-scope. Alasannya bukan round-trip melainkan otorisasi — satu permukaan yang bisa dikunci satu berkas contract test; kegagalan parsial per-scope hilang by construction, sehingga tak ada banner degrade yang bisa jadi kanal sampingan.
+- **Chat didelegasikan, bukan disalin** (FR-2): `search_chat_messages` dipanggil sebagai set-returning function di dalam `FROM`. Preseden mengikat: regresi 0060→0075 kehilangan limit clamp + guard + truncation karena `create or replace` penuh.
+- **Bug ditemukan sepanjang jalan (FR-6):** `search_cards` (0046:2120) merangkai `'%'||lower(trim(q))||'%'` **tanpa escaping** → `%` yang diketik user jadi wildcard sungguhan. `search_global` wajib escape; `search_cards` sendiri tidak disentuh (NG-6).
+- **Peringatan yang harus ikut migrasi (FR-7):** `search_global` SECURITY DEFINER + `search_path=''` berarti **RLS tabel tidak berlaku di dalamnya** — tidak ada jaring pengaman kedua. Komentar "RLS-scoped via RPC" di `search.tsx:1` menyesatkan dan dikoreksi.
+- **Anti-oracle digeneralisasi per-grup** (FR-15/FR-16): dilarang differentiator yang merupakan fungsi data pihak lain — header grup kosong, "(0)", count per grup, total count, nomor halaman global, banner error bernama scope. Grup yang belum dirilis juga tidak dirender kosong (AC-16).
+- **Rilis bertahap 4 PR:** PR-1 9/14 scope (7 card + chat + grouping + paging per-grup, migrasi 0084) → PR-2 People (0085) → PR-3 task_instance/comment/evidence (0086) → PR-4 audit scope (0087, paling akhir karena 2 keputusan owner belum final + menyentuh tabel append-only). Grouping ikut PR-1 tanpa pengecualian.
+- **12 open question**, 4 blocking: BL10-OQ-01/02 (owner, blokir PR-4), OQ-03 (owner, blokir PR-3), OQ-04 (eng, blokir PR-4).
+- **§11 mengoreksi premis yang beredar di draft awal** — a.l. "Activity Log & Governance Violation adalah data admin" TIDAK akurat (kedua policy ber-OR dengan self-row, 0005:557-565); "snippet chat sudah ≤240 char" salah (0075:57 mengembalikan body utuh); angka "90 hari" dan "staleTime 15 detik" tanpa dasar sumber, dibuang.
+- Catatan proses: workflow mengembalikan spec sebagai nilai balik, **tidak menulis ke disk** — file di atas ditulis manual dari output. Perlu diingat untuk pemakaian `/sdd-plan` berikutnya.
