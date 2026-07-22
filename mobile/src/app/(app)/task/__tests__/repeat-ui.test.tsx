@@ -13,6 +13,7 @@ const mockGetTask = jest.fn();
 const mockListSubmissions = jest.fn();
 const mockListInstances = jest.fn();
 const mockGetCompliance = jest.fn();
+const mockGetOrgTimezone = jest.fn();
 const mockRouterPush = jest.fn();
 let mockParams: Record<string, string> = { id: 'ap-1', actionPlanId: 'init-1' };
 
@@ -42,6 +43,12 @@ jest.mock('@/lib/cards', () => ({
   startTask: jest.fn(),
   reviewSubmission: jest.fn(),
   createTask: jest.fn(),
+}));
+
+// Label zona waktu dipertahankan asli (requireActual) — yang di-stub cuma pengambilan datanya.
+jest.mock('@/lib/org-timezone', () => ({
+  ...jest.requireActual('@/lib/org-timezone'),
+  getOrgTimezone: (...a: unknown[]) => mockGetOrgTimezone(...a),
 }));
 
 jest.mock('@/lib/repeat', () => ({
@@ -98,6 +105,7 @@ beforeEach(() => {
   mockParams = { id: 'ap-1', actionPlanId: 'init-1' };
   mockListSubmissions.mockResolvedValue([]);
   mockListInstances.mockResolvedValue([]);
+  mockGetOrgTimezone.mockResolvedValue('Asia/Jakarta');
   mockGetCompliance.mockResolvedValue({
     expected_count: 30,
     on_time_count: 28,
@@ -143,6 +151,44 @@ describe('new.tsx — form Repeat', () => {
     expect(await screen.findByTestId('grace-input')).toBeTruthy();
     fireEvent.press(screen.getByTestId('missed-rule-strict'));
     await waitFor(() => expect(screen.queryByTestId('grace-input')).toBeNull());
+  });
+
+  // BL-06 / PRD §23 field 5 — "Zona waktu" adalah TAMPILAN, bukan input: tidak ada kolom
+  // timezone di task_repeat_rules dan engine repeat memakai org_today() yang org-wide.
+  it('[10] Zona Waktu tampil sebagai keterangan read-only di dalam repeat-config', async () => {
+    await wrap(<NewTaskScreen />);
+    expect(screen.queryByTestId('repeat-timezone')).toBeNull();
+    fireEvent(screen.getByTestId('repeat-toggle'), 'valueChange', true);
+    const note = await screen.findByTestId('repeat-timezone');
+    // getByText string = pencocokan literal; toHaveTextContent memperlakukan '(WIB)' sebagai
+    // grup regex sehingga tanda kurungnya tidak pernah ikut dicocokkan.
+    expect(await screen.findByText('Asia/Jakarta (WIB)')).toBeTruthy();
+    expect(screen.getByText('Zona Waktu')).toBeTruthy();
+    // Anti-regresi: jangan pernah berubah jadi kontrol yang bisa dipilih per repeat-rule.
+    // Casing PRD ("Jam deadline", §23 field 4) — sengaja beda dari label field "Jam Deadline"
+    // agar query test [3] tidak ikut menangkap keterangan ini.
+    expect(screen.getByText(/Jam deadline mengikuti zona waktu organisasi/)).toBeTruthy();
+    expect(note.props.accessibilityLabel).toContain('Asia/Jakarta (WIB)');
+  });
+
+  it('[11] mengikuti zona organisasi yang sebenarnya, bukan hardcode WIB', async () => {
+    mockGetOrgTimezone.mockResolvedValue('Asia/Makassar');
+    await wrap(<NewTaskScreen />);
+    fireEvent(screen.getByTestId('repeat-toggle'), 'valueChange', true);
+    await screen.findByTestId('repeat-timezone');
+    expect(await screen.findByText('Asia/Makassar (WITA)')).toBeTruthy();
+    expect(screen.queryByText('Asia/Jakarta (WIB)')).toBeNull();
+  });
+
+  it('[12] gagal memuat zona → fallback default, form repeat tetap bisa dipakai', async () => {
+    mockGetOrgTimezone.mockRejectedValue(new Error('rls/jaringan'));
+    await wrap(<NewTaskScreen />);
+    fireEvent(screen.getByTestId('repeat-toggle'), 'valueChange', true);
+    await screen.findByTestId('repeat-timezone');
+    expect(screen.getByText('Asia/Jakarta (WIB)')).toBeTruthy();
+    // Field hiasan tidak boleh menjatuhkan form: kontrol repeat lain tetap ada.
+    expect(screen.getByTestId('frequency-daily')).toBeTruthy();
+    expect(screen.getByTestId('missed-rule-strict')).toBeTruthy();
   });
 });
 
