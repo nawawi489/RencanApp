@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [backlog, gap-analysis, prd-conformance, triage]
-updated: 2026-07-21
+updated: 2026-07-22
 sources: 0
 ---
 
@@ -32,7 +32,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-06** | Task Repeat | Field **"Zona waktu" §23** (item 5 dari 10) hilang. `task_repeat_rules` tidak punya kolom timezone; satu-satunya ada di `organizations.timezone`, dibaca `coalesce(o.timezone,'Asia/Jakarta')` di seluruh perhitungan deadline. **Butuh migrasi** + ubah logika deadline | S→M | ✅ |
 | **BL-07** | Notifications | **Terkoreksi**: §28 mendefinisikan **9** tipe, 5 sudah jalan. Yang absen: **Bukti dikirim** (dikonflasi jadi `review_request`), **Deadline lewat one-time** (`instance_missed` hanya untuk repeat; task one-time tak pernah masuk state missed), **Permission berubah** (nihil), **MBR warning** (nihil). 3 dari 4 belum ada di CHECK constraint 13-tipe (0038). Gap 100% server-side — `lib/notifications.ts` sudah mirror tepat | M | ⚠️ |
 | **BL-08** | Review | ~~**Aksi "Catatan" §24.3 hilang**~~ ✅ **SELESAI 2026-07-20 — nol migrasi**. Temuan RPC hard-reject **benar** (`0046:1976` + `0046:2051`) tapi hanya mengikat bila Catatan = nilai `decision` ketiga. PRD §24.3 tidak menyatakan semantiknya; **owner memutuskan NON-TERMINAL** → Catatan tidak memutuskan apa pun, jadi tidak pernah masuk jalur RPC review dan tidak menyentuh CHECK mana pun. Implementasi: `lib/inbox.ts::postReviewNote` (room Rencana Aksi → `send_chat_message` ber-konteks Tugas) + mode ketiga di `review-submission-panel.tsx`. Submission tetap `pending`. **Sisa ter-defer:** entri Activity Log — `write_activity` dicabut dari `authenticated` (`0062:57`) → butuh RPC SECURITY DEFINER baru (0083+). Rinci di branch `claude/pensive-goodall-42169f`: `ui-prototype-gap.md` §2.2 + item UI-G-016 (belum ada di tree ini; masuk saat merge) | XS→S | ✅ |
-| **BL-09** | Archive | **Pecah 3, satu klaim gugur**: (a) ❌ `includeArchived` **sudah** di-pass (`settings-archive.tsx:32`); (b) ✅ row tanpa `onPress` (bandingkan `search.tsx:58-60`) — **masih terbuka**; ~~(c) invalidate key salah~~ ✅ **SELESAI 2026-07-20** — `['search']` → `['cards_search']`, dikunci tes `[F8-UI-28]` | (b) S | ⚠️ |
+| **BL-09** | Archive | ~~**Pecah 3, satu klaim gugur**~~ ✅ **DONE 2026-07-22 — BL-09 tertutup seluruhnya**. (a) ❌ **gugur** — `includeArchived` sudah di-pass (`settings-archive.tsx:32`); ~~(b) row tanpa `onPress`~~ ✅ **PR #144, nol migrasi** — pola `search.tsx` dipakai ulang (`ENTITY_ROUTE_SEGMENT` + fallback `undefined` → kartu tetap non-pressable, bukan push path rusak), `SectionCard` dapat prop `accessibilityLabel` opsional (DESIGN §4.4: role tanpa label ⇒ tujuan tap tak jelas bagi screen reader), dikunci `[F8-UI-29]`/`[F8-UI-30]`; ~~(c) invalidate key salah~~ ✅ **SELESAI 2026-07-20** — `['search']` → `['cards_search']`, dikunci tes `[F8-UI-28]` | (b) S | ✅ |
 | **BL-10** | Search | **7 dari 14 scope §38 hilang** (persis seperti diklaim) + **tanpa grouping** (`search.tsx:70-79` FlatList datar, padahal §38 mewajibkan pengelompokan). `CardEntityType` hanya 7 tipe lewat satu RPC `search_cards`. RPC `search_chat_messages` sudah ada tapi hanya dipakai Inbox, tak pernah di-import layar Search | L | ✅ |
 | **BL-11** | Header | ~~Ikon Notifications §7.2 hilang~~ ✅ **SELESAI** — merged #115 (UI-G-016); `notifications-outline` + badge unread via `useUnreadCount()`, badge disembunyikan saat loading/error (bukan fail-silent ke "0"), jumlah masuk `accessibilityLabel` | XS | ✅ DONE |
 | **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
@@ -46,7 +46,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 ~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; BL-12 label map, BL-11 ikon header, BL-01 `rank_number`.
 
 **S — satu layar + test, nol migrasi:**
-BL-02, ~~BL-05~~ ✅ **selesai 2026-07-21 (PR #138)**, BL-09(b).
+BL-02, ~~BL-05~~ ✅ **selesai 2026-07-21 (PR #138)**, ~~BL-09(b)~~ ✅ **selesai 2026-07-22 (PR #144)**.
 
 **Butuh migrasi DB** (jadi bukan tiket sepele sekalipun UI-nya kecil):
 BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline yang kini membaca `organizations.timezone`).
@@ -68,6 +68,8 @@ BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline y
 
 > [!warning] BL-09 bukan satu bug
 > Klaim (a) "tidak tercari di Search" **gugur** — `includeArchived: true` sudah di-pass. Tersisa (b) row mati dan (c) invalidate key salah. (c) adalah **bug diam**: restore sukses, list tidak menyegar, user mengira gagal lalu mengulang. Item paling untung-per-baris di seluruh daftar.
+>
+> **Tertutup 2026-07-22.** (c) di #119, (b) di #144. Pelajaran yang dibawa keluar: satu baris backlog yang menggabungkan tiga klaim menghasilkan satu klaim palsu, satu bug diam, dan satu cacat UX — memverifikasi tiap klaim satu per satu **sebelum** menjadwalkan mencegah tiket dinilai terlalu besar (atau terlalu kecil) secara keseluruhan.
 
 **Paling dekat ke ambang P-slot:** BL-09(c) (bug diam, perbaikan satu baris) dan BL-02 (satu-satunya pelanggaran AC harfiah terhadap PRD).
 
