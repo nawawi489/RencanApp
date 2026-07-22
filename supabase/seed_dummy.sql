@@ -62,6 +62,11 @@ end $$;
 -- =============================================================================
 -- Trigger `handle_new_user` akan auto-create profile basic — kita UPDATE
 -- setelahnya untuk set full_name, position_title, dan role_template_id.
+--
+-- `organization_id` dititipkan lewat raw_app_meta_data supaya trigger menaruh
+-- profil langsung di `_seed_org`. Wajib sejak migrasi 0083: dengan lebih dari
+-- satu org, trigger menolak menebak alih-alih memilih org tertua — aturan
+-- "tertua" itulah yang dulu menelan profil seed ke org fixture ber-epoch 1970.
 -- Namespace 11111111-… = user dummy
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -70,22 +75,28 @@ insert into auth.users (
 ) values
   ('11111111-1111-1111-1111-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'ceo@rencan.local', crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
+   ('{"provider":"email","providers":["email"]}'::jsonb
+     || jsonb_build_object('organization_id', (select id from _seed_org))), '{}'::jsonb, now(), now(), '', '', '', ''),
   ('11111111-1111-1111-1111-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'cmo@rencan.local', crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
+   ('{"provider":"email","providers":["email"]}'::jsonb
+     || jsonb_build_object('organization_id', (select id from _seed_org))), '{}'::jsonb, now(), now(), '', '', '', ''),
   ('11111111-1111-1111-1111-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'mgr.sales@rencan.local', crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
+   ('{"provider":"email","providers":["email"]}'::jsonb
+     || jsonb_build_object('organization_id', (select id from _seed_org))), '{}'::jsonb, now(), now(), '', '', '', ''),
   ('11111111-1111-1111-1111-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'mgr.ops@rencan.local', crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
+   ('{"provider":"email","providers":["email"]}'::jsonb
+     || jsonb_build_object('organization_id', (select id from _seed_org))), '{}'::jsonb, now(), now(), '', '', '', ''),
   ('11111111-1111-1111-1111-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'staff.sales@rencan.local', crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
+   ('{"provider":"email","providers":["email"]}'::jsonb
+     || jsonb_build_object('organization_id', (select id from _seed_org))), '{}'::jsonb, now(), now(), '', '', '', ''),
   ('11111111-1111-1111-1111-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'staff.finance@rencan.local', crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', '')
+   ('{"provider":"email","providers":["email"]}'::jsonb
+     || jsonb_build_object('organization_id', (select id from _seed_org))), '{}'::jsonb, now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
 -- Lengkapi profile (organization_id, full_name, position_title, role_template_id) per-role.

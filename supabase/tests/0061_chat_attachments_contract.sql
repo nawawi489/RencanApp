@@ -178,8 +178,10 @@ begin
     v_room_id := gen_random_uuid();
 
     insert into public.organizations (id, name) values (v_org_id, '_test_0061_org');
-    insert into auth.users (id, email, aud, role, encrypted_password, email_confirmed_at)
-      values (v_user_id, '_test0061@x.com', 'authenticated', 'authenticated', '', now());
+    -- organization_id explicit — required since 0083 (handle_new_user refuses to guess).
+    insert into auth.users (id, email, aud, role, encrypted_password, email_confirmed_at, raw_app_meta_data)
+      values (v_user_id, '_test0061@x.com', 'authenticated', 'authenticated', '', now(),
+              jsonb_build_object('organization_id', v_org_id));
     -- profile auto-created by handle_new_user trigger
     update public.profiles set organization_id = v_org_id where id = v_user_id;
     insert into public.action_plans (id, organization_id, name, pic_id)
@@ -281,8 +283,10 @@ begin
     v_ap_id := gen_random_uuid();
     v_room_id := gen_random_uuid();
     insert into public.organizations (id, name) values (v_org_id, '_test_0061f_org');
-    insert into auth.users (id, email, aud, role, encrypted_password, email_confirmed_at)
-      values (v_user_id, '_test0061f@x.com', 'authenticated', 'authenticated', '', now());
+    -- organization_id explicit — required since 0083 (handle_new_user refuses to guess).
+    insert into auth.users (id, email, aud, role, encrypted_password, email_confirmed_at, raw_app_meta_data)
+      values (v_user_id, '_test0061f@x.com', 'authenticated', 'authenticated', '', now(),
+              jsonb_build_object('organization_id', v_org_id));
     -- profile auto-created by handle_new_user trigger
     update public.profiles set organization_id = v_org_id where id = v_user_id;
     insert into public.action_plans (id, organization_id, name, pic_id)

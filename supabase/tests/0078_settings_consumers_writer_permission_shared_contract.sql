@@ -14,7 +14,9 @@ begin
   select organization_id into v_org from public.profiles where id = '11111111-1111-1111-1111-000000000001';
 
   v_staff := gen_random_uuid();
-  insert into auth.users(id) values (v_staff);
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data)
+    values (v_staff, jsonb_build_object('organization_id', v_org));
   insert into public.profiles(id, organization_id, full_name)
     values (v_staff, v_org, 'S1 Staff')
     on conflict (id) do update set organization_id = v_org;
@@ -53,7 +55,8 @@ begin
   select organization_id into v_org from public.profiles where id = '11111111-1111-1111-1111-000000000001';
 
   v_staff := gen_random_uuid();
-  insert into auth.users(id) values (v_staff);
+  insert into auth.users(id, raw_app_meta_data)
+    values (v_staff, jsonb_build_object('organization_id', v_org));
   insert into public.profiles(id, organization_id, full_name)
     values (v_staff, v_org, 'S2 Staff')
     on conflict (id) do update set organization_id = v_org;

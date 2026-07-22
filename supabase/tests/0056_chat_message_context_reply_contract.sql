@@ -101,9 +101,11 @@ begin
     returning id into v_org;
   v_user1 := gen_random_uuid();
   v_user2 := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_user1, 'alice-0046c@test.local', jsonb_build_object('full_name', 'Alice')),
-           (v_user2, 'bob-0046c@test.local', jsonb_build_object('full_name', 'Bob'));
+  -- raw_app_meta_data.organization_id wajib sejak 0083: handle_new_user menolak
+  -- menebak org, dan prelude fixtures sudah membuat dua org.
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_user1, 'alice-0046c@test.local', jsonb_build_object('full_name', 'Alice'), jsonb_build_object('organization_id', v_org)),
+           (v_user2, 'bob-0046c@test.local', jsonb_build_object('full_name', 'Bob'), jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_user1, v_user2);
 
   insert into public.action_plans (id, organization_id, name, status, created_by)
@@ -169,8 +171,8 @@ begin
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046d')
     returning id into v_org;
   v_user1 := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_user1, 'carol-0046d@test.local', jsonb_build_object('full_name', 'Carol'));
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_user1, 'carol-0046d@test.local', jsonb_build_object('full_name', 'Carol'), jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_user1);
 
   -- Init 1 + room
@@ -230,8 +232,8 @@ begin
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046e')
     returning id into v_org;
   v_user1 := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_user1, 'dave-0046e@test.local', jsonb_build_object('full_name', 'Dave'));
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_user1, 'dave-0046e@test.local', jsonb_build_object('full_name', 'Dave'), jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_user1);
 
   -- Room 1
@@ -298,8 +300,8 @@ begin
   insert into public.organizations (id, name) values (gen_random_uuid(), 'TestOrg-0046f')
     returning id into v_org;
   v_user1 := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_user1, 'eve-0046f@test.local', jsonb_build_object('full_name', 'Eve'));
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_user1, 'eve-0046f@test.local', jsonb_build_object('full_name', 'Eve'), jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_user1);
 
   insert into public.action_plans (id, organization_id, name, status, created_by)
@@ -358,9 +360,9 @@ begin
     returning id into v_org;
   v_user1 := gen_random_uuid();
   v_user2 := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_user1, 'fay-0046g@test.local', jsonb_build_object('full_name', 'Fay')),
-           (v_user2, 'gus-0046g@test.local', jsonb_build_object('full_name', 'Gus'));
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_user1, 'fay-0046g@test.local', jsonb_build_object('full_name', 'Fay'), jsonb_build_object('organization_id', v_org)),
+           (v_user2, 'gus-0046g@test.local', jsonb_build_object('full_name', 'Gus'), jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_user1, v_user2);
 
   insert into public.action_plans (id, organization_id, name, status, created_by)

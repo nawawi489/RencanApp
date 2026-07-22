@@ -17,11 +17,16 @@
 --
 -- INVARIANTS THIS FILE MUST PRESERVE
 --   • Idempotent — safe to re-run (ON CONFLICT everywhere).
---   • The shared org is the OLDEST organization (created_at pinned to the epoch)
---     so `handle_new_user()` — which assigns each new auth.user a profile in the
---     `organizations ORDER BY created_at LIMIT 1` org — lands test-created users
---     in the fixtures org. In CI it is also the ONLY org, so this is automatic;
---     the pin makes it robust if seed data is ever loaded alongside.
+--   • EVERY `auth.users` INSERT must name its organization explicitly via
+--     `raw_app_meta_data.organization_id`. Since migration 0083 (BL-14),
+--     `handle_new_user()` REFUSES to guess: with more than one organization in
+--     the database and no explicit id, it raises. This file creates two orgs
+--     (shared + DCR-05), so the "oldest org wins" fallback it used to rely on is
+--     no longer available here — and a failure in this prelude is FATAL to the
+--     whole contract suite (see scripts/ci/run-db-contract-tests.sh).
+--   • The shared org keeps its `created_at = 'epoch'` pin. It no longer decides
+--     placement, but tests and seeds elsewhere still reason about org ordering,
+--     so the pin stays to keep that ordering deterministic.
 --   • System catalog rows the tests also depend on (permissions, role guidance,
 --     minimum_breakdown_rules, score-formula system, card_guidance_contents,
 --     goal_templates) are already created BY THE MIGRATIONS — do NOT duplicate
@@ -56,8 +61,10 @@ insert into public.role_templates (id, organization_id, name, level, is_system) 
 on conflict (id) do update
   set organization_id = excluded.organization_id, level = excluded.level;
 
--- CEO user (ca8c1471…). role_level='ceo' in app_metadata makes handle_new_user
--- assign the CEO role template in the (oldest) fixtures org automatically.
+-- CEO user (ca8c1471…). app_metadata carries BOTH the explicit organization_id
+-- (required since 0083 — this file creates two orgs) and role_level='ceo', so
+-- handle_new_user provisions the profile in the shared org with the CEO role
+-- template without any follow-up UPDATE.
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -66,12 +73,14 @@ insert into auth.users (
   'ca8c1471-b870-4f09-a149-25e5eae99d6f', '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated', 'ceo@fixtures.local',
   crypt('rencan123', gen_salt('bf')), now(),
-  '{"provider":"email","providers":["email"],"role_level":"ceo"}'::jsonb,
+  '{"provider":"email","providers":["email"],"role_level":"ceo","organization_id":"4b07a19f-550d-4952-b0d8-44f38f651d89"}'::jsonb,
   '{"full_name":"CEO Fixture"}'::jsonb, now(), now(), '', '', '', ''
 ) on conflict (id) do nothing;
 
--- Force the CEO profile onto the shared org + CEO role (defensive: covers the
--- case where the org was not the oldest when the user row was created).
+-- Force the CEO profile onto the shared org + CEO role. Still needed despite the
+-- explicit organization_id above: the `on conflict (id) do nothing` on auth.users
+-- means a re-run does NOT re-fire the trigger, so a profile left behind by an
+-- older revision of this file would otherwise keep its stale org/role.
 insert into public.profiles (id, organization_id, role_template_id, full_name, email, is_active) values
   ('ca8c1471-b870-4f09-a149-25e5eae99d6f', '4b07a19f-550d-4952-b0d8-44f38f651d89',
    '4b07ce00-0000-0000-0000-0000000000ce', 'CEO Fixture', 'ceo@fixtures.local', true)
@@ -105,12 +114,12 @@ insert into auth.users (
   ('11111111-1111-1111-1111-000000000001', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'dcr.ceo@fixtures.local',
    crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"],"role_level":"ceo"}'::jsonb,
+   '{"provider":"email","providers":["email"],"role_level":"ceo","organization_id":"52b0ebe1-d8bd-466d-b491-526ee6518b70"}'::jsonb,
    '{"full_name":"DCR CEO"}'::jsonb, now(), now(), '', '', '', ''),
   ('11111111-1111-1111-1111-000000000003', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'dcr.reviewer@fixtures.local',
    crypt('rencan123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}'::jsonb,
+   '{"provider":"email","providers":["email"],"organization_id":"52b0ebe1-d8bd-466d-b491-526ee6518b70"}'::jsonb,
    '{"full_name":"DCR Reviewer"}'::jsonb, now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 

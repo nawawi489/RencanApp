@@ -25,7 +25,10 @@ begin
   -- Fixture org kedua (minimum viable): org + CEO profile + role_template staff + period aktif.
   insert into public.organizations (id, name) values (v_org_other, '0079-T1-other-org')
     on conflict (id) do nothing;
-  insert into auth.users (id) values (v_other_ceo) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_other_ceo, jsonb_build_object('organization_id', v_org_other))
+    on conflict (id) do nothing;
   insert into public.role_templates (id, organization_id, level, name)
     values (v_other_role_staff, v_org_other, 'staff', '0079-T1-other-staff')
     on conflict (id) do nothing;
@@ -70,7 +73,9 @@ declare
 begin
   insert into public.organizations (id, name) values (v_org_other, '0079-T2-other-org')
     on conflict (id) do nothing;
-  insert into auth.users (id) values (v_other_ceo) on conflict (id) do nothing;
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_other_ceo, jsonb_build_object('organization_id', v_org_other))
+    on conflict (id) do nothing;
   insert into public.role_templates (id, organization_id, level, name)
     values (v_other_role_staff, v_org_other, 'staff', '0079-T2-other-staff')
     on conflict (id) do nothing;
@@ -191,7 +196,11 @@ begin
     returning id into v_formula_ver;
 
   -- 3 staff user di v_org.
-  insert into auth.users (id) values (v_u1), (v_u2), (v_u3) on conflict (id) do nothing;
+  insert into auth.users (id, raw_app_meta_data) values
+    (v_u1, jsonb_build_object('organization_id', v_org)),
+    (v_u2, jsonb_build_object('organization_id', v_org)),
+    (v_u3, jsonb_build_object('organization_id', v_org))
+  on conflict (id) do nothing;
   insert into public.profiles (id, organization_id, role_template_id, full_name)
     values (v_u1, v_org, v_role_staff, 'Uji T6 satu'),
            (v_u2, v_org, v_role_staff, 'Uji T6 dua'),
@@ -276,7 +285,9 @@ begin
       'active', 1)
     returning id into v_formula;
 
-  insert into auth.users (id) values (v_u) on conflict (id) do nothing;
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_u, jsonb_build_object('organization_id', v_org))
+    on conflict (id) do nothing;
   insert into public.profiles (id, organization_id, role_template_id, full_name)
     values (v_u, v_org, v_role_staff, 'Uji T7 override')
     on conflict (id) do update set organization_id = excluded.organization_id, role_template_id = excluded.role_template_id;
