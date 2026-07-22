@@ -93,3 +93,91 @@ begin
   raise notice 'PASS 0085-DB-1..5: kerangka search_global (tanda tangan, secdef/stable/search_path, 9 kolom, tanpa payload, ACL)';
 end $$;
 rollback;
+
+-- ============================================================================
+-- Wave 2 — guard biaya DIGABUNG cabang `goal` (DB-6..DB-10)
+--
+-- Digabung sengaja: selama search_global masih selalu `return;`, seluruh assertion guard
+-- ("length<2 → 0 baris", "clamp → ≤30", "escape → 0 baris") hijau palsu. Cabang `goal`
+-- adalah kontrol positif yang memberi test guard taringnya.
+-- ============================================================================
+
+begin;
+do $$
+declare
+  v_org  uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';   -- Contract Fixtures Org
+  v_ceo  uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
+  fails  text := '';
+  n      int;
+  got    text;
+begin
+  -- Seed diskriminatif §9.4: metakarakter LIKE sebagai LITERAL di dalam nama.
+  insert into public.goals (organization_id, name, pic_id, period_start, period_end, status, target_value, created_by)
+  values
+    (v_org, 'bl10 ab',   v_ceo, current_date, current_date+30, 'draft', '1', v_ceo),
+    (v_org, 'bl10 a%b',  v_ceo, current_date, current_date+30, 'draft', '1', v_ceo),
+    (v_org, 'bl10 a_b',  v_ceo, current_date, current_date+30, 'draft', '1', v_ceo),
+    (v_org, 'bl10 a\b',  v_ceo, current_date, current_date+30, 'draft', '1', v_ceo);
+
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- DB-6 — KONTROL POSITIF. Tanpa ini seluruh assertion di bawah tak bermakna.
+  select count(*) into n from public.search_global('bl10 ab', array['goal'], true, 30, null, null);
+  if n < 1 then fails := fails || 'DB-6 kontrol_positif_nol_baris(cabang goal mati?); '; end if;
+
+  -- DB-7 — length<2 = EARLY RETURN, bukan exception (FR-13: exception = oracle)
+  begin
+    select count(*) into n from public.search_global('a', array['goal'], true, 30, null, null);
+    if n <> 0 then fails := fails || 'DB-7 query_1_char_mengembalikan_baris; '; end if;
+  exception when others then
+    fails := fails || 'DB-7 query_pendek_melempar_exception(' || sqlerrm || '); ';
+  end;
+
+  -- DB-8 — truncation 200 char: query 250 char yang berbeda HANYA di char 201-250
+  -- harus memberi hasil identik dengan 200 char pertamanya.
+  select count(*) into n from public.search_global(rpad('bl10 ab', 200, 'x') || repeat('Z', 50),
+                                                   array['goal'], true, 30, null, null);
+  declare m int; begin
+    select count(*) into m from public.search_global(rpad('bl10 ab', 200, 'x'),
+                                                     array['goal'], true, 30, null, null);
+    if n <> m then fails := fails || 'DB-8 truncation_200_tidak_berlaku(' || n || ' vs ' || m || '); '; end if;
+  end;
+
+  -- DB-9 — escaping, PASANGAN DISKRIMINATIF per metakarakter (§9.4).
+  -- Tiap pasangan meng-assert DUA ARAH: yang muncul DAN yang tidak.
+  select string_agg(title, ',' order by title) into got
+  from public.search_global('a%', array['goal'], true, 30, null, null);
+  if coalesce(got,'') <> 'bl10 a%b' then
+    fails := fails || 'DB-9 escape_persen: harap [bl10 a%b] dapat [' || coalesce(got,'<nol>') || ']; ';
+  end if;
+
+  select string_agg(title, ',' order by title) into got
+  from public.search_global('a_', array['goal'], true, 30, null, null);
+  if coalesce(got,'') <> 'bl10 a_b' then
+    fails := fails || 'DB-9 escape_underscore: harap [bl10 a_b] dapat [' || coalesce(got,'<nol>') || ']; ';
+  end if;
+
+  select string_agg(title, ',' order by title) into got
+  from public.search_global('a\b', array['goal'], true, 30, null, null);
+  if coalesce(got,'') <> 'bl10 a\b' then
+    fails := fails || 'DB-9 escape_backslash: harap [bl10 a\b] dapat [' || coalesce(got,'<nol>') || ']; ';
+  end if;
+
+  -- DB-10 — clamp limit 1..30, default 5
+  select count(*) into n from public.search_global('bl10', array['goal'], true, 100, null, null);
+  if n > 30 then fails := fails || 'DB-10 limit_100_tidak_di-clamp_ke_30(' || n || '); '; end if;
+  select count(*) into n from public.search_global('bl10', array['goal'], true, 0, null, null);
+  if n <> 1 then fails := fails || 'DB-10 limit_0_harus_clamp_ke_1(dapat ' || n || '); '; end if;
+  select count(*) into n from public.search_global('bl10', array['goal'], true, null, null, null);
+  if n <> 4 then fails := fails || 'DB-10 limit_null_default_5(seed 4 baris, dapat ' || n || '); '; end if;
+
+  execute 'reset role';
+
+  if fails <> '' then
+    raise exception 'FAIL 0085-DB-6..10: %', fails;
+  end if;
+  raise notice 'PASS 0085-DB-6..10: guard biaya + cabang goal (kontrol positif, early-return, truncation, escaping 3 metakarakter, clamp)';
+end $$;
+rollback;

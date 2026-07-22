@@ -52,10 +52,48 @@ stable
 security definer
 set search_path = ''
 as $$
+declare
+  q   text;
+  pat text;
+  lim int := least(greatest(coalesce(p_limit, 5), 1), 30);
 begin
-  -- Wave 1: kerangka. Nol baris, tanpa cabang scope apa pun.
-  -- Wave 2 menambahkan guard biaya (btrim -> length<2 early return -> substring 1..200 ->
-  -- escape \ % _ -> clamp limit 1..30) bersama scope `goal` sebagai kontrol positif.
+  -- Guard biaya — disalin VERBATIM dari 0075_fix_search_chat_messages_limit_clamp.sql:42-48.
+  -- Regresi 0060 kehilangan justru blok ini karena `create or replace` penuh; jangan
+  -- menyusunnya ulang dari ingatan.
+  q := btrim(coalesce(p_query, ''));
+  if length(q) < 2 then
+    return;                       -- EARLY RETURN, bukan exception (FR-13: exception = oracle)
+  end if;
+  q := substring(q from 1 for 200);
+  pat := '%' || replace(replace(replace(q, '\', '\\'), '%', '\%'), '_', '\_') || '%';
+
+  -- Cabang `goal`. Catatan yang berlaku untuk SETIAP cabang yang ditambahkan sesudah ini:
+  --   * `order by … limit lim` ada DI DALAM subquery cabang, bukan satu limit di akhir UNION
+  --     (spec §6.2) — limit per grup, bukan limit global.
+  --   * Gate `public.can_access_goal(g.id)` WAJIB. RLS tidak berlaku di sini (lihat header).
+  --   * `ilike … escape '\'` — bukan `lower() like`. `search_cards` (0046:2120) memakai pola
+  --     tanpa escaping; perbedaan itu DISENGAJA (NG-6) dan dikunci DB-73.
+  if p_scopes is null or 'goal' = any(p_scopes) then
+    return query
+    select
+      'goal'::text            as scope,
+      g.id                    as id,
+      null::uuid              as parent_id,
+      g.name                  as title,
+      null::text              as subtitle,
+      null::text              as snippet,
+      g.status                as status,
+      g.created_at            as sort_ts,
+      g.id                    as sort_id
+    from public.goals g
+    where g.name ilike pat escape '\'
+      and public.can_access_goal(g.id)
+      and (p_include_archived or g.status <> 'archived')
+      and (p_cursor_ts is null or (g.created_at, g.id) < (p_cursor_ts, p_cursor_id))
+    order by g.created_at desc, g.id desc
+    limit lim;
+  end if;
+
   return;
 end;
 $$;
