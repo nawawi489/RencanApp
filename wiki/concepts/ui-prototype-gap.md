@@ -82,7 +82,7 @@ Separuh dari UI-G-017 **belum** dikerjakan: aksi "Catatan" tidak menulis entri `
 
 **Sebabnya bukan kelalaian — klien memang tidak boleh menulis audit log.** `write_activity` dicabut dari role `authenticated` di migrasi `0062_revoke_authenticated_internal_rpcs.sql` dengan alasan tersurat: user authenticated mana pun bisa menyisipkan audit log palsu. Klien hanya membaca `activity_logs` ([[audit-governance]]). `send_chat_message` sendiri juga tidak menulis activity.
 
-**Konsekuensi:** entri Activity Log hanya bisa lahir dari RPC `SECURITY DEFINER` baru → **butuh migrasi** (0080+) berisi mis. `post_review_note(p_submission_id, p_body)` yang menyisipkan pesan chat + `write_activity` secara atomik, lengkap dengan `REVOKE ... FROM public, anon` + `GRANT ... TO authenticated` (pola wajib, lihat [[permission-model]]).
+**Konsekuensi:** entri Activity Log hanya bisa lahir dari RPC `SECURITY DEFINER` baru → **butuh migrasi** (0083+) berisi mis. `post_review_note(p_submission_id, p_body)` yang menyisipkan pesan chat + `write_activity` secara atomik, lengkap dengan `REVOKE ... FROM public, anon` + `GRANT ... TO authenticated` (pola wajib, lihat [[permission-model]]).
 
 Sampai itu dikerjakan, catatan reviewer tetap **durabel dan terlihat** — ia pesan permanen di Diskusi Rencana Aksi, hanya saja tidak muncul di panel Log Aktivitas.
 
