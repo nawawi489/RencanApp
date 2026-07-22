@@ -37,7 +37,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-11** | Header | ~~Ikon Notifications §7.2 hilang~~ ✅ **SELESAI** — merged #115 (UI-G-016); `notifications-outline` + badge unread via `useUnreadCount()`, badge disembunyikan saat loading/error (bukan fail-silent ke "0"), jumlah masuk `accessibilityLabel` | XS | ✅ DONE |
 | **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
 | **BL-13** | Governance Violation | ~~**Tidak ada sumber kebenaran `violation_type`**~~ ✅ **SELESAI 2026-07-22 — PR #145, nol migrasi**. Ditutup lewat **opsi 3 (gate CI, tanpa perubahan schema)**, bukan CHECK constraint maupun tabel lookup: jest mem-parse `supabase/migrations/*.sql` (kedua jalur emisi — `insert into governance_violations` langsung **dan** pemanggilan `log_governance_violation()`) lalu menuntut tiap tipe ter-emit punya entri di `GOVERNANCE_VIOLATION_TYPE_LABEL`. Parser menemukan **tepat 11 tipe** — cocok dengan audit BL-12. Peta label kini **satu-satunya** salinan manual: daftar hardcoded di test BL-12 diganti keluaran parser. Dikunci `[BL13-1..6]`. Alasan penolakan opsi 1/2 di §BL-13 | butuh scoping → XS | ✅ DONE |
-| **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`, migrasi 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. Terbukti nyata di DB lokal: org fixture contract test ber-`created_at` epoch 1970 memenangkan aturan "tertua" dan menelan profil seed (ditutup di sisi seed lewat #140, **trigger-nya belum**). Perlu keputusan produk dulu: V1 memang single-org, atau signup harus lewat undangan/`raw_app_meta_data.organization_id`? `[?]` apakah ada jalur signup publik di produksi | butuh scoping | ⚠️ terbuka |
+| **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`, migrasi 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. Terbukti nyata di DB lokal: org fixture contract test ber-`created_at` epoch 1970 memenangkan aturan "tertua" dan menelan profil seed (ditutup di sisi seed lewat #140, **trigger-nya belum**). **`[?]` terjawab 2026-07-22 — lihat §5.** Tidak ada signup publik; satu-satunya jalur pembuatan user meng-*overwrite* org setelah trigger, jadi risiko produksi hari ini rendah. Tapi kompensasi itu senyap saat gagal dan tidak menutup jalur di luar aplikasi. Arah perbaikan perlu keputusan owner | butuh scoping | ⚠️ terbuka |
 | **BL-15** | Onboarding / org | ~~**Koreksi org di `create-user` gagal senyap**~~ ✅ **SELESAI** — turunan investigasi BL-14 (#146). Tiga cabang di Edge Function `create-user` melewati/menggagalkan koreksi `organization_id` lalu tetap menjawab HTTP 200 tanpa penanda apa pun: lookup profil actor null, `role_templates` tak ketemu, dan `profileError` yang cuma di-log. Respons kini membawa field `warning` eksplisit dan UI Tambah User menampilkannya sebagai hasil berbeda dari sukses. Detail §BL-15 di bawah. **Tidak** menyentuh trigger `handle_new_user` — arah perbaikan trigger tetap keputusan terbuka di BL-14 | S | ✅ DONE |
 
 ---
@@ -144,6 +144,41 @@ Semuanya dijaga contract test `supabase/tests/0082_mbr_rule_naming_contract.sql`
 - **Nol penegakan server-side untuk `blokir_akses_turunan`.** Trigger `tg_enforce_mbr_block_child` masih ada sebagai fungsi tapi **tidak terpasang di tabel mana pun** — `0046` menghapusnya lewat `DROP FUNCTION ... CASCADE` (yang ikut menghapus trigger-nya) lalu hanya membuat ulang fungsinya. Jadi cascade sepenuhnya ditegakkan klien. Lebih jauh, badan fungsi itu **meleset satu tingkat**: untuk INSERT ke `initiatives` ia memeriksa aturan `strategy→initiative` dan menghitung sibling Inisiatif — artinya dengan `min_count=1` dan 0 Inisiatif, Inisiatif pertama tak akan pernah bisa dibuat (mengunci dirinya sendiri). Siapa pun yang memasang ulang trigger ini **wajib** memperbaiki arahnya dulu.
 - **`goal → strategy` terkunci di UI.** `isLocked` menyembunyikan seluruh kontrol untuk aturan ini (konsisten gerbang aktivasi Goal Fase 4), padahal RPC `set_minimum_breakdown_rule` sejak `0065` menerima `blokir_akses_turunan` untuknya. Cascade-nya sudah ter-wiring dan teruji; hanya jalur Settings-nya yang tertutup.
 - **Copy legacy di pesan `activate_strategy`** masih berbunyi "KPI Area" / "Strategy". Kosmetik, tidak disentuh agar diff tetap fokus.
+
+---
+
+## 5. BL-14 — Penempatan org user baru: temuan verifikasi
+
+Investigasi 2026-07-22 menjawab `[?]` di baris BL-14 dan **memperkecil** taksiran risikonya, tanpa menghapus cacatnya.
+
+**Tidak ada signup publik.** `mobile/src/app/(auth)/` hanya berisi `login.tsx` + `reset-password.tsx`; nol pemanggilan `signUp` di seluruh `mobile/src`. Satu-satunya jalur pembuatan user adalah Edge Function `create-user` (`auth.admin.createUser`, dipagari guard permission + anti-eskalasi role).
+
+**Jalur itu sudah mengoreksi org-nya sendiri.** Trigger `handle_new_user` memang menaruh profil di org tertua, tapi `create-user` menimpanya setelah itu dengan org milik *actor*:
+
+```ts
+const orgId = actorProfile?.organization_id ?? null;
+if (orgId) { … .update({ role_template_id: roleRow.id, organization_id: orgId }) }
+```
+
+Jadi selama user dibuat lewat aplikasi, ia mendarat di org yang benar — bahkan bila org lebih dari satu.
+
+> [!warning] Yang membuatnya tetap layak diperbaiki
+> Koreksi itu **best-effort dan senyap saat gagal** — tiga lubang, semuanya berakhir "user diam-diam di org yang salah, API tetap menjawab sukses":
+> 1. `if (orgId)` — bila lookup profil actor gagal/null, **seluruh blok koreksi dilewati**. Tidak ada error ke pemanggil.
+> 2. `if (roleRow?.id)` — bila tak ada `role_templates` yang cocok, koreksi dilewati juga; hanya `log('warn')`.
+> 3. `profileError` di-log, **tidak** dikembalikan — respons tetap sukses walau pin org gagal.
+>
+> Dan koreksi ini hanya ada di dalam Edge Function. **Jalur di luar aplikasi tidak tersentuh**: "Add user" di dashboard Supabase, panggilan admin API langsung, atau INSERT manual ke `auth.users` semuanya memicu trigger tanpa ada yang membetulkan sesudahnya.
+
+**Kesimpulan risiko.** Rendah hari ini (satu org + koreksi aktif), naik menjadi nyata begitu org kedua muncul **atau** begitu ada user dibuat di luar aplikasi. Karena gejalanya workspace kosong akibat RLS — bukan error — ia akan terbaca sebagai "bug permission", bukan salah org.
+
+**Keputusan yang dibutuhkan.** Arah perbaikan trigger, bukan apakah perlu diperbaiki:
+
+1. **Trigger fail-closed** — baca `raw_app_meta_data.organization_id`; bila absen, jangan menebak (profil tanpa org / tolak). Paling benar, tapi menuntut setiap pemanggil menyediakan org.
+2. **Serahkan ke pemanggil** — `create-user` menyetel `app_metadata.organization_id` sebelum insert sehingga trigger benar sejak awal; koreksi setelahnya dihapus. Menghilangkan jendela salah-org, tapi jalur luar-aplikasi tetap menebak.
+3. **Kunci single-org V1** — trigger `raise` bila `count(organizations) > 1`. Murah dan jujur; menunda masalah sampai multi-org benar-benar dibutuhkan.
+
+Terlepas dari pilihannya, tiga lubang senyap di `create-user` di atas layak ditutup terpisah — itu bugfix, bukan keputusan.
 
 ---
 

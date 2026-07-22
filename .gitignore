@@ -21,13 +21,9 @@ cf.token*
 .DS_Store
 Thumbs.db
 
-# Obsidian — local/per-machine vault state (keep shared config: app/core-plugins/appearance/graph)
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
-.obsidian/cache
-.obsidian/plugins/*/data.json
-wiki/.obsidian/workspace.json
-wiki/.obsidian/graph.json
+# Obsidian — preferensi editor per-orang, bukan pengetahuan; seluruh vault state lokal
+.obsidian/
+wiki/.obsidian/
 
 # UI/UX screenshots & mockups — artefak lokal, tidak perlu di-repo (root only; jangan match mobile/src/components/ui/)
 /ui/
