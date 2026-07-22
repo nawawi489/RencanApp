@@ -296,3 +296,136 @@ begin
   raise notice 'PASS 0085-DB-16..52: enam scope card sisanya (kontrol positif, negatif, scope-null, lintas-org, nol raise exception)';
 end $$;
 rollback;
+
+-- ============================================================================
+-- Wave 4 — cabang `chat` lewat DELEGASI (DB-53..DB-56)
+--
+-- DB-53 adalah bukti FR-2 yang sesungguhnya: `search_chat_messages` ditukar dengan stub
+-- kanari di dalam transaksi, lalu hasil `search_global` harus IKUT BERUBAH. Ini jauh lebih
+-- kuat daripada memeriksa `prosrc` — salin-tempel yang diformat ulang lolos pemeriksaan
+-- teks, tetapi tidak lolos pertukaran perilaku ini.
+--
+-- Batas yang harus disadari (§9.2 Concern #9): teknik ini menuntut `create or replace`
+-- mempertahankan tanda tangan 5-arg dan tipe hasil 9-kolom PERSIS, dan hanya sah dijalankan
+-- sebagai pemilik fungsi (postgres) — jadi ia menguji DB lokal/CI, bukan staging.
+--
+-- PEMILIHAN AKTOR — jangan diganti tanpa mengecek dua syarat sekaligus:
+--   (a) ia anggota `chat_room_members` dari room yang memuat pesan uji, DAN
+--   (b) `profiles.organization_id`-nya SAMA dengan `chat_messages.organization_id` room itu.
+-- Keanggotaan saja tidak cukup: `search_chat_messages` juga menggerbang per organisasi,
+-- sehingga anggota lintas-org mendapat nol baris dan test terbaca seperti "delegasi mati"
+-- padahal gerbangnya justru bekerja benar.
+--
+-- Ini bukan hipotetis. Aktor `…0001` memenuhi (a) tetapi tidak (b), karena prelude
+-- `_fixtures.sql` memindahkannya ke org DCR-05 sementara pesan uji ada di org Nyantuy.
+-- Prelude itu commit dan tidak pernah di-reset antar-berkas, jadi pengamatan yang diambil
+-- SEBELUM suite kontrak pernah jalan bisa tidak berlaku lagi sesudahnya.
+-- Query pemilih aktor yang benar:
+--   select m.member_id, p.organization_id = cm.organization_id
+--   from public.chat_room_members m
+--   join public.chat_messages cm on cm.chat_room_id = m.chat_room_id
+--   join public.profiles p on p.id = m.member_id
+--   where cm.body ilike '%<kata-kunci-uji>%' group by 1,2;
+-- ============================================================================
+
+begin;
+do $$
+declare
+  v_ceo  uuid := '11111111-1111-1111-1111-000000000005';   -- anggota room 'dr' DAN org-nya cocok (lihat catatan)
+  fails  text := '';
+  n      int;
+  got    text;
+  v_len  int;
+begin
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- DB-53a — KONTROL POSITIF sebelum penukaran: cabang chat memang hidup.
+  select count(*) into n from public.search_global('dr', array['chat'], true, 30, null, null);
+  if n < 1 then
+    fails := fails || 'DB-53a kontrol_positif_chat_nol_baris(cabang chat mati? delegasi tak terpasang?); ';
+  end if;
+
+  -- DB-56 — proyeksi memilih kolom yang benar, bukan sekadar "ada baris".
+  select string_agg(distinct scope, ',') into got
+  from public.search_global('dr', array['chat'], true, 30, null, null);
+  if coalesce(got,'') <> 'chat' then
+    fails := fails || 'DB-56 scope_bukan_chat(' || coalesce(got,'<nol>') || '); ';
+  end if;
+
+  select count(*) into n
+  from public.search_global('dr', array['chat'], true, 30, null, null)
+  where parent_id is null;
+  if n <> 0 then
+    fails := fails || 'DB-56 parent_id_null(deep-link ke room hilang, ' || n || ' baris); ';
+  end if;
+
+  select count(*) into n
+  from public.search_global('dr', array['chat'], true, 30, null, null)
+  where status is not null;
+  if n <> 0 then
+    fails := fails || 'DB-56 status_harus_null_untuk_chat(' || n || ' baris); ';
+  end if;
+
+  execute 'reset role';
+
+  if fails <> '' then
+    raise exception 'FAIL 0085-DB-53a/56: %', fails;
+  end if;
+  raise notice 'PASS 0085-DB-53a/56: cabang chat hidup + proyeksi kolom benar';
+end $$;
+rollback;
+
+-- DB-53b — PERTUKARAN KANARI. Blok terpisah supaya penukaran fungsi benar-benar
+-- ter-rollback dan tidak mencemari blok lain.
+begin;
+
+create or replace function public.search_chat_messages(
+  p_query text, p_room_id uuid default null, p_limit int default 20,
+  p_before timestamptz default null, p_before_id uuid default null)
+returns table (message_id uuid, chat_room_id uuid, room_name text, initiative_id uuid,
+               author_id uuid, author_name text, snippet text,
+               created_at timestamptz, body_similarity real)
+language sql stable security definer set search_path = ''
+as 'select ''aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa''::uuid,
+           ''bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb''::uuid,
+           ''KANARI-STUB''::text, null::uuid, null::uuid, ''KANARI''::text,
+           repeat(''K'', 400)::text, now(), 0::real';
+
+do $$
+declare
+  v_ceo uuid := '11111111-1111-1111-1111-000000000005';
+  fails text := '';
+  got   text;
+  v_len int;
+begin
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- DB-53b — hasil search_global HARUS ikut berubah. Kalau body-nya disalin-tempel
+  -- alih-alih didelegasikan, baris kanari tidak akan pernah muncul.
+  select string_agg(distinct title, ',') into got
+  from public.search_global('dr', array['chat'], true, 30, null, null);
+  if coalesce(got,'') <> 'KANARI-STUB' then
+    fails := fails || 'DB-53b delegasi_tidak_murni: stub tidak terlihat, dapat ['
+                   || coalesce(got,'<nol>') || ']; ';
+  end if;
+
+  -- DB-55 — truncation 240 dilakukan oleh search_global sendiri, bukan diwarisi.
+  -- Stub sengaja mengembalikan snippet 400 char.
+  select max(length(snippet)) into v_len
+  from public.search_global('dr', array['chat'], true, 30, null, null);
+  if coalesce(v_len,0) <> 240 then
+    fails := fails || 'DB-55 truncation_240_tidak_berlaku(panjang=' || coalesce(v_len,0) || '); ';
+  end if;
+
+  execute 'reset role';
+
+  if fails <> '' then
+    raise exception 'FAIL 0085-DB-53b/55: %', fails;
+  end if;
+  raise notice 'PASS 0085-DB-53b/55: delegasi terbukti (stub kanari terlihat) + truncation 240 milik search_global';
+end $$;
+rollback;

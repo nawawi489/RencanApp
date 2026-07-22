@@ -184,6 +184,32 @@ begin
     limit lim;
   end if;
 
+  -- Cabang `chat` — DELEGASI PENUH ke public.search_chat_messages (FR-2).
+  --
+  -- DILARANG menyalin body-nya ke sini. Preseden yang mengikat: 0060 melakukan
+  -- `create or replace` penuh atas fungsi itu dan diam-diam kehilangan limit clamp,
+  -- guard length<2, serta truncation — baru dipulihkan 0075. Satu sumber kebenaran
+  -- untuk otorisasi chat (termasuk confidential-aware) ada di fungsi itu, bukan di sini.
+  --
+  -- Guard biaya di atas TIDAK diteruskan mentah: `q` yang sudah di-btrim + truncate 200
+  -- dikirim apa adanya, dan fungsi tujuan menerapkan lagi guard-nya sendiri (idempoten).
+  -- Truncation 240 di bawah adalah milik search_global — fungsi tujuan mengembalikan body
+  -- utuh (0075:57), jadi jangan mengandalkannya memangkas.
+  if p_scopes is null or 'chat' = any(p_scopes) then
+    return query
+    select
+      'chat'::text            as scope,
+      m.message_id            as id,
+      m.chat_room_id          as parent_id,   -- target deep-link: ruangannya
+      m.room_name             as title,
+      m.author_name           as subtitle,
+      left(m.snippet, 240)    as snippet,
+      null::text              as status,
+      m.created_at            as sort_ts,
+      m.message_id            as sort_id
+    from public.search_chat_messages(q, null, lim, p_cursor_ts, p_cursor_id) m;
+  end if;
+
   return;
 end;
 $$;
