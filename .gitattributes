@@ -1,0 +1,8 @@
+# Wiki hotspots — dua file yang menyumbang ~separuh sentuhan wiki dan konflik
+# karena BENTUKNYA (append-only / daftar alfabetis), bukan karena isinya bertabrakan.
+# union merge menyimpan baris dari kedua sisi tanpa conflict marker.
+# Aman di sini sebab keduanya list-of-lines. JANGAN pakai merge=union untuk kode.
+# Efek samping yang harus disadari: bila dua PR mengedit baris yang sama di index.md,
+# hasilnya dua baris duplikat yang lolos diam-diam — sapu berkala.
+wiki/log.md   merge=union
+wiki/index.md merge=union
