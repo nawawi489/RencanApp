@@ -38,6 +38,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
 | **BL-13** | Governance Violation | ~~**Tidak ada sumber kebenaran `violation_type`**~~ ✅ **SELESAI 2026-07-22 — PR #145, nol migrasi**. Ditutup lewat **opsi 3 (gate CI, tanpa perubahan schema)**, bukan CHECK constraint maupun tabel lookup: jest mem-parse `supabase/migrations/*.sql` (kedua jalur emisi — `insert into governance_violations` langsung **dan** pemanggilan `log_governance_violation()`) lalu menuntut tiap tipe ter-emit punya entri di `GOVERNANCE_VIOLATION_TYPE_LABEL`. Parser menemukan **tepat 11 tipe** — cocok dengan audit BL-12. Peta label kini **satu-satunya** salinan manual: daftar hardcoded di test BL-12 diganti keluaran parser. Dikunci `[BL13-1..6]`. Alasan penolakan opsi 1/2 di §BL-13 | butuh scoping → XS | ✅ DONE |
 | **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`, migrasi 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. Terbukti nyata di DB lokal: org fixture contract test ber-`created_at` epoch 1970 memenangkan aturan "tertua" dan menelan profil seed (ditutup di sisi seed lewat #140, **trigger-nya belum**). Perlu keputusan produk dulu: V1 memang single-org, atau signup harus lewat undangan/`raw_app_meta_data.organization_id`? `[?]` apakah ada jalur signup publik di produksi | butuh scoping | ⚠️ terbuka |
+| **BL-15** | Onboarding / org | ~~**Koreksi org di `create-user` gagal senyap**~~ ✅ **SELESAI** — turunan investigasi BL-14 (#146). Tiga cabang di Edge Function `create-user` melewati/menggagalkan koreksi `organization_id` lalu tetap menjawab HTTP 200 tanpa penanda apa pun: lookup profil actor null, `role_templates` tak ketemu, dan `profileError` yang cuma di-log. Respons kini membawa field `warning` eksplisit dan UI Tambah User menampilkannya sebagai hasil berbeda dari sukses. Detail §BL-15 di bawah. **Tidak** menyentuh trigger `handle_new_user` — arah perbaikan trigger tetap keputusan terbuka di BL-14 | S | ✅ DONE |
 
 ---
 
@@ -218,6 +219,30 @@ Assertion sengaja **tidak** menulis ulang daftar 11 tipe (itu akan jadi salinan 
 **Pembuktian gate.** Empat skenario drift disuntik ke salinan scratch lalu dicabut — semuanya merah pada assertion yang tepat: tipe palsu lewat jalur A → `[BL13-4]`; tipe palsu lewat jalur B → `[BL13-4]`; emitter dinamis → `[BL13-6]`; label yatim di client → `[BL13-5]`.
 
 **Batas yang diterima.** Gate ini menjaga sinkronisasi migrasi↔client, bukan integritas data di DB — nilai sampah yang ditulis di luar migrasi (psql manual, RPC baru yang belum di-commit) tetap masuk. Kalau audit suatu saat menuntut himpunan tipe yang *enumerable dari DB*, opsi 2 kembali ke meja; sampai saat itu ia membeli kepastian yang tidak dibutuhkan siapa pun dengan harga FK di tabel append-only yang panas.
+
+## BL-15 — Koreksi org di `create-user`: dari senyap jadi terlihat pemanggil
+
+**Asal.** Turunan langsung investigasi BL-14 (#146). Investigasi itu memperkecil taksiran risiko trigger — tidak ada signup publik, dan `create-user` mengoreksi org-nya sendiri — tapi menemukan bahwa koreksi tersebut **best-effort dan senyap saat gagal**. Tiga cabang berakhir sama: user mendarat di org warisan trigger (org tertua), API menjawab 200, pemanggil tidak diberi tahu apa pun.
+
+**Kenapa itu kelas kegagalan yang mahal.** Gejala salah-org bukan error melainkan **workspace kosong akibat RLS**. Admin yang membuat user melihat "User dibuat", user yang login melihat halaman kosong, dan tiketnya akan masuk sebagai bug permission. Log server memuat penyebabnya, tapi log tidak sampai ke UI — itu persis definisi kegagalan diam.
+
+**Bentuk perbaikan: sukses + `warning`, bukan error.** Kedua opsi dipertimbangkan dan yang ini menang:
+
+- **Menggagalkan request ditolak.** Di titik koreksi, row `auth.users` sudah terlanjur ada. Menjawab 5xx menghasilkan akun hantu — ada di DB, tidak terlihat oleh admin, dan retry-nya pasti mentok `409 email_exists` tanpa jalan maju. Kompensasi (`admin.deleteUser`) berarti menghapus akun yang sebenarnya valid dan bisa login demi kegagalan sekunder, dan penghapusan itu punya mode gagalnya sendiri yang lebih buruk.
+- **Sukses + `warning` dipilih.** Akunnya nyata dan berfungsi; yang gagal hanya penempatannya, dan itu bisa dibetulkan manual lewat User & Permission. Syaratnya field itu **wajib dipakai pemanggil** — kalau tidak, ia cuma versi lain dari log yang tak terlihat.
+
+**Kontrak respons.** `200 { user_id, requestId, warning }` dengan `warning: null` pada jalur benar, atau `{ code, message }` dengan `code` ∈ `actor_org_missing` | `role_template_missing` | `profile_role_pin_failed`. `message` adalah copy Indonesia terkurasi (WSA-18: user tidak melihat detail teknis); `code` untuk diagnosa. Semua `log()` yang ada dipertahankan — perbaikan ini soal **respons**, bukan pengganti log.
+
+**Jalur `role_template_missing` sengaja tidak menulis `organization_id` sendirian.** Menggeser org tanpa role-nya menghasilkan profil yang `role_template_id`-nya milik org lain — inkonsistensi silang-org yang lebih sulit didiagnosis daripada dibiarkan utuh lalu dilaporkan. Update-nya tetap atomik: dua kolom atau tidak sama sekali.
+
+**Rantai pemanggil ditutup sampai ke layar**, karena field respons yang ditelan call-site tidak menutup apa pun: `createOrgUser` menormalisasi `warning` (bentuk asing → `null`, `message` kosong → fallback ramah), dan `settings-user-new.tsx` merender hasil ber-warning sebagai **hasil yang berbeda** — judul Alert "User dibuat — perlu diperiksa" + banner inline persisten + **tidak** `router.back()`, mengikuti pola yang sudah dipakai jalur error di layar itu.
+
+> [!warning] Yang TIDAK ditutup di sini
+> Trigger `handle_new_user` tidak disentuh (owner mengunci single-org untuk V1). Jalur pembuatan user **di luar aplikasi** — "Add user" dashboard Supabase, admin API langsung, INSERT manual ke `auth.users` — masih memicu trigger tanpa koreksi maupun warning. Tiga arah perbaikan trigger tetap terbuka di baris BL-14.
+
+**Belum live sampai di-deploy.** Edge Function tidak ikut ter-deploy oleh merge; butuh `supabase link` + `supabase functions deploy create-user`. Sebelum itu, perubahan client sudah aman (server lama tidak mengirim `warning` → `readWarning` mengembalikan `null` → perilaku persis seperti sekarang).
+
+---
 
 ## Referensi
 

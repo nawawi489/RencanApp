@@ -70,12 +70,24 @@ export default function SettingsUserNewScreen() {
     }
     setError(null);
     try {
-      await createUser({
+      const created = await createUser({
         email: normalizedEmail,
         password,
         fullName: fullName.trim(),
         roleLevel,
       });
+      // Akun berhasil dibuat tapi penempatan org/role-nya gagal (BL-14 §5). Jangan tampilkan
+      // sebagai sukses biasa: user ada di org yang salah dan gejalanya nanti workspace kosong,
+      // bukan error. Tetap di layar + banner persisten supaya sinyalnya tidak hilang begitu
+      // Alert ditutup.
+      if (created.warning) {
+        setError(created.warning.message);
+        Alert.alert(
+          'User dibuat — perlu diperiksa',
+          `Akun ${normalizedEmail} sudah bisa dipakai untuk login, tetapi penempatan organisasi/role-nya gagal. Periksa user ini di User & Permission sebelum membagikan password sementara.`,
+        );
+        return;
+      }
       Alert.alert(
         'User dibuat',
         `Akun ${normalizedEmail} siap digunakan. Bagikan password sementara secara aman dan sarankan menggantinya lewat Reset Password setelah login pertama.`,

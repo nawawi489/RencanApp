@@ -47,7 +47,7 @@ beforeEach(() => {
   alertSpy.mockReset();
   mockCan.mockReturnValue(true);
   mockProfile.role_level = 'management';
-  mockCreateUser.mockResolvedValue({ user_id: 'u-new' });
+  mockCreateUser.mockResolvedValue({ user_id: 'u-new', warning: null });
 });
 
 async function fillValidForm() {
@@ -139,6 +139,29 @@ describe('SettingsUserNewScreen', () => {
     });
     expect(alertSpy).toHaveBeenCalledWith('User dibuat', expect.stringContaining('rina@n.id'));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('[U-UI-09] sukses dengan warning penempatan → alert beda + banner inline, tidak kembali', async () => {
+    mockCreateUser.mockResolvedValue({
+      user_id: 'u-new',
+      warning: {
+        code: 'role_template_missing',
+        message: 'User dibuat, tetapi penempatan organisasi gagal — periksa manual di User & Permission.',
+      },
+    });
+    await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
+    await fillValidForm();
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Buat User'));
+    });
+    expect(alertSpy).toHaveBeenCalledWith('User dibuat — perlu diperiksa', expect.stringContaining('rina@n.id'));
+    expect(alertSpy).not.toHaveBeenCalledWith('User dibuat', expect.any(String));
+    expect(
+      await screen.findByText(
+        'User dibuat, tetapi penempatan organisasi gagal — periksa manual di User & Permission.',
+      ),
+    ).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it('[U-UI-08] error server → pesan domain inline, tidak kembali', async () => {

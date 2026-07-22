@@ -29,7 +29,53 @@ describe('createOrgUser', () => {
         role_level: 'staff',
       },
     });
-    expect(result).toEqual({ user_id: 'u-new' });
+    expect(result).toEqual({ user_id: 'u-new', warning: null });
+  });
+
+  it('[U-LIB-05] respons sukses dengan warning penempatan → diteruskan ke pemanggil', async () => {
+    mockInvoke.mockResolvedValue({
+      data: {
+        user_id: 'u-new',
+        warning: { code: 'role_template_missing', message: 'User dibuat, tetapi penempatan organisasi gagal.' },
+      },
+      error: null,
+    });
+    const result = await createOrgUser({
+      email: 'a@b.co',
+      password: 'rahasia123',
+      fullName: 'A',
+      roleLevel: 'staff',
+    });
+    expect(result).toEqual({
+      user_id: 'u-new',
+      warning: { code: 'role_template_missing', message: 'User dibuat, tetapi penempatan organisasi gagal.' },
+    });
+  });
+
+  it('[U-LIB-06] warning tanpa message → pakai fallback ramah, code dipertahankan', async () => {
+    mockInvoke.mockResolvedValue({
+      data: { user_id: 'u-new', warning: { code: 'actor_org_missing' } },
+      error: null,
+    });
+    const result = await createOrgUser({
+      email: 'a@b.co',
+      password: 'rahasia123',
+      fullName: 'A',
+      roleLevel: 'staff',
+    });
+    expect(result.warning?.code).toBe('actor_org_missing');
+    expect(result.warning?.message).toContain('penempatan organisasi gagal');
+  });
+
+  it('[U-LIB-07] warning berbentuk tidak dikenal → diabaikan (bukan warning palsu)', async () => {
+    mockInvoke.mockResolvedValue({ data: { user_id: 'u-new', warning: 'oops' }, error: null });
+    const result = await createOrgUser({
+      email: 'a@b.co',
+      password: 'rahasia123',
+      fullName: 'A',
+      roleLevel: 'staff',
+    });
+    expect(result.warning).toBeNull();
   });
 
   it('[U-LIB-02] error dengan body {error} → throw pesan domain server', async () => {
