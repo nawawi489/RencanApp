@@ -1,7 +1,8 @@
 // Komponen fondasi: EmptyState v2, ErrorState, SkeletonList, ScoreBadge, Avatar.
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
-import { render, screen } from '@testing-library/react-native';
-import { Avatar, EmptyState, ErrorState, IconTile, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SkeletonList, orbToneFor } from '../ui';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { Text } from 'react-native-css/components';
+import { Avatar, Button, EmptyState, ErrorState, IconTile, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SectionCard, SkeletonList, orbToneFor } from '../ui';
 
 jest.setTimeout(30000);
 
@@ -174,3 +175,85 @@ describe('ProgressOrb (UI-G-001)', () => {
     expect(screen.getByLabelText('Progress 60 persen, Berjalan. 3/5 Strategi terukur')).toBeTruthy();
   });
 });
+
+describe('SectionCard — kontrol bersarang di kartu pressable (DESIGN §4.4)', () => {
+  it('[UI-SC-1] statis: tanpa onPress tidak ada elemen ber-role button', async () => {
+    await render(
+      <SectionCard>
+        <Text>Isi kartu</Text>
+      </SectionCard>,
+    );
+    expect(screen.getByText('Isi kartu')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  // Regresi: `actions` sempat hanya dirender di cabang pressable, sehingga kartu yang
+  // kehilangan `onPress` (mis. entity type tanpa segmen rute di layar Arsip) ikut kehilangan
+  // tombolnya. Ditempatkan SEBELUM tes yang menekan region pressable: menekan Pressable
+  // react-native-css ber-varian `active:` membuat render berikutnya di file ini kosong
+  // (artefak harness, bukan cacat komponen — lihat [UI-SC-4]).
+  it('[UI-SC-5] statis + actions: tombol tetap dirender walau kartu tak bisa ditekan', async () => {
+    const onAct = jest.fn();
+    await render(
+      <SectionCard actions={<Button label="Pulihkan ke Draft" onPress={onAct} />}>
+        <Text>Card Asing</Text>
+      </SectionCard>,
+    );
+    expect(screen.getByText('Card Asing')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Pulihkan ke Draft'));
+    expect(onAct).toHaveBeenCalledTimes(1);
+  });
+
+  it('[UI-SC-2] pressable tanpa actions: seluruh kartu satu tombol ber-label', async () => {
+    const onPress = jest.fn();
+    await render(
+      <SectionCard onPress={onPress} accessibilityLabel="Buka detail Goal Lama">
+        <Text>Goal Lama</Text>
+      </SectionCard>,
+    );
+    fireEvent.press(screen.getByLabelText('Buka detail Goal Lama'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  // Regresi inti: `Pressable` RN default `accessible={true}`, jadi kontrol yang bersarang di
+  // dalamnya lebur jadi satu elemen a11y dan berhenti bisa difokus VoiceOver. `actions` harus
+  // merender kontrol sebagai SIBLING region pressable — bukan keturunannya.
+  it('[UI-SC-3] actions dirender DI LUAR region pressable (bukan keturunannya)', async () => {
+    const onOpen = jest.fn();
+    const onAct = jest.fn();
+    await render(
+      <SectionCard
+        onPress={onOpen}
+        accessibilityLabel="Buka detail Goal Lama"
+        actions={<Button label="Pulihkan ke Draft" onPress={onAct} />}>
+        <Text>Goal Lama</Text>
+      </SectionCard>,
+    );
+    const pressableRegion = screen.getByLabelText('Buka detail Goal Lama');
+    // tombol ada di kartu…
+    expect(screen.getByLabelText('Pulihkan ke Draft')).toBeTruthy();
+    // …tapi BUKAN di dalam region pressable, jadi fokus a11y-nya tetap terpisah.
+    expect(within(pressableRegion).queryByLabelText('Pulihkan ke Draft')).toBeNull();
+  });
+
+  it('[UI-SC-4] kedua target bisa ditekan sendiri-sendiri tanpa saling memicu', async () => {
+    const onOpen = jest.fn();
+    const onAct = jest.fn();
+    await render(
+      <SectionCard
+        onPress={onOpen}
+        accessibilityLabel="Buka detail Goal Lama"
+        actions={<Button label="Pulihkan ke Draft" onPress={onAct} />}>
+        <Text>Goal Lama</Text>
+      </SectionCard>,
+    );
+    fireEvent.press(screen.getByLabelText('Pulihkan ke Draft'));
+    expect(onAct).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByLabelText('Buka detail Goal Lama'));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onAct).toHaveBeenCalledTimes(1);
+  });
+});
+

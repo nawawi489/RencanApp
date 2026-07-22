@@ -158,29 +158,64 @@ export function IconTile({
 
 // ---------------------------------------------------------------- SectionCard
 
+/**
+ * Kartu seksi. Tiga bentuk:
+ * - statis (`onPress` kosong) → `View` biasa.
+ * - bisa ditekan → `Pressable` ber-`accessibilityRole="button"`.
+ * - bisa ditekan **dan** punya kontrol sendiri → wadah statis + region pressable + slot `actions`.
+ *
+ * `actions` ADA supaya kontrol tidak bersarang di dalam Pressable. `Pressable` RN default
+ * `accessible={true}`, yang di iOS meleburkan seluruh anak jadi SATU elemen a11y: tombol
+ * bersarang berhenti bisa difokus VoiceOver dan aksinya jadi tak terjangkau — persis
+ * pelanggaran DESIGN §4.4. Menaruh kontrol di `actions` membuatnya jadi *sibling* region
+ * pressable, jadi keduanya dapat fokus sendiri-sendiri. Kontrol interaktif apa pun
+ * (`Button`, `Pressable`, input) di kartu pressable WAJIB lewat `actions`, bukan `children`.
+ */
 export function SectionCard({
   children,
   onPress,
   accessibilityLabel,
-}: PropsWithChildren<{ onPress?: () => void; accessibilityLabel?: string }>) {
+  actions,
+}: PropsWithChildren<{
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  actions?: ReactNode;
+}>) {
   // Surface token DESIGN §2: kartu = putih di atas latar layar neutral-50 (level-2 inset
   // bg-neutral-50 baru terbaca bila kartunya sendiri tidak transparan).
   const className =
     'gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950';
   if (onPress) {
-    // DESIGN §4.4 — kartu yang bisa ditekan butuh label eksplisit; tanpa itu screen reader
-    // hanya membaca gabungan teks anak dan tujuan tap tidak jelas.
-    return (
+    // DESIGN §4.4 — `accessibilityRole` + `accessibilityLabel`. Label opsional: tanpa label RN
+    // membacakan gabungan teks anak, yang untuk kartu ringkas justru lebih kaya. Isi label hanya
+    // bila teks anak saja tidak menjelaskan apa yang terjadi saat di-tap.
+    const pressable = (
       <Pressable
-        className={`${className} active:opacity-70`}
+        className={actions ? 'gap-2 active:opacity-70' : `${className} active:opacity-70`}
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}>
         {children}
       </Pressable>
     );
+    if (!actions) return pressable;
+    // Padding/border pindah ke wadah statis; region pressable menyisakan `gap-2` saja supaya
+    // jarak antar-elemen kartu tidak berubah secara visual.
+    return (
+      <View className={className}>
+        {pressable}
+        {actions}
+      </View>
+    );
   }
-  return <View className={className}>{children}</View>;
+  // Kartu statis tetap merender `actions` — kalau tidak, kartu yang kehilangan `onPress`-nya
+  // (mis. entity type tanpa segmen rute di layar Arsip) ikut kehilangan tombol aksinya.
+  return (
+    <View className={className}>
+      {children}
+      {actions}
+    </View>
+  );
 }
 
 // ---------------------------------------------------------------- Field (display)
