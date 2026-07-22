@@ -151,33 +151,29 @@ jobs:
 workflows:
   version: 2
 
-  # CI hanya jalan di branch `main` + `staging` untuk hemat kuota. Feature
-  # branch push (WIP, spike, exploration) tidak trigger CircleCI — validasi
-  # pre-merge di-serahkan ke pre-push hook lokal (.git/hooks/pre-push).
+  # CI pada setiap push ke branch mana pun. CircleCI tidak punya konsep
+  # `pull_request` trigger native seperti GH Actions — semua push masuk workflow.
+  # Deploy-staging di-filter branches: only staging.
   #
-  # Rasional: CircleCI tidak punya native `pull_request` trigger — build hanya
-  # bisa di-tune per-branch. Untuk solo dev disiplin (test lokal + PR flow),
-  # gate post-merge di CircleCI + gate pre-push di lokal cukup.
+  # Filter `only: [main, staging]` pada 3 job gate sempat dipasang untuk hemat
+  # kuota (2026-07-21), lalu DICABUT 2026-07-22 karena efek sampingnya: PR ke
+  # staging jadi nol check — bukan merah, melainkan tidak dijalankan sama sekali
+  # — sehingga tidak ada gate CI sebelum merge. Itu bertentangan dengan catatan
+  # di kepala file ini ("deploy-staging quality/db-contract re-run: sudah sebagai
+  # gate PR"), yang mengandaikan ketiganya memang jalan di PR.
   #
-  # Kalau nanti ada teammate atau PR flow lebih formal, pertimbangkan enable
-  # "Only build pull requests" di CircleCI Advanced settings (butuh GitHub App
-  # integration).
-  #
-  # deploy-staging: subset filter (staging only), tidak jalan di push ke main.
+  # Konsekuensi yang diterima sadar: konsumsi kuota naik karena setiap push ke
+  # branch fitur ikut menjalankan ketiganya. Pre-push hook lokal (.githooks/
+  # pre-push) TIDAK menggantikan ini — ia bisa dilewati `--no-verify` dan tidak
+  # menjalankan db-contract. Kalau kuota kembali jadi masalah, opsi yang lebih
+  # tepat daripada memfilter branch: aktifkan "Only build pull requests" di
+  # CircleCI Advanced settings (butuh GitHub App integration), supaya push WIP
+  # tidak memicu build tapi PR tetap ter-gate.
   ci:
     jobs:
-      - quality:
-          filters:
-            branches:
-              only: [main, staging]
-      - rename-guard:
-          filters:
-            branches:
-              only: [main, staging]
-      - db-contract:
-          filters:
-            branches:
-              only: [main, staging]
+      - quality
+      - rename-guard
+      - db-contract
       - deploy-staging:
           requires:
             - quality
