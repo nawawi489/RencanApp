@@ -8,6 +8,8 @@ jest.mock('../supabase', () => ({
 // eslint-disable-next-line import/first
 import { makeQueryThenable, someCall } from '@/test-support/fase8-builders';
 // eslint-disable-next-line import/first
+import { parseEmittedViolationTypes } from '@/test-support/governance-violation-types';
+// eslint-disable-next-line import/first
 import {
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
   GOVERNANCE_VIOLATION_TYPE_LABEL,
@@ -29,19 +31,9 @@ it('[4] GOVERNANCE_VIOLATION_SEVERITY_TONE memetakan 4 tier ke tone', () => {
 
 describe('[BL-12] governanceViolationTypeLabel', () => {
   // Setiap tipe yang benar-benar ditulis fungsi DB harus punya label Indonesia.
-  const DB_EMITTED_TYPES = [
-    'deadline_change_self_approval',
-    'finalize_non_submitter',
-    'instance_missed',
-    'kpi_area_mismatch',
-    'orphan_cleanup_unauthorized',
-    'reviewer_override',
-    'self_approval_attempt',
-    'self_evaluation',
-    'settings_invalid_key',
-    'strategy_mismatch',
-    'submit_non_pic',
-  ];
+  // Daftarnya di-parse dari `supabase/migrations/` (BL-13), bukan disalin manual —
+  // salinan manual di sini akan ikut basi tanpa ada yang tahu.
+  const DB_EMITTED_TYPES = parseEmittedViolationTypes().types;
 
   it.each(DB_EMITTED_TYPES)('memetakan %s ke label Indonesia', (type) => {
     const label = governanceViolationTypeLabel(type);

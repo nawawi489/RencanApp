@@ -27,9 +27,13 @@ export const GOVERNANCE_VIOLATION_SEVERITY_LABEL: Record<string, string> = {
 /** Label Indonesia untuk `governance_violations.violation_type`.
  *  Kolom di DB adalah `text` bebas (tanpa CHECK constraint), jadi peta ini enumerasi
  *  nilai yang benar-benar ditulis fungsi DB — bukan kontrak yang dipaksakan schema.
- *  Sumber: insert langsung (0005/0007/0008/0014/0038/0040/0046/0063/0064) dan
- *  `log_governance_violation()` (0019/0046). Gunakan `governanceViolationTypeLabel()`
- *  agar tipe baru dari DB tetap tampil (fallback ke nilai mentah). */
+ *  Sumber: insert langsung di body fungsi + helper `log_governance_violation()` (0019).
+ *  Gunakan `governanceViolationTypeLabel()` agar tipe baru dari DB tetap tampil
+ *  (fallback ke nilai mentah).
+ *
+ *  BL-13: peta ini di-gate oleh `governance-violation-types.contract.test.ts`, yang
+ *  mem-parse `supabase/migrations/*.sql` dan memerah bila ada tipe ter-emit tanpa label
+ *  (atau label tanpa emitter). Menambah tipe di migrasi ⇒ tambahkan entri di sini. */
 export const GOVERNANCE_VIOLATION_TYPE_LABEL: Record<string, string> = {
   deadline_change_self_approval: 'Menyetujui perubahan deadline sendiri',
   finalize_non_submitter: 'Finalisasi oleh bukan pengirim',

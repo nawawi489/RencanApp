@@ -36,7 +36,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-10** | Search | **7 dari 14 scope §38 hilang** (persis seperti diklaim) + **tanpa grouping** (`search.tsx:70-79` FlatList datar, padahal §38 mewajibkan pengelompokan). `CardEntityType` hanya 7 tipe lewat satu RPC `search_cards`. RPC `search_chat_messages` sudah ada tapi hanya dipakai Inbox, tak pernah di-import layar Search | L | ✅ |
 | **BL-11** | Header | ~~Ikon Notifications §7.2 hilang~~ ✅ **SELESAI** — merged #115 (UI-G-016); `notifications-outline` + badge unread via `useUnreadCount()`, badge disembunyikan saat loading/error (bukan fail-silent ke "0"), jumlah masuk `accessibilityLabel` | XS | ✅ DONE |
 | **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
-| **BL-13** | Governance Violation | **Tidak ada sumber kebenaran `violation_type`** — literal PL/pgSQL tersebar di 11 migrasi, peta label client salinan manual, nol gate sinkronisasi → drift lolos semua CI dan muncul sebagai degradasi diam-diam. Utang tersisa dari BL-12. Detail §BL-13 di bawah | butuh scoping | ✅ (dari #117) |
+| **BL-13** | Governance Violation | ~~**Tidak ada sumber kebenaran `violation_type`**~~ ✅ **SELESAI 2026-07-22 — PR #145, nol migrasi**. Ditutup lewat **opsi 3 (gate CI, tanpa perubahan schema)**, bukan CHECK constraint maupun tabel lookup: jest mem-parse `supabase/migrations/*.sql` (kedua jalur emisi — `insert into governance_violations` langsung **dan** pemanggilan `log_governance_violation()`) lalu menuntut tiap tipe ter-emit punya entri di `GOVERNANCE_VIOLATION_TYPE_LABEL`. Parser menemukan **tepat 11 tipe** — cocok dengan audit BL-12. Peta label kini **satu-satunya** salinan manual: daftar hardcoded di test BL-12 diganti keluaran parser. Dikunci `[BL13-1..6]`. Alasan penolakan opsi 1/2 di §BL-13 | butuh scoping → XS | ✅ DONE |
 | **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`, migrasi 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. Terbukti nyata di DB lokal: org fixture contract test ber-`created_at` epoch 1970 memenangkan aturan "tertua" dan menelan profil seed (ditutup di sisi seed lewat #140, **trigger-nya belum**). Perlu keputusan produk dulu: V1 memang single-org, atau signup harus lewat undangan/`raw_app_meta_data.organization_id`? `[?]` apakah ada jalur signup publik di produksi | butuh scoping | ⚠️ terbuka |
 
 ---
@@ -56,7 +56,7 @@ BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline y
 > Rekomendasi awal "longgarkan CHECK `p_decision` di 2 RPC" **jangan dieksekusi** — ia mengasumsikan Catatan sebagai keputusan review ketiga, sedangkan owner memutuskan non-terminal. Melonggarkan CHECK `decision` sekarang akan menambah nilai yang tidak dipakai siapa pun sekaligus melemahkan invariant state machine review. Yang tersisa dari BL-08 hanyalah entri Activity Log (RPC SECURITY DEFINER baru, **bukan** perubahan CHECK) — rinci di branch `claude/pensive-goodall-42169f`, `ui-prototype-gap.md` §2.2.
 
 **Butuh scoping/spec dulu:**
-~~BL-04~~ ✅ **terjawab + selesai** — owner memutuskan cascade satu tingkat (dicatat di PR #139, yang **ditutup tanpa merge 2026-07-22**; konten keputusannya sudah mendarat lewat #141 + migrasi 0082), dan implementasinya menyingkap bahwa sisanya bukan keputusan produk melainkan drift data (§4). BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped), BL-14 (putuskan dulu apakah V1 memang single-org; kalau ya, trigger boleh tetap begitu asal didokumentasikan sebagai asumsi mengikat — kalau tidak, butuh jalur org eksplisit saat signup).
+~~BL-13~~ ✅ **terjawab + selesai 2026-07-22 (PR #145)** — scoping menghasilkan **opsi ketiga** yang tidak ada di daftar awal (gate CI tanpa perubahan schema) dan mendominasi kedua opsi schema pada kriteria halaman ini sendiri. Pelajaran: dua opsi yang tercatat keduanya berupa perubahan DB karena gap-nya *dibingkai* sebagai gap schema; begitu dibingkai ulang sebagai "drift antara dua artefak yang bisa dibaca CI", ongkosnya turun dari migrasi+RLS+FK menjadi dua file test. ~~BL-04~~ ✅ **terjawab + selesai** — owner memutuskan cascade satu tingkat (dicatat di PR #139, yang **ditutup tanpa merge 2026-07-22**; konten keputusannya sudah mendarat lewat #141 + migrasi 0082), dan implementasinya menyingkap bahwa sisanya bukan keputusan produk melainkan drift data (§4). BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped), BL-14 (putuskan dulu apakah V1 memang single-org; kalau ya, trigger boleh tetap begitu asal didokumentasikan sebagai asumsi mengikat — kalau tidak, butuh jalur org eksplisit saat signup).
 
 **Ditutup tanpa dikerjakan:** BL-03 — keputusan desain, bukan gap.
 
@@ -167,9 +167,9 @@ Kolom `text` bebas berarti tipe baru dapat muncul dari migrasi mana pun tanpa pe
 - Tipe tak dikenal → nilai mentah (halaman tetap informatif untuk tipe yang belum dipetakan).
 - `null` / `undefined` / whitespace → `—`.
 
-Coverage di `mobile/src/lib/__tests__/activity-governance.test.ts`: 11 tipe DB dicek punya label non-`snake_case`, plus kasus fallback, input kosong, dan trim.
+Coverage di `mobile/src/lib/__tests__/activity-governance.test.ts`: 11 tipe DB dicek punya label non-`snake_case`, plus kasus fallback, input kosong, dan trim. Daftar 11 tipe itu **tidak lagi hardcoded** — ia keluaran parser migrasi sejak BL-13.
 
-**Utang yang tersisa.** Peta ini duplikasi manual dari literal yang tersebar di body PL/pgSQL, tanpa gate sinkronisasi → dilacak sebagai **BL-13**.
+~~**Utang yang tersisa.** Peta ini duplikasi manual dari literal yang tersebar di body PL/pgSQL, tanpa gate sinkronisasi~~ ✅ **ditutup lewat BL-13** (PR #145): peta tetap salinan manual, tapi kini ada gate CI yang memerah begitu ia menyimpang dari migrasi.
 
 ## BL-13 — Sumber kebenaran untuk violation type
 
@@ -185,14 +185,39 @@ Akibatnya baru terlihat di produksi: halaman Governance Violation menampilkan `s
 
 Salah ketik lebih buruk lagi: `self_aproval_attempt` menjadi tipe baru yang sah secara diam-diam, memecah baris audit yang seharusnya menyatu — dan tidak ada gate yang menangkapnya.
 
-**Arah penyelesaian.** Belum diputuskan; dua opsi yang jelas:
+**Keputusan (2026-07-22, PR #145): opsi 3 — gate CI, nol perubahan schema.**
 
-1. **CHECK constraint** di `governance_violations.violation_type`. Murah, menolak tipe tak dikenal pada waktu tulis. Tapi menambah tipe jadi butuh migrasi ALTER, dan baris lama dengan tipe yang sudah tidak dipakai harus tetap lolos constraint.
-2. **Tabel lookup** `governance_violation_types` + FK. Menjadikan himpunan tipe sebagai data yang bisa di-query — client dapat menariknya, atau test contract dapat membandingkannya dengan peta label sehingga drift jadi merah di CI. Lebih mahal: tabel + seed + RLS + FK di tabel yang append-only dan panas.
+Tiga opsi yang ditimbang:
 
-Opsi 2 satu-satunya yang benar-benar menutup drift (menjadikannya dapat diuji, bukan sekadar dilarang); opsi 1 hanya mencegah nilai baru masuk tanpa membuat peta client ikut tahu.
+1. **CHECK constraint** di `governance_violations.violation_type`. Menolak tipe tak dikenal pada waktu tulis. Tapi menambah tipe jadi butuh migrasi ALTER, dan baris lama dengan tipe yang sudah tidak dipakai harus tetap lolos constraint.
+2. **Tabel lookup** `governance_violation_types` + FK. Menjadikan himpunan tipe sebagai data yang bisa di-query. Mahal: tabel + seed + RLS + FK di tabel yang append-only dan panas.
+3. **Gate CI saja.** Test jest mem-parse `supabase/migrations/*.sql`, mengekstrak tiap `violation_type` yang bisa di-emit, lalu menuntut tiap tipe punya entri di `GOVERNANCE_VIOLATION_TYPE_LABEL`.
 
-**Kapan dikerjakan.** Tidak mendesak — fallback BL-12 membuat konsekuensi terburuknya kosmetik. Layak diangkat bila: ada migrasi berikutnya yang menambah `violation_type` (piggyback), atau audit menuntut himpunan tipe pelanggaran yang enumerable, atau drift pertama benar-benar terjadi.
+**Kenapa opsi 3 menang.** Kriteria yang dipakai halaman ini sendiri adalah *drift harus dapat diuji, bukan sekadar dilarang*. Opsi 3 memenuhinya sepenuhnya — dan lebih baik daripada opsi 2 pada kriteria itu:
+
+- Opsi 2 mem-verifikasi peta label terhadap **isi tabel seed**, yang tetap salinan manual dari literal di body PL/pgSQL. Migrasi yang menambah emitter tanpa menambah baris seed lolos: kolom `text`-nya sudah diganti FK, jadi INSERT-nya gagal saat runtime — kegagalan **produksi**, bukan CI, dan pada tabel best-effort yang beberapa emitter-nya berada di jalur `raise exception` (kegagalan tulis governance bisa menelan pesan penolakan yang sebenarnya). Opsi 3 mem-verifikasi terhadap **kode emitter itu sendiri**, jadi sumber kebenarannya adalah tempat nilainya benar-benar lahir.
+- Opsi 1 tidak membuat client ikut tahu sama sekali — ia hanya melarang.
+- Ongkos: opsi 3 = 2 file test-only, nol migrasi, nol RLS, nol FK pada tabel panas. Menambah tipe baru = **satu edit** (entri peta label). Opsi 1 = ALTER per tipe; opsi 2 = tabel + seed + RLS + FK.
+- Risiko utama opsi 3 (parser) diuji langsung, bukan diasumsikan — lihat di bawah.
+
+**Yang ditutup gate ini.** `mobile/src/test-support/governance-violation-types.ts` (parser) + `mobile/src/lib/__tests__/governance-violation-types.contract.test.ts` (6 assertion). Parser membaca **kedua** jalur emisi; menangkap satu saja menghasilkan gate hijau yang buta separuh permukaan:
+
+| Jalur | Bentuk | Site literal |
+|---|---|---|
+| A | `insert into public.governance_violations (…) values (…)` di body fungsi | 21 |
+| B | `perform public.log_governance_violation(uid, '<tipe>', …)` (helper 0019) | 14 |
+
+Hasil: **tepat 11 tipe**, cocok dengan hitungan audit BL-12 — jadi parser direkonsiliasi, bukan dipercaya begitu saja.
+
+Assertion sengaja **tidak** menulis ulang daftar 11 tipe (itu akan jadi salinan manual ketiga). Yang dijaga: kedua jalur masih menemukan site (lantai per jalur), ≥11 tipe, tiap tipe ter-emit punya label, tiap label punya emitter, dan tiap ekspresi non-literal sudah ditinjau. Daftar hardcoded di test BL-12 diganti keluaran parser → **peta label adalah satu-satunya salinan manual yang tersisa**.
+
+**Site non-literal.** Emitter dinamis (`v_type`, `case … end`) tak bisa diketahui statis. Ia **memerahkan** `[BL13-6]` supaya ditinjau manusia, bukan dilewati diam-diam — persis mode kegagalan yang jadi keluhan BL-13. Satu-satunya yang di-allowlist hari ini: `p_violation_type` di body helper `log_governance_violation()` (nilainya datang dari pemanggil, yang sudah diparse lewat jalur B).
+
+**`minimum_breakdown_not_met`** tetap dipetakan tapi dikecualikan lewat `KNOWN_UNEMITTED`: ia hanya muncul di `supabase/tests/fase5_minimum_breakdown_rules_contract.wip.sql`, tak ada fungsi yang menulisnya (0011 hanya `RAISE` pada gate-block). Dipertahankan sebagai pertahanan untuk baris lama; label yatim **lain** tetap memerahkan `[BL13-5]`.
+
+**Pembuktian gate.** Empat skenario drift disuntik ke salinan scratch lalu dicabut — semuanya merah pada assertion yang tepat: tipe palsu lewat jalur A → `[BL13-4]`; tipe palsu lewat jalur B → `[BL13-4]`; emitter dinamis → `[BL13-6]`; label yatim di client → `[BL13-5]`.
+
+**Batas yang diterima.** Gate ini menjaga sinkronisasi migrasi↔client, bukan integritas data di DB — nilai sampah yang ditulis di luar migrasi (psql manual, RPC baru yang belum di-commit) tetap masuk. Kalau audit suatu saat menuntut himpunan tipe yang *enumerable dari DB*, opsi 2 kembali ke meja; sampai saat itu ia membeli kepastian yang tidak dibutuhkan siapa pun dengan harga FK di tabel append-only yang panas.
 
 ## Referensi
 
