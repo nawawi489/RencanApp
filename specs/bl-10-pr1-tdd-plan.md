@@ -260,7 +260,7 @@ Kedua digest harus **sama persis**, keduanya 0 baris, dan **keduanya tidak melem
 |---|---|
 | `DB-72` | `pg_get_functiondef(search_cards)` **tidak** mengandung `escape` dan tidak mengandung `btrim` — bug FR-6 sengaja dipertahankan |
 | `DB-73` | Perbedaan perilaku berpasangan: `search_cards('%', null, false)` **tetap** mengembalikan baris (wildcard hidup), sedangkan `search_global('%%', array['goal'])` tidak |
-| `DB-74` | `md5(prosrc)` `search_cards` = digest baseline P5; pesan galat menjelaskan bahwa mengubah `search_cards` melanggar NG-6 dan bukan bagian PR ini |
+| `DB-74` | `md5(prosrc)` `search_cards` = digest baseline P5 — **PERINGATAN, bukan penegak** (§9.5, Concern #4). Penegak utama NG-6 adalah `DB-73` (perbedaan PERILAKU berpasangan). Pesan galat wajib berbunyi: "digest search_cards berubah; bila ini perbaikan yang disengaja, perbarui baseline P5 — NG-6 sesungguhnya ditegakkan DB-73" |
 
 ---
 
@@ -289,7 +289,7 @@ Tekanan desain yang disengaja: `mapSearchHit` **wajib diekspor terpisah**. Kalau
 
 | Langkah | Jenis | Test |
 |---|---|---|
-| 24 | **red** | `H01` enabled, `H02` debounce 250 ms, `H03` queryKey `['search_global', …]`, `H04` **NG-6** (tidak ada `cards_search`), `H05` passthrough tanpa field turunan, `H06` kembalian identik dua sebab, `H07` query mentah, `H08` `PGRST202 → isRpcMissing`, `H09` `staleTime === 0`, `H10` tanpa realtime channel, `H16` tanpa `keepPreviousData`, `H17` default limit 5 tanpa clamp klien |
+| 24 | **red** | `H01` enabled, `H02` debounce 250 ms, `H03` queryKey `['search_global', …]`, `H04` **NG-6** (tidak ada `cards_search`), `H05` passthrough tanpa field turunan, `H06` kembalian identik dua sebab, `H07` query mentah, `H08` `PGRST202 → isRpcMissing`, `H09` `staleTime === 0` **diuji sebagai perilaku, bukan lewat internal cache — §9.5**, `H10` tanpa realtime channel, `H16` tanpa `keepPreviousData`, `H17` default limit 5 tanpa clamp klien |
 | 25 | **green** | `useSearchGlobal` (cetakan `use-search-messages.ts`, **kecuali** `staleTime: 0` alih-alih 15 s, dan **tanpa** blok realtime) |
 | 26 | **red** | `H11` scopes selalu tepat satu, `H12` cursor dari baris terakhir (tanpa `offset`/`page`), `H13` halaman tidak penuh → `hasNextPage false`, `H14` error halaman berikutnya tidak menghapus hasil, `H15` queryKey terpisah per scope + isolasi kegagalan |
 | 27 | **green** | `useSearchScopePage` (`useInfiniteQuery`, cetakan `useChatMessages` di `use-inbox.ts`, **bukan** pola offset `use-activity-governance.ts`) |
@@ -336,15 +336,32 @@ Kalau salah satu menuntut modifikasi, itu **bukti pelanggaran** — kembalikan p
 
 ## 6. Harness otorisasi per scope (diulang identik 7×)
 
-Empat aktor disiapkan **di dalam transaksi test**, dengan `set local row_security = off` saat menyemai lalu impersonasi (pola `0067`):
+Empat aktor disiapkan **di dalam transaksi test**, lalu diimpersonasi. **Salin kerangka di bawah verbatim dari `supabase/tests/0067_cross_org_isolation_contract.sql:118-148`** — jangan menyusun ulang dari deskripsi (§9.5, Concern #3):
 
 ```sql
-perform set_config('request.jwt.claims',
-        json_build_object('sub', v_uid, 'role','authenticated')::text, true);
-execute 'set local role authenticated';   -- RLS aktif mulai di sini
-…
-execute 'reset role';
+begin;                                    -- transaksi EKSPLISIT, di LUAR blok do
+do $$
+declare v_uid uuid := '…'; fails text := '';
+begin
+  -- …semai baris uji di sini (masih sebagai owner/superuser, RLS belum berlaku)…
+
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_uid, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';   -- RLS aktif mulai di sini
+  -- …assertion sebagai aktor…
+  execute 'reset role';
+
+  -- …pemeriksaan pasca-impersonasi…
+  if fails <> '' then raise exception 'FAIL 0085-DB-nn: %', fails; end if;
+  raise notice 'PASS 0085-DB-nn: …';
+end $$;
+rollback;                                  -- di LUAR blok do
 ```
+
+> [!warning] Tiga aturan yang membuat kerangka ini jalan (§9.5)
+> 1. **`begin;` dan `rollback;` ada di luar blok `do $$`.** `SET LOCAL` hanya berlaku bila ada transaksi eksplisit terbuka — tanpa itu ia no-op berwarning dan impersonasi tidak pernah terjadi, sehingga seluruh assertion otorisasi berjalan sebagai superuser dan **hijau tanpa menguji apa pun**.
+> 2. **Jangan menaruh `rollback` di dalam blok `do`.** Tidak legal saat transaksi eksplisit sudah terbuka.
+> 3. **Jangan pakai `set local row_security = off`** di blok yang menguji reduksi-RLS. Ia mematikan hal yang justru sedang diuji. Penyemaian tidak membutuhkannya — kode sebelum `set local role` sudah berjalan sebagai owner.
 
 | Aktor | Identitas | Peran dalam test |
 |---|---|---|
@@ -542,3 +559,21 @@ Diganti dengan pasangan diskriminatif per metakarakter (`%`, `_`, `\`) dan kewaj
 Pilihan aktor A2 sekaligus jadi penjaga premis: ia sengaja aktor yang melihat *sebagian*. Bila fixture berubah sehingga A2 tak berhak apa pun, kontrol pertama merah dan menyatakan premisnya bergeser — pola yang sama dipakai `T-BL14-1`/`T-BL14-3` di kontrak 0083.
 
 **Belum ditutup** — tiga kegagalan mekanis (Concern #1 `staleTime` react-query v5, #3 `SET LOCAL` no-op, #2 kontradiksi `pg_get_functiondef`) dan penolakan `md5(prosrc)` (Concern #4). Semuanya masih berlaku dan harus diselesaikan sebelum wave yang bersangkutan dimulai.
+
+### 9.5 Penutupan tiga kegagalan mekanis + penolakan `md5(prosrc)` (2026-07-22)
+
+**Concern #1 — `staleTime` (H09).** Diverifikasi ke `node_modules`: react-query **5.101.2**, dan `staleTime` hidup di `FetchQueryOptions`/observer options — **bukan** di `QueryOptions` polos yang menjadi tipe `Query.options`. Jadi `getQueryCache().getAll()[0].options.staleTime` membaca `undefined` dan merah karena alasan yang salah, dengan risiko "diperbaiki" dengan melonggarkan assertion.
+
+Perbaikannya **bukan** mengganti jalur baca ke `query.observers[0].options.staleTime` — itu tetap menguji internal cache dan tetap pecah saat react-query mengubah bentuknya. H09 diubah menjadi **uji perilaku**: dengan `staleTime = 0`, mount ulang komponen memicu refetch (`queryFn` terpanggil lagi). Itu arti `staleTime = 0`, dan ia tetap benar lintas versi. Alasan yang sama dipakai menolak `md5(prosrc)` di bawah — kunci perilaku, bukan bentuk internal.
+
+**Concern #3 — `SET LOCAL` (harness §6.4).** Kerangka transaksi diganti dengan salinan verbatim `supabase/tests/0067_cross_org_isolation_contract.sql:118-148`, plus tiga aturan eksplisit: `begin;`/`rollback;` di luar blok `do`, tanpa `rollback` di dalamnya, dan **tanpa `set local row_security = off`** pada blok yang menguji reduksi-RLS.
+
+Aturan pertama yang paling berbahaya bila dilanggar: tanpa transaksi eksplisit, `SET LOCAL` hanya no-op berwarning — impersonasi tidak pernah terjadi, seluruh assertion otorisasi berjalan sebagai superuser, dan **semuanya hijau tanpa menguji apa pun**. Kegagalan sekelas dua *false-green* di §9.4, tetapi menjangkiti seluruh harness sekaligus.
+
+**Concern #2 — kontradiksi `pg_get_functiondef`.** `DB-52/54/66/71` meng-assert badan fungsi tidak mengandung `raise exception`, `is_chat_member`, ` offset `, `insert into` — sementara langkah 5 dan 35 **mewajibkan** komentar header FR-7 dan komentar per cabang yang menyebut policy padanan. Komentar itu hampir pasti memuat token terlarang, jadi assertion akan merah karena dokumentasi yang benar.
+
+Perbaikan: keempat assertion dijalankan atas badan yang **komentarnya dilucuti lebih dulu** — buang `--` sampai akhir baris dan blok `/* … */` dari `prosrc`, baru cocokkan. Dinyatakan sekali di kepala berkas kontrak sebagai helper, bukan diulang per assertion.
+
+**Concern #4 — `md5(prosrc)` sebagai penegak NG-6: ditolak.** `DB-74` diturunkan menjadi **peringatan**; penegak utama tetap `DB-73` (perbedaan perilaku berpasangan: `search_global` escape, `search_cards` tidak). Digest sensitif terhadap perubahan format tanpa makna dan akan memerahkan perbaikan keamanan `search_cards` yang sah di masa depan dengan pesan yang tidak menjelaskan apa pun. Pesan galat `DB-74` diwajibkan menyebut bahwa baseline P5 boleh diperbarui bila perubahannya disengaja.
+
+**Status §9 setelah ini:** dua *false-green* (§9.4) dan tiga kegagalan mekanis + `md5(prosrc)` (§9.5) tertutup. Sisa temuan §9.1/§9.2 adalah penambahan cakupan dan kerapuhan assertion — nyata, tapi tidak membuat test hijau-palsu, jadi boleh ditangani sambil wave berjalan.
