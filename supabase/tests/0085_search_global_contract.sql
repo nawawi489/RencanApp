@@ -181,3 +181,118 @@ begin
   raise notice 'PASS 0085-DB-6..10: guard biaya + cabang goal (kontrol positif, early-return, truncation, escaping 3 metakarakter, clamp)';
 end $$;
 rollback;
+
+-- ============================================================================
+-- Wave 3 — enam scope card sisanya (DB-16..DB-52)
+--
+-- Pola per scope identik dengan `goal` di Wave 2: kontrol positif, negatif, scope-null,
+-- dan isolasi lintas-org. Blok ini menegakkan bahwa SETIAP cabang punya gate, bukan
+-- hanya cabang pertama.
+-- ============================================================================
+
+begin;
+do $$
+declare
+  v_org   uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';
+  v_ceo   uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
+  v_orgB  uuid;
+  v_goal  uuid; v_strat uuid; v_init uuid; v_ap uuid; v_da uuid;
+  fails   text := '';
+  n       int;
+  v_body  text;
+begin
+  -- FR-18 — satu-satunya created_at yang spec tandai belum terverifikasi
+  if not exists (select 1 from information_schema.columns
+                 where table_schema='public' and table_name='tasks' and column_name='created_at') then
+    fails := fails || 'DB-34 tasks.created_at_tidak_ada(FR-18); ';
+  end if;
+
+  -- rantai induk di org bersama
+  insert into public.goals (organization_id, name, pic_id, period_start, period_end, status, target_value, created_by)
+    values (v_org, 'bl10w3 goal', v_ceo, current_date, current_date+30, 'draft', '1', v_ceo) returning id into v_goal;
+  insert into public.strategies (organization_id, goal_id, name, pic_id, period_start, period_end, status, created_by)
+    values (v_org, v_goal, 'bl10w3 strategy', v_ceo, current_date, current_date+30, 'draft', v_ceo) returning id into v_strat;
+  insert into public.initiatives (organization_id, strategy_id, name, pic_id, status, created_by)
+    values (v_org, v_strat, 'bl10w3 initiative', v_ceo, 'draft', v_ceo) returning id into v_init;
+  insert into public.action_plans (organization_id, initiative_id, name, pic_id, status, created_by)
+    values (v_org, v_init, 'bl10w3 action_plan', v_ceo, 'draft', v_ceo) returning id into v_ap;
+  insert into public.tasks (organization_id, action_plan_id, name, pic_id, status, created_by)
+    values (v_org, v_ap, 'bl10w3 task', v_ceo, 'draft', v_ceo);
+  insert into public.development_areas (organization_id, name, pic_id, status, created_by)
+    values (v_org, 'bl10w3 development_area', v_ceo, 'draft', v_ceo) returning id into v_da;
+  insert into public.problem_statements (organization_id, development_area_id, name, pic_id, status, created_by)
+    values (v_org, v_da, 'bl10w3 problem_statement', v_ceo, 'draft', v_ceo);
+
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- DB-16/22/28/34/40/46 — KONTROL POSITIF per scope (tanpa ini sisanya tak bermakna)
+  select count(*) into n from public.search_global('bl10w3 strategy',          array['strategy'],          true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-16 strategy_kontrol_positif(' || n || '); '; end if;
+  select count(*) into n from public.search_global('bl10w3 initiative',        array['initiative'],        true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-22 initiative_kontrol_positif(' || n || '); '; end if;
+  select count(*) into n from public.search_global('bl10w3 action_plan',       array['action_plan'],       true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-28 action_plan_kontrol_positif(' || n || '); '; end if;
+  select count(*) into n from public.search_global('bl10w3 task',              array['task'],              true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-34 task_kontrol_positif(' || n || '); '; end if;
+  select count(*) into n from public.search_global('bl10w3 development_area',  array['development_area'],  true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-40 development_area_kontrol_positif(' || n || '); '; end if;
+  select count(*) into n from public.search_global('bl10w3 problem_statement', array['problem_statement'], true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-46 problem_statement_kontrol_positif(' || n || '); '; end if;
+
+  -- DB-17/23/29/35/41/47 — negatif: kata kunci tak cocok = 0 baris, BUKAN error
+  begin
+    select count(*) into n from public.search_global('zzzz-tidak-ada-zzzz', null, true, 30, null, null);
+    if n <> 0 then fails := fails || 'DB-17 negatif_mengembalikan_baris(' || n || '); '; end if;
+  exception when others then
+    fails := fails || 'DB-17 negatif_melempar_exception(' || sqlerrm || '); ';
+  end;
+
+  -- DB-18/24/30/36/42/48 — p_scopes null = seluruh scope yang dirilis ikut (7 baris seed)
+  select count(*) into n from public.search_global('bl10w3', null, true, 30, null, null);
+  if n <> 7 then fails := fails || 'DB-18 scope_null_harus_7_baris(dapat ' || n || '); '; end if;
+
+  execute 'reset role';
+
+  -- ---- isolasi lintas-org: baris org LAIN tidak boleh terlihat -------------
+  insert into public.organizations (name) values ('bl10w3-victim-org') returning id into v_orgB;
+  insert into public.goals (organization_id, name, pic_id, period_start, period_end, status, target_value, created_by)
+    values (v_orgB, 'bl10w3 goal', v_ceo, current_date, current_date+30, 'draft', '1', v_ceo);
+  insert into public.development_areas (organization_id, name, pic_id, status, created_by)
+    values (v_orgB, 'bl10w3 development_area', v_ceo, 'draft', v_ceo);
+
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+
+  -- DB-19/43 — lintas-org: tepat 1 (milik org sendiri), bukan 2
+  select count(*) into n from public.search_global('bl10w3 goal', array['goal'], true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-19 lintas_org_goal(' || n || ' baris, harap 1); '; end if;
+  select count(*) into n from public.search_global('bl10w3 development_area', array['development_area'], true, 30, null, null);
+  if n <> 1 then fails := fails || 'DB-43 lintas_org_devarea(' || n || ' baris, harap 1); '; end if;
+
+  execute 'reset role';
+
+  -- DB-52 — nol `raise exception` di badan fungsi, DENGAN KOMENTAR DILUCUTI (§9.5 Concern #2).
+  -- Komentar header FR-7 memang memuat frasa "raise exception"; assertion teks atas badan
+  -- mentah akan merah karena dokumentasi yang benar. Yang diuji adalah KODE, bukan komentar.
+  select regexp_replace(
+           regexp_replace(prosrc, '--[^' || chr(10) || ']*', '', 'g'),
+           '/\*.*?\*/', '', 'gs')
+    into v_body
+  from pg_proc where proname = 'search_global';
+
+  if v_body ilike '%raise exception%' then
+    fails := fails || 'DB-52 ada_raise_exception_di_badan(FR-13: exception = oracle); ';
+  end if;
+  if v_body ilike '%map_legacy_entity_type%' then
+    fails := fails || 'DB-28 action_plan_memakai_map_legacy_entity_type(dilarang 6.4); ';
+  end if;
+
+  if fails <> '' then
+    raise exception 'FAIL 0085-DB-16..52: %', fails;
+  end if;
+  raise notice 'PASS 0085-DB-16..52: enam scope card sisanya (kontrol positif, negatif, scope-null, lintas-org, nol raise exception)';
+end $$;
+rollback;

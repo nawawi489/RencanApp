@@ -94,6 +94,96 @@ begin
     limit lim;
   end if;
 
+  if p_scopes is null or 'strategy' = any(p_scopes) then
+    return query
+    select
+      'strategy'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.strategies t
+    where t.name ilike pat escape '\'
+      and public.can_access_strategy(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'initiative' = any(p_scopes) then
+    return query
+    select
+      'initiative'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.initiatives t
+    where t.name ilike pat escape '\'
+      and public.can_access_initiative(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'action_plan' = any(p_scopes) then
+    return query
+    select
+      'action_plan'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.action_plans t
+    where t.name ilike pat escape '\'
+      and public.can_access_action_plan(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'task' = any(p_scopes) then
+    return query
+    select
+      'task'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.tasks t
+    where t.name ilike pat escape '\'
+      and public.can_access_task(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'development_area' = any(p_scopes) then
+    return query
+    select
+      'development_area'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.development_areas t
+    where t.name ilike pat escape '\'
+      and public.can_access_development_area(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'problem_statement' = any(p_scopes) then
+    return query
+    select
+      'problem_statement'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.problem_statements t
+    where t.name ilike pat escape '\'
+      and public.can_access_problem_statement(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
   return;
 end;
 $$;
