@@ -2252,3 +2252,22 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - Files created: `mobile/src/lib/org-timezone.ts`, `mobile/src/lib/__tests__/org-timezone.test.ts`.
 - Files updated: `mobile/src/app/(app)/task/new.tsx`, `mobile/src/app/(app)/task/__tests__/repeat-ui.test.tsx`, `DESIGN.md` (§7 token `TimezoneNote`).
 - Pages updated: [[feature-gap-backlog]] (baris BL-06 → DONE + ukuran dikoreksi, §2 triage dua bucket, §BL-06 baru), [[log]].
+
+## [2026-07-22] update | BL-10 rencana TDD — dua temuan false-green ditutup
+
+- Pages updated: `specs/bl-10-pr1-tdd-plan.md` (§5 langkah 4 `DB-9`, §6.4 langkah 4, §9.4 baru)
+- **Missing #6 (escaping) — kritik aslinya separuh benar.** Verifikasi ulang: assertion negatif `'%%'` SUDAH diskriminatif (escaping dicabut → pola `%%%%` → `Aman` ikut terjaring → merah). Yang tidak diskriminatif adalah assertion **positif** `'0% T'`: pola rusak `%0% T%` dibaca *apa saja · `0` · apa saja · `" T"` · apa saja* sehingga tetap cocok dengan `100% Target` — hijau di kedua dunia. Diganti pasangan diskriminatif per metakarakter (`%`, `_`, `\`) dengan kewajiban assert dua arah. Baris `a\b` menutup arah kegagalan berlawanan: bukan baris salah ikut muncul, melainkan **baris benar justru hilang** karena backslash dimakan sebagai escape.
+- **Missing #2 (reduksi-RLS) — ditutup dengan dua kontrol positif** sebelum uji `EXCEPT`: sisi RLS harus > 0 baris (aktor memang berhak melihat sesuatu) dan sisi RPC harus > 0 baris (RPC benar-benar bekerja untuk aktor itu). Tanpa keduanya, `EXCEPT` kosong tak terbedakan antara "RPC ⊆ RLS" dan "RPC rusak total, nol baris".
+- Pemilihan aktor A2 sekaligus jadi penjaga premis — ia sengaja melihat *sebagian*; bila fixture berubah sehingga A2 tak berhak apa pun, kontrol pertama merah dan menyatakan premisnya bergeser. Pola yang sama dipakai `T-BL14-1`/`T-BL14-3` di kontrak 0083.
+- §9.1 (daftar 20 missing case) **tidak diedit** — dibiarkan sebagai catatan sejarah fase Grill; penutupan dicatat terpisah di §9.4.
+- **Masih terbuka:** tiga kegagalan mekanis (Concern #1 `staleTime` react-query v5, #3 `SET LOCAL` no-op di luar transaksi, #2 kontradiksi `pg_get_functiondef`) + penolakan `md5(prosrc)` sebagai penegak NG-6 (Concern #4).
+
+## [2026-07-22] update | BL-10 rencana TDD — tiga kegagalan mekanis + md5(prosrc) ditutup
+
+- Pages updated: `specs/bl-10-pr1-tdd-plan.md` (§6.4 kerangka transaksi, baris H09, baris `DB-74`, §9.5 baru)
+- **Concern #1 (`staleTime`) diverifikasi ke `node_modules`**: react-query **5.101.2**; `staleTime` hidup di `FetchQueryOptions`/observer options, BUKAN di `QueryOptions` polos yang jadi tipe `Query.options`. Jadi `getAll()[0].options.staleTime` memang `undefined`.
+- **Tapi perbaikannya bukan yang disarankan critic.** Critic mengusulkan pindah ke `query.observers[0].options.staleTime` — itu tetap menguji internal cache dan tetap pecah saat react-query berubah bentuk. H09 diubah jadi **uji perilaku**: `staleTime = 0` ⇒ mount ulang memicu refetch. Alasan yang sama dipakai menolak `md5(prosrc)`.
+- **Concern #3 (`SET LOCAL`)** ditutup dengan menyalin verbatim kerangka `0067_cross_org_isolation_contract.sql:118-148` + tiga aturan eksplisit: `begin;`/`rollback;` di LUAR blok `do`, tanpa `rollback` di dalamnya, dan **tanpa `set local row_security = off`** pada blok penguji reduksi-RLS (ia mematikan hal yang sedang diuji). Pelanggaran aturan pertama = impersonasi tak pernah terjadi, seluruh assertion otorisasi jalan sebagai superuser, semua hijau tanpa menguji apa pun — false-green sekelas §9.4 tapi menjangkiti seluruh harness.
+- **Concern #2 (kontradiksi `pg_get_functiondef`)**: `DB-52/54/66/71` melarang token yang justru diwajibkan muncul di komentar header FR-7 + komentar per cabang. Assertion kini dijalankan atas badan yang komentarnya dilucuti (`--` sampai akhir baris + blok `/* */`), dinyatakan sekali sebagai helper di kepala berkas kontrak.
+- **Concern #4 — `md5(prosrc)` ditolak sebagai penegak NG-6.** `DB-74` diturunkan jadi peringatan; penegak utama `DB-73` (perbedaan PERILAKU berpasangan). Pesan galatnya wajib menyebut bahwa baseline P5 boleh diperbarui bila perubahan `search_cards` disengaja.
+- **Status §9:** dua false-green (§9.4) + tiga mekanis & digest (§9.5) tertutup. Sisa §9.1/§9.2 = penambahan cakupan dan kerapuhan assertion — nyata tapi tidak menghasilkan hijau-palsu, boleh ditangani sambil wave berjalan.

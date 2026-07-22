@@ -162,7 +162,17 @@ grant  execute on function public.search_global(text, text[], boolean, int, time
 | 7 | **green** | migrasi | perbaiki cabang goal sampai hijau |
 | 8 | refactor | kontrak | tulis pola harness sebagai komentar template di kepala berkas |
 
-`DB-9` bentuk konkret: seed `Aman` dan `100% Target`; `search_global('%%', array['goal'])` **tidak** mengembalikan `Aman` (wildcard mati) tetapi `search_global('0% T', …)` mengembalikan `100% Target`.
+`DB-9` bentuk konkret — **direvisi 2026-07-22, lihat §9.4**. Bentuk lama (seed `Aman` + `100% Target`, query `'%%'` lalu `'0% T'`) hanya separuh diskriminatif: assertion `'%%'` memang merah bila escaping dicabut (pola jadi `%%%%` → `Aman` ikut terjaring), tetapi assertion positif `'0% T'` **hijau baik escaping benar maupun rusak** — pola rusak `%0% T%` dibaca sebagai *apa saja · `0` · apa saja · `" T"` · apa saja*, yang tetap cocok dengan `100% Target`.
+
+Bentuk baru memakai **pasangan diskriminatif per metakarakter**. Seed: `ab`, `a%b`, `a_b`, `a\b`.
+
+| Query | Escaping benar | Escaping dicabut | Yang membuatnya merah |
+|---|---|---|---|
+| `a%` | hanya `a%b` | `ab`, `a%b`, `a_b`, `a\b` | `ab` muncul padahal tak punya `%` literal |
+| `a_` | hanya `a_b` | keempat baris | `ab` muncul; `_` jadi wildcard 1-karakter |
+| `a\b` | hanya `a\b` | `ab` (backslash dimakan sebagai escape) | baris yang benar justru HILANG |
+
+Tiap baris tabel wajib meng-assert **dua arah**: himpunan yang muncul **dan** himpunan yang tidak. Assertion satu arah ("`a%b` muncul") lolos pada implementasi tanpa escaping sama sekali.
 
 ---
 
@@ -250,7 +260,7 @@ Kedua digest harus **sama persis**, keduanya 0 baris, dan **keduanya tidak melem
 |---|---|
 | `DB-72` | `pg_get_functiondef(search_cards)` **tidak** mengandung `escape` dan tidak mengandung `btrim` — bug FR-6 sengaja dipertahankan |
 | `DB-73` | Perbedaan perilaku berpasangan: `search_cards('%', null, false)` **tetap** mengembalikan baris (wildcard hidup), sedangkan `search_global('%%', array['goal'])` tidak |
-| `DB-74` | `md5(prosrc)` `search_cards` = digest baseline P5; pesan galat menjelaskan bahwa mengubah `search_cards` melanggar NG-6 dan bukan bagian PR ini |
+| `DB-74` | `md5(prosrc)` `search_cards` = digest baseline P5 — **PERINGATAN, bukan penegak** (§9.5, Concern #4). Penegak utama NG-6 adalah `DB-73` (perbedaan PERILAKU berpasangan). Pesan galat wajib berbunyi: "digest search_cards berubah; bila ini perbaikan yang disengaja, perbarui baseline P5 — NG-6 sesungguhnya ditegakkan DB-73" |
 
 ---
 
@@ -279,7 +289,7 @@ Tekanan desain yang disengaja: `mapSearchHit` **wajib diekspor terpisah**. Kalau
 
 | Langkah | Jenis | Test |
 |---|---|---|
-| 24 | **red** | `H01` enabled, `H02` debounce 250 ms, `H03` queryKey `['search_global', …]`, `H04` **NG-6** (tidak ada `cards_search`), `H05` passthrough tanpa field turunan, `H06` kembalian identik dua sebab, `H07` query mentah, `H08` `PGRST202 → isRpcMissing`, `H09` `staleTime === 0`, `H10` tanpa realtime channel, `H16` tanpa `keepPreviousData`, `H17` default limit 5 tanpa clamp klien |
+| 24 | **red** | `H01` enabled, `H02` debounce 250 ms, `H03` queryKey `['search_global', …]`, `H04` **NG-6** (tidak ada `cards_search`), `H05` passthrough tanpa field turunan, `H06` kembalian identik dua sebab, `H07` query mentah, `H08` `PGRST202 → isRpcMissing`, `H09` `staleTime === 0` **diuji sebagai perilaku, bukan lewat internal cache — §9.5**, `H10` tanpa realtime channel, `H16` tanpa `keepPreviousData`, `H17` default limit 5 tanpa clamp klien |
 | 25 | **green** | `useSearchGlobal` (cetakan `use-search-messages.ts`, **kecuali** `staleTime: 0` alih-alih 15 s, dan **tanpa** blok realtime) |
 | 26 | **red** | `H11` scopes selalu tepat satu, `H12` cursor dari baris terakhir (tanpa `offset`/`page`), `H13` halaman tidak penuh → `hasNextPage false`, `H14` error halaman berikutnya tidak menghapus hasil, `H15` queryKey terpisah per scope + isolasi kegagalan |
 | 27 | **green** | `useSearchScopePage` (`useInfiniteQuery`, cetakan `useChatMessages` di `use-inbox.ts`, **bukan** pola offset `use-activity-governance.ts`) |
@@ -326,15 +336,32 @@ Kalau salah satu menuntut modifikasi, itu **bukti pelanggaran** — kembalikan p
 
 ## 6. Harness otorisasi per scope (diulang identik 7×)
 
-Empat aktor disiapkan **di dalam transaksi test**, dengan `set local row_security = off` saat menyemai lalu impersonasi (pola `0067`):
+Empat aktor disiapkan **di dalam transaksi test**, lalu diimpersonasi. **Salin kerangka di bawah verbatim dari `supabase/tests/0067_cross_org_isolation_contract.sql:118-148`** — jangan menyusun ulang dari deskripsi (§9.5, Concern #3):
 
 ```sql
-perform set_config('request.jwt.claims',
-        json_build_object('sub', v_uid, 'role','authenticated')::text, true);
-execute 'set local role authenticated';   -- RLS aktif mulai di sini
-…
-execute 'reset role';
+begin;                                    -- transaksi EKSPLISIT, di LUAR blok do
+do $$
+declare v_uid uuid := '…'; fails text := '';
+begin
+  -- …semai baris uji di sini (masih sebagai owner/superuser, RLS belum berlaku)…
+
+  perform set_config('request.jwt.claims',
+          json_build_object('sub', v_uid, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';   -- RLS aktif mulai di sini
+  -- …assertion sebagai aktor…
+  execute 'reset role';
+
+  -- …pemeriksaan pasca-impersonasi…
+  if fails <> '' then raise exception 'FAIL 0085-DB-nn: %', fails; end if;
+  raise notice 'PASS 0085-DB-nn: …';
+end $$;
+rollback;                                  -- di LUAR blok do
 ```
+
+> [!warning] Tiga aturan yang membuat kerangka ini jalan (§9.5)
+> 1. **`begin;` dan `rollback;` ada di luar blok `do $$`.** `SET LOCAL` hanya berlaku bila ada transaksi eksplisit terbuka — tanpa itu ia no-op berwarning dan impersonasi tidak pernah terjadi, sehingga seluruh assertion otorisasi berjalan sebagai superuser dan **hijau tanpa menguji apa pun**.
+> 2. **Jangan menaruh `rollback` di dalam blok `do`.** Tidak legal saat transaksi eksplisit sudah terbuka.
+> 3. **Jangan pakai `set local row_security = off`** di blok yang menguji reduksi-RLS. Ia mematikan hal yang justru sedang diuji. Penyemaian tidak membutuhkannya — kode sebelum `set local role` sudah berjalan sebagai owner.
 
 | Aktor | Identitas | Peran dalam test |
 |---|---|---|
@@ -353,12 +380,23 @@ Enam blok per scope:
 4. **reduksi-RLS (permintaan b)** — bentuk himpunan, tanpa menyalin predikat gate:
 
 ```sql
+-- KONTROL POSITIF dulu — tanpa dua assertion ini, uji EXCEPT di bawah hijau secara vakum
+-- (himpunan kosong EXCEPT apa pun = kosong, termasuk saat RPC rusak total & nol baris).
+select count(*) from public.<tabel> where name ilike pat escape '\'  -- ber-RLS, sebagai A2
+  --> HARUS > 0 : aktor memang berhak melihat sesuatu, jadi premis uji ini hidup
+select count(*) from public.search_global(q, array['<scope>'], true, 30, null, null)
+  --> HARUS > 0 : RPC benar-benar mengembalikan baris untuk aktor ini
+
+-- baru kemudian bentuk himpunannya
 select id from public.search_global(q, array['<scope>'], true, 30, null, null)
 except
 select id from public.<tabel> where name ilike pat escape '\';   -- dijalankan ber-RLS
 ```
 
-   Harus **kosong** (RPC ⊆ RLS). Dijalankan sebagai **A2** — aktor yang RLS-nya benar-benar memotong.
+   `EXCEPT` harus **kosong** (RPC ⊆ RLS). Dijalankan sebagai **A2** — aktor yang RLS-nya benar-benar memotong.
+
+   > [!warning] Kenapa dua kontrol positif itu wajib (§9.4)
+   > `EXCEPT` kosong punya **dua** sebab: RPC benar-benar subset RLS (yang ingin dibuktikan), **atau** RPC mengembalikan nol baris karena rusak. Keduanya tak terbedakan tanpa kontrol positif. Aktor A2 dipilih justru karena ia melihat *sebagian* — kalau suatu saat fixture berubah sehingga A2 tak berhak apa pun, kontrol pertama merah dan memberi tahu bahwa premisnya bergeser, bukan diam-diam lolos.
 5. **fail-closed** — A4 mendapat 0 baris.
 6. **arsip (FR-31)** — baris `status = 'archived'` hanya muncul bila `p_include_archived = true`.
 
@@ -507,3 +545,35 @@ Dua temuan berikut adalah **false-green**: test lulus tanpa menguji apa pun, jad
 Berikutnya, tiga yang kemungkinan besar gagal secara mekanis saat dijalankan: **Concern #1** (react-query v5 tidak menyimpan `staleTime` di `Query.options`), **Concern #3** (`SET LOCAL` di luar transaksi eksplisit = no-op berwarning), dan **Concern #2** (kontradiksi internal antara assertion `pg_get_functiondef` dan kewajiban komentar header migrasi).
 
 **Concern #4** juga layak ditolak sekarang: mengunci NG-6 lewat `md5(prosrc)` akan memerahkan perbaikan keamanan `search_cards` yang sah di masa depan dengan pesan yang membingungkan. Kunci perbedaan perilakunya, bukan digest sumbernya.
+
+### 9.4 Penutupan dua temuan false-green (2026-07-22)
+
+Dua temuan berprioritas tertinggi di §9.3 sudah **ditutup di badan rencana**; §9.1 dibiarkan apa adanya sebagai catatan sejarah fase Grill.
+
+**Missing #6 — escaping (§5 langkah 4, `DB-9`).** Kritik aslinya menyebut DB-9 "hijau tanpa diskriminasi"; pemeriksaan ulang menunjukkan itu **separuh benar**. Assertion negatif `'%%'` sebenarnya sudah diskriminatif — bila escaping dicabut, polanya menjadi `%%%%` dan `Aman` ikut terjaring sehingga test merah. Yang tidak diskriminatif adalah assertion **positif** `'0% T'`: pola rusak `%0% T%` dibaca *apa saja · `0` · apa saja · `" T"` · apa saja* dan tetap cocok dengan `100% Target`, jadi ia hijau di kedua dunia.
+
+Diganti dengan pasangan diskriminatif per metakarakter (`%`, `_`, `\`) dan kewajiban meng-assert dua arah. Baris `a\b` juga menutup arah kegagalan yang berlawanan — bukan "baris salah ikut muncul", melainkan **baris benar justru hilang** karena backslash dimakan sebagai escape.
+
+**Missing #2 — reduksi-RLS (§6.4 langkah 4).** Ditutup dengan dua kontrol positif yang dijalankan **sebelum** uji `EXCEPT`: sisi RLS harus mengembalikan > 0 baris (aktor memang berhak melihat sesuatu) dan sisi RPC harus > 0 baris (RPC benar-benar bekerja untuk aktor itu). Tanpa keduanya, `EXCEPT` kosong tidak dapat dibedakan antara "RPC subset RLS" dan "RPC rusak total, nol baris".
+
+Pilihan aktor A2 sekaligus jadi penjaga premis: ia sengaja aktor yang melihat *sebagian*. Bila fixture berubah sehingga A2 tak berhak apa pun, kontrol pertama merah dan menyatakan premisnya bergeser — pola yang sama dipakai `T-BL14-1`/`T-BL14-3` di kontrak 0083.
+
+**Belum ditutup** — tiga kegagalan mekanis (Concern #1 `staleTime` react-query v5, #3 `SET LOCAL` no-op, #2 kontradiksi `pg_get_functiondef`) dan penolakan `md5(prosrc)` (Concern #4). Semuanya masih berlaku dan harus diselesaikan sebelum wave yang bersangkutan dimulai.
+
+### 9.5 Penutupan tiga kegagalan mekanis + penolakan `md5(prosrc)` (2026-07-22)
+
+**Concern #1 — `staleTime` (H09).** Diverifikasi ke `node_modules`: react-query **5.101.2**, dan `staleTime` hidup di `FetchQueryOptions`/observer options — **bukan** di `QueryOptions` polos yang menjadi tipe `Query.options`. Jadi `getQueryCache().getAll()[0].options.staleTime` membaca `undefined` dan merah karena alasan yang salah, dengan risiko "diperbaiki" dengan melonggarkan assertion.
+
+Perbaikannya **bukan** mengganti jalur baca ke `query.observers[0].options.staleTime` — itu tetap menguji internal cache dan tetap pecah saat react-query mengubah bentuknya. H09 diubah menjadi **uji perilaku**: dengan `staleTime = 0`, mount ulang komponen memicu refetch (`queryFn` terpanggil lagi). Itu arti `staleTime = 0`, dan ia tetap benar lintas versi. Alasan yang sama dipakai menolak `md5(prosrc)` di bawah — kunci perilaku, bukan bentuk internal.
+
+**Concern #3 — `SET LOCAL` (harness §6.4).** Kerangka transaksi diganti dengan salinan verbatim `supabase/tests/0067_cross_org_isolation_contract.sql:118-148`, plus tiga aturan eksplisit: `begin;`/`rollback;` di luar blok `do`, tanpa `rollback` di dalamnya, dan **tanpa `set local row_security = off`** pada blok yang menguji reduksi-RLS.
+
+Aturan pertama yang paling berbahaya bila dilanggar: tanpa transaksi eksplisit, `SET LOCAL` hanya no-op berwarning — impersonasi tidak pernah terjadi, seluruh assertion otorisasi berjalan sebagai superuser, dan **semuanya hijau tanpa menguji apa pun**. Kegagalan sekelas dua *false-green* di §9.4, tetapi menjangkiti seluruh harness sekaligus.
+
+**Concern #2 — kontradiksi `pg_get_functiondef`.** `DB-52/54/66/71` meng-assert badan fungsi tidak mengandung `raise exception`, `is_chat_member`, ` offset `, `insert into` — sementara langkah 5 dan 35 **mewajibkan** komentar header FR-7 dan komentar per cabang yang menyebut policy padanan. Komentar itu hampir pasti memuat token terlarang, jadi assertion akan merah karena dokumentasi yang benar.
+
+Perbaikan: keempat assertion dijalankan atas badan yang **komentarnya dilucuti lebih dulu** — buang `--` sampai akhir baris dan blok `/* … */` dari `prosrc`, baru cocokkan. Dinyatakan sekali di kepala berkas kontrak sebagai helper, bukan diulang per assertion.
+
+**Concern #4 — `md5(prosrc)` sebagai penegak NG-6: ditolak.** `DB-74` diturunkan menjadi **peringatan**; penegak utama tetap `DB-73` (perbedaan perilaku berpasangan: `search_global` escape, `search_cards` tidak). Digest sensitif terhadap perubahan format tanpa makna dan akan memerahkan perbaikan keamanan `search_cards` yang sah di masa depan dengan pesan yang tidak menjelaskan apa pun. Pesan galat `DB-74` diwajibkan menyebut bahwa baseline P5 boleh diperbarui bila perubahannya disengaja.
+
+**Status §9 setelah ini:** dua *false-green* (§9.4) dan tiga kegagalan mekanis + `md5(prosrc)` (§9.5) tertutup. Sisa temuan §9.1/§9.2 adalah penambahan cakupan dan kerapuhan assertion — nyata, tapi tidak membuat test hijau-palsu, jadi boleh ditangani sambil wave berjalan.
