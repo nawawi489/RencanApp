@@ -94,7 +94,9 @@ begin
   insert into public.organizations (name) values ('OrgB-victim-override') returning id into v_orgB;
   insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status)
     values (v_orgB, 'B-override', current_date, current_date+30, 'active') returning id into v_periodB;
-  insert into auth.users (id) values (v_userB);
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_userB, jsonb_build_object('organization_id', v_orgB));
   insert into public.profiles (id, organization_id, role_template_id) values (v_userB, v_orgB, null)
     on conflict (id) do update set organization_id = excluded.organization_id,
       role_template_id = excluded.role_template_id;
@@ -208,7 +210,11 @@ begin
     values (v_orgB, 'B-null', current_date, current_date+30, 'active') returning id into v_periodB;
 
   -- Attacker aktif, role ceo, tapi organization_id = NULL.
-  insert into auth.users (id) values (v_ceoNull);
+  -- Trigger 0083 menuntut org eksplisit saat INSERT auth.users, jadi user dibuat
+  -- di OrgB lalu profilnya di-NULL-kan oleh upsert di bawah — kondisi yang diuji
+  -- (profil ber-org NULL) tetap sama persis.
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_ceoNull, jsonb_build_object('organization_id', v_orgB));
   insert into public.profiles (id, organization_id, role_template_id, is_active)
     values (v_ceoNull, NULL, v_ceo_rt, true)
     on conflict (id) do update set organization_id = NULL, role_template_id = v_ceo_rt, is_active = true;

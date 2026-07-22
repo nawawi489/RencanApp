@@ -27,7 +27,12 @@ begin
   insert into public.organizations(id, name) values
     (v_org1, 'Org 1 AC-FAN-6'),
     (v_org2, 'Org 2 AC-FAN-6') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_userB), (v_actor) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org1)),
+    (v_userB, jsonb_build_object('organization_id', v_org2)),
+    (v_actor, jsonb_build_object('organization_id', v_org1))
+  on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org1, 'User A org1', true),
     (v_userB, v_org2, 'User B org2', true),
@@ -107,7 +112,10 @@ declare
   v_matched int;
 begin
   insert into public.organizations(id, name) values (v_org, 'Org 63') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_actor, jsonb_build_object('organization_id', v_org))
+  on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User A rev', true),
     (v_actor, v_org, 'Actor rev', true)
@@ -163,7 +171,11 @@ declare
   v_leaked_userC int;
 begin
   insert into public.organizations(id, name) values (v_org, 'Org 64') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_userC), (v_actor) on conflict (id) do nothing;
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_userC, jsonb_build_object('organization_id', v_org)),
+    (v_actor, jsonb_build_object('organization_id', v_org))
+  on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User A rec', true),
     (v_userC, v_org, 'User C same-org', true),

@@ -227,7 +227,8 @@ begin
       insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
         values (user_view_all, 'authenticated', 'authenticated', 'ktest45-ceo-nm@test.local',
                 '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                now(), now(), now(), '{}'::jsonb, '{}'::jsonb);
+                now(), now(), now(),
+                jsonb_build_object('organization_id', org_a), '{}'::jsonb);
       if not exists (select 1 from public.profiles where id = user_view_all) then
         insert into public.profiles (id, organization_id, full_name, email, is_active, role_template_id)
           values (user_view_all, org_a, 'ktest45 CEO NM', 'ktest45-ceo-nm@test.local', true, role_ceo);
@@ -244,14 +245,16 @@ begin
   end if;
 
   -- Buat org B + user_cross_org (synthetic, cleanup di akhir). Insert ke auth.users memicu
-  -- trigger `on_auth_user_created` yg meng-auto-create profile (default org via convention);
-  -- karena itu kita UPDATE profile setelah insert bukan INSERT lagi (menghindari PK collision).
+  -- trigger `on_auth_user_created` yg meng-auto-create profile — sejak 0083 org-nya diambil
+  -- dari `raw_app_meta_data.organization_id` (wajib; trigger menolak menebak). Karena itu
+  -- kita UPDATE profile setelah insert bukan INSERT lagi (menghindari PK collision).
   insert into public.organizations (id, name) values (org_b, '__ktest45__ Org B');
   user_cross_org := gen_random_uuid();
   insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
     values (user_cross_org, 'authenticated', 'authenticated', 'ktest45-crossorg@test.local',
             '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-            now(), now(), now(), '{}'::jsonb, '{}'::jsonb);
+            now(), now(), now(),
+            jsonb_build_object('organization_id', org_b), '{}'::jsonb);
   -- Jika trigger tak jalan (config berbeda), fallback INSERT.
   if not exists (select 1 from public.profiles where id = user_cross_org) then
     insert into public.profiles (id, organization_id, full_name, email, is_active)

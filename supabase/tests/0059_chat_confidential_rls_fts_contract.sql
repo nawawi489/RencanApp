@@ -31,8 +31,16 @@ begin
   insert into public.role_templates (organization_id, name, level)
     values (v_org, 'Staff', 'staff') returning id into v_role_staff;
 
-  -- AUTH.USERS (FK target for profiles; handle_new_user trigger auto-creates profiles)
-  insert into auth.users(id) values (v_ceo),(v_pic),(v_grantee),(v_viewer),(v_other_ceo)
+  -- AUTH.USERS (FK target for profiles; handle_new_user trigger auto-creates profiles).
+  -- organization_id wajib eksplisit sejak 0083 — trigger menolak menebak org.
+  -- v_other_ceo ikut dibuat di v_org lalu DIPINDAH ke org lain oleh upsert di
+  -- bagian CROSS-ORG di bawah (org lain itu belum ada pada titik ini).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_ceo,       jsonb_build_object('organization_id', v_org)),
+    (v_pic,       jsonb_build_object('organization_id', v_org)),
+    (v_grantee,   jsonb_build_object('organization_id', v_org)),
+    (v_viewer,    jsonb_build_object('organization_id', v_org)),
+    (v_other_ceo, jsonb_build_object('organization_id', v_org))
     on conflict (id) do nothing;
 
   -- PROFILES (upsert — trigger may have created stubs)
