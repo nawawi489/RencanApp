@@ -161,17 +161,21 @@ export function IconTile({
 export function SectionCard({
   children,
   onPress,
-}: PropsWithChildren<{ onPress?: () => void }>) {
+  accessibilityLabel,
+}: PropsWithChildren<{ onPress?: () => void; accessibilityLabel?: string }>) {
   // Surface token DESIGN §2: kartu = putih di atas latar layar neutral-50 (level-2 inset
   // bg-neutral-50 baru terbaca bila kartunya sendiri tidak transparan).
   const className =
     'gap-2 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950';
   if (onPress) {
+    // DESIGN §4.4 — kartu yang bisa ditekan butuh label eksplisit; tanpa itu screen reader
+    // hanya membaca gabungan teks anak dan tujuan tap tidak jelas.
     return (
       <Pressable
         className={`${className} active:opacity-70`}
         onPress={onPress}
-        accessibilityRole="button">
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}>
         {children}
       </Pressable>
     );

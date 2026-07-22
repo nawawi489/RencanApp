@@ -264,4 +264,31 @@ describe('settings-archive', () => {
     );
     alertSpy.mockRestore();
   });
+
+  // BL-09(b) — baris arsip sebelumnya mati: satu-satunya kontrol adalah "Pulihkan ke Draft",
+  // jadi user tak bisa memeriksa isi card sebelum memutuskan. Pola navigasi = search.tsx.
+  it('[F8-UI-29] baris arsip bisa ditekan → push ke rute detail sesuai entity type', async () => {
+    mockUseSearch.mockReturnValue({
+      results: [{ id: 'a1', entity_type: 'action_plan', name: 'Rencana Lama', status: 'archived' }],
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<SettingsArchiveScreen />, { wrapper: wrapper() });
+    // segmen rute action_plan = 'action-plan' (bukan underscore) — ENTITY_ROUTE_SEGMENT.
+    fireEvent.press(await screen.findByLabelText('Buka detail Rencana Lama'));
+    expect(mockPush).toHaveBeenCalledWith('/action-plan/a1');
+  });
+
+  it('[F8-UI-30] entity type tanpa segmen rute → baris tetap non-pressable, tidak push', async () => {
+    mockUseSearch.mockReturnValue({
+      results: [{ id: 'x1', entity_type: 'unknown_type', name: 'Card Asing', status: 'archived' }],
+      isLoading: false,
+      enabled: true,
+    });
+    await render(<SettingsArchiveScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Card Asing')).toBeTruthy();
+    // tanpa segmen → SectionCard render sebagai View biasa, jadi tak ada kontrol "Buka detail".
+    expect(screen.queryByLabelText('Buka detail Card Asing')).toBeNull();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
 });
