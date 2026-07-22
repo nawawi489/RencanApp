@@ -30,7 +30,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-04** | MBR add-button | ~~Cakupan cascade MBR~~ ✅ **SELESAI 2026-07-21 — PR #141, migrasi 0082**. Akar sebenarnya bukan guard UI yang kurang melainkan **penamaan baris aturan yang tertinggal**: rename 0045 menggeser nama tabel, RPC ditulis ulang ke penamaan baru di 0046/0065, tapi isi `minimum_breakdown_rules` tidak pernah ikut dipindah → 3 dari 6 cabang RPC tidak menemukan baris aturannya dan fail-open permanen. Rinci di §4 | S→M | ✅ DONE |
 | **BL-05** | Evaluation | ~~**2 dari 6 field §26 hilang di UI**: `success_factors`, `failure_factors`. Kolom DB ada (0046:1882-1893), RPC `record_evaluation` menerimanya, lib `governance-admin.ts:110-124` sudah mem-forward — hanya form `evaluation.tsx` yang tidak mengirim. **Nol migrasi**~~ ✅ **DONE 2026-07-21 — PR #138, nol migrasi**. Kolom `text[]` → UI mengumpulkan **list sungguhan**: satu textarea per field, konvensi satu faktor per baris, tiap baris non-kosong jadi satu elemen array (bukan blok teks dibungkus array satu elemen). Chip/tag editor ditolak: menambah N tombol hapus ≥44px + label SR tanpa keuntungan nyata, sedangkan `LabeledInput multiline` sudah jadi idiom form di layar itu. Dikunci tes `[F8-UI-18b]` (kirim) + `[F8-UI-18c]` (pre-fill round-trip) | S | ✅ |
 | **BL-06** | Task Repeat | Field **"Zona waktu" §23** (item 5 dari 10) hilang. `task_repeat_rules` tidak punya kolom timezone; satu-satunya ada di `organizations.timezone`, dibaca `coalesce(o.timezone,'Asia/Jakarta')` di seluruh perhitungan deadline. **Butuh migrasi** + ubah logika deadline | S→M | ✅ |
-| **BL-07** | Notifications | **Terkoreksi**: §28 mendefinisikan **9** tipe, 5 sudah jalan. Yang absen: **Bukti dikirim** (dikonflasi jadi `review_request`), **Deadline lewat one-time** (`instance_missed` hanya untuk repeat; task one-time tak pernah masuk state missed), **Permission berubah** (nihil), **MBR warning** (nihil). 3 dari 4 belum ada di CHECK constraint 13-tipe (0038). Gap 100% server-side — `lib/notifications.ts` sudah mirror tepat | M | ⚠️ |
+| **BL-07** | Notifications | **Terkoreksi**: §28 mendefinisikan **9** tipe, 5 sudah jalan. Yang absen: **Bukti dikirim** (dikonflasi jadi `review_request`), **Deadline lewat one-time** (`instance_missed` hanya untuk repeat; task one-time tak pernah masuk state missed), **Permission berubah** (nihil), **MBR warning** (nihil). Gap 100% server-side — `lib/notifications.ts` sudah mirror tepat. 🔍 **DI-SCOPING 2026-07-22 — §6.** Hasil: "4 emitter + satu CHECK" **salah ukur**. MBR warning kemungkinan **bukan gap notifikasi** (§28 item 7 = kondisi sinkron, sudah digerbangi `check_minimum_breakdown_compliance`); "Deadline lewat" one-time adalah gap **state machine** — `tasks.status` tak punya nilai `missed`/`overdue` (CHECK live diverifikasi di staging), jadi task one-time secara struktural tak bisa "lewat"; "Bukti dikirim" bertumpuk dengan `review_request` kecuali dibaca sebagai jalur `review_required = false` yang kini **nol notifikasi**. Hanya "Permission berubah" yang benar-benar mekanis. Menunggu **D-BL07-1..3**. ⚠️ Prasyarat: migrasi **0081 belum diterapkan ke staging** (CHECK hidup masih 13 tipe, `emit_period_closing_reminders` tak ada) padahal client sudah memuat tipe ke-14 | ~~M~~ **XS..L per sub-item** | ⚠️ scoped |
 | **BL-08** | Review | ~~**Aksi "Catatan" §24.3 hilang**~~ ✅ **SELESAI 2026-07-20 — nol migrasi**. Temuan RPC hard-reject **benar** (`0046:1976` + `0046:2051`) tapi hanya mengikat bila Catatan = nilai `decision` ketiga. PRD §24.3 tidak menyatakan semantiknya; **owner memutuskan NON-TERMINAL** → Catatan tidak memutuskan apa pun, jadi tidak pernah masuk jalur RPC review dan tidak menyentuh CHECK mana pun. Implementasi: `lib/inbox.ts::postReviewNote` (room Rencana Aksi → `send_chat_message` ber-konteks Tugas) + mode ketiga di `review-submission-panel.tsx`. Submission tetap `pending`. **Sisa ter-defer:** entri Activity Log — `write_activity` dicabut dari `authenticated` (`0062:57`) → butuh RPC SECURITY DEFINER baru (0083+). Rinci di branch `claude/pensive-goodall-42169f`: `ui-prototype-gap.md` §2.2 + item UI-G-016 (belum ada di tree ini; masuk saat merge) | XS→S | ✅ |
 | **BL-09** | Archive | ~~**Pecah 3, satu klaim gugur**~~ ✅ **DONE 2026-07-22 — BL-09 tertutup seluruhnya**. (a) ❌ **gugur** — `includeArchived` sudah di-pass (`settings-archive.tsx:32`); ~~(b) row tanpa `onPress`~~ ✅ **PR #144, nol migrasi** — pola `search.tsx` dipakai ulang (`ENTITY_ROUTE_SEGMENT` + fallback `undefined` → kartu tetap non-pressable, bukan push path rusak), `SectionCard` dapat prop `accessibilityLabel` opsional (DESIGN §4.4) **dan slot `actions`** — kontrol tak lagi bersarang di dalam region pressable (`Pressable` RN default `accessible={true}` ⇒ tombol bersarang tak bisa difokus VoiceOver; kegagalan diam yang lolos QA visual). 2 dari 10 kartu pressable di `src/` terdampak, keduanya dipindah; aturan didaftarkan di **DESIGN §4 aturan 6**. Dikunci `[F8-UI-29]`/`[F8-UI-30]`/`[F8-UI-31]` + `[UI-SC-1..5]`; ~~(c) invalidate key salah~~ ✅ **SELESAI 2026-07-20** — `['search']` → `['cards_search']`, dikunci tes `[F8-UI-28]` | (b) S | ✅ |
 | **BL-10** | Search | **7 dari 14 scope §38 hilang** (persis seperti diklaim) + **tanpa grouping** (`search.tsx:70-79` FlatList datar, padahal §38 mewajibkan pengelompokan). `CardEntityType` hanya 7 tipe lewat satu RPC `search_cards`. RPC `search_chat_messages` sudah ada tapi hanya dipakai Inbox, tak pernah di-import layar Search | L | ✅ |
@@ -245,6 +245,75 @@ Perbaikannya melepas trigger tersebut secara **data-driven** (query `pg_trigger`
 ### 5.8 Di luar cakupan
 
 Tiga lubang kegagalan-diam di Edge Function `create-user` (`supabase/functions/create-user/index.ts`) **tidak** termasuk BL-14; dilacak terpisah sebagai bugfix biasa — PR #148.
+
+---
+
+## 6. BL-07 — Notifications: scoping, dan kenapa "4 emitter + satu CHECK" salah ukur
+
+Scoping 2026-07-22, seluruhnya diverifikasi terhadap `supabase/migrations/*` + DB **staging** (bukan dari log). Kesimpulan pendek: dari 4 gap yang tercatat, **satu bukan gap notifikasi sama sekali**, **satu jauh lebih besar dari yang tertulis**, dan **dua memang mekanis**. Ukuran M dipertahankan hanya bila keputusan owner memecahnya; sebagai satu paket ia **L**.
+
+### 6.1 Peta §28 → implementasi (9 tipe)
+
+| # | PRD §28 | Tipe DB | Emitter | Status |
+|---|---|---|---|---|
+| 1 | Review diperlukan | `review_request` | `submit_task` `0072:116`, `submit_task_instance` `0046:2493` | ✅ |
+| 2 | **Bukti dikirim** | — | — | ❌ lihat §6.2 |
+| 3 | Deadline change request | `deadline_change_requested` | DCR 0014/0038 | ✅ |
+| 4 | **Deadline lewat** | `instance_missed` **repeat saja** | `0046:1787` | ⚠️ separuh — §6.3 |
+| 5 | Mention | `mention` | 0008 | ✅ |
+| 6 | **Permission berubah** | — | — | ❌ §6.4 |
+| 7 | **Aturan Pecah Target warning** | — | — | ❓ §6.5 |
+| 8 | Warning governance (admin) | `governance_warning` | `log_governance_violation` | ✅ |
+| 9 | Repeat due today | `repeat_due` | `0046:1143` | ✅ |
+
+### 6.2 "Bukti dikirim" — satu peristiwa, dua nama, dan satu lubang nyata
+
+`review_request` dikirim **ke reviewer, saat submit, dengan actor = PIC** (`0072:116`). Itu persis peristiwa "Bukti dikirim"; dua baris PRD menamai satu kejadian. Menambahkan tipe kedua di titik yang sama = reviewer ternotifikasi **dua kali** untuk satu submit.
+
+Tapi ada lubang sungguhan di sebelahnya: emitter itu ber-gate `if a.review_required and a.reviewer_id is not null`. Saat `review_required = false`, submission langsung `done` (`0007:429-438`) dan **nol notifikasi terkirim ke siapa pun** — bukti masuk, tidak ada yang tahu. Itu slot yang tidak tumpang-tindih untuk "Bukti dikirim", dan bacaan ini membuat kedua baris PRD punya isi masing-masing tanpa duplikasi.
+
+> **Keputusan owner diperlukan (D-BL07-1).** Siapa penerima "Bukti dikirim"? (a) hanya saat `review_required = false`, ke atasan/pembuat card; (b) selalu, ke PIC sendiri sebagai konfirmasi kirim; (c) tidak ada tipe baru — §28 item 2 dinyatakan sebagai nama lain item 1, ditutup sebagai koreksi PRD seperti BL-03. Rekomendasi: **(a)** — satu-satunya bacaan yang menutup lubang nyata alih-alih menambah bunyi.
+
+### 6.3 "Deadline lewat" one-time — ini gap **state machine**, bukan gap emitter
+
+Ini yang salah ukur di baris backlog. Task one-time **sudah** dapat `deadline_reminder` untuk deadline *mendekat* (`0046:1120-1130`, ≤3 hari, penerima PIC). Yang tidak ada adalah keadaan **lewat** — dan sebabnya bukan emitter yang lupa ditulis:
+
+`tasks.status` (CHECK live di staging) = `draft · assigned · in_progress · submitted · done · revision · archived · cancelled` — **tidak ada** `missed`/`overdue`. Bandingkan `task_instances`, yang punya `missed` dan disapu `mark_overdue_instances`. Jadi task one-time secara struktural tidak bisa "lewat"; tidak ada state untuk dinotifikasikan.
+
+Konsekuensinya menjalar: menambah state terminal/penanda baru pada `tasks` menyentuh CHECK constraint, sapuan cron baru, dan **berpotensi skoring** (apakah task one-time yang lewat menurunkan Achievement Score seperti `missed_count` repeat?). Itu bukan "satu emitter".
+
+> **Keputusan owner diperlukan (D-BL07-2).** (a) Notifikasi murni — kirim `deadline_overdue` ke PIC dari sapuan cron tanpa mengubah `tasks.status` sama sekali (status tetap `assigned`/`in_progress`; "lewat" jadi fakta turunan dari `deadline < org_today()`); (b) state penuh — tambah nilai status baru + sapuan + putuskan dampak skoring. Rekomendasi: **(a)** — memenuhi bunyi §28 ("Deadline lewat" adalah *jenis notifikasi*, bukan *status kartu*) dengan nol perubahan state machine dan nol risiko skoring. (b) adalah spec tersendiri bila memang diinginkan.
+
+### 6.4 "Permission berubah" — paling mekanis dari keempatnya
+
+`set_user_permission` versi hidup (`0076`) tidak mengirim apa pun. Penerima tidak ambigu: user yang izinnya berubah. PRD membatasi *"jika relevan untuk user tersebut"* — terpenuhi secara alami karena penerimanya memang orang itu. Satu emitter di dalam RPC yang sudah ada, satu tipe baru di CHECK. **Nol keputusan produk terbuka.**
+
+### 6.5 "Aturan Pecah Target warning" — kemungkinan besar **bukan** gap notifikasi
+
+PRD §28 item 7 berbunyi *"jika user sedang membuat turunan"* — itu **kondisi sinkron**, bukan peristiwa asinkron. Kepatuhan MBR sudah disurfacekan saat itu juga lewat `check_minimum_breakdown_compliance` yang menggerbangi tombol turunan (`lib/mbr-cascade.ts`). Notifikasi persisten untuk keadaan yang sudah tampil di layar saat penyebabnya terjadi adalah kategori yang berbeda, dan berisiko jadi bunyi yang tak bisa ditindaklanjuti (user sudah melihat warning-nya; notifikasi tiba setelah ia pergi).
+
+Ini berpola sama dengan BL-03 dan BL-09(a): baris PRD yang terbaca sebagai gap padahal permukaannya sudah ada dalam bentuk lain.
+
+> **Keputusan owner diperlukan (D-BL07-3).** (a) Tutup sebagai **bukan gap**, catat di PRD bahwa item 7 dipenuhi oleh gerbang MBR inline; (b) tetap kirim notifikasi — perlu definisi pemicunya, karena "sedang membuat turunan" tidak punya peristiwa server yang bisa dipasangi emitter. Rekomendasi: **(a)**.
+
+### 6.6 Temuan sampingan — staging tertinggal migrasi 0081, dan client sudah mendahuluinya
+
+Ditemukan saat memverifikasi CHECK: constraint **hidup di staging masih 13 tipe** dan **tidak** memuat `period_closing_reminder`; `emit_period_closing_reminders` **tidak ada** di staging (`pg_proc` kosong untuk nama itu). Migrasi `0081` belum diterapkan ke sana.
+
+Sementara itu `mobile/src/lib/notifications.ts:22` **sudah** memuat `period_closing_reminder` sebagai tipe ke-14. Client mendahului DB: selama 0081 belum diterapkan, tipe itu tidak akan pernah tiba, dan andai ada jalur yang menulisnya ia akan ditolak CHECK. Ini instans lain dari [[staging-db-migrasi-tertinggal]] — CI tidak `db push`. **Prasyarat** untuk BL-07: apa pun tipe baru yang ditambahkan akan mendarat dalam keadaan sama kecuali penerapannya diverifikasi terhadap **efek di schema**, bukan terhadap `schema_migrations`.
+
+### 6.7 Ukuran setelah scoping
+
+| Sub-item | Ukuran | Butuh keputusan? |
+|---|---|---|
+| Permission berubah (§6.4) | **XS** | tidak |
+| Bukti dikirim (§6.2) | **S** | ya — D-BL07-1 |
+| Deadline lewat, opsi (a) (§6.3) | **S** | ya — D-BL07-2 |
+| Deadline lewat, opsi (b) | **L** | ya — spec sendiri |
+| MBR warning (§6.5) | **XS** (koreksi PRD) atau **M** | ya — D-BL07-3 |
+| Terapkan 0081 + verifikasi schema (§6.6) | **XS** | tidak — prasyarat |
+
+Satu migrasi menampung seluruh tipe baru yang disetujui (superset CHECK, pola 0038/0081) — jadi memutuskan ketiganya sekaligus lebih murah daripada tiga migrasi berurutan.
 
 ---
 
