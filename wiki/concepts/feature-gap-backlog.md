@@ -37,7 +37,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-11** | Header | ~~Ikon Notifications §7.2 hilang~~ ✅ **SELESAI** — merged #115 (UI-G-016); `notifications-outline` + badge unread via `useUnreadCount()`, badge disembunyikan saat loading/error (bukan fail-silent ke "0"), jumlah masuk `accessibilityLabel` | XS | ✅ DONE |
 | **BL-12** | Governance Violation | ~~Raw snake_case di `settings-governance-violation.tsx`~~ ✅ **SELESAI** — merged #117; `GOVERNANCE_VIOLATION_TYPE_LABEL` + `governanceViolationTypeLabel()` dgn fallback nilai mentah. Verifikasi independen saya mencocokkan hitungan **11 tipe** yang bisa di-emit. Detail §BL-12 di bawah | XS | ✅ DONE |
 | **BL-13** | Governance Violation | ~~**Tidak ada sumber kebenaran `violation_type`**~~ ✅ **SELESAI 2026-07-22 — PR #145, nol migrasi**. Ditutup lewat **opsi 3 (gate CI, tanpa perubahan schema)**, bukan CHECK constraint maupun tabel lookup: jest mem-parse `supabase/migrations/*.sql` (kedua jalur emisi — `insert into governance_violations` langsung **dan** pemanggilan `log_governance_violation()`) lalu menuntut tiap tipe ter-emit punya entri di `GOVERNANCE_VIOLATION_TYPE_LABEL`. Parser menemukan **tepat 11 tipe** — cocok dengan audit BL-12. Peta label kini **satu-satunya** salinan manual: daftar hardcoded di test BL-12 diganti keluaran parser. Dikunci `[BL13-1..6]`. Alasan penolakan opsi 1/2 di §BL-13 | butuh scoping → XS | ✅ DONE |
-| **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`, migrasi 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. Terbukti nyata di DB lokal: org fixture contract test ber-`created_at` epoch 1970 memenangkan aturan "tertua" dan menelan profil seed (ditutup di sisi seed lewat #140, **trigger-nya belum**). Perlu keputusan produk dulu: V1 memang single-org, atau signup harus lewat undangan/`raw_app_meta_data.organization_id`? `[?]` apakah ada jalur signup publik di produksi | butuh scoping | ⚠️ terbuka |
+| **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`; definisi hidup ada di **migrasi 0015**, bukan 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. **Keputusan produk sudah diambil 2026-07-22: V1 dikunci single-org, trigger harus gagal keras.** Implementasi bentuk pertama (`RAISE` bila `count(*) organizations > 1`) **dihentikan sebelum ditulis** — ia mematikan seluruh gate DB contract test, sebab `supabase/tests/_fixtures.sql` sendiri membuat **2 org** lalu menyisipkan `auth.users`. Bentuk guard-nya harus dirancang ulang; opsi + angka di §5 | butuh scoping ulang | ⚠️ terbuka (diperiksa #146, di-scoping ulang PR-BL14) |
 
 ---
 
@@ -56,7 +56,7 @@ BL-06 (kolom timezone di `task_repeat_rules` + ubah semua perhitungan deadline y
 > Rekomendasi awal "longgarkan CHECK `p_decision` di 2 RPC" **jangan dieksekusi** — ia mengasumsikan Catatan sebagai keputusan review ketiga, sedangkan owner memutuskan non-terminal. Melonggarkan CHECK `decision` sekarang akan menambah nilai yang tidak dipakai siapa pun sekaligus melemahkan invariant state machine review. Yang tersisa dari BL-08 hanyalah entri Activity Log (RPC SECURITY DEFINER baru, **bukan** perubahan CHECK) — rinci di branch `claude/pensive-goodall-42169f`, `ui-prototype-gap.md` §2.2.
 
 **Butuh scoping/spec dulu:**
-~~BL-13~~ ✅ **terjawab + selesai 2026-07-22 (PR #145)** — scoping menghasilkan **opsi ketiga** yang tidak ada di daftar awal (gate CI tanpa perubahan schema) dan mendominasi kedua opsi schema pada kriteria halaman ini sendiri. Pelajaran: dua opsi yang tercatat keduanya berupa perubahan DB karena gap-nya *dibingkai* sebagai gap schema; begitu dibingkai ulang sebagai "drift antara dua artefak yang bisa dibaca CI", ongkosnya turun dari migrasi+RLS+FK menjadi dua file test. ~~BL-04~~ ✅ **terjawab + selesai** — owner memutuskan cascade satu tingkat (dicatat di PR #139, yang **ditutup tanpa merge 2026-07-22**; konten keputusannya sudah mendarat lewat #141 + migrasi 0082), dan implementasinya menyingkap bahwa sisanya bukan keputusan produk melainkan drift data (§4). BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped), BL-14 (putuskan dulu apakah V1 memang single-org; kalau ya, trigger boleh tetap begitu asal didokumentasikan sebagai asumsi mengikat — kalau tidak, butuh jalur org eksplisit saat signup).
+~~BL-13~~ ✅ **terjawab + selesai 2026-07-22 (PR #145)** — scoping menghasilkan **opsi ketiga** yang tidak ada di daftar awal (gate CI tanpa perubahan schema) dan mendominasi kedua opsi schema pada kriteria halaman ini sendiri. Pelajaran: dua opsi yang tercatat keduanya berupa perubahan DB karena gap-nya *dibingkai* sebagai gap schema; begitu dibingkai ulang sebagai "drift antara dua artefak yang bisa dibaca CI", ongkosnya turun dari migrasi+RLS+FK menjadi dua file test. ~~BL-04~~ ✅ **terjawab + selesai** — owner memutuskan cascade satu tingkat (dicatat di PR #139, yang **ditutup tanpa merge 2026-07-22**; konten keputusannya sudah mendarat lewat #141 + migrasi 0082), dan implementasinya menyingkap bahwa sisanya bukan keputusan produk melainkan drift data (§4). BL-07 (4 emitter server-side baru + migrasi CHECK constraint), BL-10 (spec sendiri; 7 sumber data + rewrite list jadi grouped), **BL-14** — keputusan produk **sudah turun** (single-org dikunci untuk V1, trigger harus gagal keras), tapi scoping bergeser dari "apa keputusannya" ke "**di mana** penegakannya ditaruh": guard runtime bentuk polos memerahkan seluruh gate DB contract test. Rinci + tiga opsi di §5.
 
 **Ditutup tanpa dikerjakan:** BL-03 — keputusan desain, bukan gap.
 
@@ -143,6 +143,66 @@ Semuanya dijaga contract test `supabase/tests/0082_mbr_rule_naming_contract.sql`
 - **Nol penegakan server-side untuk `blokir_akses_turunan`.** Trigger `tg_enforce_mbr_block_child` masih ada sebagai fungsi tapi **tidak terpasang di tabel mana pun** — `0046` menghapusnya lewat `DROP FUNCTION ... CASCADE` (yang ikut menghapus trigger-nya) lalu hanya membuat ulang fungsinya. Jadi cascade sepenuhnya ditegakkan klien. Lebih jauh, badan fungsi itu **meleset satu tingkat**: untuk INSERT ke `initiatives` ia memeriksa aturan `strategy→initiative` dan menghitung sibling Inisiatif — artinya dengan `min_count=1` dan 0 Inisiatif, Inisiatif pertama tak akan pernah bisa dibuat (mengunci dirinya sendiri). Siapa pun yang memasang ulang trigger ini **wajib** memperbaiki arahnya dulu.
 - **`goal → strategy` terkunci di UI.** `isLocked` menyembunyikan seluruh kontrol untuk aturan ini (konsisten gerbang aktivasi Goal Fase 4), padahal RPC `set_minimum_breakdown_rule` sejak `0065` menerima `blokir_akses_turunan` untuknya. Cascade-nya sudah ter-wiring dan teruji; hanya jalur Settings-nya yang tertutup.
 - **Copy legacy di pesan `activate_strategy`** masih berbunyi "KPI Area" / "Strategy". Kosmetik, tidak disentuh agar diff tetap fokus.
+
+---
+
+## 5. BL-14 — asumsi single-org: keputusan owner + kenapa guard bentuk pertama dihentikan
+
+### 5.1 Keputusan owner (2026-07-22)
+
+**V1 dikunci single-org.** `handle_new_user` tidak boleh lagi menebak organisasi secara diam-diam; ia harus **gagal keras** begitu asumsi yang ia sandari tidak lagi berlaku. Keputusan ini menutup pertanyaan produk yang menggantung di baris BL-14 sejak audit 2026-07-20 — tidak ada lagi `[?]` soal "apakah V1 memang single-org".
+
+Yang **belum** tertutup adalah bentuk penegakannya. Bentuk yang diminta pertama kali — `RAISE` di dalam trigger bila `count(*) from public.organizations > 1` — diverifikasi sebelum ditulis dan **tidak jadi dikirim**, karena ia mematikan gate CI yang justru menjaga seluruh lapisan DB.
+
+### 5.2 Definisi yang hidup
+
+`handle_new_user` ditulis ulang lintas migrasi; yang berlaku sekarang ada di **`0015_qa_followup_fixes.sql:45`**, bukan `0001`. Perbedaannya penting: 0015 menambahkan penghormatan pada `raw_app_meta_data->>'role_level'` (service-role only) untuk memilih role template. Pemilihan **org** tidak berubah sejak 0001 — masih `order by created_at limit 1`. `0002`/`0003`/`0066` hanya menyentuh GRANT, bukan body.
+
+Konsekuensi teknis untuk implementasi nanti: pakai `create or replace function` (ACL dipertahankan), **bukan** `drop function … cascade` — pola terakhir mereset ACL ke `PUBLIC EXECUTE` dan akan membatalkan `REVOKE` dari 0003 + 0066 sekaligus melepas trigger `on auth.users`.
+
+### 5.3 Kenapa guard bentuk polos dihentikan — angka
+
+Penegakan dibaca dari `scripts/ci/run-db-contract-tests.sh`: satu database dipakai bersama untuk seluruh loop (tidak ada reset antar file), prelude `supabase/tests/_fixtures.sql` diterapkan lebih dulu, dan **kegagalan prelude bersifat FATAL** (`exit 1`, nol test dijalankan).
+
+Prelude itu sendiri melanggar asumsi single-org:
+
+| Baris `_fixtures.sql` | Isi |
+|---|---|
+| 43 | `insert into public.organizations` — org #1 (`Contract Fixtures Org`, `created_at = 'epoch'`) |
+| 87 | `insert into public.organizations` — org #2 (`DCR-05 Fixtures Org`, `epoch + 1 second`) |
+| 100 | `insert into auth.users` — 2 user, **sesudah org kedua ada** |
+
+Jadi guard ber-`RAISE` gagal pada baris 100 prelude → runner berhenti sebelum satu pun contract file jalan. Bukan "beberapa test merah": **gate-nya nol**.
+
+Efeknya juga tidak berhenti di prelude. Karena prelude commit dan tidak ada reset antar file, sejak titik itu `count(*) organizations ≥ 2` **permanen** untuk sisa run — sehingga setiap `insert into auth.users` berikutnya ikut raise. Di `supabase/tests/` (di luar `*.wip.sql`): **18 file** menyisipkan `auth.users`, dan **12 file** membuat org tambahan sendiri.
+
+Yang menentukan: 12 file itu bukan kelalaian fixture yang bisa dirapikan. Lima di antaranya adalah suite **cross-org isolation** (`0039`, `0067`, `0068`, `0063_push_ac_fan6_cross_org`, `0079`) yang *harus* punya dua org untuk menguji hal yang mereka uji — plus `0073` yang membuat 3 org untuk tujuan sama meski tak menyisipkan `auth.users`. Guard yang melarang org kedua eksis dan test yang mensyaratkan org kedua eksis tidak bisa hidup di database yang sama.
+
+> [!warning] Jangan kirim guard `RAISE` polos di `handle_new_user`
+> Ia hijau di lokal single-org dan merah total di CI, pada gate yang kegagalannya menyembunyikan seluruh regresi DB lain. Verifikasi ini **statis** (pembacaan `_fixtures.sql` + runner), belum dijalankan terhadap database — tapi jalur baris 87 → baris 100 tidak punya cabang.
+
+### 5.4 Ruang opsi untuk penegakan (belum diputuskan)
+
+Akar biayanya bukan trigger-nya, melainkan **ketergantungan test suite pada fallback diam "org tertua"** — 18 file mengandalkan `auth.users` berubah jadi profil tanpa pernah menyebut org. Itu sendiri sinyal: perilaku yang dianggap terlalu berbahaya untuk produksi adalah perilaku yang dipakai fixture sebagai kenyamanan.
+
+1. **`RAISE` polos** — spesifikasi awal. **Ditolak**, §5.3.
+2. **Jalur eksplisit + `RAISE` hanya sebagai fallback.** Trigger membaca `raw_app_meta_data->>'organization_id'` lebih dulu (service-role only, sama seperti `role_level` di 0015); bila absen **dan** `count(*) > 1` → `RAISE`; bila absen dan tunggal → perilaku hari ini. Lalu prelude + 18 file test disetel menyebut org-nya eksplisit. Ukuran **M**, mekanis. Manfaat sampingan: suite berhenti bergantung pada sihir "org tertua", dan jalur eksplisit itu persis yang disarankan pesan error kepada pembacanya. Risiko: diff lebar menyentuh fixture yang menjaga hampir semua gate DB.
+3. **Penegakan di luar runtime trigger.** Trigger tidak disentuh; asumsi single-org ditegakkan di tempat yang tidak berbenturan dengan fixture multi-org yang sah — assertion `count(*) organizations = 1` terhadap **staging/produksi** (bukan DB test). Ukuran **XS–S**. Kelemahan: tidak memenuhi bunyi harfiah keputusan owner ("trigger gagal keras") — ia memindahkan alarm ke lapisan lain, dan pembuatan org kedua tetap sukses diam-diam sampai check berikutnya jalan.
+
+Rekomendasi: **opsi 2**, karena hanya ia yang benar-benar membuat trigger gagal keras seperti yang diminta, dan biayanya mekanis bukan arsitektural. Opsi 3 layak bila lebar diff di fixture dinilai terlalu berisiko untuk imbalannya.
+
+### 5.5 Pesan error yang sudah disepakati (dipakai opsi mana pun)
+
+Pesan harus menyebut sebab **dan** perbaikannya, supaya pembacanya dua tahun lagi tak perlu membaca body trigger:
+
+```
+lebih dari satu organisasi terdaftar — penempatan organisasi otomatis untuk user baru
+dinonaktifkan. Set raw_app_meta_data.organization_id secara eksplisit saat membuat user.
+```
+
+### 5.6 Di luar cakupan
+
+Tiga lubang kegagalan-diam di Edge Function `create-user` (`supabase/functions/create-user/index.ts`) **tidak** termasuk BL-14; dilacak terpisah sebagai bugfix biasa.
 
 ---
 
