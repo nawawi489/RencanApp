@@ -2193,3 +2193,12 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - Temuan riset yang berguna: `search_chat_messages` adalah `language plpgsql` sehingga **tidak inlinable** — dieksekusi sebagai satu Function Scan ber-LIMIT internal, jadi predikat luar tidak bisa didorong masuk (menjawab sebagian BL10-OQ-11). Test delegasi bisa dibuat kuat lewat `create or replace` stub di dalam transaksi lalu `rollback` — bukti jauh lebih kuat daripada memeriksa `prosrc`.
 - Fixture lintas-org sudah tersedia (`supabase/tests/_fixtures.sql`, dua organisasi). Catatan mengikat: sejak 0083 setiap INSERT `auth.users` WAJIB menyertakan `raw_app_meta_data.organization_id`, kalau tidak trigger `handle_new_user` raise dan seluruh suite gagal fatal.
 - Catatan proses (kedua kalinya): workflow mengembalikan hasil sebagai nilai balik, **tidak menulis ke disk**, dan `markdown`-nya **tidak memuat critic** — keduanya harus dirakit manual.
+
+## [2026-07-22] update | Slot migrasi BL-10 digeser 0084→0085 (hindari tabrakan dgn BL-07 #154)
+
+- Pages updated: `specs/bl-10-search-scope-38.md`, `specs/bl-10-search-scope-38-tdd-handoff.json`, `specs/bl-10-pr1-tdd-plan.md`
+- Spec BL-10 memesan 0084–0087 saat ditulis (terakhir di repo `0083`), tapi PR #154 (BL-07) sudah mengklaim `0084_bl07_notifications_missing_types.sql` dan belum merge. Keputusan owner: **BL-10 yang menggeser**, #154 tidak diganggu.
+- Pemetaan baru: PR-1 `0085` · PR-2 `0086` · PR-3 `0087` · PR-4 `0088`. Berkas contract test ikut bergeser.
+- Baris "migrasi berikutnya tersedia" di spec §0 diberi alasan eksplisit + peringatan: nomor di dokumen adalah **rencana, bukan reservasi**; verifikasi `ls supabase/migrations/ | tail` DAN PR terbuka sesaat sebelum membuat berkas, karena beberapa sesi bekerja paralel.
+- Jebakan teknis saat menggeser (layak diingat): `\b0084\b` **tidak** cocok pada `0084_search_global.sql` karena underscore adalah word character, sehingga substitusi pertama hanya mengenai angka telanjang dan menghasilkan campuran tak konsisten. Pola yang benar `(?<![0-9])0084(?![0-9])`, dijalankan **menurun** (0087→0088 lebih dulu) agar hasil substitusi tidak tertimpa langkah berikutnya. Diverifikasi lewat hitungan per-berkas sebelum/sesudah — harus cerminan persis, tergeser satu.
+- Entri log lama yang menyebut "migrasi 0084" untuk BL-10 **sengaja tidak diedit** (log append-only; itu catatan keputusan pada waktunya).
