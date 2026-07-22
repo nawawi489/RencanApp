@@ -24,7 +24,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 
 | ID | Area | Gap (setelah verifikasi) | Ukuran | Status |
 |---|---|---|---|---|
-| **BL-01** | People | **Ranking tie tidak konsisten**. `people-profile/[id].tsx:222` render `rank_number` dari DB; `people.tsx:94-104` membuang `rank_number` (padahal `listRanking` sudah `select('*')`) lalu me-derive `rank += 1` per orang. DB memakai *competition ranking* (skor sama → rank sama, berikutnya melompat — migrasi 0013 D11), list memakai 1,2,3 berurutan → tie tampil beda | XS | ✅ |
+| **BL-01** | People | ~~**Ranking tie tidak konsisten**. `people.tsx:94-104` membuang `rank_number` lalu me-derive `rank += 1` per orang, sedangkan DB memakai *competition ranking* (0013 D11) → tie tampil beda dari `people-profile/[id].tsx:222`~~ ✅ **SELESAI 2026-07-20 — PR #116, nol migrasi.** `people.tsx:80-84` kini membangun `rankByUser` dari `r.rank_number`; nol derivasi berbasis indeks tersisa di kedua layar. Dikunci tes `people.test.tsx` "tie renders rank_number kembar dari DB, bukan index+1" (fixture `1,1,3`). **Baris ini sempat basi**: PR #116 merge **13:42 UTC 2026-07-20**, hari yang sama dengan audit yang menuliskannya, jadi tabel ini menandainya CONFIRMED padahal sudah tertutup — dikoreksi 2026-07-22 | XS | ✅ DONE |
 | **BL-02** | Strategy period | ~~**AC-11 FAIL**. `strategy/new.tsx:254-259` render `DateRangeField` editable; `parentQ.data` hanya dipakai untuk `goal_template_id` + `pic_id`, `period_start/end` Goal tidak pernah dibaca~~ ✅ **SELESAI 2026-07-22 — merged #140, nol migrasi. PRD §44 AC-11 kini PASS.** `DateRangeField` dicabut; periode disalin dari Goal induk saat submit dan tampil **read-only** (token `Field`) sebagai konteks — periode yang ditetapkan diam-diam tak bisa ditelusuri saat aktivasi ditolak. Goal induk tanpa periode → simpan **diblokir** menunjuk Goal, bukan kirim NULL (`activate_strategy` 0078 mem-gate `period_start/end` NOT NULL → Draft ber-periode NULL tak pernah bisa aktif). Dikunci tes `[BL02-1..3]`. **Nol permukaan lain** yang mengedit periode Strategy (`DraftCompletion` di `[id].tsx` hanya target+PIC), jadi AC tertutup penuh | S | ✅ DONE |
 | **BL-03** | Past-period dim | ~~AC-9 parsial~~ **BUKAN GAP KODE — keputusan owner 2026-07-03**. `PastDim` sempat ada (fix single-layer 2026-07-02) lalu **dicabut owner** sehari kemudian; kini nol layer dim, dikunci tes `[W08·1]`/`[W08·2]` (`countOpacityHalf === 0`). **Tapi PRD masih mewajibkan dim** — §44 AC-9 "tampil redup", diulang normatif di §7.7 & §11.3 (§37 permisif, tak konflik). Konflik spec-vs-kode ini yang melahirkan ulang temuan, bukan bug | — | ❌ kode · ⚠️ spec |
 | **BL-04** | MBR add-button | ~~Cakupan cascade MBR~~ ✅ **SELESAI 2026-07-21 — PR #141, migrasi 0082**. Akar sebenarnya bukan guard UI yang kurang melainkan **penamaan baris aturan yang tertinggal**: rename 0045 menggeser nama tabel, RPC ditulis ulang ke penamaan baru di 0046/0065, tapi isi `minimum_breakdown_rules` tidak pernah ikut dipindah → 3 dari 6 cabang RPC tidak menemukan baris aturannya dan fail-open permanen. Rinci di §4 | S→M | ✅ DONE |
@@ -44,8 +44,11 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 
 ## 2. Triage (pasca-verifikasi)
 
+> [!note] Sisa pekerjaan per 2026-07-22: **dua item, keduanya butuh spec**
+> Setiap bucket yang bisa dikerjakan langsung — XS, S, dan "butuh migrasi DB" — kini **kosong**. Yang tersisa hanya **BL-07** (Notifications, M) dan **BL-10** (Search, L), dan keduanya duduk di bucket "butuh scoping/spec dulu" karena masing-masing menyimpan keputusan produk yang PRD tidak jawab — bukan sekadar karena besar. Keduanya masuk `/sdd-plan`, bukan diambil sebagai tiket. BL-03 ditutup permanen (keputusan desain; jangan dikerjakan sebagai bug).
+
 **XS murni — nol migrasi, nol keputusan produk:**
-~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; BL-12 label map, BL-11 ikon header, BL-01 `rank_number`.
+~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; ~~BL-12 label map~~ ✅ (#117); ~~BL-11 ikon header~~ ✅ (#115); ~~BL-01 `rank_number`~~ ✅ **selesai 2026-07-20 (#116)**. **Bucket ini kosong.**
 
 **S — satu layar + test, nol migrasi:**
 ~~BL-02~~ ✅ **selesai 2026-07-22 (#140)**; ~~BL-05~~ ✅ **selesai 2026-07-21 (PR #138)**; ~~BL-09(b)~~ ✅ **selesai 2026-07-22 (#144)**. **Bucket ini kosong.**
