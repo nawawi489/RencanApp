@@ -2182,3 +2182,14 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **12 open question**, 4 blocking: BL10-OQ-01/02 (owner, blokir PR-4), OQ-03 (owner, blokir PR-3), OQ-04 (eng, blokir PR-4).
 - **§11 mengoreksi premis yang beredar di draft awal** — a.l. "Activity Log & Governance Violation adalah data admin" TIDAK akurat (kedua policy ber-OR dengan self-row, 0005:557-565); "snippet chat sudah ≤240 char" salah (0075:57 mengembalikan body utuh); angka "90 hari" dan "staleTime 15 detik" tanpa dasar sumber, dibuang.
 - Catatan proses: workflow mengembalikan spec sebagai nilai balik, **tidak menulis ke disk** — file di atas ditulis manual dari output. Perlu diingat untuk pemakaian `/sdd-plan` berikutnya.
+## [2026-07-22] update | Rencana TDD BL-10 PR-1 (tdd-plan, 8 agen) — verdict "perlu-perbaikan"
+
+- Pages created: `specs/bl-10-pr1-tdd-plan.md`
+- Workflow `/tdd-plan` di-scope ke **PR-1 saja** (9/14 scope, migrasi 0084); 8 agen, nol error.
+- **Verdict fase Grill: `perlu-perbaikan`** — 20 kasus belum tercakup + 14 kekhawatiran. Rencana TIDAK siap dieksekusi apa adanya; addendum kritik dilampirkan sebagai §9 karena markdown bawaan workflow tidak memuatnya.
+- **Dua temuan false-green** (test lulus tanpa menguji apa pun) diprioritaskan: (1) test reduksi-RLS bisa hijau vakum — `RPC EXCEPT RLS` juga kosong saat RPC mengembalikan 0 baris karena bug, jadi butuh kontrol positif; (2) test escaping `search_global('%%')` menghasilkan pola yang tidak cocok apa pun sehingga hijau tanpa diskriminasi — butuh pasangan diskriminatif. Keduanya menyerang justru dua hal yang saya minta dipertajam.
+- **Tiga kemungkinan gagal mekanis:** react-query v5 tidak menyimpan `staleTime` di `Query.options`; `SET LOCAL` di luar transaksi eksplisit = no-op berwarning; kontradiksi internal antara assertion `pg_get_functiondef` dan kewajiban komentar header migrasi.
+- **Ditolak sejak awal:** mengunci NG-6 lewat `md5(prosrc)` — akan memerahkan perbaikan keamanan `search_cards` yang sah di masa depan dengan pesan membingungkan. Kunci perbedaan PERILAKU, bukan digest sumber.
+- Temuan riset yang berguna: `search_chat_messages` adalah `language plpgsql` sehingga **tidak inlinable** — dieksekusi sebagai satu Function Scan ber-LIMIT internal, jadi predikat luar tidak bisa didorong masuk (menjawab sebagian BL10-OQ-11). Test delegasi bisa dibuat kuat lewat `create or replace` stub di dalam transaksi lalu `rollback` — bukti jauh lebih kuat daripada memeriksa `prosrc`.
+- Fixture lintas-org sudah tersedia (`supabase/tests/_fixtures.sql`, dua organisasi). Catatan mengikat: sejak 0083 setiap INSERT `auth.users` WAJIB menyertakan `raw_app_meta_data.organization_id`, kalau tidak trigger `handle_new_user` raise dan seluruh suite gagal fatal.
+- Catatan proses (kedua kalinya): workflow mengembalikan hasil sebagai nilai balik, **tidak menulis ke disk**, dan `markdown`-nya **tidak memuat critic** — keduanya harus dirakit manual.
