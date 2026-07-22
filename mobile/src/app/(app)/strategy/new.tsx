@@ -4,11 +4,9 @@ import { useMemo, useState } from 'react';
 import { Alert, Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, EmptyState, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
-import { DateRangeField } from '@/components/date-range-field';
+import { Button, EmptyState, Field, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
-import { periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
 import { getGoal, listStrategyTemplates, type StrategyTemplate } from '@/lib/goals';
 import type { PersonRef } from '@/lib/strategies';
@@ -128,6 +126,60 @@ function StrategyTemplatePicker({
   );
 }
 
+/**
+ * Kondisi periode warisan. Empat state ini SENGAJA dipisah: "Goal tidak terbaca" dan "Goal
+ * terbaca tapi periodenya kosong" sama-sama memblokir simpan, tapi perbaikannya berbeda —
+ * yang satu soal akses/rute, yang satu soal data Goal. Menyatukan keduanya jadi satu kalimat
+ * mengirim user memperbaiki hal yang salah.
+ */
+type PeriodState = 'loading' | 'error' | 'unreachable' | 'no-period' | 'ok';
+
+const PERIOD_COPY: Record<PeriodState, { label: string; hint: string; blockTitle: string; blockBody: string }> = {
+  loading: {
+    label: 'Memuat periode Goal…',
+    hint: 'Periode Strategi mengikuti Goal induk.',
+    blockTitle: 'Periode Goal belum termuat',
+    blockBody: 'Tunggu sebentar sampai periode Goal induk tampil, lalu simpan lagi.',
+  },
+  error: {
+    label: 'Gagal memuat Goal induk',
+    hint: 'Periode Strategi mengikuti Goal induk, jadi Strategi belum bisa disimpan. Periksa koneksi lalu buka ulang layar ini.',
+    blockTitle: 'Goal induk gagal dimuat',
+    blockBody: 'Periode Strategi diturunkan dari Goal induk, dan Goal itu gagal dimuat. Periksa koneksi lalu buka ulang layar ini.',
+  },
+  unreachable: {
+    label: 'Goal induk tidak ditemukan',
+    hint: 'Goal mungkin sudah dihapus atau di luar akses Anda. Buka layar ini lewat tombol tambah di Goal-nya.',
+    blockTitle: 'Goal induk tidak ditemukan',
+    blockBody:
+      'Periode Strategi diturunkan dari Goal induk, tetapi Goal itu tidak ditemukan atau di luar akses Anda. Buka layar ini lewat tombol tambah di Goal-nya.',
+  },
+  'no-period': {
+    label: 'Goal induk belum punya periode',
+    hint: 'Isi periode di Goal induk dulu; Strategi tidak bisa diaktifkan tanpa periode.',
+    blockTitle: 'Periode Goal belum diisi',
+    blockBody: 'Strategi mengikuti periode Goal induk. Isi dulu periode Goal, lalu buat Strategi ini kembali.',
+  },
+  ok: {
+    label: '',
+    hint: 'Strategi tidak punya masa berlaku sendiri — periode diturunkan dari Goal induk.',
+    blockTitle: '',
+    blockBody: '',
+  },
+};
+
+function periodStateOf(
+  q: { isLoading: boolean; isError: boolean; data?: unknown },
+  start: string | null,
+  end: string | null,
+): PeriodState {
+  if (q.isLoading) return 'loading';
+  if (q.isError) return 'error';
+  // getGoal memakai maybeSingle → null saat id tak ada ATAU RLS menyaringnya habis.
+  if (!q.data) return 'unreachable';
+  return start && end ? 'ok' : 'no-period';
+}
+
 export function LiveNewStrategyScreen() {
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
   const router = useRouter();
@@ -143,10 +195,17 @@ export function LiveNewStrategyScreen() {
   const [targetUnit, setTargetUnit] = useState('');
   // UI-S-K03 — PRD §18 wajib "Ekspektasi Hasil".
   const [expectedOutcome, setExpectedOutcome] = useState('');
-  const [periodStart, setPeriodStart] = useState('');
-  const [periodEnd, setPeriodEnd] = useState('');
   const [description, setDescription] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
+
+  // PRD §12.1 (baris 540-544): "Strategy tidak punya masa berlaku sendiri karena mengikuti Goal
+  // tahunan." Periode DITURUNKAN dari Goal induk, tidak pernah diketik user (§44 AC-11).
+  // Warisan disalin saat pembuatan (kolom `strategies.period_start/end` tetap material karena
+  // `activate_strategy` mem-gate keduanya NOT NULL), bukan dibaca ulang dari Goal saat render.
+  const inheritedStart = parentQ.data?.period_start ?? null;
+  const inheritedEnd = parentQ.data?.period_end ?? null;
+  const periodState = periodStateOf(parentQ, inheritedStart, inheritedEnd);
+  const periodCopy = PERIOD_COPY[periodState];
 
   async function submit() {
     if (!name.trim()) {
@@ -161,9 +220,12 @@ export function LiveNewStrategyScreen() {
       Alert.alert('Belum lengkap', 'Ekspektasi Hasil Strategi wajib diisi.');
       return;
     }
-    const dateErr = periodError(periodStart, periodEnd);
-    if (dateErr) {
-      Alert.alert('Tanggal tidak valid', dateErr);
+    // Periode warisan tidak bisa "diperbaiki" dari layar ini. Menyimpan Strategy dengan periode
+    // NULL menghasilkan Draft yang TIDAK PERNAH bisa diaktifkan (`activate_strategy` 0078 mem-gate
+    // period_start/period_end NOT NULL) — errornya baru muncul jauh dari penyebabnya. Blokir di
+    // sini, dan sebutkan perbaikan yang TEPAT untuk state-nya (lihat PERIOD_COPY).
+    if (periodState !== 'ok' || !inheritedStart || !inheritedEnd) {
+      Alert.alert(periodCopy.blockTitle, periodCopy.blockBody);
       return;
     }
     let targetNumericVal: number | null = null;
@@ -185,8 +247,8 @@ export function LiveNewStrategyScreen() {
         target_unit: targetUnit.trim() || null,
         expected_outcome: expectedOutcome.trim(),
         pic_id: (pic ?? inheritedPic)?.id ?? null,
-        period_start: periodStart || null,
-        period_end: periodEnd || null,
+        period_start: inheritedStart,
+        period_end: inheritedEnd,
       });
       router.replace(`/strategy/${created.id}` as Href);
     } catch (e) {
@@ -251,11 +313,16 @@ export function LiveNewStrategyScreen() {
             multiline
           />
           <UserPicker label="PIC / Owner" value={pic ?? inheritedPic} onChange={setPic} />
-          <DateRangeField
-            startValue={periodStart}
-            endValue={periodEnd}
-            onStartChange={setPeriodStart}
-            onEndChange={setPeriodEnd}
+          <Field
+            label="Periode (mengikuti Goal)"
+            value={
+              <View className="gap-0.5">
+                <Text className="text-base text-black dark:text-white">
+                  {periodState === 'ok' ? `${inheritedStart} → ${inheritedEnd}` : periodCopy.label}
+                </Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">{periodCopy.hint}</Text>
+              </View>
+            }
           />
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
         </SectionCard>

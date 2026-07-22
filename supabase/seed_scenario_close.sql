@@ -31,6 +31,24 @@ set local search_path = public, auth, extensions;
 -- CEO menjadi principal semua RPC (auth.uid() dibaca dari GUC ini).
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-000000000001","role":"authenticated"}';
 
+-- Org target — cermin `_seed_org` di seed_dummy.sql. Aturannya HARUS sama persis:
+-- file ini memperluas data seed_dummy, jadi kalau keduanya memilih org berbeda,
+-- baris di sini mendarat di org lain dan tersaring RLS tanpa error apa pun.
+-- Ambil dari profil CEO dummy supaya otomatis ikut ke mana pun seed_dummy menaruhnya.
+create temporary table _seed_org on commit drop as
+select coalesce(
+  (select organization_id from public.profiles where id = '11111111-1111-1111-1111-000000000001'),
+  (select id from public.organizations where name = 'Nyantuy Group' order by created_at limit 1),
+  (select id from public.organizations order by created_at limit 1)
+) as id;
+
+do $$
+begin
+  if (select id from _seed_org) is null then
+    raise exception 'Org target tidak ketemu. Jalankan supabase/seed_dummy.sql lebih dulu.';
+  end if;
+end $$;
+
 -- ----------------------------------------------------------------------------
 -- 0. RESET AGAR IDEMPOTEN
 -- ----------------------------------------------------------------------------
@@ -77,49 +95,49 @@ insert into public.tasks (
   start_date, deadline, expected_output, definition_of_done, priority, repeat_setting,
   evidence_required, result_value_required, review_required, status, created_by
 ) values
-  ('11cccccc-cccc-cccc-cccc-000000000001', (select id from public.organizations limit 1),
+  ('11cccccc-cccc-cccc-cccc-000000000001', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000001', 'Riset Kata Kunci Referral',
    'List 20 keyword paling banyak dicari calon referrer di periode Q3',
    '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
    '2026-07-01', '2026-07-10', 'Spreadsheet 20 keyword + volume + kompetitor',
    'File tersimpan di Drive folder Referral, di-share ke manager',
    'medium', 'one_time', true, false, true, 'done', '11111111-1111-1111-1111-000000000003'),
-  ('11cccccc-cccc-cccc-cccc-000000000002', (select id from public.organizations limit 1),
+  ('11cccccc-cccc-cccc-cccc-000000000002', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000002', 'A/B Test Add-on Warna Tombol',
    'Uji dua warna CTA add-on di checkout page selama 2 minggu',
    '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
    '2026-07-14', '2026-07-28', 'Report A/B test dengan winner + confidence',
    'Report PDF disetujui manager sales',
    'medium', 'one_time', true, false, true, 'done', '11111111-1111-1111-1111-000000000003'),
-  ('11cccccc-cccc-cccc-cccc-000000000003', (select id from public.organizations limit 1),
+  ('11cccccc-cccc-cccc-cccc-000000000003', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000002', 'Copywriting Bundle Add-on',
    'Tulis 5 varian copy add-on untuk halaman checkout',
    '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
    '2026-08-01', '2026-08-10', '5 varian copy siap A/B test',
    'Copy disetujui manager sales',
    'low', 'one_time', false, false, true, 'done', '11111111-1111-1111-1111-000000000003'),
-  ('11cccccc-cccc-cccc-cccc-000000000004', (select id from public.organizations limit 1),
+  ('11cccccc-cccc-cccc-cccc-000000000004', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000001', 'Follow-up Referrer H+3',
    'Hubungi 30 referrer untuk feedback progress',
    '11111111-1111-1111-1111-000000000005', '11111111-1111-1111-1111-000000000003',
    '2026-08-15', '2026-08-31', 'Rekap feedback 30 referrer',
    'Rekap dikonfirmasi manager sales',
    'medium', 'one_time', true, false, true, 'in_progress', '11111111-1111-1111-1111-000000000003'),
-  ('11cccccc-cccc-cccc-cccc-000000000005', (select id from public.organizations limit 1),
+  ('11cccccc-cccc-cccc-cccc-000000000005', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000004', 'Susun Daftar Piutang Prioritas',
    'Segmentasi 50 debitor besar berdasarkan usia piutang',
    '11111111-1111-1111-1111-000000000006', '11111111-1111-1111-1111-000000000004',
    '2026-07-05', '2026-07-15', 'Spreadsheet segmentasi 50 debitor',
    'File tersimpan + disetujui ops manager',
    'high', 'one_time', true, false, true, 'done', '11111111-1111-1111-1111-000000000006'),
-  ('11cccccc-cccc-cccc-cccc-000000000006', (select id from public.organizations limit 1),
+  ('11cccccc-cccc-cccc-cccc-000000000006', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000004', 'Template Email Reminder Formal',
    'Draft 3 template email formal untuk H+30 dan H+45',
    '11111111-1111-1111-1111-000000000006', '11111111-1111-1111-1111-000000000004',
    '2026-07-20', '2026-07-31', '3 template email siap kirim',
    'Template disetujui ops manager',
    'medium', 'one_time', false, false, true, 'done', '11111111-1111-1111-1111-000000000006'),
-  ('11cccccc-cccc-cccc-cccc-000000000007', (select id from public.organizations limit 1),
+  ('11cccccc-cccc-cccc-cccc-000000000007', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000004', 'Verifikasi Data Kontak Debitor',
    'Verifikasi ulang nomor & email 100 debitor teratas',
    '11111111-1111-1111-1111-000000000006', '11111111-1111-1111-1111-000000000004',
@@ -176,7 +194,7 @@ insert into public.task_instances (
 )
 select
   ('21eeeeee-eeee-eeee-eeee-0000000000' || lpad(n::text, 2, '0'))::uuid,
-  (select id from public.organizations limit 1),
+  (select id from _seed_org),
   'cccccccc-cccc-cccc-cccc-000000000002',
   'dddddddd-dddd-dddd-dddd-000000000001',
   d, '17:00:00',
@@ -234,7 +252,7 @@ insert into public.task_instances (
 )
 select
   ('22eeeeee-eeee-eeee-eeee-0000000000' || lpad(n::text, 2, '0'))::uuid,
-  (select id from public.organizations limit 1),
+  (select id from _seed_org),
   'cccccccc-cccc-cccc-cccc-000000000004',
   'dddddddd-dddd-dddd-dddd-000000000002',
   d, '09:00:00',
@@ -283,7 +301,7 @@ update public.task_instances i
 insert into public.governance_violations (
   id, organization_id, user_id, violation_type, entity_type, entity_id, detail, severity, resolution_status, created_at
 ) values
-  ('66666666-cccc-cccc-cccc-000000000002', (select id from public.organizations limit 1),
+  ('66666666-cccc-cccc-cccc-000000000002', (select id from _seed_org),
    '11111111-1111-1111-1111-000000000006', 'deadline_missed_repeat', 'task',
    'cccccccc-cccc-cccc-cccc-000000000004',
    '{"note":"3 hari berturut miss reminder piutang"}'::jsonb,
@@ -300,7 +318,7 @@ insert into public.evaluations (
   should_become_sop, rollout_needed, rollout_notes,
   evaluated_by, pic_id
 ) values
-  ('ee111111-1111-1111-1111-000000000001', (select id from public.organizations limit 1),
+  ('ee111111-1111-1111-1111-000000000001', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000001', 'sebagian',
    '112 referral konversi dari target 120 (93%). Overspend reward 8%.',
    ARRAY['Landing page mobile-first','Reward jelas','CTA copy fokus'],
@@ -308,7 +326,7 @@ insert into public.evaluations (
    'Referral bekerja terbaik pada customer aktif 3+ bulan. Reward tier perlu diperluas.',
    true, true, 'Rollout ke divisi retail pada Q4 dgn tier reward baru.',
    '11111111-1111-1111-1111-000000000001', '11111111-1111-1111-1111-000000000003'),
-  ('ee111111-1111-1111-1111-000000000002', (select id from public.organizations limit 1),
+  ('ee111111-1111-1111-1111-000000000002', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000002', 'ya',
    'Basket size naik dari Rp 305rb → Rp 358rb (target Rp 350rb).',
    ARRAY['A/B test warna CTA','Copy add-on cross-sell','Slot add-on halaman ke-2'],
@@ -316,7 +334,7 @@ insert into public.evaluations (
    'Placement di halaman ke-2 aman utk konversi; halaman ke-1 kurangi bounce.',
    true, false, null,
    '11111111-1111-1111-1111-000000000001', '11111111-1111-1111-1111-000000000005'),
-  ('ee111111-1111-1111-1111-000000000003', (select id from public.organizations limit 1),
+  ('ee111111-1111-1111-1111-000000000003', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000003', 'sebagian',
    'Boros bahan turun 6% (target 8%). Shift malam belum diimplementasi.',
    ARRAY['SOP tertulis lengkap','Role-play efektif','Checklist harian'],
@@ -324,7 +342,7 @@ insert into public.evaluations (
    'Perlu pendekatan bertahap; roll out shift malam Q4 setelah tim dilatih ulang.',
    true, true, 'Latih shift malam pada minggu ke-2 Q4.',
    '11111111-1111-1111-1111-000000000001', '11111111-1111-1111-1111-000000000004'),
-  ('ee111111-1111-1111-1111-000000000004', (select id from public.organizations limit 1),
+  ('ee111111-1111-1111-1111-000000000004', (select id from _seed_org),
    '99999999-9999-9999-9999-000000000004', 'ya',
    'DSO turun dari 41 → 27 hari (target 28). Kolektibilitas AR meningkat.',
    ARRAY['Template reminder bertahap','Follow-up konsisten harian','Segmentasi debitor prioritas'],
