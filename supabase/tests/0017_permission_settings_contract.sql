@@ -23,7 +23,13 @@ begin
   if perm_mup is null or perm_voa is null then raise exception 'seed permissions missing'; end if;
 
   -- Fixtures (privileged): admin = staff + granted manage_users_permissions; target staff; mgmt c_level.
-  insert into auth.users(id) values (admin_id),(target_id),(mgmt_id) on conflict (id) do nothing;
+  -- organization_id in app_metadata is required since 0083: handle_new_user
+  -- refuses to guess an org, and the fixtures prelude creates two of them.
+  insert into auth.users(id, raw_app_meta_data) values
+    (admin_id,  jsonb_build_object('organization_id', v_org)),
+    (target_id, jsonb_build_object('organization_id', v_org)),
+    (mgmt_id,   jsonb_build_object('organization_id', v_org))
+  on conflict (id) do nothing;
   insert into public.profiles(id,organization_id,role_template_id,is_active) values
     (admin_id,v_org,v_role_staff,true),(target_id,v_org,v_role_staff,true),(mgmt_id,v_org,v_role_cl,true)
   on conflict (id) do update set organization_id=excluded.organization_id,

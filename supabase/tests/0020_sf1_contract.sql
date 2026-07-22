@@ -30,7 +30,12 @@ begin
   select id into v_perm from public.permissions where key='manage_score_formula';
   select id into v_role_staff from public.role_templates where level='staff' limit 1;
 
-  insert into auth.users(id) values (v_admin),(v_nonadmin) on conflict do nothing;
+  -- organization_id in app_metadata is required since 0083 (handle_new_user
+  -- refuses to guess an org; the fixtures prelude creates two).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_admin,    jsonb_build_object('organization_id', v_org)),
+    (v_nonadmin, jsonb_build_object('organization_id', v_org))
+  on conflict do nothing;
   insert into public.profiles(id, organization_id, role_template_id, full_name, is_active) values
     (v_admin, v_org, v_role_staff, 'Admin', true),
     (v_nonadmin, v_org, v_role_staff, 'Non-admin', true)

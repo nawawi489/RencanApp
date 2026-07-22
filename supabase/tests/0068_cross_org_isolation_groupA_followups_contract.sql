@@ -91,7 +91,10 @@ declare
 begin
   insert into public.organizations (name) values ('OrgB-victim-review-task') returning id into v_orgB;
   v_picB := gen_random_uuid(); v_revB := gen_random_uuid();
-  insert into auth.users (id) values (v_picB), (v_revB);
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users (id, raw_app_meta_data) values
+    (v_picB, jsonb_build_object('organization_id', v_orgB)),
+    (v_revB, jsonb_build_object('organization_id', v_orgB));
   insert into public.profiles (id, organization_id) values (v_picB, v_orgB), (v_revB, v_orgB)
     on conflict (id) do update set organization_id = excluded.organization_id;
 
@@ -137,7 +140,9 @@ declare
 begin
   insert into public.organizations (name) values ('OrgB-victim-review-instance') returning id into v_orgB;
   v_picB := gen_random_uuid(); v_revB := gen_random_uuid();
-  insert into auth.users (id) values (v_picB), (v_revB);
+  insert into auth.users (id, raw_app_meta_data) values
+    (v_picB, jsonb_build_object('organization_id', v_orgB)),
+    (v_revB, jsonb_build_object('organization_id', v_orgB));
   insert into public.profiles (id, organization_id) values (v_picB, v_orgB), (v_revB, v_orgB)
     on conflict (id) do update set organization_id = excluded.organization_id;
 
@@ -218,7 +223,8 @@ declare
 begin
   insert into public.organizations (name) values ('OrgB-victim-team-lead') returning id into v_orgB;
   v_leadB := gen_random_uuid();
-  insert into auth.users (id) values (v_leadB);
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_leadB, jsonb_build_object('organization_id', v_orgB));
   insert into public.profiles (id, organization_id) values (v_leadB, v_orgB)
     on conflict (id) do update set organization_id = excluded.organization_id;
 
@@ -250,7 +256,9 @@ declare
 begin
   select organization_id into v_orgA from public.profiles where id = v_ceoA;
   v_picA := gen_random_uuid(); v_revA := gen_random_uuid();
-  insert into auth.users (id) values (v_picA), (v_revA);
+  insert into auth.users (id, raw_app_meta_data) values
+    (v_picA, jsonb_build_object('organization_id', v_orgA)),
+    (v_revA, jsonb_build_object('organization_id', v_orgA));
   insert into public.profiles (id, organization_id) values (v_picA, v_orgA), (v_revA, v_orgA)
     on conflict (id) do update set organization_id = excluded.organization_id;
 
@@ -289,7 +297,8 @@ declare
 begin
   select organization_id into v_orgA from public.profiles where id = v_ceoA;
   v_leadA := gen_random_uuid();
-  insert into auth.users (id) values (v_leadA);
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_leadA, jsonb_build_object('organization_id', v_orgA));
   insert into public.profiles (id, organization_id) values (v_leadA, v_orgA)
     on conflict (id) do update set organization_id = excluded.organization_id;
 

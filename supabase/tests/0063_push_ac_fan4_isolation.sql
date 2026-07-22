@@ -54,7 +54,11 @@ declare
   v_delivery_count int;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_actor), (v_recipient) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_actor,     jsonb_build_object('organization_id', v_org)),
+    (v_recipient, jsonb_build_object('organization_id', v_org))
+  on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_actor,     v_org, 'Actor',     true),
     (v_recipient, v_org, 'Recipient', true)

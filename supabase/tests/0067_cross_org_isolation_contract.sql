@@ -218,7 +218,9 @@ begin
   insert into public.organizations (name) values ('OrgB-null-caller') returning id into v_orgB;
 
   -- Create attacker user first (needed as FK target for pic_id on goals).
-  insert into auth.users (id) values (v_ceoNull);
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_ceoNull, jsonb_build_object('organization_id', v_orgB));
   insert into public.profiles (id, organization_id, role_template_id, is_active)
     values (v_ceoNull, v_orgB, v_ceo_rt, true)
     on conflict (id) do update set organization_id = v_orgB, role_template_id = v_ceo_rt, is_active = true;

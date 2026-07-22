@@ -76,9 +76,11 @@ begin
     returning id into v_org;
   v_pic := gen_random_uuid();
   v_reviewer := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_pic, 'fajar-0047c@test.local', '{"full_name":"Fajar"}'::jsonb),
-           (v_reviewer, 'dewi-0047c@test.local', '{"full_name":"Dewi"}'::jsonb);
+  -- raw_app_meta_data.organization_id wajib sejak 0083: handle_new_user menolak
+  -- menebak org, dan prelude fixtures sudah membuat dua org.
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_pic, 'fajar-0047c@test.local', '{"full_name":"Fajar"}'::jsonb, jsonb_build_object('organization_id', v_org)),
+           (v_reviewer, 'dewi-0047c@test.local', '{"full_name":"Dewi"}'::jsonb, jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_pic, v_reviewer);
 
   insert into public.action_plans (id, organization_id, name, status, created_by)
@@ -156,9 +158,9 @@ begin
     returning id into v_org;
   v_pic := gen_random_uuid();
   v_reviewer := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_pic, 'pic-0047d@test.local', '{"full_name":"PIC-d"}'::jsonb),
-           (v_reviewer, 'rev-0047d@test.local', '{"full_name":"Rev-d"}'::jsonb);
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_pic, 'pic-0047d@test.local', '{"full_name":"PIC-d"}'::jsonb, jsonb_build_object('organization_id', v_org)),
+           (v_reviewer, 'rev-0047d@test.local', '{"full_name":"Rev-d"}'::jsonb, jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_pic, v_reviewer);
 
   insert into public.action_plans (id, organization_id, name, status, created_by)
@@ -213,9 +215,9 @@ begin
     returning id into v_org;
   v_pic := gen_random_uuid();
   v_reviewer := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_pic, 'pic-0047e@test.local', '{"full_name":"PIC-e"}'::jsonb),
-           (v_reviewer, 'rev-0047e@test.local', '{"full_name":"Rev-e"}'::jsonb);
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_pic, 'pic-0047e@test.local', '{"full_name":"PIC-e"}'::jsonb, jsonb_build_object('organization_id', v_org)),
+           (v_reviewer, 'rev-0047e@test.local', '{"full_name":"Rev-e"}'::jsonb, jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_pic, v_reviewer);
 
   insert into public.action_plans (id, organization_id, name, status, created_by)
@@ -295,9 +297,9 @@ begin
     returning id into v_org;
   v_pic := gen_random_uuid();
   v_reviewer := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data)
-    values (v_pic, 'pic-0047f@test.local', '{"full_name":"PIC-f"}'::jsonb),
-           (v_reviewer, 'rev-0047f@test.local', '{"full_name":"Rev-f"}'::jsonb);
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data)
+    values (v_pic, 'pic-0047f@test.local', '{"full_name":"PIC-f"}'::jsonb, jsonb_build_object('organization_id', v_org)),
+           (v_reviewer, 'rev-0047f@test.local', '{"full_name":"Rev-f"}'::jsonb, jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_pic, v_reviewer);
 
   -- Initiative in draft (no room created by trigger)
@@ -347,10 +349,10 @@ begin
   v_pic := gen_random_uuid();
   v_reviewer := gen_random_uuid();
   v_member := gen_random_uuid();
-  insert into auth.users (id, email, raw_user_meta_data) values
-    (v_pic, 'pic-0047g@test.local', '{"full_name":"PIC-g"}'::jsonb),
-    (v_reviewer, 'rev-0047g@test.local', '{"full_name":"Rev-g"}'::jsonb),
-    (v_member, 'mem-0047g@test.local', '{"full_name":"Mem-g"}'::jsonb);
+  insert into auth.users (id, email, raw_user_meta_data, raw_app_meta_data) values
+    (v_pic, 'pic-0047g@test.local', '{"full_name":"PIC-g"}'::jsonb, jsonb_build_object('organization_id', v_org)),
+    (v_reviewer, 'rev-0047g@test.local', '{"full_name":"Rev-g"}'::jsonb, jsonb_build_object('organization_id', v_org)),
+    (v_member, 'mem-0047g@test.local', '{"full_name":"Mem-g"}'::jsonb, jsonb_build_object('organization_id', v_org));
   update public.profiles set organization_id = v_org where id in (v_pic, v_reviewer, v_member);
 
   insert into public.action_plans (id, organization_id, name, status, created_by)

@@ -92,6 +92,13 @@ ON CONFLICT (key) DO NOTHING;
 -- Org 1 (Nyantuy Group) — existing org ID: 9054981b-bb2f-492f-a471-d4f053ddcb1b
 -- Existing users kept: aksalalsal23@gmail.com (CEO), qa-manager, qa-staff
 -- New users:
+--
+-- Setiap baris membawa `organization_id` di raw_app_meta_data. Sejak migrasi 0083
+-- `handle_new_user` MENOLAK menebak organisasi bila ada lebih dari satu — dan file
+-- ini sendiri membuat org 2 + org 3 di PART 1. Tanpa key ini seluruh PART 2 gagal.
+-- Id org 1 di-hardcode sama seperti sisa file ini (departments, positions, dst).
+-- Kalau id itu tidak ada di database tujuan, trigger sekarang menolak dengan pesan
+-- yang menyebut org-nya — dulu ia diam-diam menaruh user di org tertua.
 
 INSERT INTO auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -103,81 +110,81 @@ INSERT INTO auth.users (
   ('a1000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'coo@nyantuy.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"9054981b-bb2f-492f-a471-d4f053ddcb1b"}'::jsonb,
    '{"full_name":"Bayu Pratama"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a1000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'mgr.ops@nyantuy.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"9054981b-bb2f-492f-a471-d4f053ddcb1b"}'::jsonb,
    '{"full_name":"Eko Saputro"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a1000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'staff.finance@nyantuy.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"9054981b-bb2f-492f-a471-d4f053ddcb1b"}'::jsonb,
    '{"full_name":"Gita Maharani"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   -- === ORG 2 (PT Mitra Logistik) ===
   ('a2000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'ceo@mitralogistik.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a2000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Andi Wijaya"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'cfo@mitralogistik.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a2000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Sari Dewi"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'mgr.warehouse@mitralogistik.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a2000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Budi Hartono"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'mgr.fleet@mitralogistik.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a2000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Rini Susanti"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'staff.admin@mitralogistik.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a2000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Dimas Prasetyo"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a2000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'driver@mitralogistik.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a2000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Teguh Prasetya"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   -- === ORG 3 (Karya Digital Indonesia) ===
   ('a3000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'ceo@karyadigital.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a3000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Rizki Maulana"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a3000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'cto@karyadigital.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a3000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Ayu Lestari"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a3000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'pm@karyadigital.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a3000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Hendra Gunawan"}'::jsonb, now(), now(), '', '', '', '', false, false),
 
   ('a3000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'dev@karyadigital.staging',
    extensions.crypt('__STAGING_SEED_PASSWORD__', extensions.gen_salt('bf')),
-   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   now(), '{"provider":"email","providers":["email"],"organization_id":"a3000000-0000-0000-0000-000000000001"}'::jsonb,
    '{"full_name":"Nisa Putri"}'::jsonb, now(), now(), '', '', '', '', false, false)
 ON CONFLICT (id) DO NOTHING;
 
@@ -196,8 +203,11 @@ ON CONFLICT DO NOTHING;
 -- ============================================================================
 -- PART 3: FIX PROFILES (org assignment + role + names)
 -- ============================================================================
--- handle_new_user trigger puts ALL new users in org 1 as 'staff'.
--- We need to move org 2/3 users to their correct org + role.
+-- Sejak 0083 trigger sudah menaruh tiap user di org yang benar (dari
+-- raw_app_meta_data.organization_id di PART 2), jadi bagian ini tidak lagi
+-- memindahkan org — ia melengkapi nama, jabatan, dan role_template. Kolom
+-- organization_id tetap ditulis ulang di beberapa UPDATE sebagai perbaikan
+-- untuk profil yang terlanjur salah org dari run sebelum 0083.
 
 -- Existing Org 1 users: fix names & roles
 UPDATE public.profiles SET

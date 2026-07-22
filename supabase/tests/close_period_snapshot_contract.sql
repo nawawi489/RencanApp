@@ -87,7 +87,10 @@ declare
   period uuid; v_rank int; v_audit int; fails text := '';
 begin
   select id into v_role_staff from public.role_templates where organization_id = v_org and level = 'staff' limit 1;
-  insert into auth.users (id) values (v_staff) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_staff, jsonb_build_object('organization_id', v_org))
+    on conflict (id) do nothing;
   insert into public.profiles (id, organization_id, role_template_id)
     values (v_staff, v_org, v_role_staff)
     on conflict (id) do update set organization_id = excluded.organization_id, role_template_id = excluded.role_template_id;
@@ -131,7 +134,9 @@ declare
   v_role_staff uuid; period uuid; v_rid uuid; fails text := '';
 begin
   select id into v_role_staff from public.role_templates where organization_id = v_org and level = 'staff' limit 1;
-  insert into auth.users (id) values (v_u) on conflict (id) do nothing;
+  insert into auth.users (id, raw_app_meta_data)
+    values (v_u, jsonb_build_object('organization_id', v_org))
+    on conflict (id) do nothing;
   insert into public.profiles (id, organization_id, role_template_id, full_name)
     values (v_u, v_org, v_role_staff, 'Uji Ranking')
     on conflict (id) do update set organization_id = excluded.organization_id, role_template_id = excluded.role_template_id;
