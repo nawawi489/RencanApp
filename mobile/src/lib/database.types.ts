@@ -3486,6 +3486,10 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string; p_reason: string }
         Returns: string
       }
+      card_completion_rule_for: {
+        Args: { p_card_type: string; p_org: string }
+        Returns: string[]
+      }
       check_minimum_breakdown_compliance: {
         Args: { p_parent_card_id: string; p_parent_card_type: string }
         Returns: {
@@ -3638,6 +3642,11 @@ export type Database = {
           p_title: string
           p_type: string
         }
+        Returns: undefined
+      }
+      emit_period_closing_reminders: { Args: never; Returns: number }
+      enforce_card_completion_rule: {
+        Args: { p_card_type: string; p_required: string[]; p_row: Json }
         Returns: undefined
       }
       generate_action_plan_instances: {
@@ -3891,6 +3900,27 @@ export type Database = {
           snippet: string
         }[]
       }
+      search_global: {
+        Args: {
+          p_cursor_id?: string
+          p_cursor_ts?: string
+          p_include_archived?: boolean
+          p_limit?: number
+          p_query: string
+          p_scopes?: string[]
+        }
+        Returns: {
+          id: string
+          parent_id: string
+          scope: string
+          snippet: string
+          sort_id: string
+          sort_ts: string
+          status: string
+          subtitle: string
+          title: string
+        }[]
+      }
       send_chat_message: {
         Args: {
           p_attachments?: Json
@@ -4007,6 +4037,23 @@ export type Database = {
           p_categories: Json
           p_change_reason: string
           p_version_id: string
+        }
+        Returns: undefined
+      }
+      upsert_card_completion_rule: {
+        Args: {
+          p_card_type: string
+          p_reason?: string
+          p_required_fields: string[]
+        }
+        Returns: undefined
+      }
+      upsert_card_guidance: {
+        Args: {
+          p_body: string
+          p_card_type: string
+          p_reason?: string
+          p_title: string
         }
         Returns: undefined
       }
