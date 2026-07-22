@@ -240,7 +240,11 @@ Assertion sengaja **tidak** menulis ulang daftar 11 tipe (itu akan jadi salinan 
 > [!warning] Yang TIDAK ditutup di sini
 > Trigger `handle_new_user` tidak disentuh (owner mengunci single-org untuk V1). Jalur pembuatan user **di luar aplikasi** — "Add user" dashboard Supabase, admin API langsung, INSERT manual ke `auth.users` — masih memicu trigger tanpa koreksi maupun warning. Tiga arah perbaikan trigger tetap terbuka di baris BL-14.
 
-**Belum live sampai di-deploy.** Edge Function tidak ikut ter-deploy oleh merge; butuh `supabase link` + `supabase functions deploy create-user`. Sebelum itu, perubahan client sudah aman (server lama tidak mengirim `warning` → `readWarning` mengembalikan `null` → perilaku persis seperti sekarang).
+**Deploy.** Edge Function tidak ikut ter-deploy oleh merge — ia butuh langkah sendiri. Di-deploy ke project staging `fhnqwytqprsptjshoxfn` pada **2026-07-22**, `create-user` **v1 → v2**, status ACTIVE, `verify_jwt` tetap `true`. Sumber terpasang diverifikasi identik dengan file repo, dan v1 yang ditimpa terverifikasi identik dengan `origin/staging` (tidak ada drift yang tertimpa diam-diam).
+
+**Jalurnya bukan `supabase link`.** CLI `link` menuntut access token + prompt interaktif yang tidak tersedia di sesi headless. Supabase MCP menembak project yang sama (`deploy_edge_function`) dan tidak butuh link sama sekali — itu jalur deploy yang dipakai. Lihat [[add-user-edge-function]].
+
+**Urutan merge/deploy tidak punya jendela rusak** ke arah mana pun: server baru mengirim `warning: null` pada jalur benar sehingga client lama mengabaikannya, dan server lama tidak mengirim `warning` sehingga `readWarning` mengembalikan `null`.
 
 ---
 
