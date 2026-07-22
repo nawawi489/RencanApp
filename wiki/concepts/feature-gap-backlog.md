@@ -224,7 +224,21 @@ Pemilihan role template dari `role_level` (0015 F-5) tidak berubah dan dikunci u
 
 **Kontrak baru** `supabase/tests/0083_handle_new_user_explicit_org_contract.sql` — `T-BL14-1..8`: guard menolak tebakan; **isi pesan** dikunci (sebab + `raw_app_meta_data.organization_id`, bukan sekadar "ada raise"); penempatan eksplisit menang atas org tertua; org hantu ditolak; nilai non-UUID ditolak; regresi `role_level`; **single-org tanpa key tetap jalan** (diuji dengan menyisakan satu org di dalam transaksi ber-`rollback`); dan ACL + keberadaan trigger `on_auth_user_created` — backstop kalau seseorang menggantinya jadi `DROP … CASCADE`.
 
-### 5.7 Di luar cakupan
+### 5.7 Jebakan yang ditemukan saat menjalankan gate — FK cascade ≠ DELETE boleh jalan
+
+Run CI pertama (CircleCI 107): **32 lolos, 1 gagal** — satu-satunya yang merah adalah kontrak baru itu sendiri, di `T-BL14-7`. Seluruh 18 file contract yang disunting **lolos**, jadi migrasi + perubahan pemanggil terbukti benar pada run pertama; yang salah hanya teknik teardown tes barunya.
+
+```
+ERROR: score_formula_versions adalah append-only dan tidak dapat dihapus.
+CONTEXT: public.tg_block_delete_append_only()
+  SQL statement "delete from public.organizations where id <> v_shared"
+```
+
+**Akarnya sebuah pemeriksaan pra-coding yang benar tapi tidak cukup.** Sebelum menulis `T-BL14-7` seluruh FK ke `public.organizations` diperiksa dan semuanya `cascade`/`set null` — nol `restrict` — lalu disimpulkan "DELETE aman". Kesimpulan itu meleset: yang memblokir bukan constraint melainkan **trigger `before delete`**. `tg_block_delete_append_only` terpasang di **8 tabel** (0013, 0014, 0020, 0021), beberapa di antaranya target cascade dari `organizations`. Pelajaran yang bisa dipakai ulang: *"boleh di-cascade"* dijawab oleh `pg_constraint`, *"boleh dihapus"* dijawab oleh `pg_constraint` **dan** `pg_trigger`.
+
+Perbaikannya melepas trigger tersebut secara **data-driven** (query `pg_trigger` by `tgfoid`, bukan daftar tabel hardcoded yang basi begitu tabel append-only ke-9 lahir) dan **hanya di dalam transaksi tes**: DDL di Postgres transaksional, jadi `rollback` memasangnya kembali. Aturan append-only bukan yang sedang diuji di blok itu — ia rintangan teardown, dan diperlakukan sebagai rintangan, bukan dilonggarkan secara permanen.
+
+### 5.8 Di luar cakupan
 
 Tiga lubang kegagalan-diam di Edge Function `create-user` (`supabase/functions/create-user/index.ts`) **tidak** termasuk BL-14; dilacak terpisah sebagai bugfix biasa — PR #148.
 

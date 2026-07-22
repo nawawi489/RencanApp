@@ -220,7 +220,28 @@ declare
   v_org    uuid;
   v_count  bigint;
   fails    text := '';
+  r        record;
 begin
+  -- Teardown, bukan bagian dari yang diuji. Menghapus org meng-cascade ke 8 tabel
+  -- append-only (0013/0014/0020/0021) yang memblokir DELETE lewat
+  -- `tg_block_delete_append_only` — jadi "sisakan satu org" mustahil selama trigger
+  -- itu terpasang. Trigger dilepas secara data-driven (bukan daftar tabel hardcoded,
+  -- yang akan basi begitu tabel append-only ke-9 muncul) dan HANYA di dalam transaksi
+  -- ini: DDL di Postgres transaksional, jadi `rollback` di bawah memasangnya kembali.
+  -- Catatan untuk pembaca berikutnya: FK-nya sendiri semuanya `cascade`/`set null` —
+  -- yang memblokir adalah trigger, bukan constraint.
+  for r in
+    select n.nspname as schema_name, c.relname as table_name, t.tgname as trigger_name
+    from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgfoid = 'public.tg_block_delete_append_only()'::regprocedure
+      and not t.tgisinternal
+  loop
+    execute format('drop trigger %I on %I.%I',
+                   r.trigger_name, r.schema_name, r.table_name);
+  end loop;
+
   delete from public.organizations where id <> v_shared;
 
   select count(*) into v_count from public.organizations;
