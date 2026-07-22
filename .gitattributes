@@ -6,3 +6,8 @@
 # hasilnya dua baris duplikat yang lolos diam-diam — sapu berkala.
 wiki/log.md   merge=union
 wiki/index.md merge=union
+
+# Workflow scripts dieksekusi via tool Workflow, yang MENOLAK skrip ber-control-char
+# (CR dianggap "tersembunyi di dialog izin"). Dengan core.autocrlf=true di Windows,
+# checkout mengubah LF->CRLF dan setiap Workflow({name}) gagal validasi. Pin ke LF.
+.claude/workflows/*.js text eol=lf
