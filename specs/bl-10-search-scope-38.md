@@ -3,7 +3,10 @@
 **Status:** spec final, siap disambung ke `/tdd-plan`
 **Tanggal:** 2026-07-22
 **Sumber otoritatif:** `PRD.md` §38 (blok "## 38. Search"), AC-27; `wiki/concepts/{architecture,permission-model,scope-guardrails,audit-governance}.md`; `specs/search-pesan-inbox.md`; `specs/fase-8-governance-admin.md`
-**Migrasi berikutnya tersedia:** 0084 (terakhir di repo: `0083_handle_new_user_explicit_org.sql`)
+**Migrasi berikutnya tersedia:** 0085 — bukan 0084. Terakhir di repo `0083_handle_new_user_explicit_org.sql`, tapi **0084 sudah diklaim** `0084_bl07_notifications_missing_types.sql` (BL-07, PR #154, terbuka saat spec ini ditulis). Seluruh slot BL-10 digeser satu pada 2026-07-22: PR-1 `0085`, PR-2 `0086`, PR-3 `0087`, PR-4 `0088`.
+
+> [!warning] Verifikasi ulang slot sebelum menulis migrasi
+> Beberapa sesi bekerja paralel di repo ini dan slot bisa berpindah lagi antara sekarang dan saat implementasi. Jalankan `ls supabase/migrations/ | tail` **dan** cek PR terbuka (`gh pr list --json files`) sesaat sebelum membuat berkas — nomor di dokumen ini adalah rencana, bukan reservasi.
 
 ---
 
@@ -155,7 +158,7 @@ Alasan bukan round-trip: `wiki/concepts/architecture.md:24` menolak pemindahan p
 
 **FR-11 [DECIDED — default fail-closed, sign-off owner: BL10-OQ-01]** Baris audit yang `entity_id`-nya menunjuk entitas yang tidak dapat diakses aktor karena **Confidential Access** dikeluarkan dari hasil Search. `entity_type` tak dikenal atau `entity_id` NULL juga dikeluarkan. Filter ini hidup **hanya di RPC search**; RLS tabel dan layar `/settings-activity-log` tidak diubah.
 
-**FR-12 [DECIDED — sign-off owner: BL10-OQ-03]** Scope `evidence` mengembalikan bukti dari submission `status <> 'draft'` **ATAU** `submitted_by = auth.uid()`. Ini penyempitan sengaja terhadap `evidence_select` (yang tidak memfilter status sama sekali) demi semangat evidence locking, sambil tetap membuat PIC dapat menemukan draft yang baru ia unggah. Wajib dicatat di header migrasi 0086. *(Terverifikasi: kolom `status text check in ('draft','submitted')` ditambahkan `0019_fase_exec_ap5_ap6.sql:30-32`; `submitted_by` ada sejak 0005:94.)*
+**FR-12 [DECIDED — sign-off owner: BL10-OQ-03]** Scope `evidence` mengembalikan bukti dari submission `status <> 'draft'` **ATAU** `submitted_by = auth.uid()`. Ini penyempitan sengaja terhadap `evidence_select` (yang tidak memfilter status sama sekali) demi semangat evidence locking, sambil tetap membuat PIC dapat menemukan draft yang baru ia unggah. Wajib dicatat di header migrasi 0087. *(Terverifikasi: kolom `status text check in ('draft','submitted')` ditambahkan `0019_fase_exec_ap5_ap6.sql:30-32`; `submitted_by` ada sejak 0005:94.)*
 
 **FR-13 [MUST NOT]** `search_global` **tidak boleh** `raise exception` untuk kondisi otorisasi apa pun. Satu-satunya exception yang diizinkan adalah **error bentuk-request** pada cursor (FR-19), yang tidak bergantung pada identitas atau data aktor.
 
@@ -432,10 +435,10 @@ Grouping ikut PR-1 tanpa pengecualian: memangkas scope punya pembenaran rilis, "
 
 | PR | Migrasi | Isi | Alasan urutan | Cakupan |
 |---|---|---|---|---|
-| **PR-1** | `0084_search_global.sql` | `search_global` + 7 scope card + `chat` (delegasi) + grouping + paging per-grup + anti-oracle + layar Search ditulis ulang + amandemen dokumen | Nol permukaan otorisasi baru: 7 card menyalin gate `search_cards` yang sudah ada, chat mendelegasi ke RPC yang sudah lolos review + contract test. Sekaligus memperbaiki bug LIKE-escaping. | 9/14 |
-| **PR-2** | `0085_search_global_people.sql` | `people` + index trgm | Gate paling sederhana (`profiles_select_same_org`, tanpa permission gate). Menutup utang FR-8.5.3 — **perbaikan FR Fase 8 yang meleset, bukan fitur baru** | 10/14 |
-| **PR-3** | `0086_search_global_derived.sql` | `task_instance` + `comment` + `evidence` + 3 index trgm | Mewarisi `can_access_task`/`can_access_action_plan` yang sudah confidential-aware pasca-0077. Butuh sign-off BL10-OQ-03 (bukti draft) | 13/14 |
-| **PR-4** | `0087_search_global_admin.sql` | `activity_log` + `governance_violation` + ekstraksi peta label | Terakhir: dua keputusan owner belum final (BL10-OQ-01, BL10-OQ-02), definisi match belum ada (BL10-OQ-05), menyentuh tabel append-only yang tidak bisa dikoreksi bila salah | 14/14 |
+| **PR-1** | `0085_search_global.sql` | `search_global` + 7 scope card + `chat` (delegasi) + grouping + paging per-grup + anti-oracle + layar Search ditulis ulang + amandemen dokumen | Nol permukaan otorisasi baru: 7 card menyalin gate `search_cards` yang sudah ada, chat mendelegasi ke RPC yang sudah lolos review + contract test. Sekaligus memperbaiki bug LIKE-escaping. | 9/14 |
+| **PR-2** | `0086_search_global_people.sql` | `people` + index trgm | Gate paling sederhana (`profiles_select_same_org`, tanpa permission gate). Menutup utang FR-8.5.3 — **perbaikan FR Fase 8 yang meleset, bukan fitur baru** | 10/14 |
+| **PR-3** | `0087_search_global_derived.sql` | `task_instance` + `comment` + `evidence` + 3 index trgm | Mewarisi `can_access_task`/`can_access_action_plan` yang sudah confidential-aware pasca-0077. Butuh sign-off BL10-OQ-03 (bukti draft) | 13/14 |
+| **PR-4** | `0088_search_global_admin.sql` | `activity_log` + `governance_violation` + ekstraksi peta label | Terakhir: dua keputusan owner belum final (BL10-OQ-01, BL10-OQ-02), definisi match belum ada (BL10-OQ-05), menyentuh tabel append-only yang tidak bisa dikoreksi bila salah | 14/14 |
 
 Scope yang belum dirilis **tidak dirender sebagai grup kosong** (AC-16) — ketiadaan grup tidak dapat dibedakan dari nihil hasil.
 
@@ -473,7 +476,7 @@ Klaim-klaim berikut beredar di draft awal dan **tidak didukung kode** — jangan
 
 **Urutan red-green yang disarankan untuk PR-1:**
 
-1. **DB merah dulu** — tulis `supabase/tests/0084_search_global_contract.sql` sebelum migrasi: assert eksistensi fungsi + `provolatile='s'` + `proconfig` + daftar kolom keluaran + ACL. Semuanya merah karena fungsi belum ada.
+1. **DB merah dulu** — tulis `supabase/tests/0085_search_global_contract.sql` sebelum migrasi: assert eksistensi fungsi + `provolatile='s'` + `proconfig` + daftar kolom keluaran + ACL. Semuanya merah karena fungsi belum ada.
 2. **Guard biaya** — test `length<2`, truncation 200 char, escape `%`/`_`/`\`, clamp 1..30. Implementasi minimal: kerangka fungsi + guard, mengembalikan 0 baris.
 3. **Per scope card, satu per satu** — test positif → test negatif (0 baris, bukan error) → test lintas-org → test reduksi-RLS. Baru tambahkan cabang UNION-nya.
 4. **Cabang chat** — test delegasi (ubah perilaku `search_chat_messages` → hasil `search_global` ikut berubah) + test truncation 240 char.

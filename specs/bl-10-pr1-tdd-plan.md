@@ -9,7 +9,7 @@ Rencana ini **menerjemahkan** spec menjadi urutan red→green→refactor. Ia tid
 
 ## 1. Ringkasan fitur
 
-Satu RPC baru `public.search_global` (migrasi `0084`) menggantikan permukaan Search layar utama:
+Satu RPC baru `public.search_global` (migrasi `0085`) menggantikan permukaan Search layar utama:
 
 | Aspek | Isi PR-1 |
 |---|---|
@@ -41,7 +41,7 @@ PR-1 **tidak diblokir** open question mana pun (BL10-OQ-01/02/03/05 adalah block
 | P4 | **EXPLAIN BL10-OQ-11** | lihat §3 Wave 0 | **GATE KERAS** — gagal ⇒ hentikan, tinjau FR-2 |
 | P5 | Baseline NG-6 | `select md5(prosrc) … proname='search_cards'` | digest disimpan sebagai konstanta di header berkas kontrak |
 | P6 | Fixture dua org tersedia | `supabase/tests/_fixtures.sql` memuat org `4b07a19f…d89` + org DCR-05 `52b0ebe1…b70` | ada; ingat aturan `raw_app_meta_data.organization_id` eksplisit (0083) |
-| P7 | Nomor migrasi bebas | migrasi tertinggi = `0083` | `0084` aman |
+| P7 | Nomor migrasi bebas | migrasi tertinggi = `0083` | `0085` aman |
 
 ---
 
@@ -51,7 +51,7 @@ PR-1 **tidak diblokir** open question mana pun (BL10-OQ-01/02/03/05 adalah block
 W0 Preflight (baseline + EXPLAIN OQ-11 + digest NG-6)
         │  (GATE: OQ-11 lulus)
         ▼
-W1 Kerangka DB  ── struktur/ACL/kolom keluaran (0084-DB-1..5)
+W1 Kerangka DB  ── struktur/ACL/kolom keluaran (0085-DB-1..5)
         ▼
 W2 Guard biaya + scope `goal`  ← digabung sengaja (goal = kontrol positif; tanpa itu guard hijau palsu)
         ▼
@@ -81,14 +81,14 @@ Ketergantungan yang tidak boleh dibalik:
 
 | Lapis | Berkas | Status | Isi |
 |---|---|---|---|
-| DB | `supabase/tests/0084_search_global_contract.sql` | **baru** | 0084-DB-1..DB-74 |
+| DB | `supabase/tests/0085_search_global_contract.sql` | **baru** | 0085-DB-1..DB-74 |
 | Data klien | `mobile/src/lib/__tests__/search.test.ts` | **baru** | BL10-L1..L14 |
 | Hook | `mobile/src/hooks/__tests__/use-search-global.test.tsx` | **baru** | BL10-H01..H17 |
 | Layar | `mobile/src/app/(app)/__tests__/search.test.tsx` | **baru** | BL10-UI-01..UI-17 |
 | Regresi (tidak diubah) | `mobile/src/hooks/__tests__/use-search.test.tsx`, `mobile/src/lib/__tests__/governance-admin.test.ts`, `mobile/src/app/(app)/__tests__/fase8-settings-screens.test.tsx`, `mobile/src/lib/__tests__/push-route-resolver.test.ts`, `mobile/src/components/__tests__/app-header.test.tsx` | hijau tanpa edit | harness NG-6/NG-7 |
 | Regresi (satu-satunya yang sah berubah) | `mobile/src/app/(app)/__tests__/fase8-lifecycle-screens.test.tsx` | dua test dipindah | `describe('search')` ~383-399 + mock `@/hooks/use-search` ~37-42 |
 
-Berkas produksi yang dibuat/diubah: `supabase/migrations/0084_search_global.sql` (baru), `mobile/src/lib/search.ts` (baru), `mobile/src/hooks/use-search-global.ts` (baru), `mobile/src/app/(app)/search.tsx` (ditulis ulang), `mobile/src/lib/database.types.ts` (regen).
+Berkas produksi yang dibuat/diubah: `supabase/migrations/0085_search_global.sql` (baru), `mobile/src/lib/search.ts` (baru), `mobile/src/hooks/use-search-global.ts` (baru), `mobile/src/app/(app)/search.tsx` (ditulis ulang), `mobile/src/lib/database.types.ts` (regen).
 
 ---
 
@@ -123,7 +123,7 @@ Yang harus dilihat:
 
 **Gagal ⇒ berhenti.** Simpan output di scratchpad sebagai bukti keputusan.
 
-**0.3 — digest NG-6.** Rekam `md5(prosrc)` `search_cards` untuk dipakai di blok `0084-DB-74`.
+**0.3 — digest NG-6.** Rekam `md5(prosrc)` `search_cards` untuk dipakai di blok `0085-DB-74`.
 
 ---
 
@@ -131,8 +131,8 @@ Yang harus dilihat:
 
 | Langkah | Jenis | Berkas | Test |
 |---|---|---|---|
-| 1 | **red** | `supabase/tests/0084_search_global_contract.sql` | `0084-DB-1..DB-5` |
-| 2 | **green** | `supabase/migrations/0084_search_global.sql` | idem hijau |
+| 1 | **red** | `supabase/tests/0085_search_global_contract.sql` | `0085-DB-1..DB-5` |
+| 2 | **green** | `supabase/migrations/0085_search_global.sql` | idem hijau |
 | 3 | refactor | — | runner penuh |
 
 **DB-1** tanda tangan persis via `pg_get_function_arguments`. **DB-2** `prosecdef = true` ∧ `provolatile = 's'` ∧ `proconfig` memuat `search_path=`. **DB-3** sembilan kolom keluaran berurutan + tipe via `pg_get_function_result`. **DB-4** tidak ada kolom `payload` (larangan jsonb §6.2). **DB-5** ACL: `authenticated` boleh EXECUTE, `anon` dan `public` tidak (FR-35).
@@ -377,8 +377,8 @@ do $$
 declare fails text := '';
 begin
   …
-  if fails <> '' then raise exception 'FAIL 0084-DB-n: %', fails; end if;
-  raise notice 'PASS 0084-DB-n';
+  if fails <> '' then raise exception 'FAIL 0085-DB-n: %', fails; end if;
+  raise notice 'PASS 0085-DB-n';
 end $$;
 ```
 
@@ -447,7 +447,7 @@ Konvensi wajib repo: `// eslint-disable-next-line import/first` di atas import y
 10. **React Compiler lint.** Debounce via `useEffect` + `setState` berpotensi memicu `react-hooks/set-state-in-effect` (ERROR di CI, luput dari jest/tsc). Salin bentuk `use-search-messages.ts` persis dan jalankan `npm run lint`.
 11. **Flake CI.** `test:ci` merah 2× sementara lokal hijau ⇒ curigai **race** press-sebelum-query-resolve, bukan OOM; deploy staging bisa di-skip diam-diam.
 12. **rename-guard.** `scripts/no-old-names.sh` memblokir `deploy-staging` bila migrasi/wiki baru menyebut nama pra-0045. Literal warisan seperti `action_plan_instance` di §6.4 adalah **nilai data** — pastikan konteks/EXCLUDES tidak membuat guard merah.
-13. **ACL & DROP.** Jangan `DROP … CASCADE` di 0084 — ACL RPC akan reset ke PUBLIC EXECUTE. Gunakan `create or replace` + blok revoke/grant FR-35.
+13. **ACL & DROP.** Jangan `DROP … CASCADE` di 0085 — ACL RPC akan reset ke PUBLIC EXECUTE. Gunakan `create or replace` + blok revoke/grant FR-35.
 14. **Staging tertinggal.** CI tidak `db push`; verifikasi **efek** di schema staging (fungsi + ACL), bukan isi `schema_migrations`.
 
 ---
@@ -470,7 +470,7 @@ Konvensi wajib repo: `// eslint-disable-next-line import/first` di atas import y
 9. Isi kolom `subtitle`/`snippet`/`status` untuk 7 scope card tidak diassert (§6.3 mewajibkan subtitle & snippet NULL, status = status baris). DB-6 hanya memeriksa title/parent_id/sort_ts/sort_id, sehingga cabang yang membocorkan description/notes ke snippet lolos.
 10. Case-folding non-ASCII dan perbedaan `ilike` (search_global) vs `lower() like` (search_cards 0046:2120) tidak diuji sama sekali.
 11. Tabrakan UUID lintas scope tidak diuji di UI: dua hit dengan `id` sama pada scope berbeda (keyExtractor `scope:id`).
-12. Scope tak dikenal DARI SERVER: bila DB staging sudah punya 0085/0086 sementara bundle app masih PR-1, `search_global` mengembalikan scope yang layar belum dukung tap-nya. Skew app-vs-DB nyata di proyek ini, tanpa test.
+12. Scope tak dikenal DARI SERVER: bila DB staging sudah punya 0086/0087 sementara bundle app masih PR-1, `search_global` mengembalikan scope yang layar belum dukung tap-nya. Skew app-vs-DB nyata di proyek ini, tanpa test.
 13. FR-34 (observability via logger seam terstruktur: JSON, requestId, hanya metrik agregat, dilarang melog isi query/PII) sama sekali tidak ada di rencana — tidak ada langkah, file, maupun test. `mobile/src/lib/logger.ts` sudah dipakai errors.ts/activation-check.ts. Ini MUST §5.7 sekaligus aturan global proyek.
 14. FR-23 (pill 'Cari' di header global → /search) tidak diuji; app-header.test.tsx hanya terdaftar sebagai regresi 'tidak disentuh'.
 15. `/inbox/[roomId]` menghormati `?highlight=` tidak diverifikasi. UI-14 hanya mengassert URL yang di-push; bila layar inbox mengabaikan param itu, PR-1 mengirim deep link mati tanpa satu test pun merah.
@@ -478,7 +478,7 @@ Konvensi wajib repo: `// eslint-disable-next-line import/first` di atas import y
 17. EE-12 (sesi kadaluwarsa) dan EE-13 (offline → cache terakhir) tidak diuji; wrapper test memakai `gcTime: 0` yang justru meniadakan perilaku EE-13.
 18. Jalur biaya/timeout: 8 cabang `ilike '%…%'` di atas 7 tabel tanpa index trigram (NG-13) tidak punya guard test. Kode 57014 hanya di-mock di lapis hook (H08); preflight EXPLAIN hanya untuk delegasi chat, tidak untuk cabang card.
 19. Kelayakan fixture A4 (`profiles.organization_id` NULL) tidak diverifikasi. Bila kolom NOT NULL atau trigger 0083 menolak, seluruh harness fail-closed (6 blok × 7 scope) tidak dapat dibangun — harus jadi item preflight.
-20. ACL: tidak ada assertion untuk `service_role`, tidak ada test pemulihan ACL bila kelak dipakai DROP+CREATE, dan tidak ada langkah/test untuk reload schema cache PostgREST setelah 0084 (PGRST202 di staging hanya state UI ter-mock).
+20. ACL: tidak ada assertion untuk `service_role`, tidak ada test pemulihan ACL bila kelak dipakai DROP+CREATE, dan tidak ada langkah/test untuk reload schema cache PostgREST setelah 0085 (PGRST202 di staging hanya state UI ter-mock).
 
 ### 9.2 Kekhawatiran atas rencana (14)
 
@@ -494,7 +494,7 @@ Konvensi wajib repo: `// eslint-disable-next-line import/first` di atas import y
 10. [GUARD GANDA] `q` yang sudah di-btrim+truncate diteruskan ke search_chat_messages yang menerapkan lagi btrim/truncate/escape sendiri. Idempoten hari ini, tetapi tidak ada test yang mengunci bahwa cabang card dan chat mencocokkan prefiks 200 char yang SAMA (query 250 char yang berbeda pada char 201-250).
 11. [PAGING CHAT] DB-64 (tanpa duplikasi/kehilangan di batas halaman) hanya untuk goal. Cabang chat memakai jalur cursor yang berbeda total (argumen ke-4/5 milik 0075), justru yang paling mungkin salah. Butuh DB-64 versi chat.
 12. [WAKTU & FLAKE] ~17 kasus hook memakai debounce 250 ms dengan timer nyata; H02 bahkan mengassert 'segera setelah rerender belum dipanggil'. Digabung riwayat ci-flake-test-ci dan rn-css-pressable-test-blank-render, wave 6 berisiko flake tertinggi. Pertimbangkan menyuntikkan nilai debounce lewat opsi hook (default 250) agar test dapat memakai 0-10 ms tanpa fake timers.
-13. [URUTAN GERBANG] `no-old-names.sh` baru dijalankan di langkah terakhir, padahal 0084 dan amandemen wiki hampir pasti memuat literal warisan (`action_plan_instance` di tabel dispatch §6.4). Jalankan segera setelah migrasi ditulis — memori rename-guard-gates-deploy: biayanya staging merah dan tidak ter-deploy.
+13. [URUTAN GERBANG] `no-old-names.sh` baru dijalankan di langkah terakhir, padahal 0085 dan amandemen wiki hampir pasti memuat literal warisan (`action_plan_instance` di tabel dispatch §6.4). Jalankan segera setelah migrasi ditulis — memori rename-guard-gates-deploy: biayanya staging merah dan tidak ter-deploy.
 14. [GERBANG TANPA KRITERIA] Rencana tidak menetapkan siapa yang memutuskan bila PREFLIGHT-2 (EXPLAIN OQ-11) gagal, dan tidak menetapkan ambang kuantitatif yang disepakati sebelumnya. Tanpa itu, gerbang keras yang benar secara prinsip akan diputuskan sendiri oleh implementor di tengah jalan.
 
 ### 9.3 Prioritas penutupan (bacaan saya)
