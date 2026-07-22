@@ -20,6 +20,13 @@ export const NOTIFICATION_TYPES = [
   'deadline_change_revision_requested',
   // B-1 score-period-end-nudge (migrasi 0081) — pengingat periode skoring akan/sudah berakhir.
   'period_closing_reminder',
+  // BL-07 (migrasi 0084) — tiga jenis §28 yang sebelumnya tak punya emitter sama sekali.
+  // 'evidence_submitted' HANYA menyala di jalur review_required = false (D-BL07-1); saat review
+  // diperlukan, reviewer tetap menerima 'review_request' seperti biasa dan tidak dinotifikasi dua kali.
+  'evidence_submitted',
+  // 'deadline_overdue' = fakta turunan (deadline < org_today), BUKAN status kartu (D-BL07-2).
+  'deadline_overdue',
+  'permission_changed',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -66,6 +73,9 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   deadline_change_rejected: 'Perubahan Deadline Ditolak',
   deadline_change_revision_requested: 'Perubahan Deadline Perlu Revisi',
   period_closing_reminder: 'Periode Skoring',
+  evidence_submitted: 'Bukti Dikirim',
+  deadline_overdue: 'Deadline Terlewat',
+  permission_changed: 'Hak Akses Berubah',
 };
 
 export const NOTIFICATION_TYPE_TONE: Record<
@@ -88,6 +98,12 @@ export const NOTIFICATION_TYPE_TONE: Record<
   // 'warn', bukan 'danger': periode terlambat memang mendesak tapi bisa diperbaiki kapan saja
   // dengan menekan Finalisasi — bukan kondisi rusak.
   period_closing_reminder: 'warn',
+  // 'info': bukti masuk pada jalur tanpa review adalah kabar netral bagi pembuat card —
+  // tidak ada yang perlu ditindak, hanya perlu diketahui.
+  evidence_submitted: 'info',
+  // 'danger' sejajar instance_missed — keduanya berarti deadline sudah lewat.
+  deadline_overdue: 'danger',
+  permission_changed: 'info',
 };
 
 // ---------------------------------------------------------------- tabs
@@ -122,9 +138,13 @@ export function notificationTypesForTab(tab?: NotificationTab): NotificationType
         'deadline_change_revision_requested',
         // Butuh aksi admin (tekan Finalisasi) — bukan sekadar informasi.
         'period_closing_reminder',
+        // Deadline sudah lewat → PIC memang harus bertindak.
+        'deadline_overdue',
       ];
     case 'review':
-      return ['review_request', 'approved', 'rejected'];
+      // evidence_submitted masuk sini, BUKAN 'perlu_tindakan': ia justru menandai submission
+      // yang tidak memerlukan review, jadi tak ada aksi yang dituntut dari penerimanya.
+      return ['review_request', 'approved', 'rejected', 'evidence_submitted'];
     case 'deadline':
       return [
         'deadline_reminder',
@@ -132,15 +152,22 @@ export function notificationTypesForTab(tab?: NotificationTab): NotificationType
         'deadline_change_rejected',
         // Berbasis tanggal → wajar dicari di tab ini juga.
         'period_closing_reminder',
+        'deadline_overdue',
       ];
     case 'komentar':
       return ['comment', 'mention'];
     case 'terlewat':
-      return ['instance_missed'];
+      // instance_missed = instance repeat yang terlewat (punya status 'missed');
+      // deadline_overdue = tugas one-time yang lewat deadline (TANPA status — D-BL07-2).
+      // Berbeda mekanisme, satu arti bagi user, jadi satu tab.
+      return ['instance_missed', 'deadline_overdue'];
     case 'repeat':
       return ['repeat_due'];
     case 'governance':
-      return ['governance_warning'];
+      // permission_changed ditaruh di sini karena kontrol akses adalah domain governance.
+      // Tab ini memfilter notifikasi milik user sendiri, jadi menempatkannya di sini tidak
+      // membocorkan apa pun — penerimanya memang orang yang izinnya berubah.
+      return ['governance_warning', 'permission_changed'];
   }
 }
 

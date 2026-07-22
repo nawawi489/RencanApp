@@ -24,6 +24,8 @@ import {
   unreadCount,
   type NotificationTab,
 } from '../notifications';
+// eslint-disable-next-line import/first -- sama seperti di atas: harus setelah jest.mock
+import { PUSH_WORTHY_TYPES } from '../push-notifications';
 
 /**
  * Builder query thenable (B5.1): SEMUA metode chainable mengembalikan builder; builder sendiri
@@ -80,17 +82,27 @@ describe('notificationTypesForTab', () => {
   });
 
   it('[4] tiap tab non-semua memetakan ke tipe spesifik', () => {
-    expect(notificationTypesForTab('review')).toEqual(['review_request', 'approved', 'rejected']);
+    expect(notificationTypesForTab('review')).toEqual([
+      'review_request',
+      'approved',
+      'rejected',
+      // BL-07: submission tanpa review — kabar, bukan tuntutan aksi.
+      'evidence_submitted',
+    ]);
     expect(notificationTypesForTab('deadline')).toEqual([
       'deadline_reminder',
       'deadline_change_approved',
       'deadline_change_rejected',
       // B-1: pengingat periode berbasis tanggal → muncul di tab deadline juga.
       'period_closing_reminder',
+      'deadline_overdue',
     ]);
-    expect(notificationTypesForTab('terlewat')).toEqual(['instance_missed']);
+    expect(notificationTypesForTab('terlewat')).toEqual(['instance_missed', 'deadline_overdue']);
     expect(notificationTypesForTab('repeat')).toEqual(['repeat_due']);
-    expect(notificationTypesForTab('governance')).toEqual(['governance_warning']);
+    expect(notificationTypesForTab('governance')).toEqual([
+      'governance_warning',
+      'permission_changed',
+    ]);
     expect(notificationTypesForTab('komentar')).toEqual(['comment', 'mention']);
     expect(notificationTypesForTab('perlu_tindakan')).toEqual([
       'review_request',
@@ -100,7 +112,38 @@ describe('notificationTypesForTab', () => {
       'deadline_change_revision_requested',
       // B-1: butuh aksi admin (tekan Finalisasi), bukan sekadar informasi.
       'period_closing_reminder',
+      'deadline_overdue',
     ]);
+  });
+
+  // BL-07 / PRD §28 — tiga tipe yang sebelumnya tak punya emitter sama sekali (migrasi 0084).
+  it('[BL07-1] tiga tipe baru ada di NOTIFICATION_TYPES + LABEL + TONE', () => {
+    for (const t of ['evidence_submitted', 'deadline_overdue', 'permission_changed'] as const) {
+      expect(NOTIFICATION_TYPES).toContain(t);
+      expect(NOTIFICATION_TYPE_LABEL[t]).toBeTruthy();
+      expect(NOTIFICATION_TYPE_TONE[t]).toBeTruthy();
+    }
+  });
+
+  it('[BL07-2] deadline_overdue bertone danger, sejajar instance_missed', () => {
+    expect(NOTIFICATION_TYPE_TONE.deadline_overdue).toBe('danger');
+    expect(NOTIFICATION_TYPE_TONE.deadline_overdue).toBe(NOTIFICATION_TYPE_TONE.instance_missed);
+  });
+
+  it('[BL07-3] evidence_submitted BUKAN di perlu_tindakan — tidak menuntut aksi', () => {
+    // D-BL07-1: tipe ini justru menandai submission yang TIDAK memerlukan review. Menaruhnya
+    // di perlu_tindakan akan menyuruh penerimanya melakukan sesuatu yang tak ada.
+    expect(notificationTypesForTab('perlu_tindakan')).not.toContain('evidence_submitted');
+    expect(notificationTypesForTab('review')).toContain('evidence_submitted');
+  });
+
+  it('[BL07-4] tiga tipe baru TIDAK push-worthy (is_push_worthy DB belum memuatnya)', () => {
+    // Daftar push client wajib cermin fallback `is_push_worthy` di DB. 0084 sengaja tidak
+    // menyentuh fungsi itu (0081 belum mendarat di staging), jadi client tidak boleh
+    // mendahuluinya — persis kesalahan yang membuat period_closing_reminder menggantung.
+    for (const t of ['evidence_submitted', 'deadline_overdue', 'permission_changed'] as const) {
+      expect(PUSH_WORTHY_TYPES).not.toContain(t);
+    }
   });
 
   it('[ISSUE-005-10a] tipe DCR ada di NOTIFICATION_TYPES + LABEL + TONE (dulu silent-render)', () => {
@@ -166,11 +209,16 @@ describe('listNotifications', () => {
     expect(rows).toEqual([{ id: 'n1' }]);
   });
 
-  it('[9] tab review: tambah .in(type, [review_request, approved, rejected])', async () => {
+  it('[9] tab review: tambah .in(type, [review_request, approved, rejected, evidence_submitted])', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
     await listNotifications('review');
-    expect(calls.in).toEqual(['type', ['review_request', 'approved', 'rejected']]);
+    // Daftar sengaja dikunci persis (bukan toContain): filter tab adalah kontrak query, dan
+    // tipe yang diam-diam masuk/keluar mengubah apa yang user lihat tanpa jejak.
+    expect(calls.in).toEqual([
+      'type',
+      ['review_request', 'approved', 'rejected', 'evidence_submitted'],
+    ]);
   });
 
   it('[ISSUE-005-8a] tab perlu_tindakan menambah .is(resolved_at, null) supaya notif basi disembunyikan', async () => {

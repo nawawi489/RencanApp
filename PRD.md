@@ -1120,6 +1120,12 @@ Jenis Notifications:
 8. Warning governance hanya untuk admin/user berwenang.
 9. Repeat due today.
 
+Semantik yang ditetapkan (BL-07, keputusan owner 2026-07-22):
+
+1. **Item 2 "Bukti dikirim" hanya berlaku saat review tidak diperlukan.** Saat review diperlukan, peristiwa yang sama sudah dilaporkan oleh item 1 ke reviewer; dua notifikasi untuk satu submit adalah duplikasi, bukan kelengkapan. Penerima item 2 adalah pembuat card.
+2. **Item 4 "Deadline lewat" adalah jenis notifikasi, bukan status kartu.** Untuk Task one-time, "lewat" dihitung sebagai fakta turunan (`deadline` < hari ini pada zona waktu organisasi). Task one-time tidak memiliki status `missed`/`overdue`; hanya Task Instance (repeat) yang punya.
+3. **Item 7 "Aturan Pecah Target warning" dipenuhi oleh gerbang MBR inline, bukan oleh Notifications.** Kondisinya sinkron — peringatan tampil di layar pada saat user menekan tombol turunan, lewat pemeriksaan kepatuhan Aturan Pecah Target. Tidak ada notifikasi persisten untuk item ini, dan tidak boleh ditambahkan: notifikasi akan tiba setelah user meninggalkan konteks yang menyebabkannya.
+
 UX:
 
 1. Card tidak terlalu kecil sampai membuat stres.

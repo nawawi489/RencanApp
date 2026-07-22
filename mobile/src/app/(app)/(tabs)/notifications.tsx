@@ -57,6 +57,11 @@ const TYPE_ICON: Record<NotificationType, ComponentProps<typeof Ionicons>['name'
   deadline_change_rejected: 'close-circle-outline',
   deadline_change_revision_requested: 'refresh-outline',
   period_closing_reminder: 'trophy-outline',
+  evidence_submitted: 'document-attach-outline',
+  // Sengaja BEDA dari instance_missed ('alert-circle-outline'): keduanya berarti deadline lewat,
+  // tapi ikon berbeda membantu membedakan tugas one-time dari instance rutin dalam satu tab.
+  deadline_overdue: 'alarm-outline',
+  permission_changed: 'key-outline',
 };
 
 /** Waktu relatif ringkas (id-ID). Graceful pada tanggal invalid: string kosong. */
