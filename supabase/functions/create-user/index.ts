@@ -112,17 +112,38 @@ Deno.serve(async (req) => {
     return reply(500, { error: 'Gagal membuat user. Coba lagi.', requestId });
   }
 
-  // Pin role_template_id di profil user baru. Trigger handle_new_user (AFTER INSERT auth.users)
-  // jalan sebelum GoTrue meng-UPDATE app_metadata, jadi role_level belum tampak dan trigger
-  // jatuh ke default 'staff'. Kita perbaiki di sini pakai org milik actor + level yang diminta;
-  // fallback ke 'staff' bila tidak ketemu agar user tetap punya profil valid.
-  const { data: actorProfile } = await adminClient
+  // Pin role_template_id + organization_id di profil user baru. Trigger handle_new_user
+  // (AFTER INSERT auth.users) jalan sebelum GoTrue meng-UPDATE app_metadata, jadi role_level
+  // belum tampak dan trigger jatuh ke default 'staff' + org TERTUA (migrasi 0001, BL-14).
+  // Kita perbaiki di sini pakai org milik actor + level yang diminta.
+  //
+  // BL-14 §5: bila koreksi ini gagal, user MENDARAT DI ORG WARISAN TRIGGER — gejalanya
+  // workspace kosong akibat RLS, bukan error. Karena itu kegagalannya WAJIB terlihat oleh
+  // pemanggil lewat `warning` di body respons, bukan hanya di log server (log tidak sampai
+  // ke UI — itu persis cacat yang ditutup di sini).
+  //
+  // Bentuknya sukses+warning, BUKAN error: row auth.users sudah terlanjur ada di titik ini,
+  // jadi menjawab 5xx akan menghasilkan user hantu yang tidak terlihat oleh admin dan retry-nya
+  // pasti mentok 409 email_exists. Akun tetap valid dan bisa login — yang gagal hanya
+  // penempatannya, dan itu bisa dibetulkan manual lewat User & Permission.
+  const PLACEMENT_WARNING_MESSAGE =
+    'User dibuat, tetapi penempatan organisasi gagal — periksa manual di User & Permission sebelum membagikan akses.';
+  let placementFailure: string | null = null;
+
+  const { data: actorProfile, error: actorProfileError } = await adminClient
     .from('profiles')
     .select('organization_id')
     .eq('id', actorId)
     .single();
   const orgId = actorProfile?.organization_id ?? null;
-  if (orgId) {
+  if (!orgId) {
+    log('error', 'actor_org_missing', {
+      actorId,
+      userId: created.user.id,
+      code: (actorProfileError as { code?: string } | null)?.code,
+    });
+    placementFailure = 'actor_org_missing';
+  } else {
     const { data: roleRow } = await adminClient
       .from('role_templates')
       .select('id')
@@ -136,14 +157,20 @@ Deno.serve(async (req) => {
         .from('profiles')
         .update({ role_template_id: roleRow.id, organization_id: orgId })
         .eq('id', created.user.id);
-      if (profileError)
+      if (profileError) {
         log('error', 'profile_role_pin_failed', {
           actorId,
           userId: created.user.id,
           code: (profileError as { code?: string }).code,
         });
+        placementFailure = 'profile_role_pin_failed';
+      }
     } else {
+      // Sengaja TIDAK menulis organization_id sendirian di sini: role_template_id warisan
+      // trigger menunjuk template milik org lain, dan memindahkan org tanpa role-nya
+      // menghasilkan profil silang-org yang lebih sulit didiagnosis daripada dibiarkan utuh.
       log('warn', 'role_template_missing', { actorId, orgId, roleLevel });
+      placementFailure = 'role_template_missing';
     }
   }
 
@@ -159,6 +186,15 @@ Deno.serve(async (req) => {
   });
   if (auditError) log('error', 'audit_failed', { actorId, userId: created.user.id });
 
-  log('info', 'user_created', { actorId, userId: created.user.id, roleLevel });
-  return reply(200, { user_id: created.user.id, requestId });
+  log('info', 'user_created', {
+    actorId,
+    userId: created.user.id,
+    roleLevel,
+    placement: placementFailure ?? 'ok',
+  });
+  return reply(200, {
+    user_id: created.user.id,
+    requestId,
+    warning: placementFailure ? { code: placementFailure, message: PLACEMENT_WARNING_MESSAGE } : null,
+  });
 });

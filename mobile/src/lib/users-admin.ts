@@ -10,7 +10,33 @@ export type CreateOrgUserInput = {
   roleLevel: 'staff' | 'management' | 'c_level';
 };
 
-export type CreatedOrgUser = { user_id: string };
+/**
+ * Peringatan non-fatal dari Edge Function: akun BERHASIL dibuat, tetapi koreksi penempatan
+ * org/role setelah trigger `handle_new_user` gagal (BL-14 §5). User mendarat di org warisan
+ * trigger — gejalanya workspace kosong akibat RLS, bukan error — jadi ini harus terlihat di UI,
+ * bukan hanya di log server. `message` sudah berupa copy Indonesia terkurasi dari server;
+ * `code` untuk telemetry/diagnosa (`actor_org_missing` | `role_template_missing` |
+ * `profile_role_pin_failed`).
+ */
+export type CreateOrgUserWarning = { code: string; message: string };
+
+export type CreatedOrgUser = { user_id: string; warning: CreateOrgUserWarning | null };
+
+const PLACEMENT_WARNING_FALLBACK =
+  'User dibuat, tetapi penempatan organisasi gagal — periksa manual di User & Permission sebelum membagikan akses.';
+
+/** Normalisasi field `warning` yang opsional/berbentuk bebas dari respons function. */
+function readWarning(data: unknown): CreateOrgUserWarning | null {
+  const raw = (data as { warning?: unknown } | null)?.warning;
+  if (!raw || typeof raw !== 'object') return null;
+  const code = (raw as { code?: unknown }).code;
+  const message = (raw as { message?: unknown }).message;
+  if (typeof code !== 'string' || !code) return null;
+  return {
+    code,
+    message: typeof message === 'string' && message ? message : PLACEMENT_WARNING_FALLBACK,
+  };
+}
 
 /**
  * Baca pesan domain terkurasi dari body response FunctionsHttpError (duck-typing
@@ -41,5 +67,5 @@ export async function createOrgUser(input: CreateOrgUserInput): Promise<CreatedO
     const serverMessage = await readFunctionErrorMessage(error);
     throw new Error(serverMessage ?? 'Gagal membuat user. Periksa koneksi lalu coba lagi.');
   }
-  return data as CreatedOrgUser;
+  return { user_id: (data as { user_id: string }).user_id, warning: readWarning(data) };
 }
