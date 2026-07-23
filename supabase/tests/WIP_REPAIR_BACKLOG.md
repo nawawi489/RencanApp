@@ -67,6 +67,43 @@ pre-0045 tests hardcode.
   > run as `supabase_admin`, which a migration cannot do. Test z2 is kept and
   > passes in CI, but only because the local image never granted the privilege
   > in the first place — a vacuous pass, flagged in-file above the block.
+  >
+  > **Follow-up landed in the same PR:** migration `0091` +
+  > `0091_push_guardrail_g2_contract.sql`. See the escalation section below.
+
+## Guardrail G-2 — platform escalation required (2026-07-23)
+
+**We cannot fix this ourselves.** Verified, not inferred:
+
+- `net` is owned by `supabase_admin` on staging.
+- `postgres` is not a superuser and is **not** a member of `supabase_admin`.
+  The only elevated role it can assume, `supabase_privileged_role`, is not a
+  member either.
+- Running the REVOKE as `postgres` inside an explicit transaction and re-reading
+  the ACL before rollback: privileges unchanged, `WARNING: no privileges could
+  be revoked for "net"`. It is a silent no-op, not a partial success.
+- The Dashboard SQL editor connects as `postgres` too, so there is no manual
+  workaround either.
+
+**Ask Supabase support to run, as `supabase_admin` on the project:**
+
+```sql
+revoke usage on schema net from public, anon, authenticated;
+revoke execute on all functions in schema net from public, anon, authenticated;
+```
+
+Nothing in the app calls `net.*` from a client role — the only egress is the
+`push-fanout-drainer` cron command, which runs as `postgres` — so this is not
+expected to break anything. `0091_push_guardrail_g2_contract.sql` block (c)
+flips from `KNOWN GAP` to `PASS` once it lands.
+
+**Mitigation active in the meantime:** `net` is not PostgREST-exposed
+(`config.toml` declares no `[api]` schemas, so the default `public,
+graphql_public` applies), so the grant is only reachable through a bridge — a
+function in a schema we own that references `net.*`. Contract blocks (a) and (b)
+gate the absence of exactly that, as hard failures. Residual risk is therefore
+SQL injection into an existing function, which the pinned-`search_path`
+convention (migration `0069`) addresses separately.
 
 ## Un-quarantined (2026-07-19) — PR #107 merged, migration 0076 live
 
