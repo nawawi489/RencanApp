@@ -189,6 +189,19 @@ describe('interaksi', () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/goal/g1'));
   });
 
+  it('[BL10-UI-18] tap baris people → profil (BL-10b)', async () => {
+    // `ENTITY_ROUTE_SEGMENT` ber-key `CardEntityType` (7 tipe card) dan TIDAK BOLEH
+    // diubah (NG-7). Rute People karena itu ditangani terpisah di `hrefForHit`,
+    // pola yang sama dengan chat.
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'people', id: 'u9', title: 'Dewi Anggraini',
+                   subtitle: 'Analis Riset', sortId: 'u9' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByText('Dewi Anggraini'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/people-profile/u9'));
+  });
+
   it('[BL10-UI-14] tap baris chat → deep-link ke room dgn highlight', async () => {
     mockUseSearchGlobal.mockReturnValue(state({
       hits: [hit({ scope: 'chat', id: 'm1', parentId: 'r1', title: 'Ruang A', sortId: 'm1' })],
