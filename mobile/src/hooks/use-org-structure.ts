@@ -20,6 +20,11 @@ import {
   type TeamMemberWithProfile,
 } from '@/lib/org-structure';
 import { createPosition, createRoleTemplate } from '@/lib/governance-admin';
+import {
+  listProfilesWithManager,
+  setReportingLine,
+  type ProfileWithManager,
+} from '@/lib/reporting-line';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/lib/database.types';
 
@@ -74,6 +79,32 @@ export function useTeamMembers(teamId: string | null) {
     members: (q.data ?? []) as TeamMemberWithProfile[],
     isLoading: q.isLoading,
     isError: q.isError,
+  };
+}
+
+/**
+ * BL-19d — daftar anggota + atasannya. Query key `['reporting_line']` sengaja DI LUAR
+ * cabang `org_structure`: isinya profil, bukan struktur, dan invalidasi `org_structure`
+ * yang sering terjadi (buat Departemen/Tim) tidak ada urusannya dengan garis pelaporan.
+ */
+export function useReportingLines() {
+  const q = useQuery({ queryKey: ['reporting_line'], queryFn: listProfilesWithManager });
+  return {
+    people: (q.data ?? []) as ProfileWithManager[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
+}
+
+export function useReportingLineActions() {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (input: { userId: string; managerId: string | null }) => setReportingLine(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reporting_line'] }),
+  });
+  return {
+    setReportingLine: (input: { userId: string; managerId: string | null }) => m.mutateAsync(input),
+    isPending: m.isPending,
   };
 }
 

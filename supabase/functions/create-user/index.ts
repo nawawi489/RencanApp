@@ -39,7 +39,13 @@ Deno.serve(async (req) => {
 
   if (req.method !== 'POST') return reply(405, { error: 'Method tidak didukung.', requestId });
 
-  let body: { email?: string; password?: string; full_name?: string; role_level?: string };
+  let body: {
+    email?: string;
+    password?: string;
+    full_name?: string;
+    role_level?: string;
+    role_template_id?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -50,6 +56,7 @@ Deno.serve(async (req) => {
   const password = body.password ?? '';
   const fullName = (body.full_name ?? '').trim();
   const roleLevel = body.role_level ?? 'staff';
+  const roleTemplateId = (body.role_template_id ?? '').trim() || null;
 
   if (!EMAIL_RE.test(email)) return reply(400, { error: 'Format email tidak valid.', requestId });
   if (password.length < PASSWORD_MIN)
@@ -82,23 +89,76 @@ Deno.serve(async (req) => {
     return reply(403, { error: 'Anda tidak memiliki izin untuk melakukan tindakan ini.', requestId });
   }
 
-  if (roleLevel === 'c_level') {
-    const { data: callerLevel } = await userClient.rpc('user_role_level');
-    if (callerLevel !== 'ceo') {
-      log('warn', 'escalation_blocked', { actorId, roleLevel });
-      return reply(403, { error: 'Hanya CEO yang dapat membuat user dengan role C-Level.', requestId });
-    }
-  }
-
   const adminClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false },
   });
+
+  // BL-19d — Role Template kustom bisa dipilih. Sebelum ini endpoint selalu memungut
+  // baris seeded tertua per level, sehingga template kustom bisa DIBUAT tapi tidak
+  // pernah bisa DI-ASSIGN.
+  //
+  // Invarian keamanan: level efektif diturunkan dari BARIS TEMPLATE DI DB, tidak pernah
+  // dari `role_level` kiriman klien. Kalau level ikut dipercaya dari body, penyerang cukup
+  // mengirim template C-Level bersama `role_level: 'staff'` untuk melewati guard eskalasi —
+  // template kustom justru berubah jadi vektor eskalasi, kebalikan dari tujuan fitur ini.
+  let effectiveLevel = roleLevel;
+  let resolvedTemplateId: string | null = null;
+
+  if (roleTemplateId) {
+    const { data: actorOrgRow } = await adminClient
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', actorId)
+      .single();
+    const actorOrgId = actorOrgRow?.organization_id ?? null;
+    if (!actorOrgId) {
+      log('error', 'actor_org_missing_preflight', { actorId });
+      return reply(400, {
+        error: 'Organisasi Anda tidak ditemukan — tidak bisa memvalidasi Role Template.',
+        requestId,
+      });
+    }
+
+    // Template diambil DENGAN filter organisasi: tanpa itu, id template milik org lain
+    // akan diterima dan user baru mendarat memakai role milik tenant lain.
+    const { data: tpl } = await adminClient
+      .from('role_templates')
+      .select('id, level')
+      .eq('id', roleTemplateId)
+      .eq('organization_id', actorOrgId)
+      .maybeSingle();
+    if (!tpl?.id) {
+      log('warn', 'role_template_invalid', { actorId });
+      return reply(400, { error: 'Role Template tidak ditemukan di organisasi Anda.', requestId });
+    }
+
+    effectiveLevel = tpl.level as string;
+    resolvedTemplateId = tpl.id as string;
+  }
+
+  // Guard eskalasi berjalan atas level EFEKTIF, bukan level kiriman. Urutannya penting:
+  // template diresolusi lebih dulu supaya template ber-level 'ceo'/'c_level' terkena
+  // gerbang yang sama dengan permintaan level polos.
+  if (!ALLOWED_LEVELS.includes(effectiveLevel)) {
+    log('warn', 'escalation_blocked_level', { actorId, effectiveLevel });
+    return reply(403, {
+      error: 'Role Template dengan level CEO tidak bisa dipakai dari layar ini.',
+      requestId,
+    });
+  }
+  if (effectiveLevel === 'c_level') {
+    const { data: callerLevel } = await userClient.rpc('user_role_level');
+    if (callerLevel !== 'ceo') {
+      log('warn', 'escalation_blocked', { actorId, roleLevel: effectiveLevel });
+      return reply(403, { error: 'Hanya CEO yang dapat membuat user dengan role C-Level.', requestId });
+    }
+  }
 
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    app_metadata: { role_level: roleLevel },
+    app_metadata: { role_level: effectiveLevel },
     user_metadata: { full_name: fullName },
   });
 
@@ -144,14 +204,20 @@ Deno.serve(async (req) => {
     });
     placementFailure = 'actor_org_missing';
   } else {
-    const { data: roleRow } = await adminClient
-      .from('role_templates')
-      .select('id')
-      .eq('organization_id', orgId)
-      .eq('level', roleLevel)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    // Template pilihan dipakai apa adanya — sudah divalidasi milik org actor dan sudah
+    // melewati guard eskalasi di atas. Tanpa pilihan, perilaku lama dipertahankan:
+    // baris seeded TERTUA per level (`order created_at asc`), supaya pemanggil yang
+    // tidak mengirim `role_template_id` mendapat hasil yang persis sama seperti dulu.
+    const { data: roleRow } = resolvedTemplateId
+      ? { data: { id: resolvedTemplateId } }
+      : await adminClient
+          .from('role_templates')
+          .select('id')
+          .eq('organization_id', orgId)
+          .eq('level', effectiveLevel)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
     if (roleRow?.id) {
       const { error: profileError } = await adminClient
         .from('profiles')
@@ -169,7 +235,7 @@ Deno.serve(async (req) => {
       // Sengaja TIDAK menulis organization_id sendirian di sini: role_template_id warisan
       // trigger menunjuk template milik org lain, dan memindahkan org tanpa role-nya
       // menghasilkan profil silang-org yang lebih sulit didiagnosis daripada dibiarkan utuh.
-      log('warn', 'role_template_missing', { actorId, orgId, roleLevel });
+      log('warn', 'role_template_missing', { actorId, orgId, roleLevel: effectiveLevel });
       placementFailure = 'role_template_missing';
     }
   }
@@ -182,14 +248,14 @@ Deno.serve(async (req) => {
     entity_type: 'user',
     entity_id: created.user.id,
     action: 'create',
-    detail: { role_level: roleLevel },
+    detail: { role_level: effectiveLevel },
   });
   if (auditError) log('error', 'audit_failed', { actorId, userId: created.user.id });
 
   log('info', 'user_created', {
     actorId,
     userId: created.user.id,
-    roleLevel,
+    roleLevel: effectiveLevel,
     placement: placementFailure ?? 'ok',
   });
   return reply(200, {

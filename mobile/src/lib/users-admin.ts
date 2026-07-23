@@ -8,6 +8,12 @@ export type CreateOrgUserInput = {
   password: string;
   fullName: string;
   roleLevel: 'staff' | 'management' | 'c_level';
+  /**
+   * BL-19d — Role Template kustom (opsional). Bila diisi, server menurunkan level EFEKTIF
+   * dari baris template di DB dan mengabaikan `roleLevel` untuk keperluan guard eskalasi.
+   * Klien tidak pernah jadi sumber kebenaran level.
+   */
+  roleTemplateId?: string | null;
 };
 
 /**
@@ -60,6 +66,7 @@ export async function createOrgUser(input: CreateOrgUserInput): Promise<CreatedO
       password: input.password,
       full_name: input.fullName.trim(),
       role_level: input.roleLevel,
+      ...(input.roleTemplateId ? { role_template_id: input.roleTemplateId } : {}),
     },
   });
   if (error) {

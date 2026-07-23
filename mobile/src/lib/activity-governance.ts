@@ -100,6 +100,8 @@ export const ACTIVITY_LOG_ACTION_LABEL: Record<string, string> = {
   permission_scope_updated: 'Scope Permission Diubah',
   profile_updated: 'Profil Diubah',
   push_token_transferred: 'Token Push Dipindahkan',
+  reporting_line_cleared: 'Atasan Dilepas',
+  reporting_line_set: 'Atasan Ditetapkan',
   review_approve: 'Review Disetujui',
   review_instance_approve: 'Review Instance Disetujui',
   review_instance_reject: 'Review Instance Ditolak',

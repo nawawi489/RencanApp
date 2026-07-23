@@ -8,7 +8,9 @@ import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
+import { OptionPicker } from '@/components/option-picker';
 import { Button, GuidanceNote, LabeledInput, SectionCard, SkeletonList } from '@/components/ui';
+import { useRoleTemplates } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
 import { useCreateUserAdmin } from '@/hooks/use-users-admin';
 import { surfaceServerError } from '@/lib/errors';
@@ -23,6 +25,10 @@ const ROLE_OPTIONS: { value: RoleLevel; label: string }[] = [
   { value: 'c_level', label: 'C-Level' },
 ];
 
+const LEVEL_LABEL: Record<string, string> = {
+  staff: 'Staff', management: 'Management', c_level: 'C-Level', ceo: 'CEO',
+};
+
 export default function SettingsUserNewScreen() {
   const router = useRouter();
   const { profile, isLoading: profileLoading, can } = useProfile();
@@ -32,7 +38,9 @@ export default function SettingsUserNewScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [roleLevel, setRoleLevel] = useState<RoleLevel>('staff');
+  const [roleTemplateId, setRoleTemplateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { roleTemplates } = useRoleTemplates();
 
   if (profileLoading) {
     return (
@@ -75,6 +83,7 @@ export default function SettingsUserNewScreen() {
         password,
         fullName: fullName.trim(),
         roleLevel,
+        roleTemplateId,
       });
       // Akun berhasil dibuat tapi penempatan org/role-nya gagal (BL-14 §5). Jangan tampilkan
       // sebagai sukses biasa: user ada di org yang salah dan gejalanya nanti workspace kosong,
@@ -170,6 +179,32 @@ export default function SettingsUserNewScreen() {
               </Text>
             )}
           </View>
+
+          {/* BL-19d — Role Template kustom akhirnya bisa dipilih; sebelumnya bisa dibuat
+              tapi tak pernah bisa di-assign karena server selalu memungut baris seeded.
+              Template ber-level `ceo` TIDAK ditawarkan: server menolaknya, dan menawarkan
+              pilihan yang pasti gagal itu jebakan. Level template menang atas chip di atas
+              — dinyatakan eksplisit supaya admin tidak menyangka chip-nya yang berlaku. */}
+          <OptionPicker
+            label="Role Template (opsional)"
+            options={roleTemplates
+              .filter((t) => t.level !== 'ceo')
+              .map((t) => ({
+                value: t.id,
+                label: t.name,
+                hint: `Level ${LEVEL_LABEL[t.level] ?? t.level}${t.is_system ? ' · sistem' : ''}`,
+              }))}
+            value={roleTemplateId}
+            onChange={setRoleTemplateId}
+            placeholder="Pakai template bawaan sesuai Role"
+            clearLabel="Pakai template bawaan sesuai Role"
+            emptyText="Belum ada Role Template. Buat di Organisasi → Role."
+          />
+          {roleTemplateId ? (
+            <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+              Level user mengikuti Role Template yang dipilih, bukan pilihan Role di atas.
+            </Text>
+          ) : null}
         </SectionCard>
 
         {error ? (
