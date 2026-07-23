@@ -42,6 +42,10 @@
 --     terkunci setelah aktivasi karena keduanya dasar perhitungan skor. Pergantian
 --     PIC dicatat ke activity log — atribusi skor ikut bergeser, jadi harus bisa
 --     ditelusuri.
+--
+-- Dikunci `supabase/tests/0093_self_service_write_paths_contract.sql` (0093-DB-1..11).
+-- 0093-DB-3 diverifikasi MERAH dengan mengembalikan grant + policy pra-0093: staff
+-- berhasil menyetel `role_template_id` miliknya sendiri jadi CEO.
 -- =============================================================================
 
 -- ============================================================ 1. Tutup lubang di `profiles`
@@ -172,16 +176,20 @@ begin
     raise exception 'Periode selesai tidak boleh mendahului periode mulai.';
   end if;
 
-  if v_name is distinct from g.name then v_changed := v_changed || 'name'; end if;
+  -- `::text` WAJIB pada tiap literal. Tanpa cast, `text[] || 'name'` membuat parser
+  -- memilih operator array||array dan mem-parse literalnya sebagai array — gagal saat
+  -- runtime dengan `malformed array literal: "name"`, hanya pada cabang yang benar-benar
+  -- dijalankan. Ditemukan 0093-DB-8/DB-9, bukan oleh `create function` yang tetap sukses.
+  if v_name is distinct from g.name then v_changed := v_changed || 'name'::text; end if;
   if nullif(trim(coalesce(p_description,'')),'') is distinct from g.description then
-    v_changed := v_changed || 'description';
+    v_changed := v_changed || 'description'::text;
   end if;
-  if p_pic_id is distinct from g.pic_id then v_changed := v_changed || 'pic_id'; end if;
+  if p_pic_id is distinct from g.pic_id then v_changed := v_changed || 'pic_id'::text; end if;
   if p_period_start is distinct from g.period_start
      or p_period_end is distinct from g.period_end then
-    v_changed := v_changed || 'period';
+    v_changed := v_changed || 'period'::text;
   end if;
-  if p_target_value is distinct from g.target_value then v_changed := v_changed || 'target_value'; end if;
+  if p_target_value is distinct from g.target_value then v_changed := v_changed || 'target_value'::text; end if;
 
   update public.goals
      set name         = v_name,
