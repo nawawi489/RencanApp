@@ -45,7 +45,14 @@ pre-0045 tests hardcode.
   day 0063 shipped, and nothing caught it.
 
   Its quarantine note blamed z2/z3 (schema-net REVOKE and `vault.create_secret`
-  needing `supabase_admin` on local). **Both were wrong.** The actual rot was
+  needing `supabase_admin` on local). **z3 was wrong; z2 was right.** A fresh
+  bootstrap really does leak `net` USAGE to `anon`/`authenticated`, and the
+  hard-fail z2 assertion really does go red on it (CI build #333). An early
+  revision of this repair claimed z2 passed on a fresh stack — that reading came
+  from a long-lived local DB that happens not to carry the grant, and CI settled
+  it. z2 is now environment-aware rather than hard-fail. What the old note *did*
+  get backwards is the direction: hosted leaks too, so the migration's REVOKE
+  no-ops there, not on local. The actual rot behind everything was
   every `insert into auth.users(id)` failing since 0083 (`handle_new_user`
   refuses to infer an org once >1 organisation exists). Execution died at block
   (j) under `ON_ERROR_STOP`, so z2 was merely the first thing *nobody had ever
@@ -65,8 +72,9 @@ pre-0045 tests hardcode.
   > defense-in-depth rather than a directly reachable hole, but the guardrail
   > the migration claims to install does not exist. Closing it needs a REVOKE
   > run as `supabase_admin`, which a migration cannot do. Test z2 is kept and
-  > passes in CI, but only because the local image never granted the privilege
-  > in the first place — a vacuous pass, flagged in-file above the block.
+  > is now environment-aware: it reports `KNOWN GAP` in CI and on staging (owner
+  > out of reach) and hard-fails only where we hold owner rights and the
+  > privilege still leaks. It never reports success on a leak.
   >
   > **Follow-up landed in the same PR:** migration `0091` +
   > `0091_push_guardrail_g2_contract.sql`. See the escalation section below.
