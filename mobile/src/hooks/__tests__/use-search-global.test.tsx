@@ -149,6 +149,15 @@ describe('useSearchGlobal', () => {
     await act(async () => { b.unmount(); });
   });
 
+
+  it('[BL10-H18] meneruskan actorId ke lapis data (penghitung per-aktor FR-34)', async () => {
+    // Tanpa ini, penghitung per-aktor FR-34 selalu null dan kontrol kompensasi atas
+    // nol-emisi audit (BL10-OQ-09) tidak pernah benar-benar ada.
+    const { W } = wrapper();
+    await renderHook(() => useSearchGlobal('abc', { debounceMs: 0 }), { wrapper: W });
+    await waitFor(() => expect(mockSearchGlobal).toHaveBeenCalled());
+    expect(mockSearchGlobal.mock.calls[0][0].actorId).toBe('u1');
+  });
   it('[BL10-H10] tanpa realtime channel (Search read-only, tidak berlangganan)', async () => {
     const { W } = wrapper();
     await renderHook(() => useSearchGlobal('abc', { debounceMs: 0 }), { wrapper: W });
