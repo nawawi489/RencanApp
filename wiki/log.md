@@ -2467,3 +2467,10 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **Gate BL-17 menahan tepat waktu.** Kontrak `activity-log-actions.contract.test.ts` memindai literal `action` yang di-emit migrasi dan menuntut tiap satunya punya label Indonesia di klien; `reporting_line_set`/`reporting_line_cleared` dari 0094 langsung menyala sebagai `missing`. Suite bertarget hijau, run penuh merah — kelas yang sama dengan mock parsial di BL-19b: **jalankan suite penuh sebelum menyatakan selesai.** Label ditambahkan, bukan gate-nya yang dilonggarkan.
 - `settings-user-new.test.tsx` ikut diperbarui: payload sekarang selalu membawa `roleTemplateId`, dan `null` (pakai template bawaan sesuai Role) dinyatakan **eksplisit** alih-alih tersirat lewat absennya field.
 - Verifikasi: DB contract **45 lolos, 0 gagal** (naik dari 44), `[D-01..D-08]` 8/8, `tsc` bersih, lint 0 error, rename-guard clean.
+
+## [2026-07-23] update | Edge Function `create-user` v3 di-deploy ke staging (kontrak BL-19d)
+
+- **Pre-flight sebelum menimpa**: isi versi 2 yang ter-deploy dibandingkan dengan repo lebih dulu dan terbukti identik dengan keadaan **sebelum** perubahan BL-19d — jadi tidak ada perubahan di luar repo yang ikut terhapus. Menimpa function tanpa memeriksa isinya lebih dulu adalah cara paling mudah menghilangkan hotfix yang pernah dipasang manual.
+- **`verify_jwt: true` dipertahankan** eksplisit. Deploy yang tidak menyebutkan flag ini berisiko menurunkannya ke default dan membuka endpoint admin tanpa autentikasi.
+- Versi 3 ACTIVE; isi ter-deploy diverifikasi ulang setelah deploy dan cocok dengan file repo, termasuk invarian keamanannya (level efektif dari baris template DB, filter `organization_id`, guard eskalasi setelah resolusi template).
+- **Urutan deploy sekarang benar**: function mendahului app. Kalau terbalik, picker Role Template terkirim ke function lama yang mengabaikannya dan diam-diam jatuh ke template seeded — kelas kegagalan senyap yang jadi tema seluruh rangkaian BL-19.
