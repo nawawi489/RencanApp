@@ -32,8 +32,29 @@ export function orgTimezoneLabel(timezone: string | null | undefined): string {
 }
 
 /**
- * Zona waktu organisasi user yang sedang login. Read-only — tidak ada jalur tulis dari
- * Repeat Setting; perubahan zona adalah setting organisasi.
+ * Pilihan zona untuk layar Profil Organisasi (BL-19c). Sengaja hanya tiga zona Indonesia:
+ * server menerima zona APA PUN yang dikenal katalog Postgres (±600 nama), dan daftar
+ * sepanjang itu di picker mobile lebih mudah salah pilih daripada berguna.
+ *
+ * Zona di luar daftar TIDAK hilang: `orgTimezoneOptions()` menyisipkan nilai yang sedang
+ * dipakai bila belum ada — picker yang diam-diam membuang nilai tersimpan akan menampilkan
+ * "kosong" untuk kolom yang server selalu punya isinya, lalu menimpanya saat disimpan.
+ */
+const TIMEZONE_CHOICES = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'] as const;
+
+export function orgTimezoneOptions(current: string | null | undefined): {
+  value: string;
+  label: string;
+}[] {
+  const zone = current?.trim() || DEFAULT_ORG_TIMEZONE;
+  const values: string[] = [...TIMEZONE_CHOICES];
+  if (!values.includes(zone)) values.unshift(zone);
+  return values.map((v) => ({ value: v, label: orgTimezoneLabel(v) }));
+}
+
+/**
+ * Zona waktu organisasi user yang sedang login. Read-only dari sisi Repeat Setting —
+ * perubahan zona adalah setting organisasi (lihat `/settings-organization`).
  */
 export async function getOrgTimezone(): Promise<string> {
   const { orgId } = await getOrgContext();

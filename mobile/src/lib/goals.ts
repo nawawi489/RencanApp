@@ -158,6 +158,38 @@ export async function activateGoal(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * BL-19c — sunting Goal yang sudah ada. Semua field dikirim setiap kali (RPC menimpa,
+ * bukan patch parsial), jadi pemanggil WAJIB mengirim nilai saat ini untuk field yang
+ * tidak diubah.
+ *
+ * Periode & target TERKUNCI setelah aktivasi (keputusan owner 2026-07-23): keduanya dasar
+ * perhitungan skor. Server MENOLAK perubahannya dengan error, bukan mengabaikannya diam-diam —
+ * kirim nilai Goal apa adanya (termasuk `null`) supaya panggilan yang tidak menyentuh
+ * keduanya tidak ikut tertolak.
+ */
+export type GoalPatch = {
+  name: string;
+  description: string | null;
+  pic_id: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  target_value: string | null;
+};
+
+export async function updateGoal(id: string, patch: GoalPatch): Promise<void> {
+  const { error } = await supabase.rpc('update_goal', {
+    p_goal_id: id,
+    p_name: patch.name,
+    p_description: (patch.description ?? null) as unknown as string,
+    p_pic_id: (patch.pic_id ?? null) as unknown as string,
+    p_period_start: (patch.period_start ?? null) as unknown as string,
+    p_period_end: (patch.period_end ?? null) as unknown as string,
+    p_target_value: (patch.target_value ?? null) as unknown as string,
+  });
+  if (error) throw error;
+}
+
 /** Instansiasi goal + strategi dari template; mengembalikan goal_id baru. */
 export async function applyGoalTemplate(args: {
   goalTemplateId: string;

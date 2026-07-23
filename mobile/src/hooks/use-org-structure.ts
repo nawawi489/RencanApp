@@ -11,6 +11,7 @@ import {
   listTeams,
   removeTeamMember,
   setDepartmentActive,
+  updateOrganization,
   type Department,
   type NewTeam,
   type NewTeamMember,
@@ -93,6 +94,29 @@ export function useRoleTemplates() {
     roleTemplates: (q.data ?? []) as RoleTemplate[],
     isLoading: q.isLoading,
     isError: q.isError,
+  };
+}
+
+/**
+ * BL-19c — identitas Organisasi. Dipisah dari `useOrgActions` karena konsumennya berbeda:
+ * yang ini menyentuh cache PROFIL (nama + zona org ikut di `useProfile`) dan cache zona
+ * waktu yang dibaca Repeat Setting — bukan cabang `org_structure` sama sekali.
+ */
+export function useOrganizationActions() {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (input: { name: string; timezone: string }) => updateOrganization(input),
+    onSuccess: () => {
+      // `['org_timezone']` dibaca `task/new.tsx` untuk TimezoneNote. Tanpa invalidasi ini
+      // layar Repeat Setting terus menampilkan zona lama sampai app di-restart — dan zona
+      // itulah yang dipakai user untuk menafsirkan jam deadline.
+      qc.invalidateQueries({ queryKey: ['current-profile'] });
+      qc.invalidateQueries({ queryKey: ['org_timezone'] });
+    },
+  });
+  return {
+    updateOrganization: (input: { name: string; timezone: string }) => m.mutateAsync(input),
+    isPending: m.isPending,
   };
 }
 

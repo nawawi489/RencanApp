@@ -110,7 +110,10 @@ const BANTUAN_ITEMS: MenuItem[] = [
 // 3 item terakhir DIVERGENSI TERCATAT (owner decision 2026-07-05): dipertahankan agar layar
 // Card Completion Rule / Keterangan Card / Notifications Rule tetap punya entry point.
 const PENGATURAN_ITEMS: MenuItem[] = [
+  // BL-19c — tanpa `permission`: ini baris milik user sendiri, bukan aksi admin.
+  { label: 'Profil Saya', description: 'Ubah nama', icon: 'person-outline', tone: 'info', href: '/settings-profile' as Href },
   { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permissionAny: ORG_SETTINGS_PERMISSIONS },
+  { label: 'Profil Organisasi', description: 'Nama & zona waktu', icon: 'globe-outline', tone: 'warn', href: '/settings-organization' as Href, permission: 'manage_settings' },
   { label: 'Repeat Setting', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
   { label: 'Permission Settings', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
   { label: 'Card Completion Rule', description: 'Aturan selesai', icon: 'checkbox-outline', tone: 'info', href: '/settings-card-completion-rule' as Href, permission: 'manage_card_completion_rule' },

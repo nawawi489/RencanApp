@@ -97,6 +97,21 @@ export async function setDepartmentActive(input: { departmentId: string; active:
   if (error) throw error;
 }
 
+/**
+ * BL-19c — identitas Organisasi (nama + zona waktu). `organizations` tidak punya policy
+ * UPDATE sama sekali (RLS menolak by default), jadi yang kurang memang jalur tulisnya —
+ * bukan lubang seperti `profiles`. Zona waktu divalidasi server terhadap katalog Postgres:
+ * ia dipakai `org_today()` untuk menghitung deadline, jadi zona ngawur menggeser tenggat
+ * SELURUH organisasi tanpa error yang terlihat.
+ */
+export async function updateOrganization(input: { name: string; timezone: string }): Promise<void> {
+  const { error } = await supabase.rpc('update_organization', {
+    p_name: input.name,
+    p_timezone: input.timezone,
+  });
+  if (error) throw error;
+}
+
 export type TeamMemberWithProfile = TeamMember & {
   profiles: { id: string; full_name: string | null; email: string | null } | null;
 };
