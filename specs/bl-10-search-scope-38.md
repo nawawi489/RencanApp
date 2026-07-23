@@ -312,10 +312,27 @@ from public.search_chat_messages(q, null, lim, p_cursor_ts, p_cursor_id) m
 | `comment` | `body` | nama entity induk | jenis induk | `body` (≤240) | `entity_id` (§6.4) |
 | `chat` | `body` (via RPC) | `room_name` | nama pengirim | `body` (≤240) | `chat_room_id` |
 | `evidence` | `file_name`, `text_content` | `file_name` atau "Catatan bukti" | nama Task/Instance induk | `text_content` (≤240) | `task_id` induk |
-| `activity_log` | lihat BL10-OQ-05 | label aksi | nama aktor + waktu | — | null |
-| `governance_violation` | lihat BL10-OQ-05 | label tipe | severity + status | — | null |
+| `activity_log` | **nama entitas induk** (§6.3.1) | nama entitas induk | `action` mentah | — | `entity_id` |
+| `governance_violation` | **nama entitas induk** (§6.3.1) | nama entitas induk | `violation_type` + severity | — | `entity_id` |
 
 **Larangan keluaran (diuji negatif, AC-02):** `evidence_files.storage_path` dan `url`; `profiles.email`; `activity_logs.detail`; `governance_violations.resolution_note` (catatan admin tentang user — menjadikannya searchable oleh subjeknya adalah perubahan permukaan disclosure yang nyata, dan tidak diminta §38).
+
+### 6.3.1 BL10-OQ-05 terjawab — scope audit dicocokkan lewat nama entitas induk
+
+**Keputusan owner 2026-07-23.** Baris `activity_log`/`governance_violation` dicocokkan pada **nama entitas yang ditunjuk `entity_id`**, bukan pada `action`/`violation_type`.
+
+Alasannya terukur, bukan preferensi. Di database nyata: `activity_logs` punya **733 baris tetapi hanya 11 `action` unik**, dan `create` sendiri **536 (73%)**. Mencocokkan pada `action` berarti mengetik "dibuat" mengembalikan **nol** (nilainya snake_case), sedangkan mengetik "create" mengembalikan **tiga perempat seluruh log** — itu dump, bukan pencarian. Menaruh peta label Indonesia di SQL juga ditolak: ia menduplikasi `GOVERNANCE_VIOLATION_TYPE_LABEL` di klien, dan gate CI BL-13 dipasang persis untuk mencegah peta itu menyimpang.
+
+**Entitas diresolusi lewat identitas, bukan label.** `entity_type` mencampur literal warisan pra-0045 dengan literal baru, dan berbeda dari komentar (§6.4) di sini **ambigu untuk gating** — `strategy` bisa berarti tabel `strategies` (baru) atau `initiatives` (warisan), yang gate-nya berbeda. `entity_id` adalah UUID dan hanya ada di satu tabel, jadi tujuh `LEFT JOIN` menjawabnya tanpa menebak.
+
+Efek samping yang diinginkan: **FR-11 fail-closed menjadi struktural.** Baris yang entitasnya tak dapat diakses — termasuk yang menunjuk tabel non-card seperti `period_snapshot`, dan yang `entity_id`-nya NULL — gugur lewat gate per-entitas, bukan lewat filter terpisah yang bisa lupa dipasang.
+
+> [!warning] Konsekuensi pada cabang self-row FR-10 — batas yang harus diketahui
+> Keputusan ini bertabrakan dengan FR-10 saat seorang aktor punya baris audit atas entitas yang **tidak berhak ia lihat**. FR-10 mengatakan self-row ikut RLS (baris itu miliknya); OQ-05 mengatakan yang ditampilkan adalah nama entitasnya. Menampilkan keduanya berarti **membocorkan nama entitas** kepada orang yang tidak berhak melihatnya.
+>
+> Search memilih **tidak bocor**: gate per-entitas berlaku juga pada cabang self-row. Konsekuensinya jujur dan disengaja — **Search bukan pengganti `/settings-activity-log`**. Layar itu tidak diubah dan tetap menampilkan self-row apa adanya (tanpa nama entitas). Yang dipersempit hanyalah permukaan Search.
+>
+> Dikunci `0088-DB-103` (tidak bocor) berpasangan dengan `0088-DB-104` (self-row tetap hidup saat entitasnya boleh dilihat) — tanpa pasangan itu, `DB-103` akan hijau pada implementasi yang keliru mematikan seluruh cabang self-row.
 
 ### 6.4 Normalisasi `entity_type` warisan
 

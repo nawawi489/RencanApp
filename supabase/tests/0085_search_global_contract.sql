@@ -249,9 +249,29 @@ begin
     fails := fails || 'DB-17 negatif_melempar_exception(' || sqlerrm || '); ';
   end;
 
-  -- DB-18/24/30/36/42/48 — p_scopes null = seluruh scope yang dirilis ikut (7 baris seed)
-  select count(*) into n from public.search_global('bl10w3', null, true, 30, null, null);
-  if n <> 7 then fails := fails || 'DB-18 scope_null_harus_7_baris(dapat ' || n || '); '; end if;
+  -- DB-18/24/30/36/42/48 — p_scopes null = SELURUH scope yang dirilis ikut.
+  --
+  -- Assertion dipecah per-scope, bukan satu count total. Bentuk lamanya (`= 7`) benar saat
+  -- hanya 7 scope card yang dirilis, tetapi menjadi salah begitu BL-10d menambahkan scope
+  -- audit: menyisipkan sebuah card memicu log otomatis ber-action `create`, dan nama entitas
+  -- log itu cocok dengan kata kunci yang sama. Count total karena itu ikut bertambah —
+  -- perilaku yang BENAR, tetapi membuat assertion agregat pecah karena alasan yang tidak
+  -- ada hubungannya dengan apa yang hendak diuji.
+  select count(*) into n
+  from public.search_global('bl10w3', null, true, 30, null, null)
+  where scope in ('goal','strategy','initiative','action_plan','task',
+                  'development_area','problem_statement');
+  if n <> 7 then fails := fails || 'DB-18 scope_null_harus_memuat_7_card(dapat ' || n || '); '; end if;
+
+  -- Kontrol positif untuk sifat "seluruh scope": bila scope audit sudah dirilis, ia HARUS
+  -- ikut muncul di hasil scope-null. Tanpa ini, assertion di atas tetap hijau pada
+  -- implementasi yang diam-diam membatasi scope-null hanya ke card.
+  select count(*) into n
+  from public.search_global('bl10w3', null, true, 30, null, null)
+  where scope = 'activity_log';
+  if n < 1 then
+    fails := fails || 'DB-18 scope_null_tidak_menjangkau_audit(' || n || ' baris activity_log); ';
+  end if;
 
   execute 'reset role';
 
