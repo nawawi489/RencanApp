@@ -22,6 +22,8 @@ import {
   listGoals,
   listStrategyTemplates,
   restoreGoalTemplateItems,
+  updateGoal,
+  type GoalPatch,
   type GoalTemplate,
   type StrategyTemplate,
   type Goal,
@@ -276,6 +278,16 @@ export function useGoalActions() {
     },
   });
 
+  // BL-19c. Nama Goal ikut muncul di judul header detail, daftar Goal, dan tree Workspace,
+  // jadi invalidasi menyertakan ['goals'] — bukan hanya baris yang disunting.
+  const updateM = useMutation({
+    mutationFn: (args: { id: string; patch: GoalPatch }) => updateGoal(args.id, args.patch),
+    onSuccess: (_data, args) => {
+      qc.invalidateQueries({ queryKey: ['goal', args.id] });
+      qc.invalidateQueries({ queryKey: ['goals'] });
+    },
+  });
+
   const restoreM = useMutation({
     mutationFn: (goalId: string) => restoreGoalTemplateItems(goalId),
     onSuccess: (_data, goalId) => {
@@ -295,10 +307,16 @@ export function useGoalActions() {
       targets?: Record<string, string>;
     }) => applyTemplateM.mutateAsync(args),
     restore: (goalId: string) => restoreM.mutateAsync(goalId),
+    update: (id: string, patch: GoalPatch) => updateM.mutateAsync({ id, patch }),
     isPending:
-      createM.isPending || activateM.isPending || applyTemplateM.isPending || restoreM.isPending,
+      createM.isPending ||
+      activateM.isPending ||
+      applyTemplateM.isPending ||
+      restoreM.isPending ||
+      updateM.isPending,
     activatePending: activateM.isPending,
     restorePending: restoreM.isPending,
+    updatePending: updateM.isPending,
   };
 }
 

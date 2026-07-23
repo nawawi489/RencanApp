@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { MGR_DEFAULT_KEYS } from '@/lib/permission-defaults';
+import { updateOwnProfile } from '@/lib/profile-self';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -94,4 +95,31 @@ export function useProfile() {
   }
 
   return { profile, isLoading: query.isLoading, can };
+}
+
+/**
+ * BL-19c — ubah nama sendiri lewat `update_own_profile`.
+ *
+ * Nama pengguna muncul di beberapa cache dengan key berbeda: `['current-profile']`
+ * (hook ini), `['profile']` (kartu Menu), `['org-profiles']` + `['profile-detail', id]`
+ * (halaman People), dan `['ranking', periodId]` (daftar People). Meng-invalidate hanya satu
+ * di antaranya membuat nama lama tetap terlihat di layar lain — gejala "tersimpan tapi
+ * tidak berubah" yang tampak seperti kegagalan tulis, padahal tulisannya sukses.
+ */
+export function useUpdateOwnProfile() {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: (fullName: string) => updateOwnProfile(fullName),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['current-profile'] });
+      qc.invalidateQueries({ queryKey: ['profile'] });
+      qc.invalidateQueries({ queryKey: ['org-profiles'] });
+      qc.invalidateQueries({ queryKey: ['profile-detail'] });
+      qc.invalidateQueries({ queryKey: ['ranking'] });
+    },
+  });
+  return {
+    updateOwnProfile: (fullName: string) => m.mutateAsync(fullName),
+    isPending: m.isPending,
+  };
 }

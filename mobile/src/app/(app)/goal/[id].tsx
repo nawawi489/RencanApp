@@ -131,6 +131,17 @@ export function LiveGoalDetailScreen() {
               </SectionCard>
             ) : null}
 
+            {/* BL-19c — hanya Draft/Aktif yang bisa disunting; RPC menolak status lain
+                ("Goal berstatus % tidak bisa diubah"), jadi tombolnya tidak ditawarkan.
+                Kewenangan tetap ditegakkan server (pembuat / PIC / manage_others_cards). */}
+            {goal.status === 'draft' || goal.status === 'active' ? (
+              <Button
+                label="Ubah Goal"
+                variant="secondary"
+                onPress={() => router.push(`/goal/edit/${id}` as Href)}
+              />
+            ) : null}
+
             {goal.status === 'draft' ? (
               <Button label="Aktifkan Goal" onPress={onActivate} loading={activatePending} />
             ) : null}

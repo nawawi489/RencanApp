@@ -4040,6 +4040,26 @@ export type Database = {
         Args: { p_expo_token: string }
         Returns: undefined
       }
+      update_goal: {
+        Args: {
+          p_description: string
+          p_goal_id: string
+          p_name: string
+          p_period_end: string
+          p_period_start: string
+          p_pic_id: string
+          p_target_value: string
+        }
+        Returns: undefined
+      }
+      update_organization: {
+        Args: { p_name: string; p_timezone: string }
+        Returns: undefined
+      }
+      update_own_profile: {
+        Args: { p_full_name: string }
+        Returns: undefined
+      }
       update_score_formula_version_weights: {
         Args: {
           p_categories: Json
