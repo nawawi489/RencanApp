@@ -123,6 +123,44 @@ describe('scope audit (BL-10d)', () => {
   });
 });
 
+describe('subtitle audit berlabel (BL-17)', () => {
+  it('[BL17-UI-1] subtitle activity_log BUKAN snake_case mentah', async () => {
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'activity_log', id: 'al1', parentId: 'g1',
+                   title: 'Sasaran A', subtitle: 'review_approve', sortId: 'al1' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Review Disetujui')).toBeTruthy();
+    expect(screen.queryByText('review_approve')).toBeNull();
+    // Sapuan menyeluruh: tidak ada satu pun teks terlihat yang masih snake_case.
+    const snake = visibleTexts(screen.toJSON()).filter((t) => /^[a-z]+(_[a-z]+)+$/.test(t));
+    expect(snake).toEqual([]);
+  });
+
+  it('[BL17-UI-2] action tak dikenal jatuh ke nilai mentah, bukan kosong', async () => {
+    // Migrasi baru bisa menambah action kapan saja; halaman harus tetap informatif.
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'activity_log', id: 'al2', parentId: 'g1',
+                   title: 'Sasaran B', subtitle: 'action_masa_depan', sortId: 'al2' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('action_masa_depan')).toBeTruthy();
+  });
+
+  it('[BL17-UI-3] subtitle governance_violation ikut berlabel (peta BL-12)', async () => {
+    // Baris yang sama merender kedua scope audit; membiarkan yang satu mentah sementara
+    // yang lain berlabel adalah cacat yang sama, hanya satu kolom bergeser.
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'governance_violation', id: 'gv2', parentId: 'g1',
+                   title: 'Sasaran C', subtitle: 'self_approval_attempt · high', sortId: 'gv2' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    expect(
+      await screen.findByText('Percobaan menyetujui pekerjaan sendiri · Tinggi'),
+    ).toBeTruthy();
+  });
+});
+
 describe('render', () => {
   it('[BL10-UI-01] kotak pencarian tampil', async () => {
     mockUseSearchGlobal.mockReturnValue(state({ enabled: false, trimmed: '' }));

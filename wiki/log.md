@@ -2359,3 +2359,17 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **Dikunci `DB-96..DB-101`**, seed sendiri (dua goal ber-`created_at` identik `2026-01-01`), tidak bergantung data ambient. Dua kontrol positif dipasang lebih dulu agar assertion inti tak bisa hijau hanya karena seed tak tercari; `DB-100` menjaga halaman pertama (kedua bagian NULL) tidak ikut tertolak.
 - **Diverifikasi merah lebih dulu**, dan merahnya presisi: hanya `DB-98` (0 baris senyap) + `DB-99` (cursor diabaikan, 2 baris) yang gagal — kedua kontrol positif hijau di run yang sama, membuktikan bug memang cuma pada bentuk separuh.
 - Verifikasi: DB contract **39 lolos, 0 gagal** (baseline 38 + berkas baru), `tsc` bersih (6.0.3 — dikonfirmasi compiler asli, bukan paket squatter `tsc`), lint 0 error, rename-guard clean.
+
+## [2026-07-23] update | BL-17 — label Indonesia untuk `activity_logs.action`, + gate BL-13 diperluas
+
+- Files updated: `mobile/src/lib/activity-governance.ts`, `mobile/src/app/(app)/search.tsx`, `mobile/src/app/(app)/settings-activity-log.tsx`; baru: `mobile/src/test-support/activity-log-actions.ts`, `mobile/src/lib/__tests__/activity-log-actions.contract.test.ts`; tes: `activity-governance.test.ts`, `search.test.tsx`
+- Pages updated: [[feature-gap-backlog]] (baris BL-17 dicoret + §BL-17 baru + catatan triage §2)
+- **Nol migrasi.** `ACTIVITY_LOG_ACTION_LABEL` + `activityLogActionLabel()` mengikuti bentuk BL-12 persis, termasuk fallback: dikenal → label Indonesia; tak dikenal → nilai mentah; null/whitespace → `—`; tidak pernah string kosong.
+- **Peta duplikat dihapus.** `settings-activity-log.tsx` diam-diam menyimpan `ACTION_LABEL` privat 41 entri. Sekarang satu peta melayani dua layar.
+- **Keputusan yang diminta eksplisit: gate CI BL-13 DIPERLUAS ke `action`.** Argumen "penulisnya lebih banyak, bertambah lebih sering" adalah deskripsi laju drift — dan laju drift itu alasan memasang gate, bukan melewatkannya. Bukan spekulatif: gate langsung menangkap **5 action ter-emit tanpa label** (`card_completion_rule_updated`, `card_guidance_updated`, `push_token_transferred`, `settings_legacy_purged`, `target_breakdown_updated`) dan **1 label yatim** (`instance_missed` — tipe notifikasi 0008, bukan action). Enam kekeliruan yang tak memerahkan apa pun. Ongkosnya dua berkas: parser BL-13 sudah menyediakan `splitTopLevel`/`literalValue`.
+- **Tiga jalur emisi**, bukan dua seperti `violation_type`: `write_activity()` (0005), `write_activity_system()` (0007, cron), dan `insert into activity_logs` langsung (badan helper, trigger `log_card_creation`, migrasi data 0078). Parser: **152 site → 44 action**; kesebelas action yang teramati di DB nyata (733 baris) semuanya termasuk.
+- **`case … end` diresolusi, bukan diallowlist.** Empat action jalur review HANYA hidup di dalam ekspresi `case` di tujuh migrasi — termasuk `review_approve` yang sendirian 72 dari 733 baris. Membuangnya ke allowlist manual = lubang tepat di tempat gate paling dibutuhkan. Satu cabang non-literal → seluruh ekspresi dinamis (resolusi sebagian menghasilkan gate hijau yang kehilangan nilai). Sisa allowlist: `p_action` di badan kedua helper.
+- **Ikut dikirim**: subtitle `governance_violation` (`violation_type · severity`) di layar Search juga mentah, dirender baris kode yang sama, dan sudah punya peta sejak BL-12. Nol peta baru.
+- Verifikasi: `npm test` **138 suite / 1775 test hijau**, `tsc --noEmit` bersih (TypeScript **6.0.3**, versi diperiksa — bukan paket squatter), `expo lint` 0 error pada berkas yang disentuh.
+
+- Nomor PR: **#166**.

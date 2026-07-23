@@ -19,6 +19,11 @@ import { Text, TextInput, View } from 'react-native-css/components';
 import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import { useSearchGlobal } from '@/hooks/use-search-global';
+import {
+  GOVERNANCE_VIOLATION_SEVERITY_LABEL,
+  activityLogActionLabel,
+  governanceViolationTypeLabel,
+} from '@/lib/activity-governance';
 import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 import {
   SEARCH_SCOPE_LABEL,
@@ -92,6 +97,32 @@ function hrefForHit(h: SearchHit): Href | null {
   const segment = ENTITY_ROUTE_SEGMENT[card as keyof typeof ENTITY_ROUTE_SEGMENT];
   return segment ? (`/${segment}/${h.id}` as Href) : null;
 }
+
+/**
+ * Subtitle yang siap dibaca manusia (BL-17).
+ *
+ * `search_global` memproyeksikan kolom audit MENTAH — `activity_logs.action` dan
+ * `governance_violations.violation_type || ' · ' || severity` — dan menyerahkan pelabelan
+ * ke sini. Itu keputusan sadar migrasi 0088: peta label di SQL akan menduplikasi peta
+ * client dan mengembalikan drift yang gate CI BL-13/BL-17 pasang untuk dicegah.
+ *
+ * `hrefForHit` untuk scope `comment` masih membaca `h.subtitle` MENTAH (literal
+ * `entity_type`); rute tidak boleh bergantung pada teks tampilan, jadi pelabelan sengaja
+ * hanya terjadi di sini, pada saat render.
+ */
+export function subtitleForHit(h: SearchHit): string | null {
+  if (h.scope === 'activity_log') return activityLogActionLabel(h.subtitle);
+  if (h.scope === 'governance_violation') {
+    // Server merangkai `tipe · severity`; keduanya snake_case/lowercase dan punya peta
+    // masing-masing sejak BL-12. Bentuk lain (kolom kosong) jatuh ke cabang aman di bawah.
+    const [type, severity] = (h.subtitle ?? '').split(' · ');
+    const typeLabel = governanceViolationTypeLabel(type);
+    const severityLabel = severity ? (GOVERNANCE_VIOLATION_SEVERITY_LABEL[severity] ?? severity) : '';
+    return severityLabel ? `${typeLabel} · ${severityLabel}` : typeLabel;
+  }
+  return h.subtitle;
+}
+
 
 export function LiveSearchScreen() {
   const router = useRouter();
@@ -192,6 +223,7 @@ export function LiveSearchScreen() {
         )}
         renderItem={({ item }) => {
           const href = hrefForHit(item);
+          const subtitle = subtitleForHit(item);
           return (
             <SectionCard
               accessibilityLabel={`Buka ${item.title}`}
@@ -199,10 +231,8 @@ export function LiveSearchScreen() {
               <Text className="text-base font-semibold text-black dark:text-white">
                 {item.title}
               </Text>
-              {item.subtitle ? (
-                <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {item.subtitle}
-                </Text>
+              {subtitle ? (
+                <Text className="text-sm text-neutral-500 dark:text-neutral-400">{subtitle}</Text>
               ) : null}
               {item.snippet ? (
                 <Text className="text-sm text-neutral-500 dark:text-neutral-400">

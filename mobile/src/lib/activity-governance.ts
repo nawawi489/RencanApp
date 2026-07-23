@@ -57,6 +57,76 @@ export function governanceViolationTypeLabel(type: string | null | undefined): s
   return GOVERNANCE_VIOLATION_TYPE_LABEL[raw] ?? raw;
 }
 
+/** Label Indonesia untuk `activity_logs.action` (BL-17).
+ *  Bentuknya sengaja identik dengan `GOVERNANCE_VIOLATION_TYPE_LABEL` di atas: kolomnya
+ *  `text` bebas tanpa CHECK constraint, jadi peta ini enumerasi nilai yang benar-benar
+ *  ditulis migrasi — bukan kontrak yang dipaksakan schema.
+ *
+ *  Peta ini TIDAK ditaruh di SQL. `search_global` (0088) memproyeksikan `action` mentah dan
+ *  menyerahkan pelabelan ke klien justru supaya tidak ada salinan kedua; menaruhnya di
+ *  migrasi akan mengulang drift yang gate BL-13 pasang untuk dicegah.
+ *
+ *  BL-17: peta ini di-gate oleh `activity-log-actions.contract.test.ts`, yang mem-parse
+ *  `supabase/migrations/*.sql` (tiga jalur emisi) dan memerah bila ada action ter-emit
+ *  tanpa label — atau label tanpa emitter. Menambah action di migrasi ⇒ tambah entri di sini.
+ *
+ *  Gunakan `activityLogActionLabel()` agar action baru dari DB tetap tampil (fallback ke
+ *  nilai mentah). */
+export const ACTIVITY_LOG_ACTION_LABEL: Record<string, string> = {
+  activate: 'Diaktifkan',
+  activate_repeat: 'Repeat Diaktifkan',
+  apply_template: 'Template Diterapkan',
+  cancellation_requested: 'Pengajuan Pembatalan',
+  card_archived: 'Diarsipkan',
+  card_cancelled: 'Dibatalkan',
+  card_completion_rule_updated: 'Aturan Penyelesaian Card Diubah',
+  card_guidance_updated: 'Panduan Card Diubah',
+  card_restored: 'Dipulihkan',
+  confidential_access_granted: 'Akses Rahasia Diberikan',
+  create: 'Dibuat',
+  deadline_change_approved: 'Perubahan Deadline Disetujui',
+  deadline_change_rejected: 'Perubahan Deadline Ditolak',
+  deadline_change_requested: 'Pengajuan Perubahan Deadline',
+  deadline_change_resubmitted: 'Perubahan Deadline Diajukan Ulang',
+  deadline_change_revision_requested: 'Revisi Perubahan Deadline Diminta',
+  evaluation_recorded: 'Evaluasi Dicatat',
+  instance_marked_overdue: 'Instance Terlewat',
+  instances_generated: 'Instance Digenerate',
+  period_closed: 'Periode Ditutup',
+  period_opened: 'Periode Dibuka',
+  permission_scope_updated: 'Scope Permission Diubah',
+  push_token_transferred: 'Token Push Dipindahkan',
+  review_approve: 'Review Disetujui',
+  review_instance_approve: 'Review Instance Disetujui',
+  review_instance_reject: 'Review Instance Ditolak',
+  review_reject: 'Review Ditolak',
+  score_formula_activated: 'Formula Diaktifkan',
+  score_formula_changed: 'Formula Diubah',
+  score_formula_draft_created: 'Draft Formula Dibuat',
+  score_formula_weights_updated: 'Bobot Formula Diubah',
+  score_override_applied: 'Override Skor Diterapkan',
+  scores_calculated: 'Skor Dihitung',
+  set_repeat_rule: 'Jadwal Repeat Diatur',
+  setting_updated: 'Pengaturan Diubah',
+  settings_legacy_purged: 'Pengaturan Warisan Dibersihkan',
+  start: 'Dimulai',
+  submit: 'Bukti Disubmit',
+  submit_instance: 'Bukti Instance Disubmit',
+  target_breakdown_updated: 'Target Breakdown Diubah',
+  update: 'Diubah',
+  user_permission_granted: 'Hak Akses Diberikan',
+  user_permission_revoked: 'Hak Akses Dicabut',
+  violation_resolved: 'Pelanggaran Diselesaikan',
+};
+
+/** Label aman untuk satu `action`. Tidak pernah mengembalikan string kosong:
+ *  action tak dikenal / nilai kosong jatuh balik ke nilai mentah, lalu ke '—'. */
+export function activityLogActionLabel(action: string | null | undefined): string {
+  const raw = (action ?? '').trim();
+  if (raw === '') return '—';
+  return ACTIVITY_LOG_ACTION_LABEL[raw] ?? raw;
+}
+
 export const ACTIVITY_LOG_PAGE_SIZE = 30;
 const PAGE_SIZE = 50;
 
