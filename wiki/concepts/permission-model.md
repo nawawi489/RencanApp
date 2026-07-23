@@ -30,6 +30,18 @@ Pemilik card induk membuat turunan & menentukan PIC + Reviewer-nya:
 
 Bukan system rule: boleh membuat tiap jenis card; lihat seluruh Workspace; kelola card orang lain; ubah Settings; kelola User & Permission; kelola template/MBR/Card Completion Rule; lihat Activity Log & Governance Violation; kelola Score Formula.
 
+> [!note] Activity Log & Governance Violation **bukan** admin-only murni (koreksi 2026-07-23)
+> Kedua policy ber-**OR** dengan cabang self-row (`0005:557-565`):
+> `organization_id = current_user_org() AND (has_permission(…) OR actor_id = auth.uid())`.
+> Artinya user tanpa permission tetap berhak melihat **barisnya sendiri**.
+>
+> Ini ditemukan saat menyusun spec BL-10, yang draft awalnya memperlakukan keduanya sebagai
+> data admin dan nyaris menyembunyikan scope-nya sama sekali dari non-admin. Konsekuensi
+> untuk Search (PR-4): scope tetap ada untuk semua orang, yang berbeda hanya **label grup**
+> — "Log Aktivitas" bagi pemegang permission, "Aktivitas Saya" bagi yang bukan. Perbedaan
+> label itu fungsi permission **pemanggil sendiri**, yang sudah ia ketahui, jadi ia bukan
+> oracle atas data pihak lain.
+
 ## Default role permission
 
 | Role | Default |

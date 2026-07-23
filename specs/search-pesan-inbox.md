@@ -39,7 +39,7 @@ Lihat blok `non_goals` di StructuredOutput. Ringkas: Chat-only V1; Comment/Bukti
 ## 3. Functional Requirements
 
 ### 3.1 Surface & Cakupan
-- FR-1 Entry point HANYA header lokal tab Inbox (`mobile/src/app/(app)/(tabs)/inbox.tsx`). Global Search `/search` TIDAK dibebani cakupan pesan V1.
+- FR-1 Entry point HANYA header lokal tab Inbox (`mobile/src/app/(app)/(tabs)/inbox.tsx`). Global Search `/search` TIDAK dibebani cakupan pesan V1. — **DIBALIK 2026-07-23 (BL-10 PR-1).** Global Search kini memuat scope `chat`, dan ia **mendelegasikan** ke `search_chat_messages` alih-alih menyalin logikanya (migrasi 0085, FR-2). Pembalikan ini memang jalur yang direncanakan ("debt Global Search"), tetapi dicatat di sini supaya tidak ada dua spec yang saling menyangkal. Entry point Inbox tetap berlaku dan tidak berubah.
 - FR-2 Placeholder input: **"Cari Initiative atau pesan"**.
 - FR-3 Cakupan V1: `chat_messages` saja. Comment/Bukti/Activity Log/GV/People = debt.
 - FR-4 Read-only mutlak. Tidak ada tombol approve/reject/mark-evidence di hasil.
@@ -273,6 +273,16 @@ Ringkasan (detail di §3.2, §5):
 > AC-5 (view_all_workspace melihat pesan non-member) adalah perilaku yang benar. Bila confidential per-room
 > kelak dibutuhkan, itu perubahan lintas-app di `can_access_initiative` (bukan hanya chat) + perketat gate
 > RPC ini bersamaan — di luar scope V1.
+>
+> ⚠️ **STALE sejak 2026-07-15 — jangan dikutip sebagai keadaan sekarang.** Catatan di atas
+> bertanggal 2026-07-12. Ia **dibalik OWNER-A 2026-07-15** dan ditutup migrasi **0060**
+> (`chat_confidential_rls_fts`): chat KINI confidential-aware, dan gate-nya ditegakkan
+> **di dalam** `search_chat_messages` — bukan di pemanggil.
+>
+> Itu justru alasan BL-10 boleh memakai ulang RPC ini lewat delegasi (FR-2) alih-alih
+> menyalin logikanya: satu sumber kebenaran untuk otorisasi chat. Menyalinnya akan
+> mengulang kelas regresi 0060→0075, yang diam-diam kehilangan limit clamp, guard panjang,
+> dan truncation karena `create or replace` penuh.
 
 ---
 
