@@ -380,20 +380,14 @@ describe('evaluation', () => {
   });
 });
 
-describe('search', () => {
-  it('[F8-UI-20a] empty state saat query kosong', async () => {
-    await render(<SearchScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText(/Mulai mencari/i)).toBeTruthy();
-  });
-
-  it('[F8-UI-20b] hasil pencarian dengan label entity_type', async () => {
-    mockUseSearch.mockReturnValue({
-      results: [{ id: 'i1', entity_type: 'action_plan', name: 'Migrasi Server', status: 'active' }],
-      isLoading: false,
-      enabled: true,
-    });
-    await render(<SearchScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Migrasi Server')).toBeTruthy();
-    expect(screen.getByText('Rencana Aksi')).toBeTruthy();
-  });
-});
+// `describe('search')` DIPINDAH ke src/app/(app)/__tests__/search.test.tsx (BL-10 W6c).
+//
+// Kedua test lama (`F8-UI-20a`/`F8-UI-20b`) mengikat layar ke `useSearchCards` + label
+// `entity_type`, sedangkan layar kini memakai `useSearchGlobal` + grouping per scope.
+// Penggantinya bukan sekadar salinan: `BL10-UI-17` menutup empty-state awal, dan
+// `BL10-UI-02` menutup penamaan grup — plus tujuh assertion anti-oracle yang tidak
+// punya padanan di versi lama.
+//
+// Ini SATU-SATUNYA berkas regresi yang sah berubah di PR ini; `use-search.test.tsx`,
+// `push-route-resolver.test.ts`, dan `app-header.test.tsx` harus tetap hijau TANPA
+// disentuh sebagai bukti NG-6/NG-7 dipatuhi.

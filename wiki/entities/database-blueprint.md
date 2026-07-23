@@ -55,4 +55,18 @@ Kolom `goal_id`, `problem_statement_id`, `pic_id`, `reviewer_id`, `submission_id
 - **`idx_chat_messages_body_trgm`** — GIN `body extensions.gin_trgm_ops` pada `public.chat_messages`; mendukung ILIKE partial murah.
 - **`idx_chat_messages_org_room_created`** — composite `(organization_id, chat_room_id, created_at desc)` pada `public.chat_messages`; push-down org sebelum operator matching + cursor keyset.
 
+## RPC pencarian
+
+Dua RPC search hidup berdampingan **dengan sengaja**. Keduanya `SECURITY DEFINER` + `search_path=''`, artinya **RLS tabel tidak berlaku di dalam badan keduanya** — otorisasi ditulis tangan per cabang, dan tidak ada jaring pengaman kedua.
+
+| RPC | Dipakai | Cakupan | Catatan |
+|---|---|---|---|
+| `public.search_cards` (0046:2113) | layar **Arsip** (`settings-archive.tsx`), queryKey `['cards_search']` | 7 tipe card, `SETOF jsonb` | **Punya bug pola LIKE tanpa escaping** (0046:2120): `%` dan `_` yang diketik user menjadi wildcard sungguhan. |
+| `public.search_global` (0085) | layar **Search** (`search.tsx`), queryKey `['search_global']` | 9 dari 14 scope §38 + grouping + paging keyset per grup | Escaping benar (`ilike … escape '\'`); cabang `chat` **mendelegasikan** ke `search_chat_messages`, tidak menyalinnya. |
+
+> [!warning] Jangan "merapikan" `search_cards`
+> Bug escaping-nya **sengaja dipertahankan** di BL-10 PR-1 (NG-6): layar Arsip berbagi RPC + queryKey dengannya, dan mengubahnya di PR yang sama akan mencampur dua permukaan yang perlu diverifikasi terpisah. Perbedaan perilaku itu dikunci contract test `0085-DB-73` — memperbaiki `search_cards` akan **memerahkan** test itu sampai keputusannya dicabut secara sadar. Konsolidasi kedua permukaan adalah backlog tersendiri.
+
+`search_global` memakai `stable` (bukan `volatile`) sebagai **penegak mekanis** nol-emisi audit: Search tidak menulis apa pun, termasuk `activity_logs`. Melonggarkannya demi kemudahan akan membuka kanal enumerasi lewat log.
+
 Berkaitan dengan: [[tech-stack]], [[permission-model]], [[score-formula]], [[audit-governance]].

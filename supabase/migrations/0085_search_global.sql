@@ -1,0 +1,241 @@
+-- BL-10 PR-1 — `public.search_global`: RPC Search multi-scope (PRD §38).
+--
+-- WAVE 1: KERANGKA SAJA. Fungsi ini sengaja mengembalikan NOL BARIS. Cabang per-scope,
+-- guard biaya, cursor keyset, dan delegasi chat menyusul di Wave 2-5. Jangan memakainya
+-- dari klien sebelum Wave 6.
+--
+-- ============================================================================
+-- PERINGATAN KEAMANAN (FR-7) — BACA SEBELUM MENAMBAH CABANG SCOPE APA PUN
+-- ============================================================================
+-- Fungsi ini `security definer` + `set search_path = ''`. Konsekuensinya:
+--
+--   RLS TABEL TIDAK BERLAKU DI DALAM BADAN FUNGSI INI.
+--
+-- Tidak ada jaring pengaman kedua. Setiap cabang scope WAJIB menuliskan sendiri gate
+-- otorisasinya di `WHERE`, dan gate itu harus dibuktikan <= seketat policy RLS tabel
+-- sumbernya (uji reduksi-RLS di supabase/tests/0085_search_global_contract.sql).
+--
+-- Komentar "RLS-scoped via RPC" yang beredar di mobile/src/app/(app)/search.tsx menyesatkan
+-- dan dikoreksi bersama PR ini.
+--
+-- Aturan turunan yang tidak boleh dilanggar:
+--   * Gate hidup di `WHERE`, TIDAK PERNAH sebagai `raise exception` (FR-13). Exception
+--     berdasarkan identitas/data aktor adalah oracle: ia membedakan "tidak berhak" dari
+--     "tidak ada hasil".
+--   * `stable` (bukan `volatile`) adalah penegak mekanis G6: Search tidak menulis apa pun,
+--     termasuk activity_logs. Jangan longgarkan demi kemudahan.
+--   * `search_cards` TIDAK DISENTUH (NG-6), termasuk bug pola LIKE tanpa escaping di
+--     0046:2120. Perbedaan perilaku itu dikunci sengaja oleh DB-73.
+-- ============================================================================
+
+create or replace function public.search_global(
+  p_query            text,
+  p_scopes           text[]      default null,
+  p_include_archived boolean     default false,
+  p_limit            int         default 5,
+  p_cursor_ts        timestamptz default null,
+  p_cursor_id        uuid        default null
+)
+returns table (
+  scope     text,
+  id        uuid,
+  parent_id uuid,
+  title     text,
+  subtitle  text,
+  snippet   text,
+  status    text,
+  sort_ts   timestamptz,
+  sort_id   uuid
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  q   text;
+  pat text;
+  lim int := least(greatest(coalesce(p_limit, 5), 1), 30);
+begin
+  -- Guard biaya — disalin VERBATIM dari 0075_fix_search_chat_messages_limit_clamp.sql:42-48.
+  -- Regresi 0060 kehilangan justru blok ini karena `create or replace` penuh; jangan
+  -- menyusunnya ulang dari ingatan.
+  -- Validasi BENTUK-REQUEST (FR-19). Ini SATU-SATUNYA exception yang diizinkan di fungsi
+  -- ini, dan ia sah justru karena tidak bergantung pada identitas maupun data aktor:
+  -- pemanggil mana pun dengan request berbentuk sama mendapat galat yang sama, sehingga
+  -- ia tidak dapat dipakai sebagai oracle. Pesannya statis — jangan menyisipkan nilai
+  -- apa pun dari baris atau dari aktor ke dalamnya.
+  --
+  -- Cursor keyset hanya bermakna dalam SATU urutan. Dengan lebih dari satu scope,
+  -- tiap scope punya urutannya sendiri sehingga satu pasang (ts, id) tidak dapat
+  -- menunjuk posisi yang konsisten — diam-diam ia akan melewatkan atau menggandakan baris.
+  if (p_cursor_ts is not null or p_cursor_id is not null)
+     and (p_scopes is null or array_length(p_scopes, 1) is distinct from 1) then
+    raise exception 'cursor hanya sah bila p_scopes berisi tepat satu scope'
+      using errcode = '22023';    -- invalid_parameter_value
+  end if;
+
+  q := btrim(coalesce(p_query, ''));
+  if length(q) < 2 then
+    return;                       -- EARLY RETURN, bukan exception (FR-13: exception = oracle)
+  end if;
+  q := substring(q from 1 for 200);
+  pat := '%' || replace(replace(replace(q, '\', '\\'), '%', '\%'), '_', '\_') || '%';
+
+  -- Cabang `goal`. Catatan yang berlaku untuk SETIAP cabang yang ditambahkan sesudah ini:
+  --   * `order by … limit lim` ada DI DALAM subquery cabang, bukan satu limit di akhir UNION
+  --     (spec §6.2) — limit per grup, bukan limit global.
+  --   * Gate `public.can_access_goal(g.id)` WAJIB. RLS tidak berlaku di sini (lihat header).
+  --   * `ilike … escape '\'` — bukan `lower() like`. `search_cards` (0046:2120) memakai pola
+  --     tanpa escaping; perbedaan itu DISENGAJA (NG-6) dan dikunci DB-73.
+  if p_scopes is null or 'goal' = any(p_scopes) then
+    return query
+    select
+      'goal'::text            as scope,
+      g.id                    as id,
+      null::uuid              as parent_id,
+      g.name                  as title,
+      null::text              as subtitle,
+      null::text              as snippet,
+      g.status                as status,
+      g.created_at            as sort_ts,
+      g.id                    as sort_id
+    from public.goals g
+    where g.name ilike pat escape '\'
+      and public.can_access_goal(g.id)
+      and (p_include_archived or g.status <> 'archived')
+      and (p_cursor_ts is null or (g.created_at, g.id) < (p_cursor_ts, p_cursor_id))
+    order by g.created_at desc, g.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'strategy' = any(p_scopes) then
+    return query
+    select
+      'strategy'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.strategies t
+    where t.name ilike pat escape '\'
+      and public.can_access_strategy(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'initiative' = any(p_scopes) then
+    return query
+    select
+      'initiative'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.initiatives t
+    where t.name ilike pat escape '\'
+      and public.can_access_initiative(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'action_plan' = any(p_scopes) then
+    return query
+    select
+      'action_plan'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.action_plans t
+    where t.name ilike pat escape '\'
+      and public.can_access_action_plan(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'task' = any(p_scopes) then
+    return query
+    select
+      'task'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.tasks t
+    where t.name ilike pat escape '\'
+      and public.can_access_task(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'development_area' = any(p_scopes) then
+    return query
+    select
+      'development_area'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.development_areas t
+    where t.name ilike pat escape '\'
+      and public.can_access_development_area(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  if p_scopes is null or 'problem_statement' = any(p_scopes) then
+    return query
+    select
+      'problem_statement'::text as scope, t.id, null::uuid as parent_id, t.name as title,
+      null::text as subtitle, null::text as snippet, t.status,
+      t.created_at as sort_ts, t.id as sort_id
+    from public.problem_statements t
+    where t.name ilike pat escape '\'
+      and public.can_access_problem_statement(t.id)
+      and (p_include_archived or t.status <> 'archived')
+      and (p_cursor_ts is null or (t.created_at, t.id) < (p_cursor_ts, p_cursor_id))
+    order by t.created_at desc, t.id desc
+    limit lim;
+  end if;
+
+  -- Cabang `chat` — DELEGASI PENUH ke public.search_chat_messages (FR-2).
+  --
+  -- DILARANG menyalin body-nya ke sini. Preseden yang mengikat: 0060 melakukan
+  -- `create or replace` penuh atas fungsi itu dan diam-diam kehilangan limit clamp,
+  -- guard length<2, serta truncation — baru dipulihkan 0075. Satu sumber kebenaran
+  -- untuk otorisasi chat (termasuk confidential-aware) ada di fungsi itu, bukan di sini.
+  --
+  -- Guard biaya di atas TIDAK diteruskan mentah: `q` yang sudah di-btrim + truncate 200
+  -- dikirim apa adanya, dan fungsi tujuan menerapkan lagi guard-nya sendiri (idempoten).
+  -- Truncation 240 di bawah adalah milik search_global — fungsi tujuan mengembalikan body
+  -- utuh (0075:57), jadi jangan mengandalkannya memangkas.
+  if p_scopes is null or 'chat' = any(p_scopes) then
+    return query
+    select
+      'chat'::text            as scope,
+      m.message_id            as id,
+      m.chat_room_id          as parent_id,   -- target deep-link: ruangannya
+      m.room_name             as title,
+      m.author_name           as subtitle,
+      left(m.snippet, 240)    as snippet,
+      null::text              as status,
+      m.created_at            as sort_ts,
+      m.message_id            as sort_id
+    from public.search_chat_messages(q, null, lim, p_cursor_ts, p_cursor_id) m;
+  end if;
+
+  return;
+end;
+$$;
+
+-- ACL (FR-35). `revoke ... from authenticated` SAJA tidak membatalkan grant PUBLIC yang
+-- otomatis melekat pada fungsi baru — PUBLIC harus dicabut eksplisit (preseden 0066:22-31).
+revoke execute on function public.search_global(text, text[], boolean, int, timestamptz, uuid)
+  from public, anon, authenticated;
+grant execute on function public.search_global(text, text[], boolean, int, timestamptz, uuid)
+  to authenticated;
+
+comment on function public.search_global(text, text[], boolean, int, timestamptz, uuid) is
+  'BL-10 Search multi-scope (PRD 38). SECURITY DEFINER: RLS tabel tidak berlaku di dalamnya; '
+  'setiap cabang scope wajib menuliskan gate otorisasinya sendiri di WHERE. Wave 1 = kerangka nol baris.';

@@ -209,7 +209,11 @@ UI: severity, entity terkait, penyebab, CTA selesaikan, resolution note.
 ### E.1 Search
 **Search wajib ikut permission** — user tidak boleh menemukan data yang tidak boleh diaksesnya.
 
-Cakupan: Goal, KPI Area, Strategy, Initiative, Action Plan, Action Plan Instance, Development Area, Problem Statement, People, Comment, Chat, Bukti, Activity Log, Governance Violation. Hasil dikelompokkan per jenis.
+Cakupan (14 scope): Goal, Strategy, Initiative, Action Plan, Task, Task Instance, Development Area, Problem Statement, People, Comment, Chat, Bukti, Activity Log, Governance Violation. Hasil dikelompokkan per jenis.
+
+> **Amandemen 2026-07-23 (BL-10 PR-1).** Daftar di atas sebelumnya memakai kosakata pra-rename 0045 — "KPI Area" dan "Action Plan Instance". Rename 0045 menggeser nama tabel satu tingkat (`kpi_areas`→`strategies`, `strategies`→`initiatives`, `initiatives`→`action_plans`, `action_plans`→`tasks`), sehingga daftar lama tidak lagi menunjuk entitas yang sama dengan `PRD.md` §38. Jumlahnya tetap 14. Kelas kekeliruan yang sama pernah menyebabkan BL-04: 6 baris seed `minimum_breakdown_rules` tidak ikut dipindah saat rename, dan tiga cabang RPC diam-diam fail-open selama berbulan-bulan.
+>
+> Status implementasi: 9 dari 14 scope aktif (migrasi 0085). Sisanya menyusul — People, lalu Task Instance/Comment/Bukti, lalu Activity Log/Governance Violation.
 
 ### E.2 Settings (via Menu)
 User & Permission, Role Template, Organization, Department, Position, Team, Goal Template Library, KPI Area Template Library, Minimum Breakdown Rule, Card Completion Rule, Keterangan Card, Status, Prioritas, Repeat Setting, Notifications Rule, Score Formula, Activity Log, Governance Violation, Archive, Confidential Access, Manual Score Override.
