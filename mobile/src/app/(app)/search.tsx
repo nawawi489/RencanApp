@@ -1,4 +1,4 @@
-// BL-10 — Search global (PRD §38): 9 dari 14 scope, hasil DIKELOMPOKKAN per jenis.
+// BL-10 — Search global (PRD §38): 14 dari 14 scope, hasil DIKELOMPOKKAN per jenis.
 //
 // KOREKSI KOMENTAR LAMA (§10.4): berkas ini dulu berbunyi "RLS-scoped via search_cards RPC".
 // Itu menyesatkan. `search_global` adalah SECURITY DEFINER dengan `search_path=''`, sehingga
@@ -12,11 +12,12 @@
 //   3. Empty state untuk "tidak cocok" dan "tersaring otorisasi" WAJIB identik. Keduanya
 //      lewat cabang render yang sama; jangan menambah cabang yang membedakannya.
 import { Stack, useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { SectionList } from 'react-native';
 import { Text, TextInput, View } from 'react-native-css/components';
 
 import { EmptyState, SectionCard, SkeletonList, usePlaceholderColor } from '@/components/ui';
+import { useProfile } from '@/hooks/use-profile';
 import { useSearchGlobal } from '@/hooks/use-search-global';
 import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 import {
@@ -96,7 +97,29 @@ export function LiveSearchScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const placeholderColor = usePlaceholderColor();
+  const { can } = useProfile();
   const { hits, isLoading, isError, isRpcMissing, enabled } = useSearchGlobal(query);
+
+  /**
+   * Label grup. Dua scope audit punya varian menurut permission PEMANGGIL (FR-10):
+   * pemegang permission melihat "Log Aktivitas"/"Governance Violation", yang bukan
+   * melihat "Aktivitas Saya"/"Catatan Governance Saya".
+   *
+   * Ini BUKAN oracle. Yang membedakan label adalah permission pemanggil sendiri —
+   * sesuatu yang sudah ia ketahui — bukan ada-tidaknya data milik orang lain. Bandingkan
+   * dengan count atau grup kosong, yang merupakan fungsi data pihak lain dan karena itu
+   * dilarang (FR-15/FR-16).
+   */
+  const scopeLabel = useCallback(
+    (s: SearchScope): string => {
+      if (s === 'activity_log' && !can('view_activity_log')) return 'Aktivitas Saya';
+      if (s === 'governance_violation' && !can('view_governance_violation')) {
+        return 'Catatan Governance Saya';
+      }
+      return SEARCH_SCOPE_LABEL[s];
+    },
+    [can],
+  );
 
   // Urutan section dibangun dengan MENGITERASI KONSTANTA, bukan urutan kedatangan baris.
   // Map insertion-order akan membuat urutan grup bergantung pada data — tidak stabil,
@@ -110,10 +133,10 @@ export function LiveSearchScreen() {
     }
     return SEARCH_SCOPE_ORDER.filter((s) => byScope.has(s)).map((s) => ({
       scope: s,
-      title: SEARCH_SCOPE_LABEL[s],
+      title: scopeLabel(s),
       data: byScope.get(s) as SearchHit[],
     }));
-  }, [hits]);
+  }, [hits, scopeLabel]);
 
   const header = (
     <View className="pb-3">

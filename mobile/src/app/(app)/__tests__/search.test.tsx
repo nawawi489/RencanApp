@@ -24,6 +24,12 @@ jest.mock('@/hooks/use-search-global', () => ({
   useSearchScopePage: (...a: unknown[]) => mockUseSearchScopePage(...a),
 }));
 
+const mockCan = jest.fn(() => true);
+jest.mock('@/hooks/use-profile', () => ({
+  __esModule: true,
+  useProfile: () => ({ profile: { id: 'u1' }, isLoading: false, can: mockCan }),
+}));
+
 // NG-6: layar baru tidak boleh menyentuh jalur lama sama sekali.
 const mockUseSearchCards = jest.fn();
 jest.mock('@/hooks/use-search', () => ({
@@ -72,11 +78,48 @@ function state(over: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   mockPush.mockReset();
+  mockCan.mockReset().mockReturnValue(true);
   mockUseSearchCards.mockReset();
   mockUseSearchGlobal.mockReset().mockReturnValue(state());
   mockUseSearchScopePage.mockReset().mockReturnValue({
     hits: [], fetchNextPage: jest.fn(), hasNextPage: false,
     isFetchingNextPage: false, isLoading: false, isError: false, isRpcMissing: false,
+  });
+});
+
+describe('scope audit (BL-10d)', () => {
+  it('[BL10-UI-24] pemegang permission melihat label "Log Aktivitas"', async () => {
+    mockCan.mockImplementation(() => true);
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'activity_log', id: 'al1', parentId: 'g1',
+                   title: 'Sasaran A', subtitle: 'create', sortId: 'al1' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Log Aktivitas')).toBeTruthy();
+    expect(screen.queryByText('Aktivitas Saya')).toBeNull();
+  });
+
+  it('[BL10-UI-25] TANPA permission, label jadi "Aktivitas Saya" (FR-10)', async () => {
+    // Perbedaan label ini fungsi permission PEMANGGIL SENDIRI — sesuatu yang sudah ia
+    // ketahui — jadi ia bukan oracle atas data pihak lain.
+    mockCan.mockImplementation(() => false);
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'activity_log', id: 'al1', parentId: 'g1',
+                   title: 'Sasaran A', subtitle: 'update', sortId: 'al1' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Aktivitas Saya')).toBeTruthy();
+    expect(screen.queryByText('Log Aktivitas')).toBeNull();
+  });
+
+  it('[BL10-UI-26] label governance juga bervarian menurut permission', async () => {
+    mockCan.mockImplementation(() => false);
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'governance_violation', id: 'gv1', parentId: 'g1',
+                   title: 'Sasaran A', subtitle: 'self_approval_attempt · high', sortId: 'gv1' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    expect(await screen.findByText('Catatan Governance Saya')).toBeTruthy();
   });
 });
 
