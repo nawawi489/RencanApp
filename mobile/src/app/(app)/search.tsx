@@ -56,6 +56,36 @@ function hrefForHit(h: SearchHit): Href | null {
     // `CardEntityType` (7 tipe card) dan tidak boleh diperluas (NG-7).
     return `/people-profile/${h.id}` as Href;
   }
+  if (h.scope === 'task_instance') {
+    // `id` instance itu sendiri yang jadi rute; `parentId` (task_id) hanya konteks.
+    return `/task/instance/${h.id}` as Href;
+  }
+  if (h.scope === 'evidence') {
+    // Bukti tidak punya layar sendiri — dibawa ke Task induknya (`parentId` = `task_id`).
+    return h.parentId ? (`/task/${h.parentId}` as Href) : null;
+  }
+  if (h.scope === 'comment') {
+    // Komentar juga tak punya layar sendiri, tetapi induknya BISA BERBEDA JENIS. Untuk
+    // scope ini `subtitle` memang literal `entity_type` (§6.3 "jenis induk") — jadi ini
+    // memakai maknanya, bukan menebak dari teks tampilan.
+    //
+    // Dispatch disalin dari §6.4 dan memuat literal WARISAN pra-0045 (`action_plan`,
+    // `action_plan_instance`) yang masih sah tersimpan di data. Literal di luar daftar
+    // ini membuat baris tidak dapat ditekan — fail-closed, bukan rute tebakan.
+    if (!h.parentId) return null;
+    switch (h.subtitle) {
+      case 'action_plan':
+      case 'task':
+        return `/task/${h.parentId}` as Href;
+      case 'action_plan_instance':
+      case 'task_instance':
+        return `/task/instance/${h.parentId}` as Href;
+      case 'initiative':
+        return `/initiative/${h.parentId}` as Href;
+      default:
+        return null;
+    }
+  }
   const card = cardScopeOf(h.scope);
   if (!card) return null;
   const segment = ENTITY_ROUTE_SEGMENT[card as keyof typeof ENTITY_ROUTE_SEGMENT];
