@@ -2284,3 +2284,14 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **Jebakan lingkungan yang dicatat di berkas test:** aktor uji chat harus memenuhi DUA syarat — anggota room DAN org-nya sama dengan org pesan. Prelude `_fixtures.sql` commit dan tidak pernah reset, sehingga ia memindahkan aktor `…0001` ke org DCR-05 dan membuat pengamatan Wave 0 tidak berlaku lagi sesudahnya.
 - Verifikasi: DB contract **34 lolos** (baseline 33 + 1 baru; kegagalan `0079` pra-ada karena sisa data uji manual, tidak disentuh). `tsc` bersih. 5 berkas regresi NG-6/NG-7 hijau **tanpa satu baris pun diubah** — `git status` kosong untuk kelimanya.
 - BL-10 dipecah: **BL-10a DONE**, BL-10b (People) berikutnya, BL-10c/BL-10d diblokir open question.
+
+## [2026-07-23] update | BL-10b selesai — scope People (migrasi 0086)
+
+- Files created: `supabase/migrations/0086_search_global_people.sql`, `supabase/tests/0086_search_global_people_contract.sql`
+- Files updated: `mobile/src/app/(app)/search.tsx` (rute People), test layar (+`BL10-UI-18`), [[feature-gap-backlog]]
+- Gate tersederhana dari 14 scope: `organization_id = current_user_org() OR id = auth.uid()`, tanpa permission gate. Menutup utang FR-8.5.3 Fase 8 yang shipped 7 dari 8 entity type tanpa catatan keputusan.
+- **`email` sengaja bukan field match dan tidak diproyeksikan** (§6.3). `DB-78` menguji DUA arah: tidak bocor di kolom keluaran, DAN tidak bisa dicari. **Diverifikasi merah** dengan menambahkan `p.email ilike pat` ke cabang — assertion `email_dapat_dicari` menyala tepat.
+- Rute People ditangani terpisah di `hrefForHit`, **bukan** lewat `ENTITY_ROUTE_SEGMENT` — peta itu ber-key `CardEntityType` (7 tipe card) dan NG-7 melarang memperluasnya.
+- `create or replace` penuh, bukan `drop`+`create`: `drop ... cascade` akan mereset ACL fungsi ke `PUBLIC EXECUTE` dan membatalkan revoke 0085. Konsekuensinya seluruh badan fungsi ditulis ulang di 0086 — itu harga yang memang harus dibayar.
+- **Dua kerusakan generator berulang** dari Wave 3, keduanya tertangkap sebelum commit: JS `String.replace` memakan `$$` sehingga penutup dollar-quote jadi `$;`, dan escaping bertingkat menghasilkan `escape '\'` alih-alih `escape '\'`. Pelajaran yang sama: verifikasi isi berkas yang di-generate, jangan percaya hitungan dari skrip generatornya sendiri.
+- Verifikasi: DB contract **35 lolos** (naik dari 34; kegagalan `0079` pra-ada), jest penuh **1705/1705**, `tsc` bersih, lint 0 error, rename-guard clean.

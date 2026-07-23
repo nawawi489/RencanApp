@@ -51,6 +51,11 @@ function hrefForHit(h: SearchHit): Href | null {
     // Deep-link ke ruangan + sorot pesannya (pola `?highlight=` dari Inbox search).
     return h.parentId ? (`/(tabs)/inbox/${h.parentId}?highlight=${h.id}` as Href) : null;
   }
+  if (h.scope === 'people') {
+    // Ditangani terpisah, BUKAN lewat `ENTITY_ROUTE_SEGMENT` — peta itu ber-key
+    // `CardEntityType` (7 tipe card) dan tidak boleh diperluas (NG-7).
+    return `/people-profile/${h.id}` as Href;
+  }
   const card = cardScopeOf(h.scope);
   if (!card) return null;
   const segment = ENTITY_ROUTE_SEGMENT[card as keyof typeof ENTITY_ROUTE_SEGMENT];
