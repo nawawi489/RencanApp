@@ -44,19 +44,19 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`; definisi hidup ada di **migrasi 0015**, bukan 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. ✅ **SELESAI 2026-07-22 — PR #147, migrasi 0083 (opsi 2).** Keputusan produk: V1 dikunci single-org, trigger harus gagal keras. Bentuk pertama (`RAISE` polos bila `count(*) organizations > 1`) **dihentikan sebelum ditulis** — ia mematikan seluruh gate DB contract test, sebab `supabase/tests/_fixtures.sql` sendiri membuat **2 org** lalu menyisipkan `auth.users`. Yang dikirim: jalur penempatan **eksplisit** `raw_app_meta_data.organization_id` (service-role only, pola sama seperti `role_level` 0015), `RAISE` hanya bila key absen **dan** org > 1; single-org tanpa key tetap jalan persis seperti dulu. 21 file pemanggil disetel eksplisit (prelude + 18 contract test + 2 seed). Dikunci `T-BL14-1..8`. Rinci §5 | M | ✅ DONE |
 | **BL-15** | Onboarding / org | ~~**Koreksi org di `create-user` gagal senyap**~~ ✅ **SELESAI** — turunan investigasi BL-14 (#146). Tiga cabang di Edge Function `create-user` melewati/menggagalkan koreksi `organization_id` lalu tetap menjawab HTTP 200 tanpa penanda apa pun: lookup profil actor null, `role_templates` tak ketemu, dan `profileError` yang cuma di-log. Respons kini membawa field `warning` eksplisit dan UI Tambah User menampilkannya sebagai hasil berbeda dari sukses. Detail §BL-15 di bawah. **Tidak** menyentuh trigger `handle_new_user` — perbaikan trigger dikirim terpisah, lihat BL-14 (✅ DONE, PR #147) | S | ✅ DONE |
 | **BL-16** | Search / paging | ~~**Cursor separuh diterima `search_global`**~~ ✅ **SELESAI 2026-07-23 — PR #165, migrasi 0089.** Guard FR-19 hanya menuntut `p_scopes` berisi tepat satu scope, tidak menuntut kedua bagian cursor ada. Karena Postgres membandingkan tuple **short-circuit**, `p_cursor_id` NULL baru terasa saat `created_at` persis **tie** dengan cursor — di sana `id < NULL` → NULL dan seluruh baris tie gugur **tanpa error**. Cakupan sebenarnya **hanya kasus tie**; kritik §9.1 Missing #4 `specs/bl-10-pr1-tdd-plan.md` yang menyebut "semua baris hilang" **berlebihan** dan dikoreksi di sini. Klien tak pernah menghasilkannya (`useSearchScopePage` mengirim cursor sebagai objek `{ts,id}`) — hanya terjangkau lewat panggilan API tangan. Diperbaiki karena **gejalanya kehilangan data tanpa error**, bukan karena jangkauannya. Cursor kini sah hanya bila kedua bagian terisi atau keduanya NULL; errcode `22023` + pesan **statis** (FR-13). Guard di kepala fungsi, bukan per cabang, agar cabang ke-15 ikut terlindungi. Dikunci `DB-96..DB-101`, diverifikasi merah lebih dulu. Detail §BL-16 di bawah | XS | ✅ DONE |
-| **BL-17** | Search / audit | **Subtitle scope audit menampilkan `action` mentah snake_case** (`create`, `update`, `review_approve`) — persis kelas cacat yang **BL-12 baru saja tutup** untuk `violation_type`. Peta label Indonesia (`BL10-OQ-04`) sengaja TIDAK ditaruh di SQL karena akan menduplikasi `GOVERNANCE_VIOLATION_TYPE_LABEL` dan mengembalikan drift yang gate CI BL-13 cegah; tempat yang benar adalah **klien**, mengikuti pola BL-12. Statusnya turun dari blocker jadi kosmetik setelah OQ-05 diputuskan (search tidak lagi mencocokkan `action`), tetapi ia tetap teks mentah yang dilihat pengguna | XS | ⚠️ terbuka |
+| **BL-17** | Search / audit | ~~**Subtitle scope audit menampilkan `action` mentah snake_case**~~ ✅ **SELESAI 2026-07-23 — PR #166, nol migrasi**. `ACTIVITY_LOG_ACTION_LABEL` + `activityLogActionLabel()` di `activity-governance.ts`, bersebelahan dengan peta BL-12, fallback identik (dikenal → label; tak dikenal → nilai mentah; kosong → `—`). Peta lokal duplikat di `settings-activity-log.tsx` **dihapus** — satu peta melayani dua layar. **Gate CI BL-13 DIPERLUAS** ke `action` (keputusan + alasan di §BL-17); ia langsung membayar dirinya: peta warisan ternyata sudah kehilangan **5** action ter-emit dan menyimpan **1** label yatim. Dikunci `[BL17-1..7]` + `[BL17-UI-1..3]` | XS | ✅ DONE |
 | **BL-18** | Search / governance | **Kontrol kompensasi `BL10-OQ-09` baru separuh tertutup.** FR-34 (PR #163) memasang penghitung per-aktor ke logger seam, tetapi **tidak ada ambang, alerting, atau siapa pun yang membacanya**. Kontrol kompensasi yang tidak diawasi bukan kontrol — dan ia dipasang justru untuk mengimbangi keputusan Search nol-emisi audit (G6), sehingga penambangan data organisasi lewat pencarian berulang tidak meninggalkan jejak di `activity_logs`. Sisanya **operasional, bukan kode**: tentukan ambang wajar per aktor per jendela waktu, dan sambungkan ke sink terpusat yang memang dipantau | S | ⚠️ terbuka |
 
 ---
 
 ## 2. Triage (pasca-verifikasi)
 
-> [!note] Sisa pekerjaan per 2026-07-23: **dua item, keduanya turunan BL-10 pasca-rilis**
-> Seluruh BL-01..BL-15 tertutup; PRD §38 lengkap 14/14 lewat migrasi 0085-0088. ~~BL-16~~ ✅ **selesai 2026-07-23 (PR #165, migrasi 0089)**. Yang tersisa **BL-17..BL-18**, dan ketiganya lahir dari menyisir sisa utang BL-10 secara sengaja — bukan dari audit baru.
+> [!note] Sisa pekerjaan per 2026-07-23: **satu item** — BL-18
+> Seluruh BL-01..BL-15 tertutup; PRD §38 lengkap 14/14 lewat migrasi 0085-0088. ~~BL-16~~ ✅ **selesai 2026-07-23 (PR #165, migrasi 0089)**; ~~BL-17~~ ✅ **selesai 2026-07-23 (PR #166, nol migrasi)**. Yang tersisa **BL-18**, dan ketiganya lahir dari menyisir sisa utang BL-10 secara sengaja — bukan dari audit baru.
 >
 > Ketiganya **sempat masuk kategori "ditunda demi menghindari overengineering"**, lalu dinilai ulang dan ternyata tidak semuanya pantas di situ. Yang membedakannya dari penundaan yang memang aman (`BL10-OQ-12` realtime non-chat, `BL10-OQ-10` dua semantik People, `BL10-OQ-07` kebisingan instance, `NG-13` tanpa index trigram): ketiga ini punya **konsekuensi yang tidak akan dilaporkan siapa pun** — kehilangan data senyap, teks mentah ke pengguna, dan kontrol yang tidak dibaca.
 >
-> Prioritas: **BL-16 lebih dulu** — gejalanya baris hilang tanpa error, jadi tidak ada yang akan melaporkannya. ✅ **Dikerjakan pertama dan sudah tutup** (PR #165); sisa antrean **BL-17** lalu **BL-18**.
+> Prioritas: **BL-16 lebih dulu** — gejalanya baris hilang tanpa error, jadi tidak ada yang akan melaporkannya. ✅ **Dikerjakan pertama dan sudah tutup** (PR #165), disusul **BL-17** (PR #166); sisa antrean **BL-18**.
 
 **XS murni — nol migrasi, nol keputusan produk:**
 ~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; ~~BL-12 label map~~ ✅ (#117); ~~BL-11 ikon header~~ ✅ (#115); ~~BL-01 `rank_number`~~ ✅ **selesai 2026-07-20 (#116)**. ~~BL-06 zona waktu~~ ✅ **selesai 2026-07-22** (pindah dari bucket "butuh migrasi" setelah interpretasinya disetel — lihat §BL-06). **Bucket ini kosong.**
@@ -422,6 +422,43 @@ Assertion sengaja **tidak** menulis ulang daftar 11 tipe (itu akan jadi salinan 
 **Pembuktian gate.** Empat skenario drift disuntik ke salinan scratch lalu dicabut — semuanya merah pada assertion yang tepat: tipe palsu lewat jalur A → `[BL13-4]`; tipe palsu lewat jalur B → `[BL13-4]`; emitter dinamis → `[BL13-6]`; label yatim di client → `[BL13-5]`.
 
 **Batas yang diterima.** Gate ini menjaga sinkronisasi migrasi↔client, bukan integritas data di DB — nilai sampah yang ditulis di luar migrasi (psql manual, RPC baru yang belum di-commit) tetap masuk. Kalau audit suatu saat menuntut himpunan tipe yang *enumerable dari DB*, opsi 2 kembali ke meja; sampai saat itu ia membeli kepastian yang tidak dibutuhkan siapa pun dengan harga FK di tabel append-only yang panas.
+
+## BL-17 — Label Indonesia untuk `activity_logs.action`, dan keputusan memperluas gate BL-13
+
+**Gap.** `search_global` (0088) memproyeksikan `activity_logs.action` mentah sebagai `subtitle`, dan `search.tsx` merendernya apa adanya: `create`, `update`, `review_approve`. Kelas cacat yang sama persis dengan yang BL-12 tutup untuk `violation_type`, dikirim sebagai permukaan baru.
+
+**Tempatnya klien, bukan SQL.** Migrasi 0088 sudah menuliskan alasannya di komentar cabang audit: peta label di SQL menduplikasi `GOVERNANCE_VIOLATION_TYPE_LABEL` dan mengembalikan drift yang gate BL-13 dipasang untuk mencegah. Implementasi mengikuti bentuk BL-12 — `ACTIVITY_LOG_ACTION_LABEL` + `activityLogActionLabel()` di `mobile/src/lib/activity-governance.ts`, dengan fallback identik.
+
+**Penulis baris.** `activity_logs.action` bertipe `text` tanpa CHECK constraint, jadi himpunannya ditelusuri dari migrasi. **Tiga** jalur, bukan dua seperti `violation_type`:
+
+1. `write_activity(entity_type, entity_id, <action>, detail)` — helper Fase 1 (0005), jalur mayoritas.
+2. `write_activity_system(org, actor, entity_type, entity_id, <action>, detail)` — jalur cron/sistem (0007).
+3. `insert into activity_logs (…)` langsung — badan kedua helper, trigger `log_card_creation()` (literal `'create'`), dan migrasi data (0078 `settings_legacy_purged`).
+
+Parser menemukan **152 site** → **44 action** unik. Sebelas action yang teramati di DB nyata (733 baris) semuanya termasuk, jadi hitungannya direkonsiliasi terhadap data, bukan dipercaya begitu saja.
+
+**Ekspresi `case` diresolusi, tidak diallowlist.** Jalur review menulis `case when p_decision = 'approve' then 'review_approve' else 'review_reject' end` di tujuh migrasi. Memperlakukannya sebagai dinamis akan membuang empat action ke allowlist manual — termasuk `review_approve`, yang sendirian 72 dari 733 baris produksi. Selama SELURUH cabang hasilnya literal, nilainya dapat diketahui statis; satu cabang non-literal membuat seluruh ekspresi dinamis (resolusi sebagian = gate hijau yang kehilangan nilai). Satu-satunya yang tersisa di allowlist: `p_action` di badan kedua helper — nilainya datang dari pemanggil, yang sudah diparse lewat jalur 1/2.
+
+### Keputusan: gate BL-13 DIPERLUAS ke `action`
+
+Pertanyaan yang tercatat di baris BL-17 adalah apakah gate `violation_type` pantas diperluas, mengingat `action` punya lebih banyak penulis dan lebih sering bertambah. **Diputuskan: diperluas.**
+
+Alasannya membalik premis pertanyaannya. "Lebih banyak penulis, lebih sering bertambah" adalah deskripsi **laju drift**, dan laju drift adalah argumen untuk memasang gate, bukan untuk melewatkannya. Kolom yang jarang berubah bisa dijaga review manusia; kolom yang sering berubah tidak bisa.
+
+Argumen itu tidak spekulatif — drift-nya sudah terjadi dan terukur sebelum satu baris gate ditulis. Peta warisan di `settings-activity-log.tsx` (41 entri, hidup diam-diam sebagai konstanta privat satu layar) ternyata:
+
+- **kehilangan 5 action ter-emit**: `card_completion_rule_updated`, `card_guidance_updated`, `push_token_transferred`, `settings_legacy_purged`, `target_breakdown_updated`;
+- **menyimpan 1 label yatim**: `instance_missed` — sebenarnya tipe **notifikasi** (0008), bukan action; `instance_marked_overdue` adalah action-nya. Dihapus.
+
+Enam kekeliruan yang tak satu pun memerahkan apa pun, di peta yang tidak ada seorang pun tahu sudah basi. Itulah tepatnya mode kegagalan yang jadi keluhan BL-13.
+
+Ongkosnya juga bukan variabel bebas: parser BL-13 sudah menyediakan `splitTopLevel`/`literalValue`, jadi perluasan ini dua berkas (`test-support/activity-log-actions.ts` + `lib/__tests__/activity-log-actions.contract.test.ts`), nol migrasi, nol perubahan schema — bentuk yang sama dengan opsi 3 BL-13.
+
+**Batas yang diterima**, identik BL-13: gate menjaga sinkronisasi migrasi↔client, bukan integritas data di DB. Nilai yang ditulis di luar migrasi tetap masuk — dan fallback nilai mentah memang ada untuk itu.
+
+**Yang ikut dikirim (di luar tulisan baris BL-17).** Subtitle scope `governance_violation` di layar yang sama (`violation_type · severity`) **juga** mentah. Ia dirender baris kode yang sama dan dilayani peta BL-12 yang sudah ada, jadi membiarkannya berarti mengirim ulang cacat yang sedang ditutup, satu kolom bergeser. Nol peta baru: `governanceViolationTypeLabel()` + `GOVERNANCE_VIOLATION_SEVERITY_LABEL`.
+
+**Dikunci tes.** `[BL17-1..7]` gate kontrak (ketiga jalur emisi punya lantai sendiri, resolusi `case`, lantai 11 action produksi, dua arah label↔emitter, site dinamis ditinjau) + `[BL-17]` di `activity-governance.test.ts` (44 action dari parser dicek berlabel non-`snake_case`, fallback, kosong, trim) + `[BL17-UI-1..3]` di `search.test.tsx` — termasuk sapuan bahwa **tidak ada** teks terlihat yang masih `snake_case`.
 
 ## BL-15 — Koreksi org di `create-user`: dari senyap jadi terlihat pemanggil
 
