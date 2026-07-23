@@ -3831,6 +3831,10 @@ export type Database = {
         Args: { p_device_id?: string; p_expo_token: string; p_platform: string }
         Returns: undefined
       }
+      remove_team_member: {
+        Args: { p_profile_id: string; p_team_id: string }
+        Returns: undefined
+      }
       resolve_governance_violation: {
         Args: {
           p_resolution_note: string
@@ -3931,6 +3935,10 @@ export type Database = {
           p_room: string
         }
         Returns: string
+      }
+      set_department_active: {
+        Args: { p_active: boolean; p_department_id: string }
+        Returns: undefined
       }
       set_minimum_breakdown_rule: {
         Args: {

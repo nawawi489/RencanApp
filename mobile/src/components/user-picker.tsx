@@ -14,16 +14,19 @@ export function UserPicker({
   value,
   onChange,
   excludeId,
+  excludeIds,
 }: {
   label: string;
   required?: boolean;
   value: Person | null;
   onChange: (p: Person | null) => void;
   excludeId?: string | null;
+  /** Beberapa orang sekaligus — mis. yang sudah jadi anggota Tim. */
+  excludeIds?: ReadonlySet<string>;
 }) {
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ['org-profiles'], queryFn: listOrgProfiles });
-  const options = (data ?? []).filter((p) => p.id !== excludeId);
+  const options = (data ?? []).filter((p) => p.id !== excludeId && !excludeIds?.has(p.id));
 
   return (
     <View className="gap-1.5">

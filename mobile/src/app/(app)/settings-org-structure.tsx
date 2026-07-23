@@ -1,11 +1,15 @@
 // Fase 8 — Settings > Organisasi. UI-S-OR1: tab Departemen / Posisi / Tim / Role Template.
 // Gating: create_department / manage_positions / manage_teams / manage_settings (per tab).
-import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Stack, useRouter, type Href } from 'expo-router';
+import { useState, type ReactNode } from 'react';
+import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
+import { OptionPicker, type PickerOption } from '@/components/option-picker';
 import { Button, EmptyState, LabeledInput, SectionCard, SkeletonList, TabBar } from '@/components/ui';
+import { UserPicker } from '@/components/user-picker';
 import {
   useOrgActions,
   useOrgStructure,
@@ -14,6 +18,7 @@ import {
   useTeams,
 } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
+import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 
 type Tab = 'department' | 'position' | 'team' | 'role';
@@ -84,7 +89,7 @@ export default function SettingsOrgStructureScreen() {
 /** Item bersama tab Departemen/Posisi/Tim (nama + optional deskripsi + is_active). */
 type OrgItem = { id: string; name: string; description: string | null; is_active: boolean };
 
-function SimpleOrgTab({
+function SimpleOrgTab<T extends OrgItem>({
   items,
   isLoading,
   isPending,
@@ -92,14 +97,28 @@ function SimpleOrgTab({
   entity,
   subhead,
   placeholder,
+  metaOf,
+  actionsOf,
+  onPressItem,
+  formExtras,
+  onResetForm,
 }: {
-  items: OrgItem[];
+  items: T[];
   isLoading: boolean;
   isPending: boolean;
   onCreate: (name: string) => Promise<unknown>;
   entity: string;
   subhead: string;
   placeholder: string;
+  /** Baris keterangan tautan (mis. "Departemen: Operasi") di bawah nama item. */
+  metaOf?: (item: T) => string | null;
+  /** Kontrol per baris. Lewat prop `actions` SectionCard, bukan children — DESIGN §4 aturan 6. */
+  actionsOf?: (item: T) => ReactNode;
+  onPressItem?: (item: T) => void;
+  /** Field tambahan di form tambah — state-nya dipegang tab pemanggil. */
+  formExtras?: ReactNode;
+  /** Kosongkan `formExtras` setelah simpan berhasil supaya tidak lengket ke entri berikutnya. */
+  onResetForm?: () => void;
 }) {
   const [name, setName] = useState('');
   const [adding, setAdding] = useState(false);
@@ -109,6 +128,7 @@ function SimpleOrgTab({
     try {
       await onCreate(name.trim());
       setName('');
+      onResetForm?.();
       setAdding(false);
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Kesalahan.');
@@ -122,19 +142,28 @@ function SimpleOrgTab({
       {items.length === 0 ? (
         <EmptyState title={`Belum ada ${entity}`} description={`Tambahkan ${entity} pertama Anda.`} />
       ) : (
-        items.map((it) => (
-          <SectionCard key={it.id}>
-            <Text className="text-base font-semibold text-black dark:text-white">{it.name}</Text>
-            {it.description ? (
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{it.description}</Text>
-            ) : null}
-            {!it.is_active ? <Text className="text-xs text-neutral-400">Nonaktif</Text> : null}
-          </SectionCard>
-        ))
+        items.map((it) => {
+          const meta = metaOf?.(it) ?? null;
+          return (
+            <SectionCard
+              key={it.id}
+              actions={actionsOf?.(it)}
+              onPress={onPressItem ? () => onPressItem(it) : undefined}
+              accessibilityLabel={onPressItem ? `Buka ${entity} ${it.name}` : undefined}>
+              <Text className="text-base font-semibold text-black dark:text-white">{it.name}</Text>
+              {it.description ? (
+                <Text className="text-sm text-neutral-500 dark:text-neutral-400">{it.description}</Text>
+              ) : null}
+              {meta ? <Text className="text-xs text-neutral-500 dark:text-neutral-400">{meta}</Text> : null}
+              {!it.is_active ? <Text className="text-xs text-neutral-400">Nonaktif</Text> : null}
+            </SectionCard>
+          );
+        })
       )}
       {adding ? (
         <SectionCard>
           <LabeledInput label={`Nama ${entity}`} value={name} onChangeText={setName} placeholder={placeholder} />
+          {formExtras}
           <Button label={`Simpan ${entity}`} onPress={handleAdd} disabled={isPending || !name.trim()} />
         </SectionCard>
       ) : (
@@ -146,7 +175,40 @@ function SimpleOrgTab({
 
 function DepartmentTab() {
   const { departments, isLoading } = useOrgStructure();
-  const { createDepartment, isPending } = useOrgActions();
+  const { createDepartment, setDepartmentActive, isPending } = useOrgActions();
+  // Jumlah tautan hanya untuk teks konfirmasi — keduanya sudah di-cache tab lain.
+  const { positions } = usePositions();
+  const { teams } = useTeams();
+
+  function confirmToggle(dept: { id: string; name: string; is_active: boolean }) {
+    const nextActive = !dept.is_active;
+    if (nextActive) {
+      void run(true);
+      return;
+    }
+    const linked =
+      positions.filter((p) => p.department_id === dept.id).length +
+      teams.filter((t) => t.department_id === dept.id).length;
+    Alert.alert(
+      `Nonaktifkan ${dept.name}?`,
+      linked > 0
+        ? `${linked} Posisi/Tim masih tertaut dan TIDAK akan diputus — riwayatnya dipertahankan. Departemen ini hanya berhenti muncul sebagai pilihan untuk yang baru.`
+        : 'Departemen berhenti muncul sebagai pilihan untuk Posisi/Tim baru. Bisa diaktifkan lagi kapan saja.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        { text: 'Nonaktifkan', style: 'destructive', onPress: () => void run(false) },
+      ],
+    );
+
+    async function run(active: boolean) {
+      try {
+        await setDepartmentActive({ departmentId: dept.id, active });
+      } catch (e) {
+        alertFriendlyError('Gagal', e, 'Kesalahan.');
+      }
+    }
+  }
+
   return (
     <SimpleOrgTab
       items={departments}
@@ -156,38 +218,124 @@ function DepartmentTab() {
       entity="Departemen"
       subhead="Kelola Departemen organisasi. Nonaktifkan tanpa menghapus untuk menjaga riwayat."
       placeholder="mis. Operasi"
+      actionsOf={(d) => (
+        <Button
+          label={d.is_active ? 'Nonaktifkan' : 'Aktifkan kembali'}
+          // Tanpa label eksplisit, setiap baris mengumumkan "Nonaktifkan" yang sama —
+          // pembaca layar kehilangan tahu departemen mana yang akan terpengaruh.
+          accessibilityLabel={`${d.is_active ? 'Nonaktifkan' : 'Aktifkan kembali'} ${d.name}`}
+          variant={d.is_active ? 'danger' : 'secondary'}
+          onPress={() => confirmToggle(d)}
+          disabled={isPending}
+        />
+      )}
     />
   );
 }
 
+/**
+ * Opsi Departemen untuk picker Posisi/Tim. Hanya departemen aktif yang bisa dipilih —
+ * `create_position` / `create_team` menerima departemen nonaktif, tapi menautkan struktur
+ * baru ke unit yang sudah dipensiunkan hanya memindahkan masalah ke laporan.
+ */
+function useDepartmentOptions(): { options: PickerOption[]; nameOf: (id: string | null) => string | null } {
+  const { departments } = useOrgStructure();
+  return {
+    options: departments.filter((d) => d.is_active).map((d) => ({ value: d.id, label: d.name })),
+    nameOf: (id) => (id ? (departments.find((d) => d.id === id)?.name ?? null) : null),
+  };
+}
+
+const DEPARTMENT_EMPTY_HINT = 'Belum ada Departemen aktif. Buat lebih dulu di tab Departemen.';
+
 function PositionTab() {
   const { positions, isLoading } = usePositions();
   const { createPosition, isPending } = useOrgActions();
+  const { options, nameOf } = useDepartmentOptions();
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
+
   return (
     <SimpleOrgTab
       items={positions}
       isLoading={isLoading}
       isPending={isPending}
-      onCreate={(name) => createPosition({ name })}
+      onCreate={(name) => createPosition({ name, departmentId })}
       entity="Posisi"
       subhead="Posisi (jabatan) yang bisa dipilih saat memetakan struktur organisasi."
       placeholder="mis. Sales Manager"
+      metaOf={(it) => {
+        const dept = nameOf(it.department_id);
+        return dept ? `Departemen: ${dept}` : null;
+      }}
+      formExtras={
+        <OptionPicker
+          label="Departemen"
+          options={options}
+          value={departmentId}
+          onChange={setDepartmentId}
+          placeholder="Tanpa departemen"
+          clearLabel="Tanpa departemen"
+          emptyText={DEPARTMENT_EMPTY_HINT}
+        />
+      }
+      onResetForm={() => setDepartmentId(null)}
     />
   );
 }
 
 function TeamTab() {
+  const router = useRouter();
   const { teams, isLoading } = useTeams();
   const { createTeam, isPending } = useOrgActions();
+  const { options, nameOf } = useDepartmentOptions();
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [lead, setLead] = useState<NonNullable<PersonRef> | null>(null);
+  // Key sama dengan UserPicker → satu cache profiles untuk picker dan label daftar.
+  const { data: profiles } = useQuery({ queryKey: ['org-profiles'], queryFn: listOrgProfiles });
+
+  function leadNameOf(id: string | null): string | null {
+    if (!id) return null;
+    const p = (profiles ?? []).find((x) => x.id === id);
+    return p ? personLabel(p) : null;
+  }
+
   return (
     <SimpleOrgTab
       items={teams}
       isLoading={isLoading}
       isPending={isPending}
-      onCreate={(name) => createTeam({ name, departmentId: null, leadId: null })}
+      onCreate={(name) => createTeam({ name, departmentId, leadId: lead?.id ?? null })}
       entity="Tim"
-      subhead="Tim lintas departemen — gunakan untuk kelompokkan eksekusi yang membutuhkan kolaborasi."
+      subhead="Tim lintas departemen — gunakan untuk kelompokkan eksekusi yang membutuhkan kolaborasi. Buka satu Tim untuk mengelola anggotanya."
       placeholder="mis. Squad Mobile"
+      // `as Href`: tipe rute Expo Router di-generate dev server, rute baru belum ada
+      // di sana sampai regenerasi — pola sama dengan settings-archive.tsx:111.
+      onPressItem={(t) => router.push(`/settings-team/${t.id}` as Href)}
+      metaOf={(it) => {
+        const dept = nameOf(it.department_id);
+        const leadName = leadNameOf(it.lead_id);
+        const parts = [dept ? `Departemen: ${dept}` : null, leadName ? `Lead: ${leadName}` : null];
+        const meta = parts.filter(Boolean).join(' · ');
+        return meta || null;
+      }}
+      formExtras={
+        <>
+          <OptionPicker
+            label="Departemen"
+            options={options}
+            value={departmentId}
+            onChange={setDepartmentId}
+            placeholder="Tanpa departemen"
+            clearLabel="Tanpa departemen"
+            emptyText={DEPARTMENT_EMPTY_HINT}
+          />
+          <UserPicker label="Lead Tim" value={lead} onChange={setLead} />
+        </>
+      }
+      onResetForm={() => {
+        setDepartmentId(null);
+        setLead(null);
+      }}
     />
   );
 }
