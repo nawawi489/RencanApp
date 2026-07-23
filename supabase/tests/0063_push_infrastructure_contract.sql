@@ -1,28 +1,30 @@
--- [QUARANTINED — WIP] Excluded from CI (run-db-contract-tests.sh skips *.wip.sql).
--- Reason: test z2 fails on a fresh bootstrap (supabase start). Guardrail G-2 in
--- 0063_push_infrastructure.sql ("revoke usage on schema net from public,
--- authenticated, anon;") silently no-ops on Supabase LOCAL — the net schema is
--- owned by supabase_admin there, and migrations run as postgres (not superuser
--- locally), so the REVOKE only actually takes effect on Supabase HOSTED (see
--- the migration's own comment at lines 409-414, which already documents this
--- and gives a manual docker-exec-as-supabase_admin workaround that was never
--- automated). Test execution stops at z2 (ON_ERROR_STOP), so z3-z6 (vault
--- secrets, cron job config) are UNVERIFIED against a fresh bootstrap — the
--- migration's own comment near "vault.create_secret requires supabase_admin
--- on local" suggests z3 may have the identical gap.
--- Repair: either (a) add a CI/local bootstrap step that re-runs the schema-net
--- REVOKE (and any vault.create_secret calls) as supabase_admin, mirroring the
--- migration's documented workaround, or (b) confirm hosted staging/prod truly
--- has this guardrail active (it should, per the superuser-postgres comment)
--- and scope this test to hosted-only / skip guardrail assertions on local.
--- Repair tracked in supabase/tests/WIP_REPAIR_BACKLOG.md. Rename back to *.sql
--- once green against a genuinely fresh `supabase start`.
+-- UN-QUARANTINED 2026-07-23 — gated by CI (run-db-contract-tests.sh).
+--
+-- The original quarantine note blamed z2/z3 (schema-net REVOKE and
+-- vault.create_secret needing supabase_admin on local). That diagnosis was wrong
+-- on both counts, and the only genuine rot was elsewhere:
+--
+--   * REAL rot — every `insert into auth.users(id)` failed since 0083
+--     (handle_new_user refuses to infer an org once >1 organisation exists).
+--     Execution died at block (j) under ON_ERROR_STOP, which is why z2 was
+--     *assumed* to be the blocker: nothing after (i) had ever actually run.
+--     Fixed by passing raw_app_meta_data.organization_id explicitly, matching
+--     0063_push_ac_fan4_isolation.sql.
+--   * z3/z6 — vault.create_secret does NOT need a manual step. Both secrets
+--     exist on a migration-bootstrapped local DB, still holding the migration's
+--     '___PLACEHOLDER___' value and sharing its creation timestamp, which proves
+--     the migration's own do-block created them. Passes as written.
+--   * z2 — passes locally, but for the wrong reason, and the invariant is
+--     violated on hosted. See the note above block (z2); tracked separately.
+--
+-- Verified green end-to-end (a…z6, 26 blocks) against the local stack on
+-- 2026-07-23 with migration 0090 applied.
 --
 -- Migration 0063 contract test — Push Notifications Fase 2 server infrastructure.
 --
 -- Jalankan (butuh role postgres/owner):
 --   docker exec -i supabase_db_supabase psql -U postgres -d postgres \
---     -f supabase/tests/0060_push_infrastructure_contract.sql
+--     -f supabase/tests/0063_push_infrastructure_contract.sql
 --
 -- Pola: raise notice 'PASS …' / raise exception 'FAIL: …'.
 -- Cakupan awal (Fase 2-A, tables + RLS + FK + index):
@@ -372,7 +374,10 @@ declare
   v_platform_after text;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak
+  -- saat >1 organisasi terdaftar).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active)
     values (v_userA, v_org, 'User-A idempotent', true)
     on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
@@ -406,7 +411,10 @@ declare
   v_revoked_at timestamptz;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak
+  -- saat >1 organisasi terdaftar).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active)
     values (v_userA, v_org, 'User-A unregister', true)
     on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
@@ -440,7 +448,10 @@ declare
   v_audit_detail jsonb;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_userB) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_userB, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User-A hijack', true),
     (v_userB, v_org, 'User-B hijack', true)
@@ -496,7 +507,10 @@ declare
   v_msg text;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_userB) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_userB, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User-A rl', true),
     (v_userB, v_org, 'User-B rl', true)
@@ -556,7 +570,10 @@ declare
   v_msg text;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak
+  -- saat >1 organisasi terdaftar).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active)
     values (v_userA, v_org, 'User-A n', true)
     on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
@@ -613,7 +630,10 @@ declare
   v_userA uuid := '99999999-2222-0000-0000-aaaa00000008';
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak
+  -- saat >1 organisasi terdaftar).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active)
     values (v_userA, v_org, 'User-A p', true)
     on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
@@ -653,7 +673,10 @@ declare
   v_userA uuid := '99999999-2222-0000-0000-aaaa00000009';
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak
+  -- saat >1 organisasi terdaftar).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active)
     values (v_userA, v_org, 'User-A q', true)
     on conflict (id) do update set organization_id = excluded.organization_id, is_active = true;
@@ -743,7 +766,10 @@ declare
   v_expo_token text;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_actor, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User A t', true),
     (v_actor, v_org, 'Actor t', true)
@@ -792,7 +818,10 @@ declare
   v_claim_count int;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_actor, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User A u', true),
     (v_actor, v_org, 'Actor u', true)
@@ -845,7 +874,10 @@ declare
   v_claim_count int;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_actor, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User A v', true),
     (v_actor, v_org, 'Actor v', true)
@@ -899,7 +931,10 @@ declare
   v_gap_min numeric;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_actor, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User A x', true),
     (v_actor, v_org, 'Actor x', true)
@@ -962,7 +997,10 @@ declare
   v_attempts int;
 begin
   insert into public.organizations(id, name) values (v_org, 'Test Org 0060') on conflict (id) do nothing;
-  insert into auth.users(id) values (v_userA), (v_actor) on conflict (id) do nothing;
+  -- organization_id wajib eksplisit sejak 0083 (handle_new_user menolak menebak).
+  insert into auth.users(id, raw_app_meta_data) values
+    (v_userA, jsonb_build_object('organization_id', v_org)),
+    (v_actor, jsonb_build_object('organization_id', v_org)) on conflict (id) do nothing;
   insert into public.profiles(id, organization_id, full_name, is_active) values
     (v_userA, v_org, 'User A y', true),
     (v_actor, v_org, 'Actor y', true)
@@ -1021,8 +1059,23 @@ begin
 end $$;
 
 -- ============================================================ (z2) Guardrail G-2: schema net USAGE revoked from client roles
--- Catatan: pada local dev, REVOKE harus dijalankan sebagai supabase_admin (lihat komentar di migration).
--- Pada hosted, migration postgres superuser langsung berhasil.
+-- PENTING — asumsi di komentar migration 0063 (baris 409-414) TERBALIK, terverifikasi
+-- 2026-07-23. Klaimnya: REVOKE no-op di local, berhasil di hosted karena postgres
+-- superuser. Faktanya:
+--   local   : nspacl schema net = {supabase_admin=UC/…,supabase_functions_admin=U/…,
+--             postgres=U/…,service_role=U/…} — TANPA entry PUBLIC/anon/authenticated.
+--             Bukan karena REVOKE-nya jalan, tapi karena image lokal memang tidak
+--             pernah meng-grant-nya. Assertion di bawah lolos secara kebetulan.
+--   staging : nspacl = {…,=U/supabase_admin,…,anon=U/…,authenticated=U/…} dan
+--             has_function_privilege('authenticated','net.http_post(...)','execute')
+--             = TRUE. Guardrail G-2 TIDAK aktif di hosted. schema net dimiliki
+--             supabase_admin di sana juga, jadi REVOKE dari migration (yang jalan
+--             sebagai postgres) justru no-op DI HOSTED.
+-- Konsekuensi: assertion ini hijau di CI tapi tidak membuktikan apa pun tentang
+-- hosted — vacuous pass. Ia tetap dipertahankan karena invariannya benar dan akan
+-- menangkap regresi kalau image lokal berubah. Penutupan G-2 di hosted butuh
+-- REVOKE sebagai supabase_admin (di luar jangkauan migration) — dilacak terpisah.
+-- net tidak di-expose PostgREST, jadi ini defense-in-depth, bukan lubang langsung.
 do $$
 declare
   v_auth boolean; v_anon boolean; v_pub boolean;

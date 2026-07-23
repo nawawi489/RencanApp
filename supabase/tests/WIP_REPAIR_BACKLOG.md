@@ -36,6 +36,38 @@ pre-0045 tests hardcode.
 2. The `initiatives.strategy_id` cluster (`0018`, `0040`, `ws3b`, `fase3`) shares
    one fix: build a valid `goal→strategy→initiative` chain in each scenario.
 
+## Un-quarantined (2026-07-23) — PR #168, migration 0090
+
+- **`0063_push_infrastructure_contract`** — un-quarantined, all 30 assertion
+  blocks green. It was the *only* coverage of the push drainer, and being
+  skipped is a direct cause of the 0090 incident: `service_role` never held
+  EXECUTE on `claim_push_deliveries`, so the drainer 403'd 1440×/day from the
+  day 0063 shipped, and nothing caught it.
+
+  Its quarantine note blamed z2/z3 (schema-net REVOKE and `vault.create_secret`
+  needing `supabase_admin` on local). **Both were wrong.** The actual rot was
+  every `insert into auth.users(id)` failing since 0083 (`handle_new_user`
+  refuses to infer an org once >1 organisation exists). Execution died at block
+  (j) under `ON_ERROR_STOP`, so z2 was merely the first thing *nobody had ever
+  reached* — it was assumed guilty because everything past (i) was unverified.
+  Fixed by passing `raw_app_meta_data.organization_id` explicitly.
+
+  `vault.create_secret` needs no manual step either: both secrets exist on a
+  migration-bootstrapped local DB, still holding `'___PLACEHOLDER___'` and
+  sharing the migration's creation timestamp — the do-block created them.
+
+  > **Live finding, not fixed here.** Guardrail G-2 is **inactive on hosted**.
+  > The comment in `0063_push_infrastructure.sql:409-414` has it backwards:
+  > schema `net` is owned by `supabase_admin` on staging too, so the migration's
+  > `revoke usage on schema net` no-ops *there*, not locally. On staging, `anon`
+  > and `authenticated` both hold USAGE on `net` **and** EXECUTE on
+  > `net.http_post`. `net` is not PostgREST-exposed, so this is
+  > defense-in-depth rather than a directly reachable hole, but the guardrail
+  > the migration claims to install does not exist. Closing it needs a REVOKE
+  > run as `supabase_admin`, which a migration cannot do. Test z2 is kept and
+  > passes in CI, but only because the local image never granted the privilege
+  > in the first place — a vacuous pass, flagged in-file above the block.
+
 ## Un-quarantined (2026-07-19) — PR #107 merged, migration 0076 live
 
 - **`0017_permission_settings_contract`** — un-quarantined. PR #107 (squash-
