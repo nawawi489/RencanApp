@@ -333,38 +333,68 @@ rollback;
 begin;
 do $$
 declare
-  v_ceo  uuid := '11111111-1111-1111-1111-000000000005';   -- anggota room 'dr' DAN org-nya cocok (lihat catatan)
+  v_org  uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';   -- Contract Fixtures Org
+  v_ceo  uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';   -- CEO Fixture (org yang sama)
+  v_room uuid;
   fails  text := '';
   n      int;
   got    text;
   v_len  int;
 begin
+  -- Menyemai SENDIRI room + keanggotaan + pesan.
+  --
+  -- Versi pertama blok ini mengandalkan data chat yang kebetulan ada di DB pengembang
+  -- (dari `seed_dummy.sql`) dan HIJAU secara lokal — lalu MERAH di CI. Sebabnya:
+  -- `scripts/ci/run-db-contract-tests.sh` hanya menerapkan `supabase/tests/_fixtures.sql`
+  -- sebagai prelude, dan berkas itu punya NOL chat room maupun pesan.
+  --
+  -- Aturan yang berlaku untuk blok mana pun sesudah ini: jangan pernah bergantung pada
+  -- data ambient. Kalau sebuah test butuh baris, ia yang membuatnya.
+  -- `chat_rooms.action_plan_id` NOT NULL, jadi rantai induknya ikut disemai.
+  declare v_goal uuid; v_strat uuid; v_init uuid; v_ap uuid;
+  begin
+    insert into public.goals (organization_id, name, pic_id, period_start, period_end, status, target_value, created_by)
+      values (v_org, 'bl10chat goal', v_ceo, current_date, current_date+30, 'draft', '1', v_ceo) returning id into v_goal;
+    insert into public.strategies (organization_id, goal_id, name, pic_id, period_start, period_end, status, created_by)
+      values (v_org, v_goal, 'bl10chat strategy', v_ceo, current_date, current_date+30, 'draft', v_ceo) returning id into v_strat;
+    insert into public.initiatives (organization_id, strategy_id, name, pic_id, status, created_by)
+      values (v_org, v_strat, 'bl10chat initiative', v_ceo, 'draft', v_ceo) returning id into v_init;
+    insert into public.action_plans (organization_id, initiative_id, name, pic_id, status, created_by)
+      values (v_org, v_init, 'bl10chat action plan', v_ceo, 'draft', v_ceo) returning id into v_ap;
+
+    insert into public.chat_rooms (organization_id, action_plan_id, name)
+      values (v_org, v_ap, 'bl10 chat room') returning id into v_room;
+    insert into public.chat_room_members (chat_room_id, member_id) values (v_room, v_ceo);
+    insert into public.chat_messages (organization_id, chat_room_id, author_id, body)
+      values (v_org, v_room, v_ceo, 'Mohon kirim draft desain sebelum Jumat');
+  end;
+
   perform set_config('request.jwt.claims',
           json_build_object('sub', v_ceo, 'role','authenticated')::text, true);
   execute 'set local role authenticated';
 
   -- DB-53a — KONTROL POSITIF sebelum penukaran: cabang chat memang hidup.
-  select count(*) into n from public.search_global('dr', array['chat'], true, 30, null, null);
+  select count(*) into n from public.search_global('draft', array['chat'], true, 30, null, null);
   if n < 1 then
     fails := fails || 'DB-53a kontrol_positif_chat_nol_baris(cabang chat mati? delegasi tak terpasang?); ';
   end if;
 
   -- DB-56 — proyeksi memilih kolom yang benar, bukan sekadar "ada baris".
   select string_agg(distinct scope, ',') into got
-  from public.search_global('dr', array['chat'], true, 30, null, null);
+  from public.search_global('draft', array['chat'], true, 30, null, null);
   if coalesce(got,'') <> 'chat' then
     fails := fails || 'DB-56 scope_bukan_chat(' || coalesce(got,'<nol>') || '); ';
   end if;
 
   select count(*) into n
-  from public.search_global('dr', array['chat'], true, 30, null, null)
+  from public.search_global('draft', array['chat'], true, 30, null, null)
   where parent_id is null;
   if n <> 0 then
     fails := fails || 'DB-56 parent_id_null(deep-link ke room hilang, ' || n || ' baris); ';
   end if;
 
   select count(*) into n
-  from public.search_global('dr', array['chat'], true, 30, null, null)
+  from public.search_global('draft', array['chat'], true, 30, null, null)
   where status is not null;
   if n <> 0 then
     fails := fails || 'DB-56 status_harus_null_untuk_chat(' || n || ' baris); ';
@@ -397,7 +427,10 @@ as 'select ''aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa''::uuid,
 
 do $$
 declare
-  v_ceo uuid := '11111111-1111-1111-1111-000000000005';
+  -- Aktor fixtures, BUKAN aktor seed_dummy: runner kontrak hanya menerapkan _fixtures.sql.
+  -- Stub kanari mengembalikan barisnya tanpa memandang input, jadi blok ini tidak butuh
+  -- data chat — tetapi aktornya tetap harus ada di DB yang bersih.
+  v_ceo uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
   fails text := '';
   got   text;
   v_len int;
@@ -409,7 +442,7 @@ begin
   -- DB-53b — hasil search_global HARUS ikut berubah. Kalau body-nya disalin-tempel
   -- alih-alih didelegasikan, baris kanari tidak akan pernah muncul.
   select string_agg(distinct title, ',') into got
-  from public.search_global('dr', array['chat'], true, 30, null, null);
+  from public.search_global('draft', array['chat'], true, 30, null, null);
   if coalesce(got,'') <> 'KANARI-STUB' then
     fails := fails || 'DB-53b delegasi_tidak_murni: stub tidak terlihat, dapat ['
                    || coalesce(got,'<nol>') || ']; ';
@@ -418,7 +451,7 @@ begin
   -- DB-55 — truncation 240 dilakukan oleh search_global sendiri, bukan diwarisi.
   -- Stub sengaja mengembalikan snippet 400 char.
   select max(length(snippet)) into v_len
-  from public.search_global('dr', array['chat'], true, 30, null, null);
+  from public.search_global('draft', array['chat'], true, 30, null, null);
   if coalesce(v_len,0) <> 240 then
     fails := fails || 'DB-55 truncation_240_tidak_berlaku(panjang=' || coalesce(v_len,0) || '); ';
   end if;
