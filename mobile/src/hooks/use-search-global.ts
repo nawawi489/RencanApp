@@ -13,6 +13,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { useAuth } from '@/providers/auth-provider';
 import { searchGlobal, type SearchHit, type SearchScope } from '@/lib/search';
 
 /** Debounce default produksi. Diekspor supaya nilainya dapat diuji tanpa fake timers. */
@@ -36,6 +37,11 @@ export function useSearchGlobal(rawQuery: string, opts: UseSearchGlobalOptions =
 
   // Query MENTAH diteruskan ke lapis data (L7). `trimmed` hanya dipakai untuk gerbang
   // `enabled` dan queryKey — memangkasnya sebelum dikirim akan mengubah arti pencarian.
+  // actorId hanya untuk penghitung per-aktor FR-34; lapis data sengaja tidak
+  // mengambilnya sendiri (auth.getUser() = round-trip per pencarian).
+  const { session } = useAuth();
+  const actorId = session?.user?.id ?? null;
+
   const trimmed = rawQuery.trim();
   const [debounced, setDebounced] = useState(rawQuery);
 
@@ -59,7 +65,7 @@ export function useSearchGlobal(rawQuery: string, opts: UseSearchGlobalOptions =
 
   const query = useQuery<SearchHit[], RpcErrorLike>({
     queryKey: ['search_global', debounced, limit, includeArchived],
-    queryFn: () => searchGlobal({ query: debounced, limit, includeArchived }),
+    queryFn: () => searchGlobal({ query: debounced, limit, includeArchived, actorId }),
     enabled,
     staleTime: 0,
   });
@@ -87,6 +93,10 @@ export function useSearchScopePage(
   opts: { limit?: number; includeArchived?: boolean } = {},
 ) {
   const { limit = SEARCH_PREVIEW_LIMIT, includeArchived = false } = opts;
+  // Jalur paging ikut dihitung per-aktor; kalau tidak, kontrol kompensasi FR-34 bolong
+  // persis di jalur yang paling banyak menarik baris.
+  const { session } = useAuth();
+  const actorId = session?.user?.id ?? null;
 
   const query = useInfiniteQuery<SearchHit[], RpcErrorLike>({
     queryKey: ['search_global_scope', scope, rawQuery, limit, includeArchived],
@@ -100,6 +110,7 @@ export function useSearchScopePage(
         includeArchived,
         cursorTs: cursor?.ts ?? null,
         cursorId: cursor?.id ?? null,
+        actorId,
       });
     },
     // Halaman tidak penuh = tidak ada lagi. Cursor diambil dari baris TERAKHIR halaman,

@@ -1,4 +1,4 @@
--- Migration 0089 contract test — jalur tulis struktur organisasi (BL-16b).
+-- Migration 0092 contract test — jalur tulis struktur organisasi (BL-19b).
 --
 -- Mengunci tiga hal yang mudah hilang saat RPC ditulis ulang:
 --   • ACL: kedua fungsi baru boleh dieksekusi `authenticated`, TIDAK oleh `anon`.
@@ -16,9 +16,9 @@
 --   Keduanya level `ceo` ⇒ `has_permission(...)` lolos tanpa syarat (0041), sehingga
 --   blok lintas-org di bawah terbukti ditolak oleh SCOPE ORG, bukan oleh gate permission.
 -- Run (local docker dev DB):
---   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0089_org_structure_write_paths_contract.sql
+--   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0092_org_structure_write_paths_contract.sql
 
--- ============================================================ 0089-DB-1: ACL kedua fungsi baru
+-- ============================================================ 0092-DB-1: ACL kedua fungsi baru
 do $$
 declare
   v_fns text[] := array['set_department_active', 'remove_team_member'];
@@ -37,11 +37,11 @@ begin
       fails := fails || v_fn || '_anon_can_execute; ';
     end if;
   end loop;
-  if fails <> '' then raise exception 'FAIL 0089-DB-1: %', fails; end if;
-  raise notice 'PASS 0089-DB-1: set_department_active + remove_team_member — authenticated only';
+  if fails <> '' then raise exception 'FAIL 0092-DB-1: %', fails; end if;
+  raise notice 'PASS 0092-DB-1: set_department_active + remove_team_member — authenticated only';
 end $$;
 
--- ============================================================ 0089-DB-2: toggle nonaktif ⇄ aktif + activity log
+-- ============================================================ 0092-DB-2: toggle nonaktif ⇄ aktif + activity log
 begin;
 do $$
 declare
@@ -78,12 +78,12 @@ begin
   if n_off <> 1 then fails := fails || 'deactivate_not_logged('||n_off||'); '; end if;
   if n_on  <> 1 then fails := fails || 'activate_not_logged('||n_on||'); '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0089-DB-2: %', fails; end if;
-  raise notice 'PASS 0089-DB-2: nonaktif ⇄ aktif dua arah, keduanya tercatat di activity log';
+  if fails <> '' then raise exception 'FAIL 0092-DB-2: %', fails; end if;
+  raise notice 'PASS 0092-DB-2: nonaktif ⇄ aktif dua arah, keduanya tercatat di activity log';
 end $$;
 rollback;
 
--- ============================================================ 0089-DB-3: nonaktif TIDAK meng-cascade
+-- ============================================================ 0092-DB-3: nonaktif TIDAK meng-cascade
 begin;
 do $$
 declare
@@ -115,12 +115,12 @@ begin
   if v_pos_active  is not true then fails := fails || 'position_deactivated_by_cascade; '; end if;
   if v_team_active is not true then fails := fails || 'team_deactivated_by_cascade; ';     end if;
 
-  if fails <> '' then raise exception 'FAIL 0089-DB-3: %', fails; end if;
-  raise notice 'PASS 0089-DB-3: Posisi/Tim tertaut tetap utuh setelah Departemen dinonaktifkan';
+  if fails <> '' then raise exception 'FAIL 0092-DB-3: %', fails; end if;
+  raise notice 'PASS 0092-DB-3: Posisi/Tim tertaut tetap utuh setelah Departemen dinonaktifkan';
 end $$;
 rollback;
 
--- ============================================================ 0089-DB-4: set_department_active lintas-org ditolak
+-- ============================================================ 0092-DB-4: set_department_active lintas-org ditolak
 begin;
 do $$
 declare
@@ -145,12 +145,12 @@ begin
   select is_active into v_active from public.departments where id = v_dept;
   if v_active is not true then fails := fails || 'department_mutated_across_org; '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0089-DB-4: %', fails; end if;
-  raise notice 'PASS 0089-DB-4: aktor org lain ditolak (CEO ⇒ bukan gate permission), baris tidak berubah';
+  if fails <> '' then raise exception 'FAIL 0092-DB-4: %', fails; end if;
+  raise notice 'PASS 0092-DB-4: aktor org lain ditolak (CEO ⇒ bukan gate permission), baris tidak berubah';
 end $$;
 rollback;
 
--- ============================================================ 0089-DB-5: remove_team_member melepas, panggilan kedua ditolak
+-- ============================================================ 0092-DB-5: remove_team_member melepas, panggilan kedua ditolak
 begin;
 do $$
 declare
@@ -190,12 +190,12 @@ begin
    where entity_id = v_team and action = 'team_member_removed';
   if n_log <> 1 then fails := fails || 'remove_not_logged('||n_log||'); '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0089-DB-5: %', fails; end if;
-  raise notice 'PASS 0089-DB-5: anggota terlepas + tercatat; panggilan ulang ditolak eksplisit';
+  if fails <> '' then raise exception 'FAIL 0092-DB-5: %', fails; end if;
+  raise notice 'PASS 0092-DB-5: anggota terlepas + tercatat; panggilan ulang ditolak eksplisit';
 end $$;
 rollback;
 
--- ============================================================ 0089-DB-6: remove_team_member lintas-org — ditolak tanpa membocorkan keanggotaan
+-- ============================================================ 0092-DB-6: remove_team_member lintas-org — ditolak tanpa membocorkan keanggotaan
 begin;
 do $$
 declare
@@ -229,12 +229,12 @@ begin
   select count(*) into n_after from public.team_members where team_id = v_team;
   if n_after <> 1 then fails := fails || 'membership_mutated_across_org('||n_after||'); '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0089-DB-6: %', fails; end if;
-  raise notice 'PASS 0089-DB-6: lintas-org ditolak dengan pesan non-oracle, keanggotaan utuh';
+  if fails <> '' then raise exception 'FAIL 0092-DB-6: %', fails; end if;
+  raise notice 'PASS 0092-DB-6: lintas-org ditolak dengan pesan non-oracle, keanggotaan utuh';
 end $$;
 rollback;
 
--- ============================================================ 0089-DB-7: assign_team_member ikut tercatat
+-- ============================================================ 0092-DB-7: assign_team_member ikut tercatat
 begin;
 do $$
 declare
@@ -256,7 +256,7 @@ begin
    where entity_id = v_team and action = 'team_member_assigned';
   if n_log <> 1 then fails := fails || 'assign_not_logged('||n_log||'); '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0089-DB-7: %', fails; end if;
-  raise notice 'PASS 0089-DB-7: penambahan anggota tercatat — jejak audit simetris dengan pelepasan';
+  if fails <> '' then raise exception 'FAIL 0092-DB-7: %', fails; end if;
+  raise notice 'PASS 0092-DB-7: penambahan anggota tercatat — jejak audit simetris dengan pelepasan';
 end $$;
 rollback;

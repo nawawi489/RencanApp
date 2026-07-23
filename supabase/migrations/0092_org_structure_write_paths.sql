@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0089 — BL-16b: jalur tulis yang hilang untuk struktur organisasi.
+-- 0092 — BL-19b: jalur tulis yang hilang untuk struktur organisasi.
 -- =============================================================================
 -- Dua entitas mandek sebagai create-only meski kolomnya sudah ada sejak 0014:
 --

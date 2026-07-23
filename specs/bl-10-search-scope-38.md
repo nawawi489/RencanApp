@@ -225,7 +225,7 @@ Alasan non-tappable (keputusan tertulis, bukan konsekuensi tak sengaja): tidak a
 
 **FR-33 [MUST NOT]** Tidak mem-persist raw query **maupun hash** query di tabel readable-user (rainbow-table pada domain kecil seperti nama karyawan).
 
-**FR-34 [MUST]** Observability lewat logger seam terstruktur ke stdout/sink terpusat: JSON key-value, ber-`requestId`, hanya metrik agregat (jumlah query per aktor, latensi, jumlah scope yang mengembalikan hasil, panjang query sebagai angka). **[MUST NOT]** melog isi query, nama entity, atau PII. Penghitung per-aktor ini adalah kontrol kompensasi atas keputusan nol-emisi audit (BL10-OQ-09).
+**FR-34 [MUST — ✅ DIIMPLEMENTASI 2026-07-23]** Observability lewat logger seam terstruktur ke stdout/sink terpusat: JSON key-value, ber-`requestId`, hanya metrik agregat (jumlah query per aktor, latensi, jumlah scope yang mengembalikan hasil, panjang query sebagai angka). **[MUST NOT]** melog isi query, nama entity, atau PII. Penghitung per-aktor ini adalah kontrol kompensasi atas keputusan nol-emisi audit (BL10-OQ-09).
 
 **FR-35 [MUST]** Grant per tanda tangan di setiap migrasi:
 ```sql

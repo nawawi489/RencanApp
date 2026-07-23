@@ -1,6 +1,6 @@
-// Kelompok B — layar anggota Tim (BL-16b). `assignTeamMember` sudah dirangkai lib→hook
+// Kelompok B — layar anggota Tim (BL-19b). `assignTeamMember` sudah dirangkai lib→hook
 // sejak Fase 8 tapi tidak pernah punya pemanggil, jadi Tim selalu kosong sejak dibuat.
-// `removeTeamMember` (0089) menutup pintu satu arahnya.
+// `removeTeamMember` (0092) menutup pintu satu arahnya.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';

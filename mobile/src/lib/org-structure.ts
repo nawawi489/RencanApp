@@ -76,7 +76,7 @@ export async function assignTeamMember(input: NewTeamMember): Promise<string> {
   return data as string;
 }
 
-/** BL-16b — pasangan `assignTeamMember`; tanpa ini salah-assign jadi pintu satu arah. */
+/** BL-19b — pasangan `assignTeamMember`; tanpa ini salah-assign jadi pintu satu arah. */
 export async function removeTeamMember(input: { teamId: string; profileId: string }): Promise<void> {
   const { error } = await supabase.rpc('remove_team_member', {
     p_team_id: input.teamId,
@@ -86,8 +86,8 @@ export async function removeTeamMember(input: { teamId: string; profileId: strin
 }
 
 /**
- * BL-16b — Departemen dinonaktifkan, bukan dihapus (janji copy admin sejak 0014).
- * Tautan Posisi/Tim sengaja tidak ikut diputus; lihat 0089.
+ * BL-19b — Departemen dinonaktifkan, bukan dihapus (janji copy admin sejak 0014).
+ * Tautan Posisi/Tim sengaja tidak ikut diputus; lihat 0092.
  */
 export async function setDepartmentActive(input: { departmentId: string; active: boolean }): Promise<void> {
   const { error } = await supabase.rpc('set_department_active', {

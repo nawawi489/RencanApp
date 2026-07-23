@@ -229,7 +229,7 @@ describe('tab Tim — tautan departemen + lead', () => {
 
 // ---------------------------------------------------------------- Kelompok B
 // Departemen punya kolom `is_active` sejak 0014 dan copy admin menjanjikan
-// "Nonaktifkan tanpa menghapus", tapi tidak pernah ada jalur tulisnya (0089).
+// "Nonaktifkan tanpa menghapus", tapi tidak pernah ada jalur tulisnya (0092).
 describe('tab Departemen — nonaktif/aktif', () => {
   it('[B-01] Nonaktifkan minta konfirmasi dulu, lalu kirim active=false', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});

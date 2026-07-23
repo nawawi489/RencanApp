@@ -8,11 +8,15 @@ jest.mock('../supabase', () => ({
 // eslint-disable-next-line import/first
 import { makeQueryThenable, someCall } from '@/test-support/fase8-builders';
 // eslint-disable-next-line import/first
+import { parseEmittedActions } from '@/test-support/activity-log-actions';
+// eslint-disable-next-line import/first
 import { parseEmittedViolationTypes } from '@/test-support/governance-violation-types';
 // eslint-disable-next-line import/first
 import {
+  ACTIVITY_LOG_ACTION_LABEL,
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
   GOVERNANCE_VIOLATION_TYPE_LABEL,
+  activityLogActionLabel,
   governanceViolationTypeLabel,
   listActivityLog,
   listGovernanceViolations,
@@ -57,6 +61,37 @@ describe('[BL-12] governanceViolationTypeLabel', () => {
   it('trim nilai mentah sebelum lookup', () => {
     expect(governanceViolationTypeLabel('  self_approval_attempt  ')).toBe(
       GOVERNANCE_VIOLATION_TYPE_LABEL.self_approval_attempt,
+    );
+  });
+});
+
+describe('[BL-17] activityLogActionLabel', () => {
+  // Sama seperti BL-12: daftar action di-parse dari `supabase/migrations/`, bukan disalin
+  // manual ke sini — salinan manual akan ikut basi tanpa ada yang tahu.
+  const DB_EMITTED_ACTIONS = parseEmittedActions().actions;
+
+  it.each(DB_EMITTED_ACTIONS)('memetakan %s ke label Indonesia', (action) => {
+    const label = activityLogActionLabel(action);
+    expect(ACTIVITY_LOG_ACTION_LABEL[action]).toBeDefined();
+    expect(label).toBe(ACTIVITY_LOG_ACTION_LABEL[action]);
+    // Bukan snake_case mentah.
+    expect(label).not.toBe(action);
+    expect(label).not.toMatch(/_/);
+  });
+
+  it('fallback ke nilai mentah untuk action tak dikenal', () => {
+    expect(activityLogActionLabel('action_baru_dari_db')).toBe('action_baru_dari_db');
+  });
+
+  it('tidak pernah render kosong untuk null/undefined/whitespace', () => {
+    expect(activityLogActionLabel(null)).toBe('—');
+    expect(activityLogActionLabel(undefined)).toBe('—');
+    expect(activityLogActionLabel('   ')).toBe('—');
+  });
+
+  it('trim nilai mentah sebelum lookup', () => {
+    expect(activityLogActionLabel('  review_approve  ')).toBe(
+      ACTIVITY_LOG_ACTION_LABEL.review_approve,
     );
   });
 });

@@ -1,4 +1,4 @@
-// BL-16b — UI-S-OR2: anggota satu Tim. `assignTeamMember` sudah dirangkai lib→hook sejak
+// BL-19b — UI-S-OR2: anggota satu Tim. `assignTeamMember` sudah dirangkai lib→hook sejak
 // Fase 8 tapi tidak pernah punya layar, jadi Tim selalu kosong sejak dibuat.
 // Gating: manage_teams (sama dengan tab Tim di /settings-org-structure).
 import { Stack, useLocalSearchParams } from 'expo-router';

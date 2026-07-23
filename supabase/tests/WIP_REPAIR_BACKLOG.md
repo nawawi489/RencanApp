@@ -36,6 +36,83 @@ pre-0045 tests hardcode.
 2. The `initiatives.strategy_id` cluster (`0018`, `0040`, `ws3b`, `fase3`) shares
    one fix: build a valid `goal→strategy→initiative` chain in each scenario.
 
+## Un-quarantined (2026-07-23) — PR #168, migration 0090
+
+- **`0063_push_infrastructure_contract`** — un-quarantined, all 30 assertion
+  blocks green. It was the *only* coverage of the push drainer, and being
+  skipped is a direct cause of the 0090 incident: `service_role` never held
+  EXECUTE on `claim_push_deliveries`, so the drainer 403'd 1440×/day from the
+  day 0063 shipped, and nothing caught it.
+
+  Its quarantine note blamed z2/z3 (schema-net REVOKE and `vault.create_secret`
+  needing `supabase_admin` on local). **z3 was wrong; z2 was right.** A fresh
+  bootstrap really does leak `net` USAGE to `anon`/`authenticated`, and the
+  hard-fail z2 assertion really does go red on it (CI build #333). An early
+  revision of this repair claimed z2 passed on a fresh stack — that reading came
+  from a long-lived local DB that happens not to carry the grant, and CI settled
+  it. z2 is now environment-aware rather than hard-fail. What the old note *did*
+  get backwards is the direction: hosted leaks too, so the migration's REVOKE
+  no-ops there, not on local. The actual rot behind everything was
+  every `insert into auth.users(id)` failing since 0083 (`handle_new_user`
+  refuses to infer an org once >1 organisation exists). Execution died at block
+  (j) under `ON_ERROR_STOP`, so z2 was merely the first thing *nobody had ever
+  reached* — it was assumed guilty because everything past (i) was unverified.
+  Fixed by passing `raw_app_meta_data.organization_id` explicitly.
+
+  `vault.create_secret` needs no manual step either: both secrets exist on a
+  migration-bootstrapped local DB, still holding `'___PLACEHOLDER___'` and
+  sharing the migration's creation timestamp — the do-block created them.
+
+  > **Live finding, not fixed here.** Guardrail G-2 is **inactive on hosted**.
+  > The comment in `0063_push_infrastructure.sql:409-414` has it backwards:
+  > schema `net` is owned by `supabase_admin` on staging too, so the migration's
+  > `revoke usage on schema net` no-ops *there*, not locally. On staging, `anon`
+  > and `authenticated` both hold USAGE on `net` **and** EXECUTE on
+  > `net.http_post`. `net` is not PostgREST-exposed, so this is
+  > defense-in-depth rather than a directly reachable hole, but the guardrail
+  > the migration claims to install does not exist. Closing it needs a REVOKE
+  > run as `supabase_admin`, which a migration cannot do. Test z2 is kept and
+  > is now environment-aware: it reports `KNOWN GAP` in CI and on staging (owner
+  > out of reach) and hard-fails only where we hold owner rights and the
+  > privilege still leaks. It never reports success on a leak.
+  >
+  > **Follow-up landed in the same PR:** migration `0091` +
+  > `0091_push_guardrail_g2_contract.sql`. See the escalation section below.
+
+## Guardrail G-2 — platform escalation required (2026-07-23)
+
+**We cannot fix this ourselves.** Verified, not inferred:
+
+- `net` is owned by `supabase_admin` on staging.
+- `postgres` is not a superuser and is **not** a member of `supabase_admin`.
+  The only elevated role it can assume, `supabase_privileged_role`, is not a
+  member either.
+- Running the REVOKE as `postgres` inside an explicit transaction and re-reading
+  the ACL before rollback: privileges unchanged, `WARNING: no privileges could
+  be revoked for "net"`. It is a silent no-op, not a partial success.
+- The Dashboard SQL editor connects as `postgres` too, so there is no manual
+  workaround either.
+
+**Ask Supabase support to run, as `supabase_admin` on the project:**
+
+```sql
+revoke usage on schema net from public, anon, authenticated;
+revoke execute on all functions in schema net from public, anon, authenticated;
+```
+
+Nothing in the app calls `net.*` from a client role — the only egress is the
+`push-fanout-drainer` cron command, which runs as `postgres` — so this is not
+expected to break anything. `0091_push_guardrail_g2_contract.sql` block (c)
+flips from `KNOWN GAP` to `PASS` once it lands.
+
+**Mitigation active in the meantime:** `net` is not PostgREST-exposed
+(`config.toml` declares no `[api]` schemas, so the default `public,
+graphql_public` applies), so the grant is only reachable through a bridge — a
+function in a schema we own that references `net.*`. Contract blocks (a) and (b)
+gate the absence of exactly that, as hard failures. Residual risk is therefore
+SQL injection into an existing function, which the pinned-`search_path`
+convention (migration `0069`) addresses separately.
+
 ## Un-quarantined (2026-07-19) — PR #107 merged, migration 0076 live
 
 - **`0017_permission_settings_contract`** — un-quarantined. PR #107 (squash-

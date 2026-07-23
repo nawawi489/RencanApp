@@ -11,6 +11,16 @@ import {
   searchGlobal,
 } from '../search';
 
+const mockLogInfo = jest.fn();
+const mockLogWarn = jest.fn();
+jest.mock('@/lib/logger', () => ({
+  ...jest.requireActual('@/lib/logger'),
+  createLogger: () => ({
+    info: (...a: unknown[]) => mockLogInfo(...a),
+    warn: (...a: unknown[]) => mockLogWarn(...a),
+    error: jest.fn(), debug: jest.fn(),
+  }),
+}));
 const mockRpc = jest.fn();
 jest.mock('@/lib/supabase', () => ({
   supabase: { rpc: (...a: unknown[]) => mockRpc(...a) },
@@ -18,6 +28,8 @@ jest.mock('@/lib/supabase', () => ({
 
 beforeEach(() => {
   mockRpc.mockReset().mockResolvedValue({ data: [], error: null });
+  mockLogInfo.mockReset();
+  mockLogWarn.mockReset();
 });
 
 const ROW = {
@@ -167,5 +179,61 @@ describe('searchGlobal — pemanggil tipis', () => {
   it('[BL10-L14] tidak pernah memanggil search_cards (NG-6)', async () => {
     await searchGlobal({ query: 'abc', scopes: ['goal'] });
     expect(mockRpc.mock.calls.map((c) => c[0])).not.toContain('search_cards');
+  });
+});
+
+describe('FR-34 — observability search (metrik agregat, nol isi)', () => {
+  it('[BL10-L15] mencatat metrik agregat: panjang query sbg ANGKA, scope, durasi, jumlah hasil', async () => {
+    mockRpc.mockResolvedValueOnce({ data: [ROW], error: null });
+    await searchGlobal({ query: 'rahasia perusahaan', scopes: ['goal'] });
+
+    expect(mockLogInfo).toHaveBeenCalled();
+    const payload = mockLogInfo.mock.calls[0][0] as Record<string, unknown>;
+
+    expect(payload.event).toBe('search_global');
+    expect(payload.queryLength).toBe('rahasia perusahaan'.length);   // ANGKA, bukan teksnya
+    expect(payload.scopesRequested).toEqual(['goal']);               // taksonomi, bukan data
+    expect(payload.resultCount).toBe(1);
+    expect(payload.scopesWithResults).toBe(1);
+    expect(typeof payload.durationMs).toBe('number');
+  });
+
+  it('[BL10-L16] [MUST NOT] isi query TIDAK pernah masuk log', async () => {
+    // Ini setengah FR-34 yang paling mudah dilanggar tanpa sadar: seseorang menambahkan
+    // `query` ke payload "untuk memudahkan debug", dan seluruh kata kunci pengguna —
+    // termasuk nama orang dan istilah rahasia — mengalir ke sink terpusat.
+    const rahasia = 'akuisisi-PT-Rahasia-2026';
+    mockRpc.mockResolvedValueOnce({ data: [], error: null });
+    await searchGlobal({ query: rahasia });
+
+    const serialized = JSON.stringify(mockLogInfo.mock.calls);
+    expect(serialized).not.toContain(rahasia);
+    expect(serialized).not.toContain('akuisisi');
+  });
+
+  it('[BL10-L17] [MUST NOT] nama entity dari hasil TIDAK pernah masuk log', async () => {
+    // Judul hasil adalah data yang tunduk permission. Melognya memindahkan permukaan
+    // disclosure ke sink telemetry, yang aturan aksesnya berbeda.
+    mockRpc.mockResolvedValueOnce({
+      data: [{ ...ROW, title: 'Proyek Rahasia Alpha', subtitle: 'Budi Santoso' }],
+      error: null,
+    });
+    await searchGlobal({ query: 'proyek' });
+
+    const serialized = JSON.stringify(mockLogInfo.mock.calls);
+    expect(serialized).not.toContain('Proyek Rahasia Alpha');
+    expect(serialized).not.toContain('Budi Santoso');
+  });
+
+  it('[BL10-L18] kegagalan RPC dicatat TANPA membocorkan query, dan error tetap dilempar', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: 'PGRST202', message: 'nope' } });
+    await expect(searchGlobal({ query: 'kata-kunci-sensitif' })).rejects.toMatchObject({
+      code: 'PGRST202',
+    });
+
+    expect(mockLogWarn).toHaveBeenCalled();
+    const serialized = JSON.stringify(mockLogWarn.mock.calls);
+    expect(serialized).toContain('PGRST202');            // kode error berguna & aman
+    expect(serialized).not.toContain('kata-kunci-sensitif');
   });
 });

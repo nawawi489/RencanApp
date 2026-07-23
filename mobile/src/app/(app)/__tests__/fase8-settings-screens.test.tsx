@@ -42,7 +42,7 @@ jest.mock('@/hooks/use-profile', () => ({
 const mockUseOrgStructure = jest.fn();
 const mockCreateDepartment = jest.fn();
 // Mock harus menutup SELURUH permukaan hook yang dipakai layar. `DepartmentTab` ikut
-// membaca Posisi/Tim sejak BL-16b (jumlah tautan di teks konfirmasi nonaktif), dan mock
+// membaca Posisi/Tim sejak BL-19b (jumlah tautan di teks konfirmasi nonaktif), dan mock
 // parsial membuat layar meledak dengan "usePositions is not a function" — kegagalan yang
 // terlihat seperti bug produksi padahal cuma mock ketinggalan.
 jest.mock('@/hooks/use-org-structure', () => ({
