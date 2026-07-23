@@ -153,8 +153,13 @@ export type SearchGlobalParams = {
  * `actorId` ada karena FR-34 menuntutnya, dan ia UUID internal — bukan nama/email.
  *
  * ---------------------------------------------------------------------------
- * BL-18 — STATUS SEBENARNYA: ini BELUM kontrol kompensasi. Jangan menghitungnya
- * sebagai penutup `BL10-OQ-09` sampai keputusan owner turun.
+ * BL-18 — STATUS SEBENARNYA: ini BUKAN kontrol kompensasi, dan tidak akan menjadi
+ * kontrol itu. Jangan menghitungnya sebagai penutup `BL10-OQ-09`.
+ *
+ * Keputusan owner 2026-07-23: kontrolnya dibangun di sisi PLATFORM, bukan di sini —
+ * membaca `edge_logs` (yang membawa `sb.auth_user` dan diisi gateway, bukan klien).
+ * Runbook: `wiki/concepts/search-mining-monitor.md`. Penghitung di bawah tetap ada
+ * sebagai metrik operasional biasa (pola beban, durasi, error) — itu saja.
  *
  * Komentar versi sebelumnya menyebut penghitung per-aktor ini "kontrol kompensasi atas
  * nol-emisi audit". Itu klaim yang tidak dipenuhi implementasinya, dan klaim semacam itu
@@ -172,10 +177,13 @@ export type SearchGlobalParams = {
  *      punya sesi dapat memanggilnya langsung lewat PostgREST tanpa menjalankan kode ini.
  *      Penambang data tinggal tidak memakai aplikasinya.
  *
- * Konsekuensinya: ambang/alerting di sisi klien tidak akan mengikat siapa pun. Pilihan
- * yang mengikat semuanya ada di server, dan masing-masing menyentuh keputusan G6
- * (nol-emisi audit) — karena itu ia keputusan owner, bukan pilihan implementasi.
- * Opsi + ongkos ditulis di `wiki/concepts/feature-gap-backlog.md` §BL-18.
+ * Konsekuensinya: ambang/alerting di sisi klien tidak akan mengikat siapa pun — itulah
+ * sebabnya kontrolnya tidak ditaruh di berkas ini. Jangan "memperbaiki" catatan ini
+ * dengan menaikkan level peristiwa ke `warn` agar lolos ke Sentry: itu opsi 1, ditolak
+ * owner karena tetap tidak mengikat pemanggil langsung sekaligus membanjiri kuota satu
+ * peristiwa per pencarian.
+ *
+ * Opsi + ongkos + alasan penolakan: `wiki/concepts/feature-gap-backlog.md` §BL-18.
  * ---------------------------------------------------------------------------
  */
 const log = createLogger('SearchGlobal');

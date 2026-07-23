@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-07-22
+updated: 2026-07-23
 ---
 
 # Rencanapp Wiki — Index
@@ -39,6 +39,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[score-open-period-ui]] — Tombol "Buka Periode" + modal konfirmasi dua langkah; menutup NG-2 (RPC `open_period_snapshot` sebelumnya nol caller UI); nol migrasi
 - [[score-period-end-nudge]] — Pengingat H-7/H-3/H-1 + harian saat terlambat, tipe notif `period_closing_reminder` + pg_cron harian; menutup B-1 (tanpa ini gejala bug lama bisa kambuh tanpa ada bug)
 - [[score-period-immutability]] — ADR: periode skoring closed tidak dapat dibuka kembali dari aplikasi; koreksi = periode berikutnya (owner 2026-07-19, MERGE-BLOCKER Fase 4)
+- [[search-mining-monitor]] — Runbook BL-18 opsi 3: pantau penambangan data lewat Search dari `edge_logs` (`sb.auth_user`), bukan dari telemetri klien; kueri, prosedur ambang, dan bagian ops yang masih terbuka
 - [[scope-guardrails]] — Batas scope V1.83: fitur masuk vs ditolak (anti-scope-creep); §18 Satuan opsional TETAP diizinkan
 - [[settings-consumers-spec]] — Bundled SDD spec §34.5 + §34.6: tutup config black-hole (writer → tabel dedicated `card_completion_rules` + `card_guidance_contents`; hardcoded core + admin layer); v2 + D-8 amendment (governance_violations emit deferred, single-tx rollback bug); target migrasi 0078 post-rebase
 - [[settings-consumers-tdd-plan]] — TDD plan red-green-refactor untuk [[settings-consumers-spec]]: 5 wave (7 SQL contract red → migration 0078 green → 5 client test red → 6 impl green → refactor+regression+integration); dependency graph + owner check-points + 4 follow-up ticket (CI wiring, autonomous-tx, permission UI, wiki correction)
