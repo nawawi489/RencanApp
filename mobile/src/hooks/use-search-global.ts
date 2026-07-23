@@ -39,12 +39,18 @@ export function useSearchGlobal(rawQuery: string, opts: UseSearchGlobalOptions =
   const trimmed = rawQuery.trim();
   const [debounced, setDebounced] = useState(rawQuery);
 
+  // `setTimeout` dipakai SERAGAM, termasuk saat debounceMs = 0.
+  //
+  // Cabang `if (debounceMs <= 0) setDebounced(...)` yang memanggil setState secara
+  // SINKRON di dalam efek melanggar `react-hooks/set-state-in-effect` — aturan React
+  // Compiler yang berstatus ERROR di CI dan TIDAK tertangkap jest maupun tsc. Ia lolos
+  // seluruh gate lokal lalu memerahkan pipeline.
+  //
+  // `setTimeout(fn, 0)` menjadwalkan ke task berikutnya, jadi setState-nya tidak lagi
+  // sinkron terhadap efek. Perilakunya tetap: test yang memakai debounceMs 0 hanya perlu
+  // `waitFor`, yang memang sudah mereka lakukan.
   useEffect(() => {
     if (rawQuery === debounced) return;
-    if (debounceMs <= 0) {
-      setDebounced(rawQuery);
-      return;
-    }
     const timer = setTimeout(() => setDebounced(rawQuery), debounceMs);
     return () => clearTimeout(timer);
   }, [rawQuery, debounced, debounceMs]);
