@@ -211,6 +211,21 @@ begin
 
   -- Periode aktif (INSERT langsung sebagai postgres; RPC open_period_snapshot dilewati agar
   -- tidak bentrok partial-unique "one active per org" di lingkungan dev yang sudah ter-seed).
+  --
+  -- Melewati RPC saja TIDAK CUKUP: `ux_period_snapshots_one_active_per_org` adalah partial
+  -- unique index, jadi INSERT langsung pun ditolak bila org ini sudah punya periode aktif.
+  -- Itu nyata terjadi — satu periode sisa uji manual membuat berkas ini merah di DB
+  -- pengembang selama berhari-hari, sementara CI (yang selalu bersih) tetap hijau. Gejalanya
+  -- menyesatkan: tampak seperti kegagalan logika finalisasi, padahal bentrok fixture.
+  --
+  -- Periode aktif yang sudah ada karena itu dinetralkan DI DALAM transaksi ini. Seluruh blok
+  -- ber-`rollback`, jadi tidak ada data pengembang yang benar-benar berubah — dan tidak ada
+  -- periode yang benar-benar ditutup (menutup periode ireversibel per ADR
+  -- score-period-immutability; yang terjadi di sini hanyalah keadaan sementara).
+  update public.period_snapshots
+     set status = 'closed'
+   where organization_id = v_org and status = 'active';
+
   insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status, created_by)
     values (v_org, '0079-T6', current_date, current_date + 30, 'active', v_ceo)
     returning id into period;
@@ -291,6 +306,12 @@ begin
   insert into public.profiles (id, organization_id, role_template_id, full_name)
     values (v_u, v_org, v_role_staff, 'Uji T7 override')
     on conflict (id) do update set organization_id = excluded.organization_id, role_template_id = excluded.role_template_id;
+
+  -- Sama seperti T6: netralkan periode aktif yang sudah ada di dalam transaksi ini,
+  -- supaya berkas ini tidak bergantung pada kebersihan DB pengembang. Blok ber-`rollback`.
+  update public.period_snapshots
+     set status = 'closed'
+   where organization_id = v_org and status = 'active';
 
   insert into public.period_snapshots (organization_id, period_name, period_start, period_end, status, created_by)
     values (v_org, '0079-T7', current_date, current_date + 30, 'active', v_ceo)
