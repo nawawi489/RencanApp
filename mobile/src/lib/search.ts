@@ -7,6 +7,7 @@
 //   * Validasi bentuk-request cursor ada di server (FR-19). Sama alasannya.
 //   * Query diteruskan UTUH, termasuk `%`/`_`/`\` dan spasi tepi. Merapikannya di sini
 //     akan mengubah arti pencarian tanpa server pernah tahu.
+import { createLogger } from './logger';
 import { supabase } from './supabase';
 
 /** 14 scope kanonik §6.1. Urutan array = urutan section di layar. */
@@ -126,7 +127,31 @@ export type SearchGlobalParams = {
   limit?: number;
   cursorTs?: string | null;
   cursorId?: string | null;
+  /**
+   * Identitas pemanggil, HANYA untuk penghitung per-aktor FR-34. Disuplai pemanggil
+   * (hook punya `useAuth`), bukan diambil sendiri di sini — memanggil `auth.getUser()`
+   * dari lapis data akan menambah round-trip pada setiap pencarian.
+   */
+  actorId?: string | null;
 };
+
+/**
+ * Observability FR-34. Metrik AGREGAT saja — dan daftar yang dilarang sama pentingnya
+ * dengan yang dicatat:
+ *
+ *   [MUST NOT] isi query, nama entity/judul hasil, atau PII apa pun.
+ *
+ * Alasannya bukan kerapian. Search sengaja NOL-EMISI AUDIT (G6) supaya mencari tidak
+ * meninggalkan jejak; kalau isi query mengalir ke sink telemetry, jejak itu kembali lewat
+ * pintu belakang — dengan aturan akses yang berbeda dari `activity_logs`. Judul hasil juga
+ * data yang tunduk permission; melognya memindahkan permukaan disclosure ke tempat yang
+ * kontrolnya lain.
+ *
+ * `queryLength` dicatat sebagai ANGKA (berguna untuk melihat pola beban), bukan teksnya.
+ * `actorId` ada justru karena FR-34 menuntutnya: penghitung per-aktor adalah kontrol
+ * kompensasi atas nol-emisi audit (BL10-OQ-09). Ia UUID internal, bukan nama/email.
+ */
+const log = createLogger('SearchGlobal');
 
 export async function searchGlobal(params: SearchGlobalParams): Promise<SearchHit[]> {
   // Argumen opsional dikirim sebagai `undefined`, bukan `null`.
@@ -135,6 +160,7 @@ export async function searchGlobal(params: SearchGlobalParams): Promise<SearchHi
   // `T | undefined`), sehingga `null` ditolak tsc. Secara perilaku keduanya identik:
   // supabase-js men-serialisasi payload lewat JSON, `undefined` gugur, argumennya
   // tidak terkirim, dan DEFAULT di tanda tangan SQL (null) yang berlaku.
+  const startedAt = Date.now();
   const { data, error } = await supabase.rpc('search_global', {
     p_query: params.query,                       // UTUH — tanpa trim, tanpa escape klien
     p_scopes: params.scopes ?? undefined,
@@ -146,6 +172,27 @@ export async function searchGlobal(params: SearchGlobalParams): Promise<SearchHi
 
   // Error dilempar UTUH, termasuk PGRST202 (RPC belum ada di schema cache) — pemanggil
   // yang memutuskan cara menampilkannya; menelannya di sini menyembunyikan skew app-vs-DB.
-  if (error) throw error;
-  return (data ?? []).map(mapSearchHit);
+  if (error) {
+    log.warn({
+      event: 'search_global_error',
+      actorId: params.actorId ?? null,
+      queryLength: params.query.length,
+      scopesRequested: params.scopes ?? null,
+      code: (error as { code?: string }).code ?? null,
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
+  }
+
+  const hits = (data ?? []).map(mapSearchHit);
+  log.info({
+    event: 'search_global',
+    actorId: params.actorId ?? null,
+    queryLength: params.query.length,          // ANGKA, bukan isinya
+    scopesRequested: params.scopes ?? null,    // taksonomi, bukan data
+    resultCount: hits.length,
+    scopesWithResults: new Set(hits.map((h) => h.scope)).size,
+    durationMs: Date.now() - startedAt,
+  });
+  return hits;
 }

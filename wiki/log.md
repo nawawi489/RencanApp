@@ -2323,3 +2323,14 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **Regresi tertangkap di 0085**: `DB-18` (`scope=null` → 7 baris) pecah jadi 14, karena tiap insert card memicu log otomatis yang nama entitasnya cocok. Perilakunya BENAR; assertion agregatnya yang usang. Diganti per-scope + kontrol positif bahwa scope-null benar-benar menjangkau audit.
 - Red-check: `action` disuntik sebagai field match → `DB-97` menyala tepat. Percobaan pertama gagal karena menyuntik ke kedua cabang (`a.action` tak ada di governance) — migrasi error, fungsi lama bertahan, dan test *tampak* lolos. Ditargetkan ulang ke cabang `activity_log` saja.
 - Verifikasi: DB contract **38 lolos, 0 gagal**, `tsc` bersih (compiler asli, diverifikasi), lint 0 error, rename-guard clean.
+
+## [2026-07-23] update | FR-34 — observability search yang tadinya terlewat
+
+- Files updated: `mobile/src/lib/search.ts`, `mobile/src/hooks/use-search-global.ts`, test lib (+4) & hook (+1), `specs/bl-10-search-scope-38.md`
+- **FR-34 berstatus `[MUST]` tapi tidak pernah dikerjakan di wave mana pun** — tertangkap saat menyisir sisa utang, bukan oleh gate. Tanpa ini, kalau `search_global` bermasalah di produksi tidak ada yang bisa dilihat.
+- Memakai logger seam yang sudah ada (`createLogger`, JSON + `requestId`). Metrik: `queryLength` (**angka**, bukan teksnya), `scopesRequested`, `resultCount`, `scopesWithResults`, `durationMs`, `actorId`.
+- **Bagian `[MUST NOT]` yang justru paling diuji.** `BL10-L16`/`L17` menuntut isi query dan judul/nama hasil TIDAK pernah masuk log. Alasannya bukan kerapian: Search sengaja **nol-emisi audit** (G6) supaya mencari tidak meninggalkan jejak — kalau isi query mengalir ke sink telemetry, jejak itu kembali lewat pintu belakang dengan aturan akses yang berbeda dari `activity_logs`. Judul hasil juga data yang tunduk permission.
+- **Diverifikasi merah**: `query` disuntik ke payload log → `L16` menyala tepat; berkas dipulihkan dan dipastikan nol sisa penanda.
+- `actorId` **disuplai pemanggil**, bukan diambil lapis data. `auth.getUser()` dari `lib/search.ts` berarti round-trip tambahan tiap pencarian; hook sudah punya `useAuth`. Diteruskan di **kedua** jalur — `useSearchGlobal` dan `useSearchScopePage` — karena melewatkan jalur paging membuat kontrol kompensasi BL10-OQ-09 bolong persis di jalur yang paling banyak menarik baris.
+- Logger seam ternyata **tidak membawa identitas aktor sama sekali**, jadi atribusi per-aktor memang harus datang dari payload; tidak bisa diserahkan ke sink.
+- Verifikasi: 35 test lib+hook hijau, `tsc` bersih, lint 0 error.
