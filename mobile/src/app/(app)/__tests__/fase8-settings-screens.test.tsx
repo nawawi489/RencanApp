@@ -41,10 +41,27 @@ jest.mock('@/hooks/use-profile', () => ({
 
 const mockUseOrgStructure = jest.fn();
 const mockCreateDepartment = jest.fn();
+// Mock harus menutup SELURUH permukaan hook yang dipakai layar. `DepartmentTab` ikut
+// membaca Posisi/Tim sejak BL-16b (jumlah tautan di teks konfirmasi nonaktif), dan mock
+// parsial membuat layar meledak dengan "usePositions is not a function" — kegagalan yang
+// terlihat seperti bug produksi padahal cuma mock ketinggalan.
 jest.mock('@/hooks/use-org-structure', () => ({
   __esModule: true,
   useOrgStructure: () => mockUseOrgStructure(),
-  useOrgActions: () => ({ createDepartment: mockCreateDepartment, createTeam: jest.fn(), assignTeamMember: jest.fn(), isPending: false }),
+  usePositions: () => ({ positions: [], isLoading: false }),
+  useTeams: () => ({ teams: [], isLoading: false }),
+  useRoleTemplates: () => ({ roleTemplates: [], isLoading: false }),
+  useTeamMembers: () => ({ members: [], isLoading: false }),
+  useOrgActions: () => ({
+    createDepartment: mockCreateDepartment,
+    createTeam: jest.fn(),
+    createPosition: jest.fn(),
+    createRoleTemplate: jest.fn(),
+    assignTeamMember: jest.fn(),
+    removeTeamMember: jest.fn(),
+    setDepartmentActive: jest.fn(),
+    isPending: false,
+  }),
 }));
 
 const mockUseActivityLog = jest.fn();

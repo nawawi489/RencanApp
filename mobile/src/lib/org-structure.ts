@@ -75,3 +75,39 @@ export async function assignTeamMember(input: NewTeamMember): Promise<string> {
   if (error) throw error;
   return data as string;
 }
+
+/** BL-16b — pasangan `assignTeamMember`; tanpa ini salah-assign jadi pintu satu arah. */
+export async function removeTeamMember(input: { teamId: string; profileId: string }): Promise<void> {
+  const { error } = await supabase.rpc('remove_team_member', {
+    p_team_id: input.teamId,
+    p_profile_id: input.profileId,
+  });
+  if (error) throw error;
+}
+
+/**
+ * BL-16b — Departemen dinonaktifkan, bukan dihapus (janji copy admin sejak 0014).
+ * Tautan Posisi/Tim sengaja tidak ikut diputus; lihat 0089.
+ */
+export async function setDepartmentActive(input: { departmentId: string; active: boolean }): Promise<void> {
+  const { error } = await supabase.rpc('set_department_active', {
+    p_department_id: input.departmentId,
+    p_active: input.active,
+  });
+  if (error) throw error;
+}
+
+export type TeamMemberWithProfile = TeamMember & {
+  profiles: { id: string; full_name: string | null; email: string | null } | null;
+};
+
+/** Anggota Tim + identitas orangnya — daftar berisi UUID telanjang tidak bisa dipakai memutuskan. */
+export async function listTeamMembersWithProfiles(teamId: string): Promise<TeamMemberWithProfile[]> {
+  const { data, error } = await supabase
+    .from('team_members')
+    .select('*, profiles(id, full_name, email)')
+    .eq('team_id', teamId)
+    .order('joined_at');
+  if (error) throw error;
+  return (data ?? []) as TeamMemberWithProfile[];
+}

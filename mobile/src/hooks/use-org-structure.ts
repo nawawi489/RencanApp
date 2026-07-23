@@ -7,12 +7,16 @@ import {
   createTeam,
   listDepartments,
   listPositions,
+  listTeamMembersWithProfiles,
   listTeams,
+  removeTeamMember,
+  setDepartmentActive,
   type Department,
   type NewTeam,
   type NewTeamMember,
   type Position,
   type Team,
+  type TeamMemberWithProfile,
 } from '@/lib/org-structure';
 import { createPosition, createRoleTemplate } from '@/lib/governance-admin';
 import { supabase } from '@/lib/supabase';
@@ -58,6 +62,20 @@ export function useTeams() {
   };
 }
 
+/** Anggota satu Tim. Key sejajar dengan yang di-invalidate `assignTeamMember`/`removeTeamMember`. */
+export function useTeamMembers(teamId: string | null) {
+  const q = useQuery({
+    queryKey: ['org_structure', 'team_members', teamId],
+    queryFn: () => listTeamMembersWithProfiles(teamId as string),
+    enabled: !!teamId,
+  });
+  return {
+    members: (q.data ?? []) as TeamMemberWithProfile[],
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
+}
+
 export function useRoleTemplates() {
   const q = useQuery({
     queryKey: ['org_structure', 'role_templates'],
@@ -96,6 +114,17 @@ export function useOrgActions() {
     onSuccess: (_d, vars) =>
       qc.invalidateQueries({ queryKey: ['org_structure', 'team_members', vars.teamId] }),
   });
+  const removeMemberM = useMutation({
+    mutationFn: (input: { teamId: string; profileId: string }) => removeTeamMember(input),
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: ['org_structure', 'team_members', vars.teamId] }),
+  });
+  // Nonaktif/aktif Departemen mengubah opsi picker di tab Posisi & Tim juga, jadi
+  // invalidasi seluruh cabang `org_structure` — bukan hanya daftar departemen.
+  const setDeptActiveM = useMutation({
+    mutationFn: (input: { departmentId: string; active: boolean }) => setDepartmentActive(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['org_structure'] }),
+  });
 
   const createPosM = useMutation({
     mutationFn: (input: { name: string; departmentId?: string | null; description?: string | null }) =>
@@ -112,6 +141,9 @@ export function useOrgActions() {
     createDepartment: (input: { name: string; description?: string }) => createDeptM.mutateAsync(input),
     createTeam: (input: NewTeam) => createTeamM.mutateAsync(input),
     assignTeamMember: (input: NewTeamMember) => assignMemberM.mutateAsync(input),
+    removeTeamMember: (input: { teamId: string; profileId: string }) => removeMemberM.mutateAsync(input),
+    setDepartmentActive: (input: { departmentId: string; active: boolean }) =>
+      setDeptActiveM.mutateAsync(input),
     createPosition: (input: { name: string; departmentId?: string | null; description?: string | null }) =>
       createPosM.mutateAsync(input),
     createRoleTemplate: (input: { name: string; level: 'ceo' | 'c_level' | 'management' | 'staff' }) =>
@@ -120,6 +152,8 @@ export function useOrgActions() {
       createDeptM.isPending ||
       createTeamM.isPending ||
       assignMemberM.isPending ||
+      removeMemberM.isPending ||
+      setDeptActiveM.isPending ||
       createPosM.isPending ||
       createRoleM.isPending,
   };
