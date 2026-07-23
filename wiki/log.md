@@ -2334,3 +2334,14 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - `actorId` **disuplai pemanggil**, bukan diambil lapis data. `auth.getUser()` dari `lib/search.ts` berarti round-trip tambahan tiap pencarian; hook sudah punya `useAuth`. Diteruskan di **kedua** jalur — `useSearchGlobal` dan `useSearchScopePage` — karena melewatkan jalur paging membuat kontrol kompensasi BL10-OQ-09 bolong persis di jalur yang paling banyak menarik baris.
 - Logger seam ternyata **tidak membawa identitas aktor sama sekali**, jadi atribusi per-aktor memang harus datang dari payload; tidak bisa diserahkan ke sink.
 - Verifikasi: 35 test lib+hook hijau, `tsc` bersih, lint 0 error.
+
+## [2026-07-23] update | BL-16..BL-18 dicatat — tiga penundaan yang ternyata tidak pantas disebut aman
+
+- Pages updated: [[feature-gap-backlog]] (3 baris baru + catatan triage §2 dimutakhirkan)
+- Lahir dari pertanyaan "apakah penundaan itu aman demi menghindari overengineering". Sebagian besar memang aman; tiga ini tidak, dan pembedanya satu hal: **konsekuensinya tidak akan dilaporkan siapa pun**.
+- **BL-16 — cursor separuh-null menjatuhkan baris diam-diam pada kasus tie.** Diverifikasi, bukan ditalar: tanpa cursor 2 baris, tie + `id` lengkap 2 baris, **tie + `id` NULL → 0 baris**. Postgres membandingkan tuple secara short-circuit sehingga selama `created_at < ts` tegas hasilnya benar; bug hanya muncul saat timestamp persis sama — justru satu-satunya kondisi `id` ada untuk memecahkannya. **Kritik §9.1 Missing #4 berlebihan** ("semua baris hilang"); cakupan sebenarnya hanya tie, dan tak terjangkau dari klien karena `useSearchScopePage` selalu mengirim kedua bagian dari kolom non-null.
+- **BL-17 — subtitle audit menampilkan `action` mentah snake_case**, persis kelas cacat yang BL-12 baru tutup untuk `violation_type`. Peta label sengaja tidak ditaruh di SQL (akan menduplikasi peta klien yang gate CI BL-13 jaga); tempatnya di klien, mengikuti pola BL-12.
+- **BL-18 — `BL10-OQ-09` baru separuh tertutup.** FR-34 memasang penghitungnya, tapi tidak ada ambang/alerting/pembaca. Kontrol kompensasi yang tidak diawasi bukan kontrol — dan ia justru mengimbangi keputusan Search nol-emisi audit. Sisanya operasional, bukan kode.
+- **ID melompat ke 16** karena `BL-15` sudah dipakai sesi lain (koreksi senyap `create-user`). Konvensi halaman: ID naik monoton, tidak pernah dipakai ulang.
+- Penundaan yang **tetap dinilai aman** dan sengaja TIDAK dinaikkan jadi item: `BL10-OQ-12` (realtime non-chat — baris yang tampil sudah sah dilihat saat diambil; pencabutan tidak retroaktif), `BL10-OQ-10` (dua semantik People — roster difilter client-side atas data yang sudah diambil, nol kebocoran), `BL10-OQ-07` (kebisingan instance — dibatasi limit 5 per grup), `NG-13` (tanpa index trigram — sama dengan kondisi hari ini).
+- Prioritas: **BL-16 lebih dulu**, karena gejalanya kehilangan data tanpa error.
