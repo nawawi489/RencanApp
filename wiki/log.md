@@ -2295,3 +2295,18 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - `create or replace` penuh, bukan `drop`+`create`: `drop ... cascade` akan mereset ACL fungsi ke `PUBLIC EXECUTE` dan membatalkan revoke 0085. Konsekuensinya seluruh badan fungsi ditulis ulang di 0086 — itu harga yang memang harus dibayar.
 - **Dua kerusakan generator berulang** dari Wave 3, keduanya tertangkap sebelum commit: JS `String.replace` memakan `$$` sehingga penutup dollar-quote jadi `$;`, dan escaping bertingkat menghasilkan `escape '\'` alih-alih `escape '\'`. Pelajaran yang sama: verifikasi isi berkas yang di-generate, jangan percaya hitungan dari skrip generatornya sendiri.
 - Verifikasi: DB contract **35 lolos** (naik dari 34; kegagalan `0079` pra-ada), jest penuh **1705/1705**, `tsc` bersih, lint 0 error, rename-guard clean.
+
+## [2026-07-23] update | BL-10c selesai — scope turunan (migrasi 0087), 13/14 scope
+
+- Files created: `supabase/migrations/0087_search_global_derived.sql`, `supabase/tests/0087_search_global_derived_contract.sql`
+- Files updated: `mobile/src/app/(app)/search.tsx` (rute 3 scope), test layar (+5 kasus), [[feature-gap-backlog]]
+- **BL10-OQ-03 disahkan owner 2026-07-23**: bukti berstatus `draft` tercari hanya oleh pengunggahnya. Klausa `s.status <> 'draft' or s.submitted_by = auth.uid()` adalah **penyempitan sengaja** atas policy `evidence_select` (yang tidak memfilter status sama sekali) — arahnya aman, RPC tetap ⊆ RLS.
+- **Aturan draft diuji simetris dua arah**, bukan satu: `DB-93` pemilik menemukan draftnya, `DB-94` orang lain TIDAK menemukannya, `DB-95` dari sisi aktor kedua arahnya terbalik. Tanpa `DB-94`/`DB-95`, `DB-93` hanya membuktikan "draft terlihat" — bukan "terlihat KARENA milik sendiri".
+- **`DB-95` sempat merah karena premisnya salah, bukan kodenya**: aktor kedua tidak punya akses ke Task-nya sama sekali, jadi `can_access_task` menolak lebih dulu dan test akan hijau-palsu dengan alasan keliru. Diperbaiki dengan menjadikannya **reviewer** Task itu — kontrol simetris hanya bermakna bila kedua aktor sama-sama berhak.
+- **Diverifikasi merah**: klausa FR-12 dicabut di dalam transaksi → `DB-94 draft_orang_lain_bocor` menyala tepat.
+- `storage_path` + `url` tidak diproyeksikan **dan** tidak dijadikan field match (`DB-91`/`DB-92`) — keduanya menunjuk lokasi berkas yang otorisasinya diatur terpisah.
+- Komentar memakai **dispatch literal statis** (§6.4) termasuk literal warisan pra-0045 (`action_plan`, `action_plan_instance`), bukan `map_legacy_entity_type` — helper itu tak bisa membedakan baris lama dari baris baru yang sah memakai literal sama. Dikunci `DB-88`; `DB-86` menguji literal warisan benar-benar tertangani.
+- Di klien, rute komentar memakai `subtitle` yang untuk scope ini **memang** literal `entity_type` (§6.3 "jenis induk"), bukan teks tampilan. Literal tak dikenal ⇒ baris tidak dapat ditekan (fail-closed, `BL10-UI-23`) — lebih baik baris mati daripada rute tebakan.
+- **Generator: guard verifikasi isi menyelamatkan sekali lagi, tapi guard-nya sendiri sempat salah.** Regex `escape '\'` justru MENCOCOKI bentuk yang benar; diganti perbandingan string literal. Pelajaran: pengecekan yang memakai regex atas backslash mudah terbalik maknanya — pakai `indexOf`/`split`.
+- Verifikasi: DB contract **36 lolos** (naik dari 35; `0079` pra-ada), jest penuh **1710/1710**, `tsc` bersih, lint 0 error, rename-guard clean.
+- **BL-10d diparkir** atas keputusan owner: `BL10-OQ-05` belum terjawab (kedua tabel audit tak punya kolom judul/body; `detail`/`resolution_note` dilarang keluar §6.3), tabelnya append-only, dan belum ada permintaan pengguna.

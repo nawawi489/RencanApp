@@ -202,6 +202,58 @@ describe('interaksi', () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/people-profile/u9'));
   });
 
+  it('[BL10-UI-19] tap baris task_instance → layar instance (BL-10c)', async () => {
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'task_instance', id: 'ti1', parentId: 'tk1',
+                   title: 'Tugas Induk', subtitle: '2026-07-23 · missed', sortId: 'ti1' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByText('Tugas Induk'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/task/instance/ti1'));
+  });
+
+  it('[BL10-UI-20] tap baris evidence → Task induknya (BL-10c)', async () => {
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'evidence', id: 'ev1', parentId: 'tk9',
+                   title: 'laporan.pdf', subtitle: 'Tugas A', sortId: 'ev1' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByText('laporan.pdf'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/task/tk9'));
+  });
+
+  it('[BL10-UI-21] komentar ber-literal WARISAN `action_plan` tetap dapat dirute', async () => {
+    // Rename 0045 tidak memigrasi nilai data; literal lama masih sah tersimpan (§6.4).
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'comment', id: 'c1', parentId: 'tk5',
+                   title: 'Tugas B', subtitle: 'action_plan', sortId: 'c1' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByText('Tugas B'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/task/tk5'));
+  });
+
+  it('[BL10-UI-22] komentar pada Inisiatif → rute inisiatif, bukan /task', async () => {
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'comment', id: 'c2', parentId: 'in7',
+                   title: 'Inisiatif C', subtitle: 'initiative', sortId: 'c2' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByText('Inisiatif C'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/initiative/in7'));
+  });
+
+  it('[BL10-UI-23] komentar ber-literal tak dikenal TIDAK dapat ditekan (fail-closed)', async () => {
+    mockUseSearchGlobal.mockReturnValue(state({
+      hits: [hit({ scope: 'comment', id: 'c3', parentId: 'zz1',
+                   title: 'Entah', subtitle: 'entitas_masa_depan', sortId: 'c3' })],
+    }));
+    await render(<LiveSearchScreen />, { wrapper: wrapper() });
+    fireEvent.press(await screen.findByText('Entah'));
+    // Tidak ada rute tebakan: lebih baik baris mati daripada push path rusak.
+    await waitFor(() => expect(mockPush).not.toHaveBeenCalled());
+  });
+
   it('[BL10-UI-14] tap baris chat → deep-link ke room dgn highlight', async () => {
     mockUseSearchGlobal.mockReturnValue(state({
       hits: [hit({ scope: 'chat', id: 'm1', parentId: 'r1', title: 'Ruang A', sortId: 'm1' })],
