@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [backlog, gap-analysis, prd-conformance, triage]
-updated: 2026-07-22
+updated: 2026-07-23
 sources: 0
 ---
 
@@ -43,7 +43,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-13** | Governance Violation | ~~**Tidak ada sumber kebenaran `violation_type`**~~ ✅ **SELESAI 2026-07-22 — PR #145, nol migrasi**. Ditutup lewat **opsi 3 (gate CI, tanpa perubahan schema)**, bukan CHECK constraint maupun tabel lookup: jest mem-parse `supabase/migrations/*.sql` (kedua jalur emisi — `insert into governance_violations` langsung **dan** pemanggilan `log_governance_violation()`) lalu menuntut tiap tipe ter-emit punya entri di `GOVERNANCE_VIOLATION_TYPE_LABEL`. Parser menemukan **tepat 11 tipe** — cocok dengan audit BL-12. Peta label kini **satu-satunya** salinan manual: daftar hardcoded di test BL-12 diganti keluaran parser. Dikunci `[BL13-1..6]`. Alasan penolakan opsi 1/2 di §BL-13 | butuh scoping → XS | ✅ DONE |
 | **BL-14** | Onboarding / org | **`handle_new_user` menaruh SETIAP user baru di org TERTUA** (`select id from public.organizations order by created_at limit 1`; definisi hidup ada di **migrasi 0015**, bukan 0001). Selama hanya ada satu org perilakunya benar; begitu ada lebih dari satu, user baru diam-diam masuk org yang salah — nol error, hanya workspace kosong karena RLS. ✅ **SELESAI 2026-07-22 — PR #147, migrasi 0083 (opsi 2).** Keputusan produk: V1 dikunci single-org, trigger harus gagal keras. Bentuk pertama (`RAISE` polos bila `count(*) organizations > 1`) **dihentikan sebelum ditulis** — ia mematikan seluruh gate DB contract test, sebab `supabase/tests/_fixtures.sql` sendiri membuat **2 org** lalu menyisipkan `auth.users`. Yang dikirim: jalur penempatan **eksplisit** `raw_app_meta_data.organization_id` (service-role only, pola sama seperti `role_level` 0015), `RAISE` hanya bila key absen **dan** org > 1; single-org tanpa key tetap jalan persis seperti dulu. 21 file pemanggil disetel eksplisit (prelude + 18 contract test + 2 seed). Dikunci `T-BL14-1..8`. Rinci §5 | M | ✅ DONE |
 | **BL-15** | Onboarding / org | ~~**Koreksi org di `create-user` gagal senyap**~~ ✅ **SELESAI** — turunan investigasi BL-14 (#146). Tiga cabang di Edge Function `create-user` melewati/menggagalkan koreksi `organization_id` lalu tetap menjawab HTTP 200 tanpa penanda apa pun: lookup profil actor null, `role_templates` tak ketemu, dan `profileError` yang cuma di-log. Respons kini membawa field `warning` eksplisit dan UI Tambah User menampilkannya sebagai hasil berbeda dari sukses. Detail §BL-15 di bawah. **Tidak** menyentuh trigger `handle_new_user` — perbaikan trigger dikirim terpisah, lihat BL-14 (✅ DONE, PR #147) | S | ✅ DONE |
-| **BL-16** | Search / paging | **Cursor separuh-null menjatuhkan baris DIAM-DIAM pada kasus tie.** `search_global` menerima `p_cursor_ts` terisi dengan `p_cursor_id` NULL — guard FR-19 hanya menuntut `p_scopes` tepat satu, tidak menuntut kedua bagian cursor ada. Postgres membandingkan tuple secara short-circuit, jadi selama `created_at < ts` tegas, `id` tak pernah disentuh dan hasilnya benar. **Tapi saat `created_at` PERSIS SAMA** — yaitu satu-satunya kondisi `id` ada untuk memecahkannya — perbandingan jatuh ke `id < NULL` → NULL → seluruh baris tie hilang tanpa error. Terverifikasi: tanpa cursor 2 baris, tie + `id` lengkap 2 baris, **tie + `id` NULL → 0 baris**. Klien tidak pernah menghasilkannya (`useSearchScopePage` selalu mengirim keduanya dari kolom non-null), jadi hanya terjangkau lewat panggilan API tangan. Perbaikan: tuntut kedua bagian cursor ada-atau-keduanya-null di guard bentuk-request. Kritik §9.1 Missing #4 menyebut "semua baris hilang" — itu **berlebihan**, cakupannya hanya tie | XS | ⚠️ terbuka |
+| **BL-16** | Search / paging | ~~**Cursor separuh diterima `search_global`**~~ ✅ **SELESAI 2026-07-23 — PR #165, migrasi 0089.** Guard FR-19 hanya menuntut `p_scopes` berisi tepat satu scope, tidak menuntut kedua bagian cursor ada. Karena Postgres membandingkan tuple **short-circuit**, `p_cursor_id` NULL baru terasa saat `created_at` persis **tie** dengan cursor — di sana `id < NULL` → NULL dan seluruh baris tie gugur **tanpa error**. Cakupan sebenarnya **hanya kasus tie**; kritik §9.1 Missing #4 `specs/bl-10-pr1-tdd-plan.md` yang menyebut "semua baris hilang" **berlebihan** dan dikoreksi di sini. Klien tak pernah menghasilkannya (`useSearchScopePage` mengirim cursor sebagai objek `{ts,id}`) — hanya terjangkau lewat panggilan API tangan. Diperbaiki karena **gejalanya kehilangan data tanpa error**, bukan karena jangkauannya. Cursor kini sah hanya bila kedua bagian terisi atau keduanya NULL; errcode `22023` + pesan **statis** (FR-13). Guard di kepala fungsi, bukan per cabang, agar cabang ke-15 ikut terlindungi. Dikunci `DB-96..DB-101`, diverifikasi merah lebih dulu. Detail §BL-16 di bawah | XS | ✅ DONE |
 | **BL-17** | Search / audit | **Subtitle scope audit menampilkan `action` mentah snake_case** (`create`, `update`, `review_approve`) — persis kelas cacat yang **BL-12 baru saja tutup** untuk `violation_type`. Peta label Indonesia (`BL10-OQ-04`) sengaja TIDAK ditaruh di SQL karena akan menduplikasi `GOVERNANCE_VIOLATION_TYPE_LABEL` dan mengembalikan drift yang gate CI BL-13 cegah; tempat yang benar adalah **klien**, mengikuti pola BL-12. Statusnya turun dari blocker jadi kosmetik setelah OQ-05 diputuskan (search tidak lagi mencocokkan `action`), tetapi ia tetap teks mentah yang dilihat pengguna | XS | ⚠️ terbuka |
 | **BL-18** | Search / governance | **Kontrol kompensasi `BL10-OQ-09` baru separuh tertutup.** FR-34 (PR #163) memasang penghitung per-aktor ke logger seam, tetapi **tidak ada ambang, alerting, atau siapa pun yang membacanya**. Kontrol kompensasi yang tidak diawasi bukan kontrol — dan ia dipasang justru untuk mengimbangi keputusan Search nol-emisi audit (G6), sehingga penambangan data organisasi lewat pencarian berulang tidak meninggalkan jejak di `activity_logs`. Sisanya **operasional, bukan kode**: tentukan ambang wajar per aktor per jendela waktu, dan sambungkan ke sink terpusat yang memang dipantau | S | ⚠️ terbuka |
 
@@ -51,12 +51,12 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 
 ## 2. Triage (pasca-verifikasi)
 
-> [!note] Sisa pekerjaan per 2026-07-23: **tiga item, semuanya turunan BL-10 pasca-rilis**
-> Seluruh BL-01..BL-15 tertutup; PRD §38 lengkap 14/14 lewat migrasi 0085-0088. Yang tersisa **BL-16..BL-18**, dan ketiganya lahir dari menyisir sisa utang BL-10 secara sengaja — bukan dari audit baru.
+> [!note] Sisa pekerjaan per 2026-07-23: **dua item, keduanya turunan BL-10 pasca-rilis**
+> Seluruh BL-01..BL-15 tertutup; PRD §38 lengkap 14/14 lewat migrasi 0085-0088. ~~BL-16~~ ✅ **selesai 2026-07-23 (PR #165, migrasi 0089)**. Yang tersisa **BL-17..BL-18**, dan ketiganya lahir dari menyisir sisa utang BL-10 secara sengaja — bukan dari audit baru.
 >
 > Ketiganya **sempat masuk kategori "ditunda demi menghindari overengineering"**, lalu dinilai ulang dan ternyata tidak semuanya pantas di situ. Yang membedakannya dari penundaan yang memang aman (`BL10-OQ-12` realtime non-chat, `BL10-OQ-10` dua semantik People, `BL10-OQ-07` kebisingan instance, `NG-13` tanpa index trigram): ketiga ini punya **konsekuensi yang tidak akan dilaporkan siapa pun** — kehilangan data senyap, teks mentah ke pengguna, dan kontrol yang tidak dibaca.
 >
-> Prioritas: **BL-16 lebih dulu**. Gejalanya baris hilang tanpa error, jadi tidak ada yang akan melaporkannya.
+> Prioritas: **BL-16 lebih dulu** — gejalanya baris hilang tanpa error, jadi tidak ada yang akan melaporkannya. ✅ **Dikerjakan pertama dan sudah tutup** (PR #165); sisa antrean **BL-17** lalu **BL-18**.
 
 **XS murni — nol migrasi, nol keputusan produk:**
 ~~BL-09(c) invalidate key~~ ✅ **selesai 2026-07-20**; ~~BL-12 label map~~ ✅ (#117); ~~BL-11 ikon header~~ ✅ (#115); ~~BL-01 `rank_number`~~ ✅ **selesai 2026-07-20 (#116)**. ~~BL-06 zona waktu~~ ✅ **selesai 2026-07-22** (pindah dari bucket "butuh migrasi" setelah interpretasinya disetel — lihat §BL-06). **Bucket ini kosong.**
@@ -472,6 +472,45 @@ Ukuran item ini sepenuhnya bergantung pada satu interpretasi yang PRD tidak sele
 **Dikunci tes.** `lib/__tests__/org-timezone.test.ts` `[1..7]` (label, fallback, bacaan RLS 0-baris, propagasi error) + `task/__tests__/repeat-ui.test.tsx` `[10..12]` — termasuk anti-regresi bahwa baris ini tidak pernah berubah jadi kontrol yang bisa dipilih per repeat-rule, dan bahwa zona yang tampil benar-benar zona org (`Asia/Makassar` → WITA), bukan WIB hardcoded.
 
 **Jebakan yang ditemukan.** `toHaveTextContent('Asia/Jakarta (WIB)')` **selalu lolos-palsu/gagal-palsu** untuk label ini: matcher memperlakukan argumen string sebagai sumber regex, sehingga `(WIB)` jadi grup tangkap dan tanda kurungnya tak pernah ikut dicocokkan. Pakai `getByText('...')` (pencocokan literal) untuk teks yang mengandung metakarakter regex. Terpisah: keterangan ini memakai casing PRD **"Jam deadline"** (§23 field 4), sengaja berbeda dari label field **"Jam Deadline"**, supaya query `getByText(/Jam Deadline/)` di tes `[3]` tidak menangkap dua elemen.
+
+---
+
+## BL-16 — cursor separuh di `search_global`: kehilangan data tanpa error
+
+**Gap.** Guard bentuk-request FR-19 yang dipasang 0085 menuntut satu hal saja: bila ada cursor, `p_scopes` harus berisi tepat satu scope. Ia tidak menuntut kedua bagian cursor ada. `p_cursor_ts` terisi dengan `p_cursor_id` NULL lolos utuh ke keempat belas cabang, yang semuanya memfilter dengan `(created_at, id) < (p_cursor_ts, p_cursor_id)`.
+
+**Kenapa hampir tak terlihat.** Postgres membandingkan tuple secara **short-circuit**. Selama `created_at < p_cursor_ts` tegas, komponen kedua tak pernah dievaluasi dan `p_cursor_id` NULL tidak berpengaruh apa pun. Komponen kedua baru disentuh saat `created_at` **persis sama** dengan cursor — yaitu satu-satunya kondisi `id` ada untuk memecahkannya. Di sana perbandingan jatuh ke `id < NULL` → NULL, dan seluruh baris tie gugur.
+
+| Bentuk panggilan (dua goal ber-`created_at` identik) | Sebelum 0089 | Sesudah |
+| --- | --- | --- |
+| tanpa cursor | 2 baris | 2 baris |
+| tie + `p_cursor_id` lengkap | 2 baris | 2 baris |
+| tie + `p_cursor_id` NULL | **0 baris, senyap** | ditolak `22023` |
+| `p_cursor_id` terisi + `p_cursor_ts` NULL | cursor diabaikan senyap | ditolak `22023` |
+
+**Severity dikoreksi ke bawah.** Kritik §9.1 Missing #4 di `specs/bl-10-pr1-tdd-plan.md` menyebut akibatnya "semua baris hilang". Itu **berlebihan** — cakupan sebenarnya hanya kasus tie, dan tie pada `created_at` tidak umum. Klien juga tidak pernah menghasilkan bentuk ini: `useSearchScopePage` menyimpan cursor sebagai objek `{ts, id}` yang diisi dari dua kolom non-null sekaligus, jadi kedua bagian selalu ada atau keduanya null. Bentuk separuh hanya terjangkau lewat panggilan API tangan.
+
+**Kenapa tetap dikerjakan.** Bukan karena jangkauannya, melainkan karena **bentuk kegagalannya**: hasil yang hilang tanpa error. Tidak ada exception, tidak ada baris nol yang mencurigakan (halaman berikutnya memang wajar kosong), tidak ada jejak di log. Kelas bug ini tidak pernah dilaporkan — ia hanya salah diam-diam. Ongkos perbaikannya empat baris.
+
+**Bentuk kebalikannya ikut ditutup.** `p_cursor_id` terisi dengan `p_cursor_ts` NULL hari ini "aman" hanya secara kebetulan: tiap cabang menggerbangi filternya pada `p_cursor_ts is null`, sehingga cursor-nya **diabaikan diam-diam** dan pemanggil menerima halaman pertama lagi sambil mengira ia meminta halaman berikutnya. Sama-sama salah senyap, jadi sama-sama ditolak.
+
+**Yang dikirim** (migrasi 0089, `create or replace`):
+
+```sql
+if (p_cursor_ts is null) <> (p_cursor_id is null) then
+  raise exception 'cursor wajib lengkap: p_cursor_ts dan p_cursor_id harus terisi bersama'
+    using errcode = '22023';
+end if;
+```
+
+Empat keputusan bentuk yang mengikat:
+
+1. **errcode `22023` + pesan statis.** Sama seperti guard multi-scope 0085, exception ini sah justru karena tidak bergantung identitas maupun data aktor — pemanggil mana pun dengan request berbentuk sama mendapat galat sama, sehingga ia tidak dapat dipakai sebagai oracle (FR-13). Menyisipkan nilai dari baris atau aktor akan merusak sifat itu; `DB-98` memeriksanya secara eksplisit.
+2. **Di kepala fungsi, bukan per cabang.** Cabang ke-15 yang ditambahkan nanti ikut terlindungi tanpa harus ingat.
+3. **`create or replace`, bukan `drop`+`create`.** `drop … cascade` mereset ACL fungsi ke `PUBLIC EXECUTE` dan membatalkan revoke 0085 — lihat [[anon-public-rpc-grant-gotcha]]. Konsekuensinya seluruh badan disalin verbatim dari 0088 (versi terlengkap, 14 scope), dan blok `revoke`+`grant` diulang di akhir migrasi.
+4. **Nol perubahan klien.** Tidak ada jalur klien yang menghasilkan bentuk terlarang, jadi menambah guard di klien hanya menduplikasi aturan yang sudah dipegang DB.
+
+**Dikunci `DB-96..DB-101`** (`supabase/tests/0089_search_global_cursor_guard_contract.sql`), seed sendiri berupa dua goal ber-`created_at` identik. Dua kontrol positif (`DB-96` tanpa cursor, `DB-97` tie + cursor lengkap) dipasang lebih dulu supaya assertion inti tidak bisa hijau hanya karena seed tak tercari, dan `DB-100` menjaga bentuk paling umum — kedua bagian NULL, yaitu halaman pertama — tidak ikut tertolak saat guard diperketat. Diverifikasi **merah lebih dulu**, dan merahnya tepat pada `DB-98`/`DB-99` saja: kedua kontrol positif hijau di run yang sama, membuktikan bug memang hanya pada bentuk separuh.
 
 ---
 
