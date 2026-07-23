@@ -131,6 +131,8 @@ export type SearchGlobalParams = {
    * Identitas pemanggil, HANYA untuk penghitung per-aktor FR-34. Disuplai pemanggil
    * (hook punya `useAuth`), bukan diambil sendiri di sini — memanggil `auth.getUser()`
    * dari lapis data akan menambah round-trip pada setiap pencarian.
+   *
+   * BL-18: penghitung ini BELUM menjadi kontrol — lihat catatan di atas `log`.
    */
   actorId?: string | null;
 };
@@ -148,8 +150,33 @@ export type SearchGlobalParams = {
  * kontrolnya lain.
  *
  * `queryLength` dicatat sebagai ANGKA (berguna untuk melihat pola beban), bukan teksnya.
- * `actorId` ada justru karena FR-34 menuntutnya: penghitung per-aktor adalah kontrol
- * kompensasi atas nol-emisi audit (BL10-OQ-09). Ia UUID internal, bukan nama/email.
+ * `actorId` ada karena FR-34 menuntutnya, dan ia UUID internal — bukan nama/email.
+ *
+ * ---------------------------------------------------------------------------
+ * BL-18 — STATUS SEBENARNYA: ini BELUM kontrol kompensasi. Jangan menghitungnya
+ * sebagai penutup `BL10-OQ-09` sampai keputusan owner turun.
+ *
+ * Komentar versi sebelumnya menyebut penghitung per-aktor ini "kontrol kompensasi atas
+ * nol-emisi audit". Itu klaim yang tidak dipenuhi implementasinya, dan klaim semacam itu
+ * lebih berbahaya daripada tidak ada komentar sama sekali: ia membuat kontrol tercentang
+ * di review tanpa ada yang memeriksa apakah benda itu benar-benar bekerja. Dua fakta,
+ * keduanya terverifikasi di kode ini juga:
+ *
+ *   1. Emisi berhenti di perangkat. Peristiwa sukses ditulis pada level `info`, dan
+ *      SATU-SATUNYA transport terpusat (`createSentryTransport`) hanya meneruskan
+ *      `error` + `warn` — dikunci tesnya sendiri di `sentry-logger.test.ts`
+ *      ("info/debug tidak mengirim ke Sentry (hanya console)"). Jadi penghitung ini
+ *      hari ini berakhir di `console.log` milik perangkat pemakai, bukan di sink mana pun.
+ *   2. Sekalipun sampai ke sink, ia dilaporkan SENDIRI oleh pihak yang diawasi.
+ *      `search_global` di-`grant execute … to authenticated`, sehingga siapa pun yang
+ *      punya sesi dapat memanggilnya langsung lewat PostgREST tanpa menjalankan kode ini.
+ *      Penambang data tinggal tidak memakai aplikasinya.
+ *
+ * Konsekuensinya: ambang/alerting di sisi klien tidak akan mengikat siapa pun. Pilihan
+ * yang mengikat semuanya ada di server, dan masing-masing menyentuh keputusan G6
+ * (nol-emisi audit) — karena itu ia keputusan owner, bukan pilihan implementasi.
+ * Opsi + ongkos ditulis di `wiki/concepts/feature-gap-backlog.md` §BL-18.
+ * ---------------------------------------------------------------------------
  */
 const log = createLogger('SearchGlobal');
 

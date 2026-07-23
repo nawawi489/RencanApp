@@ -45,7 +45,7 @@ Semua item diverifikasi terhadap `mobile/src/` + `supabase/migrations/` pada **2
 | **BL-15** | Onboarding / org | ~~**Koreksi org di `create-user` gagal senyap**~~ ✅ **SELESAI** — turunan investigasi BL-14 (#146). Tiga cabang di Edge Function `create-user` melewati/menggagalkan koreksi `organization_id` lalu tetap menjawab HTTP 200 tanpa penanda apa pun: lookup profil actor null, `role_templates` tak ketemu, dan `profileError` yang cuma di-log. Respons kini membawa field `warning` eksplisit dan UI Tambah User menampilkannya sebagai hasil berbeda dari sukses. Detail §BL-15 di bawah. **Tidak** menyentuh trigger `handle_new_user` — perbaikan trigger dikirim terpisah, lihat BL-14 (✅ DONE, PR #147) | S | ✅ DONE |
 | **BL-16** | Search / paging | ~~**Cursor separuh diterima `search_global`**~~ ✅ **SELESAI 2026-07-23 — PR #165, migrasi 0089.** Guard FR-19 hanya menuntut `p_scopes` berisi tepat satu scope, tidak menuntut kedua bagian cursor ada. Karena Postgres membandingkan tuple **short-circuit**, `p_cursor_id` NULL baru terasa saat `created_at` persis **tie** dengan cursor — di sana `id < NULL` → NULL dan seluruh baris tie gugur **tanpa error**. Cakupan sebenarnya **hanya kasus tie**; kritik §9.1 Missing #4 `specs/bl-10-pr1-tdd-plan.md` yang menyebut "semua baris hilang" **berlebihan** dan dikoreksi di sini. Klien tak pernah menghasilkannya (`useSearchScopePage` mengirim cursor sebagai objek `{ts,id}`) — hanya terjangkau lewat panggilan API tangan. Diperbaiki karena **gejalanya kehilangan data tanpa error**, bukan karena jangkauannya. Cursor kini sah hanya bila kedua bagian terisi atau keduanya NULL; errcode `22023` + pesan **statis** (FR-13). Guard di kepala fungsi, bukan per cabang, agar cabang ke-15 ikut terlindungi. Dikunci `DB-96..DB-101`, diverifikasi merah lebih dulu. Detail §BL-16 di bawah | XS | ✅ DONE |
 | **BL-17** | Search / audit | ~~**Subtitle scope audit menampilkan `action` mentah snake_case**~~ ✅ **SELESAI 2026-07-23 — PR #166, nol migrasi**. `ACTIVITY_LOG_ACTION_LABEL` + `activityLogActionLabel()` di `activity-governance.ts`, bersebelahan dengan peta BL-12, fallback identik (dikenal → label; tak dikenal → nilai mentah; kosong → `—`). Peta lokal duplikat di `settings-activity-log.tsx` **dihapus** — satu peta melayani dua layar. **Gate CI BL-13 DIPERLUAS** ke `action` (keputusan + alasan di §BL-17); ia langsung membayar dirinya: peta warisan ternyata sudah kehilangan **5** action ter-emit dan menyimpan **1** label yatim. Dikunci `[BL17-1..7]` + `[BL17-UI-1..3]` | XS | ✅ DONE |
-| **BL-18** | Search / governance | **Kontrol kompensasi `BL10-OQ-09` baru separuh tertutup.** FR-34 (PR #163) memasang penghitung per-aktor ke logger seam, tetapi **tidak ada ambang, alerting, atau siapa pun yang membacanya**. Kontrol kompensasi yang tidak diawasi bukan kontrol — dan ia dipasang justru untuk mengimbangi keputusan Search nol-emisi audit (G6), sehingga penambangan data organisasi lewat pencarian berulang tidak meninggalkan jejak di `activity_logs`. Sisanya **operasional, bukan kode**: tentukan ambang wajar per aktor per jendela waktu, dan sambungkan ke sink terpusat yang memang dipantau | S | ⚠️ terbuka |
+| **BL-18** | Search / governance | **Kontrol kompensasi `BL10-OQ-09` bukan "separuh tertutup" — penghitungnya tidak pernah keluar dari perangkat.** Diagnosis awal ("tidak ada ambang/alerting/pembaca") kurang satu tingkat. Terverifikasi: peristiwa FR-34 ditulis pada level `info`, dan satu-satunya transport terpusat (`createSentryTransport`) hanya meneruskan `error`+`warn` — dikunci tesnya sendiri. Jadi ia berakhir di `console.log` perangkat pemakai. Lebih menentukan lagi: `search_global` di-`grant … to authenticated`, sehingga penambang data dapat memanggil RPC langsung lewat PostgREST tanpa menjalankan kode klien — telemetri yang diemisikan klien **tidak dapat** menjadi kontrol terhadap klien. Karena itu **ambang tidak boleh ditentukan lebih dulu**: berapa pun angkanya, ia tidak mengikat. ⏳ **Scoping selesai 2026-07-23 (PR #167) — menunggu keputusan owner** atas 4 opsi di §BL-18 (rekomendasi: opsi 3, baca jejak yang sudah dicatat Postgres; nol sentuhan G6). Opsi 4 (cabut klaim palsu di komentar `search.ts`) **sudah dikerjakan** karena benar di bawah semua opsi | S → butuh keputusan | ⏳ menunggu owner |
 
 ---
 
@@ -548,6 +548,41 @@ Empat keputusan bentuk yang mengikat:
 4. **Nol perubahan klien.** Tidak ada jalur klien yang menghasilkan bentuk terlarang, jadi menambah guard di klien hanya menduplikasi aturan yang sudah dipegang DB.
 
 **Dikunci `DB-96..DB-101`** (`supabase/tests/0089_search_global_cursor_guard_contract.sql`), seed sendiri berupa dua goal ber-`created_at` identik. Dua kontrol positif (`DB-96` tanpa cursor, `DB-97` tie + cursor lengkap) dipasang lebih dulu supaya assertion inti tidak bisa hijau hanya karena seed tak tercari, dan `DB-100` menjaga bentuk paling umum — kedua bagian NULL, yaitu halaman pertama — tidak ikut tertolak saat guard diperketat. Diverifikasi **merah lebih dulu**, dan merahnya tepat pada `DB-98`/`DB-99` saja: kedua kontrol positif hijau di run yang sama, membuktikan bug memang hanya pada bentuk separuh.
+
+---
+
+## BL-18 — penghitung per-aktor FR-34: bukan "belum diawasi", melainkan **belum sampai ke mana pun**
+
+**Status: scoping selesai, menunggu keputusan owner.** Halaman ini tidak memilih diam-diam; empat opsi di bawah punya konsekuensi berbeda terhadap G6 (nol-emisi audit), dan G6 adalah keputusan produk.
+
+### Diagnosis awal kurang dalam satu tingkat
+
+Baris BL-18 berbunyi "tidak ada ambang, alerting, atau siapa pun yang membacanya". Itu benar tapi belum sampai ke akarnya. Dua fakta yang lebih menentukan, keduanya terbaca dari kode yang sudah ada:
+
+1. **Emisi berhenti di perangkat pemakai.** Peristiwa sukses ditulis `log.info({ event: 'search_global', … })` (`mobile/src/lib/search.ts`). Satu-satunya transport terpusat, `createSentryTransport` (`mobile/src/lib/sentry-logger.ts`), **hanya meneruskan `error` dan `warn`** — `info` dan `debug` sengaja dibuang, dan perilaku itu dikunci tesnya sendiri: *"info/debug tidak mengirim ke Sentry (hanya console)"* (`sentry-logger.test.ts`). Jadi penghitung per-aktor hari ini berakhir di `console.log` di perangkat, bukan di sink mana pun. Bukan "tidak ada yang membaca" — **tidak ada yang bisa membaca**, karena datanya tidak pernah keluar.
+
+2. **Sekalipun sampai ke sink, ia dilaporkan sendiri oleh pihak yang diawasi.** `search_global` di-`grant execute … to authenticated` (0085, dipertahankan 0086-0089), sehingga pemegang sesi mana pun dapat memanggilnya langsung lewat PostgREST tanpa menjalankan kode klien. Penambangan data lewat pencarian berulang — persis skenario yang `BL10-OQ-09` ingin diimbangi — tidak perlu memakai aplikasinya. Telemetri yang diemisikan klien tidak dapat menjadi kontrol terhadap klien.
+
+Konsekuensi gabungan: **ambang di sisi klien tidak akan mengikat siapa pun**, berapa pun angkanya. Menentukan ambang lebih dulu, seperti yang tertulis di baris BL-18, akan menghasilkan angka yang rapi di atas mekanisme yang tidak menegakkan apa-apa — bentuk kegagalan yang sama dengan yang dikeluhkan BL-18 itu sendiri, hanya satu lapis lebih dalam.
+
+### Empat opsi
+
+| # | Bentuk | Mengikat? | Ongkos | Sentuhan G6 |
+|---|---|---|---|---|
+| **1** | Naikkan level peristiwa FR-34 ke `warn` agar lolos transport Sentry, tambah ambang di klien | ❌ tidak — pemanggil langsung tetap tak terlihat | XS | Tidak — payload tetap agregat |
+| **2** | Akuntansi sisi server: tabel penghitung + wrapper `volatile` yang menulis sebelum memanggil `search_global` | ✅ ya | M — tabel + RLS + wrapper + kontrak | **Ya** — Search berhenti nol-emisi |
+| **3** | Baca yang sudah dicatat Postgres/Supabase di luar aplikasi (log statement / `pg_stat_statements` per `jwt.sub`), ambang + alert di sisi platform | ✅ ya | S — nol perubahan schema, kerja konfigurasi | Tidak — DB memang sudah mencatatnya |
+| **4** | Terima risikonya, **cabut klaimnya**: berhenti menyebut penghitung ini kontrol kompensasi, dan catat `BL10-OQ-09` sebagai terbuka | — | XS | Tidak |
+
+**Rekomendasi: opsi 3, dengan opsi 4 diberlakukan sekarang juga.** Opsi 3 mengikat karena ia mengamati DB — tempat setiap pemanggil harus lewat, termasuk yang mem-bypass aplikasi — dan ia tidak menyentuh G6 sedikit pun, karena tidak menambah emisi baru: ia membaca jejak yang memang sudah dihasilkan Postgres. Bentuknya sejenis opsi 3 pada BL-13: begitu masalahnya dibingkai ulang dari "apa yang harus kita tulis" jadi "apa yang sudah tercatat dan belum dibaca", ongkosnya turun dari migrasi jadi konfigurasi. Opsi 1 ditolak karena ia membeli rasa aman tanpa mengikat siapa pun **dan** membanjiri Sentry dengan satu peristiwa per pencarian. Opsi 2 mengikat tetapi membalik keputusan G6 untuk mengejar risiko yang jangkauannya belum diukur — kalau suatu saat diminta, itu spec tersendiri, bukan tiket backlog.
+
+Opsi 4 dikerjakan di PR ini karena ia benar di bawah **semua** opsi lainnya: komentar di `mobile/src/lib/search.ts` yang menyebut penghitung ini "kontrol kompensasi atas nol-emisi audit" adalah klaim yang tidak dipenuhi implementasinya, dan klaim semacam itu lebih berbahaya daripada tidak ada komentar — ia membuat kontrol tercentang di review tanpa ada yang memeriksa apakah benda itu bekerja. Komentar kini menyatakan status sebenarnya beserta kedua faktanya.
+
+### Yang perlu diputuskan owner
+
+1. Opsi mana yang dijalankan (rekomendasi: **3**).
+2. Bila 3: **sink mana yang benar-benar dipantau** — Sentry hari ini hanya menerima `error`/`warn` dari klien, dan tidak ada bukti seorang pun membaca log Postgres. Kontrol yang menunjuk sink yang tak dibaca mengulang cacat BL-18 dari awal.
+3. Baru setelah (2) terjawab: **ambang per aktor per jendela waktu**. Ia tidak dapat ditentukan lebih dulu tanpa baseline — dan baseline hanya ada setelah ada yang mengumpulkan angkanya.
 
 ---
 
