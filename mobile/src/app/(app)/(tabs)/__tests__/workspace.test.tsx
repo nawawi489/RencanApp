@@ -1333,14 +1333,17 @@ describe('WorkspaceScreen', () => {
       expect(screen.queryByText('Hierarki Strategis')).toBeNull();
     });
 
-    it('[UI-N-002·1b] WSA-12 stat label ruang: Performance "Notif", Development "Area"/"Problem Statement"', async () => {
+    it('[UI-N-002·1b] WSA-12 stat label ruang: kolom-3 "Aktif" (QA 2026-07-24 owner decision), Development "Area"/"Problem Statement"', async () => {
       mockUseGoals.mockReturnValue(goalsResult({ goals: [GOAL] }));
       mockUseDevelopmentAreas.mockReturnValue(
         devResult({ developmentAreas: [{ id: 'd1', name: 'Dev A', status: 'active' }] }),
       );
       await renderHub();
-      // Kedua hub-card memakai label kolom-3 "Notif" → dua match.
-      expect((await screen.findAllByText('Notif')).length).toBe(2);
+      // Kolom-3 semula "Notif" (WSA-12) tapi value = activeCount (jumlah card aktif),
+      // dan notif per-ruang goal/kpi/strategy DEFER (FR-GOV-04) → label menyesatkan.
+      // Owner decision QA 2026-07-24: relabel ke "Aktif" agar label == value. Dua hub-card → dua match.
+      expect((await screen.findAllByText('Aktif')).length).toBe(2);
+      expect(screen.queryByText('Notif')).toBeNull();
       expect(screen.getByText('Area')).toBeTruthy();
       expect(screen.getByText('Problem Statement')).toBeTruthy();
     });

@@ -47,7 +47,7 @@ ID temuan `WSA-xx` dipakai sebagai rujukan di [[workspace-lock-sprint-plan]] dan
 - **WSA-10 — Period switcher berbentuk card besar.** Dirender sebagai card putih `rounded-2xl p-4` (`period-switcher.tsx:61`) — dilarang eksplisit §6.2 (harus collapsed pill, summary bg `#eef4fb` border `#d9e3ef`, min-h 48). Varian Development (`#eefaf8`/`#cceee8`) tidak ada; list periode tanpa deskripsi per spec; pill list `Arsip/Akan datang` bukan `Archive/Quarter`. Mode toggle Bulan/Quarter + default Bulan sudah benar.
 - **WSA-11 — Identitas visual hub card hilang.** Tanpa border kiri 4px (`#1877f2`/`#0f766e`), gradient (`#f8fbff`/`#f7fffd`), min-height ~172px, progress line bawah; kicker teks biasa bukan pill; kedua card identik netral (`workspace-hub-card.tsx:38-65`).
 - **WSA-12 — Copy mismatch batch.** Sebagian besar terpusat di `workspace-copy.ts`:
-  - Stat Performance kolom-3 `Aktif` → spec `Notif`.
+  - Stat Performance kolom-3 `Aktif`. ~~→ spec `Notif`~~ **DIBALIK — Owner decision QA 2026-07-24:** label dikembalikan ke `Aktif`. Value kolom = `activeCount` (jumlah card aktif); notif per-ruang goal/kpi/strategy DEFER (`FR-GOV-04`), jadi label `Notif` menyesatkan. Membalik copy-lock WSA-12 khusus kolom ini.
   - Stat Development `Dev Area`/`Problem` → spec `Area`/`Problem Statement`.
   - `Masuk Performance`/`Masuk Development` → spec `Masuk`.
   - `+ Goal Baru`/`+ Development Area Baru` → spec `+ Goal`/`+ Development Area`.
