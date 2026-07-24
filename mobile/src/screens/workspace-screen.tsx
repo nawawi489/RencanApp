@@ -5,7 +5,7 @@
 //   ke level-3 (Inisiatif / Rencana Aksi) untuk turunkan tap-count Goal→Inisiatif dari 3 → 1.
 // Perpindahan pane dilakukan via Hub (Kembali di AppHeader → Masuk ruang lain) — TIDAK ada
 // TabBar internal di pane agar tidak duplikasi navigasi hub-card lobby.
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import {
   Fragment,

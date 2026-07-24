@@ -3,7 +3,7 @@
 // §31 restructure: Score Formula/MBR/Log Aktivitas pindah ke Admin Lanjutan (staff biasa
 // tidak melihat sebagai shortcut utama); Akses Cepat = People/Archive/Pusat Bantuan;
 // Template accordion conditional (hanya jika user punya akses template).
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';

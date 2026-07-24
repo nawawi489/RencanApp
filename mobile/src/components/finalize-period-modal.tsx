@@ -22,7 +22,7 @@
 //
 // Copy Indonesia konsisten "pengguna" (bukan "user"); label utama menyebut nama periode.
 
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useState } from 'react';
 import { Modal } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';

@@ -49,7 +49,7 @@ jest.mock('expo-linear-gradient', () => {
   return { LinearGradient: passthrough };
 });
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
 jest.mock('@/components/brand-logo', () => {
   const React = jest.requireActual('react');
