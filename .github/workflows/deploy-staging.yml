@@ -30,7 +30,7 @@ jobs:
       db: ${{ steps.filter.outputs.db }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -65,7 +65,7 @@ jobs:
     name: Lint, types & tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - uses: actions/setup-node@v7
         with:
@@ -89,7 +89,7 @@ jobs:
         # supabase/ and scripts/ live at the repo root, not in mobile/.
         working-directory: .
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
@@ -144,7 +144,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - uses: actions/setup-node@v7
         with:
