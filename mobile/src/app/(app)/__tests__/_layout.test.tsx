@@ -68,4 +68,17 @@ describe('AppLayout', () => {
       JSON.stringify({ headerShown: true, title: 'Score Formula' }),
     );
   });
+
+  it('[APP-LAYOUT-3] regression QA 2026-07-24: settings-profile & settings-organization punya header+back (dulu tak terdaftar → headerShown:false diwarisi)', async () => {
+    mockUseAuth.mockReturnValue({ session: { user: { id: 'u1' } } });
+
+    await render(<AppLayout />);
+
+    expect(String(screen.getByTestId('screen:settings-profile').props.children)).toContain(
+      JSON.stringify({ headerShown: true, title: 'Profil Saya' }),
+    );
+    expect(String(screen.getByTestId('screen:settings-organization').props.children)).toContain(
+      JSON.stringify({ headerShown: true, title: 'Profil Organisasi' }),
+    );
+  });
 });
