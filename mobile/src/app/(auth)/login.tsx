@@ -18,18 +18,29 @@ const PASSWORD_MIN_LENGTH = 6;
 
 type Feedback = { kind: 'error' | 'success'; message: string };
 
-// Pesan Supabase di-Indonesiakan agar selaras dengan bahasa UI.
-function translateAuthError(message: string): string {
-  const m = message.toLowerCase();
+// Pesan Supabase di-Indonesiakan agar selaras dengan bahasa UI. Menerima error
+// MENTAH (bukan hanya string) supaya bisa membaca HTTP status, dan TIDAK PERNAH
+// membocorkan teks teknis / blob JSON ke user. Contoh nyata: GoTrue balas 500
+// untuk akun dengan kolom token NULL; body-nya ter-serialize jadi "{}" dan tampil
+// mentah di banner login sebelum perbaikan ini.
+function translateAuthError(e: unknown): string {
+  const rawMessage = e instanceof Error ? e.message : typeof e === 'string' ? e : '';
+  const status =
+    e && typeof e === 'object' && typeof (e as { status?: unknown }).status === 'number'
+      ? (e as { status: number }).status
+      : undefined;
+  const m = rawMessage.toLowerCase();
   if (m.includes('invalid login credentials')) return 'Email atau kata sandi salah.';
   if (m.includes('email not confirmed')) return 'Email belum diverifikasi. Periksa kotak masuk Anda.';
   if (m.includes('user already registered')) return 'Email sudah terdaftar. Silakan masuk.';
   if (m.includes('password should be at least')) return AUTH_COPY.passwordTooShort;
-  if (m.includes('rate limit')) return 'Terlalu banyak percobaan. Coba lagi sebentar.';
+  if (m.includes('rate limit') || status === 429) return 'Terlalu banyak percobaan. Coba lagi sebentar.';
   // Web fetch error, RN network error, backend down — semua tidak informatif buat user.
   if (m.includes('failed to fetch') || m.includes('network request failed') || m.includes('network'))
     return AUTH_COPY.networkUnavailable;
-  return message;
+  // Sisa: error tak terduga (5xx server, kondisi GoTrue aneh, message kosong/JSON).
+  // Jangan pernah tampilkan pesan mentah — pakai fallback ramah yang actionable.
+  return AUTH_COPY.unexpected;
 }
 
 export default function LoginScreen() {
@@ -57,8 +68,7 @@ export default function LoginScreen() {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw error;
     } catch (e) {
-      const raw = e instanceof Error ? e.message : 'Terjadi kesalahan.';
-      setFeedback({ kind: 'error', message: translateAuthError(raw) });
+      setFeedback({ kind: 'error', message: translateAuthError(e) });
     } finally {
       setLoading(false);
     }
@@ -89,8 +99,7 @@ export default function LoginScreen() {
         message: 'Jika email terdaftar, link reset kata sandi sudah dikirim. Periksa kotak masuk Anda.',
       });
     } catch (e) {
-      const raw = e instanceof Error ? e.message : 'Terjadi kesalahan.';
-      setFeedback({ kind: 'error', message: translateAuthError(raw) });
+      setFeedback({ kind: 'error', message: translateAuthError(e) });
     } finally {
       setLoading(false);
     }

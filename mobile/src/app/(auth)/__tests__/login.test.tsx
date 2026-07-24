@@ -259,6 +259,35 @@ describe('LoginScreen — password guard AUTH-02b', () => {
     expect(screen.getByText(AUTH_COPY.networkUnavailable)).toBeTruthy();
   });
 
+  it('[16] regression QA-2026-07-24: error tak terduga (500 / message "{}") → fallback ramah, BUKAN "{}" mentah', async () => {
+    // Repro bug staging: GoTrue balas 500 untuk akun dengan kolom auth token NULL;
+    // error-nya ter-serialize jadi "{}" dan sebelumnya tampil MENTAH di banner login.
+    // Kini harus jadi AUTH_COPY.unexpected dan "{}" tidak boleh muncul.
+    const err = Object.assign(new Error('{}'), { status: 500 });
+    mockSignIn.mockResolvedValueOnce({ error: err });
+    const { fillForm, submit } = await setup();
+    await fillForm('a@b.co', 'rahasia123');
+    await submit();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText(AUTH_COPY.unexpected)).toBeTruthy();
+    expect(screen.queryByText('{}')).toBeNull();
+  });
+
+  it('[17] regression QA-2026-07-24: error non-Error (nilai lempar aneh) → fallback ramah, tak crash', async () => {
+    // Pertahanan: kalau yang dilempar bukan Error (mis. objek kosong), UI tetap
+    // menampilkan pesan yang bisa dibaca, bukan blank / [object Object].
+    mockSignIn.mockResolvedValueOnce({ error: {} });
+    const { fillForm, submit } = await setup();
+    await fillForm('a@b.co', 'rahasia123');
+    await submit();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText(AUTH_COPY.unexpected)).toBeTruthy();
+  });
+
   it('[12] AC-RESET-1: resetPasswordForEmail dikirim dengan redirectTo deep-link ems://reset-password', async () => {
     const { fillForm } = await setup();
     await fillForm('a@b.co', '');

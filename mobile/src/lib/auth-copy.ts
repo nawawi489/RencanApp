@@ -10,4 +10,8 @@
 export const AUTH_COPY = {
   passwordTooShort: 'Kata sandi minimal 6 karakter.',
   networkUnavailable: 'Tidak dapat terhubung ke server. Cek koneksi internet Anda.',
+  // Fallback untuk error tak terduga (mis. 5xx server / kondisi GoTrue aneh).
+  // WAJIB dipakai alih-alih membocorkan pesan teknis mentah ke user — pernah
+  // muncul "{}" mentah di banner login saat GoTrue balas 500.
+  unexpected: 'Terjadi kesalahan. Coba lagi sebentar atau hubungi admin.',
 } as const;
