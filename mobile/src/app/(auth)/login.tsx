@@ -153,6 +153,9 @@ export default function LoginScreen() {
             className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
             placeholder="Email perusahaan"
             placeholderTextColor={placeholder}
+            // A11y: placeholder hilang saat diketik → accessibilityLabel jadi nama
+            // aksesibel yang persisten (WCAG 3.3.2).
+            accessibilityLabel="Email perusahaan"
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -164,12 +167,18 @@ export default function LoginScreen() {
               className="flex-1 py-3 text-base text-black dark:text-white"
               placeholder="Kata sandi"
               placeholderTextColor={placeholder}
+              // A11y + password manager: label persisten + hint kredensial login yang tepat.
+              accessibilityLabel="Kata sandi"
+              autoCapitalize="none"
+              autoComplete="current-password"
               secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
             />
+            {/* DESIGN.md §4: touch target ≥44px. Ikon 20px sebelumnya cuma ~36×39 —
+                min-h/min-w 44 + center bikin target visible & AX memenuhi minimum. */}
             <Pressable
-              className="p-2 active:opacity-60"
+              className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-60"
               onPress={() => setShowPassword((s) => !s)}
               hitSlop={8}
               accessibilityRole="button"
