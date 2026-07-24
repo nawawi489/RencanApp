@@ -2581,3 +2581,19 @@ Gate masih membedakan sehat dari rusak; ia berhenti merah-palsu saat propagasi w
 **Pelajaran menyeluruh dari rentetan ini**: gagal-senyap (hijau-palsu, 56 commit) dan merah-palsu (deploy #395/#402) sama-sama merusak kepercayaan pada sinyal CI. Gate yang menilai artefak eksternal (bundel di-deploy, propagasi cache) HARUS diuji terhadap simulasi keadaan itu, bukan dinalar dari membaca — tiga kali berturut saya salah menalarnya.
 
 Verifikasi: skrip 3/3 skenario lokal lolos, `circleci config validate` OK, `bash -n` OK, rename-guard clean. Tanpa perubahan kode `mobile/` (jest/tsc tak relevan).
+
+## [2026-07-24] fix | Smoke check exit 127 — salah cwd, bukan salah logika (deploy #409)
+
+Deploy setelah PR #176 gagal **exit 127** (`No such file or directory`) di smoke check — bug KEEMPAT berturut di gate ini, tapi kelas berbeda: **working directory**, bukan logika retry.
+
+`deploy-staging` memakai executor `node22` ber-`working_directory: ~/repo/mobile`, sedang `rename-guard`/`db-contract` memakai executor ber-`~/repo`. Saya menyalin pola `bash scripts/ci/...` dari job-job itu **tanpa memeriksa bahwa cwd-nya berbeda** — dari `mobile/`, `scripts/ci/...` menunjuk `mobile/scripts/` yang tidak ada. Ironisnya persis kesalahan yang dikritik pada blok `environment:` CircleCI: mencocokkan konvensi tanpa mengecek prasyaratnya.
+
+**Fix**: `bash ../scripts/ci/smoke-check-staging.sh`. `mobile/` selalu tepat satu tingkat di bawah root repo (invarian struktur proyek), jadi `../` aman.
+
+**Kenapa uji lokal sebelumnya melewatkannya**: harness lokal dijalankan dari **repo root**, sementara job CI jalan dari `mobile/`. Selisih cwd itulah yang lolos. Diperbaiki dengan menguji ulang dari `mobile/` via `../scripts/...` — path DAN cwd yang persis dipakai CI:
+- reproduksi: dari `mobile/`, `scripts/ci/...` → "No such file or directory" (127 CI)
+- fix: dari `mobile/`, `../scripts/ci/...` → skrip jalan; skenario propagasi basi→segar lolos percobaan 3
+
+**Pelajaran, kompas dari empat kegagalan gate berturut**: menguji sebuah gate tidak cukup memvalidasi logikanya — harus mereplikasi KONTEKS EKSEKUSINYA (cwd, env yang di-inject, artefak yang dinilai). Tiga bug pertama soal logika/isi; yang keempat soal konteks, dan lolos justru karena harness lokal saya tidak meniru cwd job-nya.
+
+Verifikasi: `circleci config validate` OK; skrip diuji dari `mobile/` via `../` (path CI sebenarnya), skenario propagasi lolos; rename-guard clean. Tanpa perubahan kode `mobile/`.
