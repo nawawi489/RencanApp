@@ -35,10 +35,14 @@ function looksLikeUnexpandedShellVar(value: string): boolean {
 }
 
 if (looksLikeUnexpandedShellVar(supabaseUrl) || looksLikeUnexpandedShellVar(supabaseAnonKey)) {
+  // Pesan ini SENGAJA tidak memuat nama variabel CI mana pun secara literal. Gate CI
+  // memindai bundel hasil export untuk mendeteksi env yang tidak terinterpolasi; kalau
+  // pesan di sini menyebut token itu apa adanya, ia ikut ter-bundle dan gate-nya
+  // mencocokkan dirinya sendiri. Itu benar-benar terjadi dan menggagalkan deploy #395.
   throw new Error(
-    'EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY berisi variabel shell yang tidak ' +
-      'terekspansi (mis. "$STAGING_SUPABASE_URL"). Blok `environment:` CircleCI tidak melakukan ' +
-      'interpolasi — pindahkan penetapannya ke `command:`.',
+    'EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY berisi nama variabel shell yang ' +
+      'tidak terekspansi (nilainya diawali tanda dolar). Blok `environment:` CircleCI tidak ' +
+      'melakukan interpolasi — pindahkan penetapannya ke `command:`.',
   );
 }
 
