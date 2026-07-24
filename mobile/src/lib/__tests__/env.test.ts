@@ -87,4 +87,60 @@ describe('env guard (AC-CFG01-3)', () => {
       }),
     ).not.toThrow();
   });
+
+  // Guard variabel shell tak terekspansi. Regresi NYATA: blok `environment:` CircleCI tidak
+  // menginterpolasi `$VAR`, jadi bundel staging membawa teks `$STAGING_SUPABASE_URL`. Nilai itu
+  // lolos check kosong DAN check placeholder, lalu app merender putih tanpa error konsol —
+  // mati diam-diam sejak 2026-07-21 melewati 56 commit.
+  it('[8] throw saat URL berisi variabel shell tak terekspansi ($STAGING_SUPABASE_URL)', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = '$STAGING_SUPABASE_URL';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).toThrow(/tidak terekspansi/i);
+  });
+
+  it('[9] throw saat anon key memakai bentuk kurung kurawal (${VAR})', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://real-project-ref.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = '${STAGING_SUPABASE_ANON_KEY}';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).toThrow(/tidak terekspansi/i);
+  });
+
+  // Jaring terakhir untuk bentuk yang tak dikenal kedua guard di atas.
+  it('[10] throw saat URL bukan URL http(s) yang valid', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'bukan-sebuah-url';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).toThrow(/bukan URL http\(s\) yang valid/i);
+  });
+
+  it('[11] throw saat URL memakai skema non-http (mis. ftp)', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'ftp://project-ref.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).toThrow(/bukan URL http\(s\) yang valid/i);
+  });
+
+  // Anon key BUKAN URL — guard URL tidak boleh merembet ke sana dan memblokir nilai sah.
+  it('[12] anon key bebas-bentuk tetap diterima (guard URL tidak merembet)', () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://real-project-ref.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_abc.def-123_XYZ';
+    expect(() =>
+      jest.isolateModules(() => {
+        require('../env');
+      }),
+    ).not.toThrow();
+  });
 });
