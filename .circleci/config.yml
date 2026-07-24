@@ -137,16 +137,70 @@ jobs:
           name: Install EAS CLI
           command: sudo npm install -g eas-cli
       - run:
+          # STAGING_SUPABASE_URL + STAGING_SUPABASE_ANON_KEY di-set di CircleCI
+          # project env vars (Settings → Environment Variables).
+          #
+          # PENETAPAN ADA DI `command:`, BUKAN DI BLOK `environment:`. CircleCI
+          # memperlakukan nilai pada `environment:` sebagai string LITERAL — tidak ada
+          # ekspansi shell — sehingga `EXPO_PUBLIC_SUPABASE_URL: $STAGING_SUPABASE_URL`
+          # mem-bundle teks `$STAGING_SUPABASE_URL` apa adanya. Bundel staging membawa
+          # nilai itu sejak 2026-07-21 dan web merender halaman putih tanpa error konsol
+          # selama 56 commit, sementara job ini terus melaporkan sukses. Jangan
+          # dikembalikan ke bentuk `environment:`.
           name: Export web bundle
-          environment:
-            # STAGING_SUPABASE_URL + STAGING_SUPABASE_ANON_KEY di-set di
-            # CircleCI project env vars (Settings → Environment Variables).
-            EXPO_PUBLIC_SUPABASE_URL: $STAGING_SUPABASE_URL
-            EXPO_PUBLIC_SUPABASE_ANON_KEY: $STAGING_SUPABASE_ANON_KEY
-          command: npx expo export --platform web
+          command: |
+            set -eu
+            : "${STAGING_SUPABASE_URL:?STAGING_SUPABASE_URL belum di-set di CircleCI project env vars}"
+            : "${STAGING_SUPABASE_ANON_KEY:?STAGING_SUPABASE_ANON_KEY belum di-set di CircleCI project env vars}"
+            EXPO_PUBLIC_SUPABASE_URL="$STAGING_SUPABASE_URL" \
+            EXPO_PUBLIC_SUPABASE_ANON_KEY="$STAGING_SUPABASE_ANON_KEY" \
+              npx expo export --platform web
+      - run:
+          # Gate build-time: bundel hasil export TIDAK BOLEH memuat nama variabel shell.
+          # `env.ts` sudah menolaknya saat runtime, tapi kegagalan runtime di browser tidak
+          # terlihat CI — ini menjadikannya kegagalan build yang keras.
+          name: Verifikasi bundel tidak memuat env yang belum terinterpolasi
+          command: |
+            set -eu
+            if grep -rlF '$STAGING_SUPABASE' dist/ >/dev/null 2>&1; then
+              echo "GAGAL: bundel memuat literal \$STAGING_SUPABASE* — env tidak terinterpolasi." >&2
+              grep -rlF '$STAGING_SUPABASE' dist/ >&2
+              exit 1
+            fi
+            echo "OK: nol literal \$STAGING_SUPABASE* di dist/."
       - run:
           name: Deploy to EAS Hosting (staging alias)
           command: eas deploy --alias staging --non-interactive
+      - run:
+          # Smoke check pasca-deploy. `eas deploy` sukses hanya berarti unggahan selesai —
+          # bukan bahwa halamannya hidup. Selama 56 commit tidak ada yang menangkap staging
+          # merender putih karena job ini berhenti di langkah sebelumnya.
+          #
+          # BATAS YANG JUJUR: `curl` tidak mengeksekusi JavaScript, jadi langkah ini TIDAK
+          # membuktikan aplikasi merender. Yang dibuktikan: URL balas 200, tag bundel ada,
+          # bundel yang BENAR-BENAR DILAYANI terunduh, dan isinya bersih dari env yang tak
+          # terinterpolasi. Itu menutup kelas kegagalan yang kita alami — dan hanya itu.
+          # Untuk membuktikan render dibutuhkan browser headless di CI; kalau kelak ada
+          # kegagalan render yang lolos gate ini, itu jalur peningkatannya.
+          name: Smoke check staging (200 + bundel live bersih)
+          command: |
+            set -eu
+            URL="https://staging.rencanapp.com"
+            # Retry: alias EAS + cache Cloudflare butuh beberapa detik untuk menunjuk build baru.
+            for i in 1 2 3 4 5 6; do
+              CODE=$(curl -s -o /tmp/staging.html -w '%{http_code}' "$URL" || echo 000)
+              [ "$CODE" = "200" ] && break
+              echo "percobaan $i: HTTP $CODE, tunggu 10s"; sleep 10
+            done
+            [ "$CODE" = "200" ] || { echo "GAGAL: $URL balas HTTP $CODE" >&2; exit 1; }
+
+            BUNDLE=$(grep -oE '/_expo/static/js/web/[^"]+\.js' /tmp/staging.html | head -1)
+            [ -n "$BUNDLE" ] || { echo "GAGAL: tidak menemukan tag bundel di HTML" >&2; exit 1; }
+            curl -sfo /tmp/bundle.js "$URL$BUNDLE" || { echo "GAGAL: bundel $BUNDLE tidak terunduh" >&2; exit 1; }
+            if grep -qF '$STAGING_SUPABASE' /tmp/bundle.js; then
+              echo "GAGAL: bundel LIVE memuat literal \$STAGING_SUPABASE*." >&2; exit 1
+            fi
+            echo "OK: $URL 200, bundel $BUNDLE bersih."
 
 workflows:
   version: 2

@@ -2506,3 +2506,41 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - Diverifikasi menyeluruh: **ketujuh** indeks trigram di staging punya sumber di repo — `idx_profiles_*` (0086), `idx_comments_body` + `idx_evidence_files_*` + `idx_task_instances_missed_reason` (0087), `idx_chat_messages_body` (0054). Enam pernyataan tersimpan = enam definisi di 0086+0087, sama persis termasuk `if not exists` dan kualifikasi `extensions.gin_trgm_ops`. Ekstensi `pg_trgm` juga sudah dibuat di 0054 `with schema extensions`. **Nol drift.**
 - **Backport sengaja TIDAK dikerjakan.** File migrasi baru akan jadi salinan ketiga dari DDL yang sama: idempoten saat runtime (`if not exists`), tapi berbohong soal asal-usul — pembaca berikutnya mengira indeks itu milik migrasi baru, padahal milik 0086/0087 — dan menciptakan dua tempat yang harus disinkronkan bila 0087 berubah. Tujuan sebenarnya ("indeks ikut ke lingkungan lain") sudah terpenuhi: menjalankan migrasi repo dari awal menghasilkan ketujuhnya.
 - Pelajaran: nama migrasi tanpa prefiks nomor mudah disalahbaca sebagai drift. Periksa ISI (`statements` di `supabase_migrations.schema_migrations`) sebelum menyimpulkan ada yang hilang dari repo.
+
+## [2026-07-24] fix | Staging web mati diam-diam sejak 2026-07-21 — env CircleCI tidak terinterpolasi
+
+### Temuan
+
+Pemeriksaan `staging.rencanapp.com` tanpa login (diminta setelah deploy BL-19) menemukan **halaman putih di semua rute** (`/`, `/login`, `/_sitemap`). Infrastrukturnya sehat sepenuhnya: HTTP 200, `document.title` = `Rencanapp`, bundel JS 200 (1.25 MB), **React berhasil mount** (`hasReactRoot: true`, global `expo` ada), **nol error konsol**, nol request gagal. Yang kosong hanya `#root` — 0 anak.
+
+### Akar masalah
+
+Blok `environment:` CircleCI memperlakukan nilainya sebagai **string literal — tanpa ekspansi shell**. Jadi:
+
+```yaml
+environment:
+  EXPO_PUBLIC_SUPABASE_URL: $STAGING_SUPABASE_URL   # ← literal, bukan nilainya
+```
+
+Dibuktikan langsung dari bundel yang dilayani staging: `const n="$STAGING_SUPABASE_URL", s="$STAGING_SUPABASE_ANON_KEY"`.
+
+**Kenapa gagalnya senyap**: kedua guard `env.ts` lolos — nilainya tidak kosong, dan tidak mengandung marker placeholder (`replace`/`example`/`<`/`>`). `createClient()` lalu gagal saat modul dimuat, sebelum error handler app terpasang, sehingga nol error konsol.
+
+### Bukan regresi BL-19
+
+Blok itu masuk lewat `a0fbed3` (migrasi GitHub Actions → CircleCI, **2026-07-21**). Ada **56 commit** di staging sejak saat itu, dan setiap `deploy-staging` melaporkan **sukses**. Rollback BL-19 tidak akan memperbaiki apa pun — bagus itu tidak dilakukan.
+
+### Perbaikan (tiga lapis, saling menguatkan)
+
+1. **CI**: penetapan env dipindah dari `environment:` ke `command:`, plus `:?` guard yang menggagalkan build bila variabel CircleCI-nya sendiri belum di-set. Divalidasi `circleci config validate`.
+2. **`env.ts`**: dua guard baru — deteksi variabel shell tak terekspansi (`$VAR` / `${VAR}`, pesannya menyebut penyebab CircleCI-nya) + validasi URL http(s) sungguhan. Dikunci tes `[8]..[12]`; `[12]` memastikan guard URL **tidak merembet** ke anon key yang memang bukan URL.
+3. **Dua gate CI**: build-time (`grep` menolak `dist/` yang memuat literal) + post-deploy (mengunduh bundel yang **benar-benar dilayani** lalu memeriksanya, dengan retry untuk cache Cloudflare).
+
+**Gate diuji terhadap staging yang masih rusak** — menyala tepat, sementara `HTTP=200` tetap lolos. Itu persis kenapa cek status saja tidak pernah cukup.
+
+### Dua pelajaran
+
+- **`eas deploy` sukses ≠ halaman hidup.** Job deploy berhenti di langkah unggah; tidak ada yang membuka halamannya selama 56 commit.
+- **Batas smoke check dinyatakan jujur di komentarnya**: `curl` tidak mengeksekusi JS, jadi langkah itu membuktikan "200 + bundel live bersih", BUKAN "app merender". Komentar awal sempat mengklaim memeriksa `#root` punya anak — dikoreksi sebelum commit. Untuk membuktikan render dibutuhkan browser headless di CI; itu jalur peningkatan bila kelak ada kegagalan render yang lolos.
+
+Verifikasi: jest penuh **1829/1829** (143 suite), `env.test.ts` 12/12, `tsc` bersih, lint 0 error, rename-guard clean, `circleci config validate` OK.
