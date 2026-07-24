@@ -7,11 +7,11 @@ jest.setTimeout(30000);
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
-const mockListOrgProfiles = jest.fn();
+const mockGetOrgProfileDetail = jest.fn();
 const mockCountCompletedTasksInPeriod = jest.fn();
 jest.mock('@/lib/cards', () => ({
   __esModule: true,
-  listOrgProfiles: () => mockListOrgProfiles(),
+  getOrgProfileDetail: (...a: unknown[]) => mockGetOrgProfileDetail(...a),
   countCompletedTasksInPeriod: (...a: unknown[]) => mockCountCompletedTasksInPeriod(...a),
   personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
     p?.full_name?.trim() || p?.email || fallback,
@@ -65,7 +65,7 @@ function wrapper() {
 }
 
 beforeEach(() => {
-  mockListOrgProfiles.mockReset();
+  mockGetOrgProfileDetail.mockReset();
   mockUseActivePeriod.mockReset();
   mockUseUserScore.mockReset();
   mockUseLatestClosedPeriod.mockReset();
@@ -75,10 +75,19 @@ beforeEach(() => {
   mockCan.mockReset();
   mockPush.mockReset();
   mockParams.id = 'u-rina';
-  mockListOrgProfiles.mockResolvedValue([
-    { id: 'u-rina', full_name: 'Rina Jaya', email: 'rina@n.id' },
-    { id: 'me', full_name: 'Aku', email: 'aku@n.id' },
-  ]);
+  // Header identitas kini bersumber dari query detail per-orang (getOrgProfileDetail),
+  // bukan lagi seluruh roster org. Resolve per-id; id tak dikenal → null (not-found state).
+  const DETAILS: Record<string, unknown> = {
+    'u-rina': {
+      id: 'u-rina', full_name: 'Rina Jaya', email: 'rina@n.id',
+      position_title: null, is_active: true, created_at: null, role_name: null, role_level: null,
+    },
+    me: {
+      id: 'me', full_name: 'Aku', email: 'aku@n.id',
+      position_title: null, is_active: true, created_at: null, role_name: null, role_level: null,
+    },
+  };
+  mockGetOrgProfileDetail.mockImplementation((pid: string) => Promise.resolve(DETAILS[pid] ?? null));
   mockUseActivePeriod.mockReturnValue({ period: null, isLoading: false, isError: false });
   mockUseUserScore.mockReturnValue({ score: null, isLoading: false, isError: false });
   mockUseLatestClosedPeriod.mockReturnValue({ period: null, isLoading: false, isError: false });
@@ -91,10 +100,11 @@ beforeEach(() => {
 });
 
 describe('PeopleProfileScreen', () => {
-  it('[1] nama + email tampil dari roster', async () => {
+  it('[1] nama + email tampil dari query detail (bukan roster)', async () => {
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina Jaya')).toBeTruthy();
-    expect(screen.getByText('rina@n.id')).toBeTruthy();
+    // Email dirender di header + seksi "Detail People" (keduanya dari `detail`).
+    expect(screen.getAllByText('rina@n.id').length).toBeGreaterThan(0);
   });
 
   it('[2] skor null + self → GuidanceNote "Skor menyusul" (AC-7.23)', async () => {
