@@ -2562,3 +2562,22 @@ Deploy staging pertama setelah perbaikan env (PR #174) **gagal**, tapi bukan kar
 **Pelajaran yang lebih penting daripada bug-nya**: memindai artefak untuk **ketiadaan** sebuah string itu rapuh — string apa pun bisa muncul sah dari kode, komentar, atau pesan error, dan gate-nya lalu menuduh hal yang salah. Verifikasi **positif** (nilai yang benar hadir) membuktikan hal yang sebenarnya dipedulikan dan kebal terhadap kelas ini.
 
 Verifikasi: jest penuh **1829/1829** (143 suite), `env.test.ts` 12/12, `tsc` bersih, lint 0 error, rename-guard clean, `circleci config validate` OK. Staging masih melayani bundel lama — deploy gagal sebelum langkah unggah.
+
+## [2026-07-24] fix | Smoke check retry pada isi bundel + STAGING PULIH (bukti render)
+
+**Deploy setelah PR #175 BERHASIL** — staging pulih. Bukti dari browser: `#root` punya anak (kemarin 0), layar login merender penuh ("Masuk", "Lupa password?", logo Rencanapp), bundel live `716427bf…` memuat host asli `fhnqwytqprsptjshoxfn.supabase.co`, nol literal `$STAGING_SUPABASE`, nol error konsol (hanya 1 warning expo-notifications jinak). Perbaikan env (PR #174/#175) terbukti benar end-to-end.
+
+**TAPI deploy #402 tercatat MERAH-PALSU.** Smoke check gagal padahal deploy sukses — bug ketiga di gate yang saya tulis sendiri: **race propagasi cache**. Saat smoke check mengunduh bundel, alias EAS/cache Cloudflare masih melayani bundel LAMA. Retry loop hanya mengulang pada HTTP non-200, tapi halaman lama pun balas 200 — jadi ia tak pernah mengulang untuk "bundel masih basi", memeriksa host sekali di titik yang salah, lalu gagal.
+
+**Perbaikan — dan perubahan pendekatan.** Ini ketiga kalinya gate saya cacat, jadi logika smoke check diekstrak ke `scripts/ci/smoke-check-staging.sh` (config.yml cuma memanggilnya) supaya BISA DIUJI. Kondisi retry diubah dari "HTTP bukan 200" jadi **"host belum muncul di bundel"** — seluruh fetch→bundel→cek-host di dalam loop, hanya host-ditemukan yang break. Anggaran 15×12s (~3 menit propagasi).
+
+**Diuji lokal terhadap server tiruan** (`fake-staging.js`, mensimulasikan propagasi) sebelum merge — bukan hanya membaca logikanya:
+- langsung-segar → lolos percobaan 1
+- basi 5-6s lalu segar (skenario #402) → retry 2× basi, lolos percobaan 3
+- tak-pernah-segar (env memang rusak) → gagal setelah anggaran habis
+
+Gate masih membedakan sehat dari rusak; ia berhenti merah-palsu saat propagasi wajar.
+
+**Pelajaran menyeluruh dari rentetan ini**: gagal-senyap (hijau-palsu, 56 commit) dan merah-palsu (deploy #395/#402) sama-sama merusak kepercayaan pada sinyal CI. Gate yang menilai artefak eksternal (bundel di-deploy, propagasi cache) HARUS diuji terhadap simulasi keadaan itu, bukan dinalar dari membaca — tiga kali berturut saya salah menalarnya.
+
+Verifikasi: skrip 3/3 skenario lokal lolos, `circleci config validate` OK, `bash -n` OK, rename-guard clean. Tanpa perubahan kode `mobile/` (jest/tsc tak relevan).
