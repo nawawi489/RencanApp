@@ -15,19 +15,24 @@ import {
   useOrgStructure,
   usePositions,
   useRoleTemplates,
+  useReportingLineActions,
+  useReportingLines,
   useTeams,
 } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
 import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 
-type Tab = 'department' | 'position' | 'team' | 'role';
+type Tab = 'department' | 'position' | 'team' | 'role' | 'reporting';
 
 const TAB_PERMISSION: Record<Tab, string> = {
   department: 'create_department',
   position: 'manage_positions',
   team: 'manage_teams',
   role: 'manage_settings',
+  // Garis pelaporan mengubah siapa-atasan-siapa untuk SEMUA orang, bukan hanya struktur
+  // unit, jadi gerbangnya disamakan dengan User & Permission — bukan `manage_settings`.
+  reporting: 'manage_users_permissions',
 };
 
 const LEVEL_OPTIONS: { value: 'ceo' | 'c_level' | 'management' | 'staff'; label: string }[] = [
@@ -64,6 +69,7 @@ export default function SettingsOrgStructureScreen() {
             { key: 'position', label: 'Posisi' },
             { key: 'team', label: 'Tim' },
             { key: 'role', label: 'Role' },
+            { key: 'reporting', label: 'Atasan' },
           ]}
           active={tab}
           onChange={setTab}
@@ -78,6 +84,8 @@ export default function SettingsOrgStructureScreen() {
           <PositionTab />
         ) : tab === 'team' ? (
           <TeamTab />
+        ) : tab === 'reporting' ? (
+          <ReportingTab />
         ) : (
           <RoleTab />
         )}
@@ -337,6 +345,65 @@ function TeamTab() {
         setLead(null);
       }}
     />
+  );
+}
+
+/**
+ * BL-19d — garis pelaporan (§34.3 item 5). DESKRIPTIF, bukan otorisasi: menyetel atasan
+ * tidak memberi atasan itu akses apa pun atas data bawahannya. Itu dinyatakan di UI supaya
+ * admin tidak menyangka sedang mengatur hak akses — lihat komentar migrasi 0094.
+ */
+function ReportingTab() {
+  const { people, isLoading } = useReportingLines();
+  const { setReportingLine, isPending } = useReportingLineActions();
+
+  async function change(userId: string, manager: NonNullable<PersonRef> | null) {
+    try {
+      await setReportingLine({ userId, managerId: manager?.id ?? null });
+    } catch (e) {
+      // Penolakan server (siklus, lintas-org, atasan nonaktif) muncul apa adanya —
+      // pesannya sudah copy Indonesia terkurasi dan menjelaskan sebabnya.
+      alertFriendlyError('Gagal', e, 'Kesalahan.');
+    }
+  }
+
+  if (isLoading) return <SkeletonList count={4} />;
+  return (
+    <View className="gap-3">
+      <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+        Siapa melapor kepada siapa. Ini catatan struktur — mengatur atasan TIDAK memberi
+        akses ke data bawahan; hak akses tetap diatur di User & Permission.
+      </Text>
+      {people.length === 0 ? (
+        <EmptyState title="Belum ada anggota" description="Tambahkan user lebih dulu." />
+      ) : (
+        people.map((p) => {
+          const label = personLabel(p);
+          return (
+            <SectionCard
+              key={p.id}
+              actions={
+                <UserPicker
+                  label={`Atasan ${label}`}
+                  value={p.manager}
+                  onChange={(m) => void change(p.id, m)}
+                  // Diri sendiri disingkirkan dari pilihan: server menolaknya, dan
+                  // menawarkan opsi yang pasti gagal itu jebakan.
+                  excludeId={p.id}
+                />
+              }>
+              <Text className="text-base font-semibold text-black dark:text-white">{label}</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                {p.manager ? `Atasan: ${personLabel(p.manager)}` : 'Belum ada atasan'}
+              </Text>
+            </SectionCard>
+          );
+        })
+      )}
+      {isPending ? (
+        <Text className="text-xs text-neutral-400">Menyimpan…</Text>
+      ) : null}
+    </View>
   );
 }
 

@@ -1818,6 +1818,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_active: boolean
+          manager_id: string | null
           organization_id: string | null
           position_title: string | null
           role_template_id: string | null
@@ -1829,6 +1830,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_active?: boolean
+          manager_id?: string | null
           organization_id?: string | null
           position_title?: string | null
           role_template_id?: string | null
@@ -1840,12 +1842,20 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean
+          manager_id?: string | null
           organization_id?: string | null
           position_title?: string | null
           role_template_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_organization_id_fkey"
             columns: ["organization_id"]
@@ -3949,6 +3959,10 @@ export type Database = {
         }
         Returns: string
       }
+      set_reporting_line: {
+        Args: { p_manager_id: string; p_user_id: string }
+        Returns: undefined
+      }
       set_task_repeat_rule: {
         Args: {
           p_action_plan_id: string
@@ -4056,10 +4070,7 @@ export type Database = {
         Args: { p_name: string; p_timezone: string }
         Returns: undefined
       }
-      update_own_profile: {
-        Args: { p_full_name: string }
-        Returns: undefined
-      }
+      update_own_profile: { Args: { p_full_name: string }; Returns: undefined }
       update_score_formula_version_weights: {
         Args: {
           p_categories: Json

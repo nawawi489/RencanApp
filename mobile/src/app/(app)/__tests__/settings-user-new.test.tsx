@@ -122,6 +122,9 @@ describe('SettingsUserNewScreen', () => {
       password: 'rahasia123',
       fullName: 'Rina Jaya',
       roleLevel: 'c_level',
+      // BL-19d: payload kini selalu membawa roleTemplateId; null = pakai template bawaan
+      // sesuai Role — perilaku lama, dinyatakan eksplisit alih-alih tersirat lewat absennya field.
+      roleTemplateId: null,
     });
   });
 
@@ -136,6 +139,7 @@ describe('SettingsUserNewScreen', () => {
       password: 'rahasia123',
       fullName: 'Rina Jaya',
       roleLevel: 'staff',
+      roleTemplateId: null,
     });
     expect(alertSpy).toHaveBeenCalledWith('User dibuat', expect.stringContaining('rina@n.id'));
     expect(mockBack).toHaveBeenCalled();
