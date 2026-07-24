@@ -12,8 +12,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, ScrollView } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
@@ -690,7 +690,8 @@ export default function ChatRoomScreen() {
   const { session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
-  const { messages, isLoading, isError, refetch, loadOlder, hasMore } = useChatMessages(safeRoomId);
+  const { messages, isLoading, isError, refetch, loadOlder, hasMore, isFetchingNextPage } =
+    useChatMessages(safeRoomId);
   const { send, markRead, isSending, toggleReaction, isTogglingReaction } =
     useChatActions(safeRoomId);
   const { run: runAttachmentFlow } = useChatAttachmentFlow();
@@ -788,16 +789,17 @@ export default function ChatRoomScreen() {
     return null;
   }, [ordered, readsByMessage, currentUserId]);
 
-  // Auto-scroll ke bawah: hanya saat pesan TERBARU berubah (kirim / realtime / initial), bukan saat
-  // memuat pesan lama (prepend di atas). Gate lewat ref newest-id + flag yang dibaca onContentSizeChange.
-  const scrollRef = useRef<ScrollView>(null);
+  // Inverted FlatList: dasar layar = offset 0. Auto-scroll ke bawah HANYA saat pesan TERBARU berubah
+  // (kirim / realtime / initial), BUKAN saat memuat pesan lama (prepend → newestId tak berubah).
+  type Row = { kind: 'divider'; key: string; label: string } | { kind: 'msg'; key: string; m: ChatMessage };
+  const flatListRef = useRef<FlatList<Row>>(null);
   const lastNewestId = useRef<string | null>(null);
-  const stickToEnd = useRef(false);
   const newestId = ordered.length ? ordered[ordered.length - 1].id : null;
   useEffect(() => {
     if (newestId && newestId !== lastNewestId.current) {
+      const isFirst = lastNewestId.current === null;
       lastNewestId.current = newestId;
-      stickToEnd.current = true;
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: !isFirst });
     }
   }, [newestId]);
 
@@ -805,7 +807,6 @@ export default function ChatRoomScreen() {
   // (a) tanggal beda-tahun tidak merge (23 Jun 2025 vs 23 Jun 2026), dan
   // (b) key divider stabil sehingga swap optimistic→server tak menduplikasi divider.
   // todayKey masuk deps agar label "Hari ini"/"Kemarin" refresh saat hari berganti.
-  type Row = { kind: 'divider'; key: string; label: string } | { kind: 'msg'; key: string; m: ChatMessage };
   const todayKey = dayKey(new Date().toISOString());
   const rows = useMemo<Row[]>(() => {
     const now = new Date().toISOString();
@@ -822,6 +823,41 @@ export default function ChatRoomScreen() {
     }
     return out;
   }, [ordered, todayKey]);
+
+  // Inverted FlatList butuh data newest-first (data[0] = paling bawah). `rows` menaik → balik.
+  // Divider di `rows` diposisikan SEBELUM grup harinya; setelah dibalik ia jatuh di indeks lebih
+  // tinggi = tampil DI ATAS grup harian pada tampilan inverted (chip tanggal di atas pesan-pesannya).
+  const invertedRows = useMemo(() => [...rows].reverse(), [rows]);
+  const keyExtractor = useCallback((r: Row) => r.key, []);
+  const renderRow = useCallback(
+    ({ item: r }: { item: Row }) => {
+      if (r.kind === 'divider') return <DateDivider label={r.label} />;
+      // System event (PRD §30 komponen 8) — baris tengah informational-only.
+      if (r.m.kind === 'system') return <SystemEventRow body={r.m.body} />;
+      const isMe = currentUserId != null && r.m.author_id === currentUserId;
+      const showSeen = isMe && r.m.id === lastSeenMeId;
+      const foreignReads = showSeen
+        ? (readsByMessage.get(r.m.id) ?? []).filter((x) => x.reader_id !== currentUserId)
+        : [];
+      return (
+        <View>
+          <MessageBubble
+            m={r.m}
+            isMe={isMe}
+            memberNames={memberNames}
+            currentUserId={currentUserId}
+            onToggleReaction={toggleReaction}
+            reactionDisabled={isTogglingReaction}
+            onNavigateContext={(id) => router.push(`/task/${id}` as Href)}
+          />
+          {showSeen ? (
+            <SeenByPill count={foreignReads.length} onOpen={() => setReadsOpenFor(r.m.id)} />
+          ) : null}
+        </View>
+      );
+    },
+    [currentUserId, lastSeenMeId, readsByMessage, memberNames, toggleReaction, isTogglingReaction, router],
+  );
 
   const attachSendingRef = useRef(false);
 
@@ -977,55 +1013,39 @@ export default function ChatRoomScreen() {
             />
           </View>
         ) : (
-          <ScrollView
-            ref={scrollRef}
+          <FlatList
+            ref={flatListRef}
+            testID="chat-message-list"
+            data={invertedRows}
+            inverted
+            keyExtractor={keyExtractor}
+            renderItem={renderRow}
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 20, gap: 0, flexGrow: 1, justifyContent: 'flex-end' }}
-            onContentSizeChange={() => {
-              if (stickToEnd.current) {
-                stickToEnd.current = false;
-                scrollRef.current?.scrollToEnd?.({ animated: false });
-              }
-            }}>
-            {hasMore ? (
-              <Pressable
-                onPress={() => loadOlder()}
-                className="mb-2 min-h-[44px] items-center justify-center self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
-                accessibilityRole="button"
-                accessibilityLabel="Muat pesan lama">
-                <Text className="text-sm font-semibold text-black dark:text-white">Muat pesan lama</Text>
-              </Pressable>
-            ) : null}
-            {rows.map((r) => {
-              if (r.kind === 'divider') return <DateDivider key={r.key} label={r.label} />;
-              // System event (PRD §30 komponen 8) — baris tengah informational-only.
-              if (r.m.kind === 'system') return <SystemEventRow key={r.key} body={r.m.body} />;
-              const isMe = currentUserId != null && r.m.author_id === currentUserId;
-              const showSeen = isMe && r.m.id === lastSeenMeId;
-              const foreignReads = showSeen
-                ? (readsByMessage.get(r.m.id) ?? []).filter((x) => x.reader_id !== currentUserId)
-                : [];
-              return (
-                <View key={r.key}>
-                  <MessageBubble
-                    m={r.m}
-                    isMe={isMe}
-                    memberNames={memberNames}
-                    currentUserId={currentUserId}
-                    onToggleReaction={toggleReaction}
-                    reactionDisabled={isTogglingReaction}
-                    onNavigateContext={(id) => router.push(`/task/${id}` as Href)}
-                  />
-                  {showSeen ? (
-                    <SeenByPill
-                      count={foreignReads.length}
-                      onOpen={() => setReadsOpenFor(r.m.id)}
-                    />
-                  ) : null}
-                </View>
-              );
-            })}
-          </ScrollView>
+            contentContainerStyle={{ padding: 20 }}
+            onEndReached={() => {
+              // Inverted: "end" = ujung ATAS daftar → muat pesan lama. Guard hasMore + isFetchingNextPage
+              // (loadOlder = fetchNextPage; React Query juga menolak panggilan konkuren).
+              if (hasMore && !isFetchingNextPage) loadOlder();
+            }}
+            onEndReachedThreshold={0.4}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews
+            initialNumToRender={15}
+            maxToRenderPerBatch={12}
+            windowSize={11}
+            ListFooterComponent={
+              // Inverted → ListFooter tampil di ATAS. Tombol eksplisit (a11y) selain auto-load onEndReached.
+              hasMore ? (
+                <Pressable
+                  onPress={() => loadOlder()}
+                  className="mb-2 min-h-[44px] items-center justify-center self-center rounded-full border border-neutral-300 px-4 py-2 active:opacity-70 dark:border-neutral-700"
+                  accessibilityRole="button"
+                  accessibilityLabel="Muat pesan lama">
+                  <Text className="text-sm font-semibold text-black dark:text-white">Muat pesan lama</Text>
+                </Pressable>
+              ) : null
+            }
+          />
         )}
 
         {isMember ? (
