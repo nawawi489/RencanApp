@@ -8,7 +8,7 @@
 // Pola: useAuth().session?.user?.id menentukan me; default 'them' saat session kosong.
 // Per Critic §8.4: SendButton pakai inline style {width:44,height:44} (NativeWind class tak selalu flatten di jest)
 // dan accessibilityState={{disabled}} eksplisit.
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';

@@ -33,9 +33,7 @@ jest.mock('expo-linking', () => ({
   openSettings: (...a: unknown[]) => mockOpenSettings(...a),
 }));
 
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: 'Ionicons',
-}));
+jest.mock('@expo/vector-icons/Ionicons', () => 'Ionicons');
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),

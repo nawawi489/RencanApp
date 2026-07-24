@@ -43,7 +43,7 @@ jest.mock('expo-linear-gradient', () => {
 });
 
 // Ionicons stub — hindari load font.
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
 // expo-linking: kontrol nilai createURL agar assertion redirectTo stabil.
 jest.mock('expo-linking', () => ({

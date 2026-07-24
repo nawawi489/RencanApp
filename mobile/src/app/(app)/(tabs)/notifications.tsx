@@ -2,7 +2,7 @@
 // notifikasi task membuka detail. Tombol header menandai semua dibaca (bila ada yang unread).
 // UI-S-N01 — tombol aksi inline per row sesuai (type, entity_type).
 // UI-S-N02 — section "Baru" (≤24 jam) vs "Sebelumnya".
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Linking from 'expo-linking';
 import { useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
