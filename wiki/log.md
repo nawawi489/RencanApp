@@ -2474,3 +2474,20 @@ Alasan #3: kondisi "periode sudah lewat tapi belum ditutup" adalah persis skenar
 - **`verify_jwt: true` dipertahankan** eksplisit. Deploy yang tidak menyebutkan flag ini berisiko menurunkannya ke default dan membuka endpoint admin tanpa autentikasi.
 - Versi 3 ACTIVE; isi ter-deploy diverifikasi ulang setelah deploy dan cocok dengan file repo, termasuk invarian keamanannya (level efektif dari baris template DB, filter `organization_id`, guard eskalasi setelah resolusi template).
 - **Urutan deploy sekarang benar**: function mendahului app. Kalau terbalik, picker Role Template terkirim ke function lama yang mengabaikannya dan diam-diam jatuh ke template seeded — kelas kegagalan senyap yang jadi tema seluruh rangkaian BL-19.
+
+## [2026-07-24] update | Audit `activity_logs` untuk eskalasi role + trigger audit `profiles` (migrasi 0095)
+
+### Hasil audit: tidak ada tanda eksploitasi
+
+- **`activity_logs` TIDAK BISA menjawab pertanyaannya.** `profiles` hanya punya trigger `set_updated_at`; UPDATE tabel langsung — persis jalur eksploit yang ditutup 0093 — tak pernah menyentuh `activity_logs`, dan tabel itu nol baris untuk entitas `user`/`profile`. Audit "sesuai permintaan" akan mengembalikan nol temuan, dan itu **bukan bukti aman** melainkan bukti alat ukurnya buta.
+- Diganti **forensik berbasis state**: 0 dari 16 profil berubah sejak 23 Juli; seluruh 16 punya `updated_at` **identik sampai mikrodetik** (`2026-07-14 09:13:37`) — tanda satu operasi seed massal, bukan perubahan per-orang. Eksploitasi akan menyisakan `updated_at` menyimpang. Nol template lintas-org/menggantung, nol profil tanpa org, nol akun baru sejak 23 Juli. Distribusi level wajar (tiap org tepat satu CEO).
+- **Batasan yang jujur**: `raw_app_meta_data.role_level` null untuk semua user (semuanya seed, bukan lewat `create-user`), jadi cross-check "level JWT vs level profil" **tidak punya daya pembeda** pada data ini. Kesimpulan bertumpu pada `updated_at`, bukan pada sinyal itu.
+
+### Trigger audit (0095) — menutup celah yang tersingkap audit
+
+- Trigger `AFTER UPDATE` pada `profiles` untuk `role_template_id` / `organization_id` / `is_active`. Tiga action baru + label Indonesia (gate BL-17).
+- **`insert` langsung, BUKAN `write_activity`**: helper itu menurunkan org dari `current_user_org()` — organisasi AKTOR. Untuk perpindahan lintas-org itu org penyerang, sehingga jejaknya mendarat di tempat yang tak bisa dilihat organisasi korban. Di sini org ditentukan eksplisit ke organisasi **lama** (batas yang dilanggar); dikunci `0095-DB-3`.
+- Satu UPDATE tiga kolom → **tiga baris terpisah** (`DB-5`). Serangan nyata mengubah beberapa kolom sekaligus; satu peristiwa gabungan menyembunyikan dua di antaranya.
+- **REGRESI YANG SAYA SEBABKAN, ditangkap suite bukan review**: guard `EXISTS` dipasang untuk FK `actor_id` — lengkap dengan komentar "trigger audit tidak boleh menjadi penyebab kegagalan operasi normal" — tapi **FK `organization_id` yang berjebakan identik terlewat**. `profiles.organization_id` ber-`on delete set null`, jadi menghapus organisasi memicu UPDATE profiles DI DALAM transaksi penghapusan, `old.organization_id` menunjuk baris yang sudah lenyap → pelanggaran FK → **penghapusan organisasi dibatalkan**. Memerahkan `0083` + `0056`. Diperbaiki dengan guard yang sama; dikunci `0095-DB-9`, diverifikasi merah.
+- **Dua koreksi atas pekerjaan sendiri**: (1) bug di test, bukan produk — `tgtype & 1` menguji bit ROW-level bukan BEFORE, sehingga trigger AFTER terbaca "BEFORE"; bit benar `2`. (2) klaim `DB-6` berlebihan — ia diklaim menguji klausa `WHEN`, padahal red-check membuktikan mencabut `WHEN` saja TIDAK memerahkannya karena guard badan fungsi masih menahan. Komentarnya diluruskan: DB-6 menguji **hasil**, bukan mekanisme — lebih baik, tapi tak boleh dilabeli keliru.
+- Verifikasi: DB contract **46 lolos, 0 gagal** (naik dari 45), jest penuh **1824/1824** (143 suite), `tsc` bersih, lint 0 error, rename-guard clean.
