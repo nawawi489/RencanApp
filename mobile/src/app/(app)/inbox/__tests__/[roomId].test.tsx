@@ -203,8 +203,10 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
     jest.useRealTimers();
   });
 
-  it('[E1] urutan KRONOLOGIS-MENAIK (terlama di atas, terbaru di bawah) — meskipun data desc dari hook', async () => {
-    // hook return desc: ['m-newer','m-older']. Screen harus tampilkan 'lama' (older) sebelum 'baru' (newer).
+  it('[E1] urutan KRONOLOGIS-MENAIK (terlama di atas, terbaru di bawah) — inverted FlatList + data newest-first', async () => {
+    // hook return desc: ['m-newer','m-older']. Daftar pesan kini inverted FlatList: `data` newest-first
+    // + prop `inverted` → RN membalik secara visual sehingga terlama tampil DI ATAS, terbaru di bawah.
+    // Assert invarian sebenarnya (inverted + urutan data), bukan urutan tree (yang kini terbalik by design).
     mockUseChatMessages.mockReturnValue({
       messages: [
         { id: 'm-newer', chat_room_id: 'r1', author_id: 'me', body: 'baru',  created_at: '2026-06-24T05:00:00Z' },
@@ -212,14 +214,14 @@ describe('ChatRoomScreen — UI-S-IN2 bubble & divider', () => {
       ],
       isLoading: false, isError: false, refetch: jest.fn(), loadOlder: mockLoadOlder, hasMore: false,
     });
-    const { toJSON } = await render(<ChatRoomScreen />, { wrapper: wrapper() });
-    await screen.findByText('baru');
-    const dump = JSON.stringify(toJSON());
-    const idxLama = dump.indexOf('"lama"');
-    const idxBaru = dump.indexOf('"baru"');
-    expect(idxLama).toBeGreaterThan(-1);
-    expect(idxBaru).toBeGreaterThan(-1);
-    expect(idxLama).toBeLessThan(idxBaru); // 'lama' muncul lebih dulu di tree
+    await render(<ChatRoomScreen />, { wrapper: wrapper() });
+    const list = await screen.findByTestId('chat-message-list');
+    // `inverted` + data[0] = paling bawah → data harus newest-first agar visual terlama-di-atas.
+    expect(list.props.inverted).toBe(true);
+    const bodies = (list.props.data as { kind: string; m?: { body: string } }[])
+      .filter((r) => r.kind === 'msg')
+      .map((r) => r.m!.body);
+    expect(bodies).toEqual(['baru', 'lama']);
   });
 
   it('[E2] bubble me vs them — me (author_id == session.user.id) tidak punya nama pengirim di atas bubble', async () => {
