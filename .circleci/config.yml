@@ -156,18 +156,29 @@ jobs:
             EXPO_PUBLIC_SUPABASE_ANON_KEY="$STAGING_SUPABASE_ANON_KEY" \
               npx expo export --platform web
       - run:
-          # Gate build-time: bundel hasil export TIDAK BOLEH memuat nama variabel shell.
-          # `env.ts` sudah menolaknya saat runtime, tapi kegagalan runtime di browser tidak
-          # terlihat CI — ini menjadikannya kegagalan build yang keras.
-          name: Verifikasi bundel tidak memuat env yang belum terinterpolasi
+          # Gate build-time: buktikan NILAI env yang sebenarnya sampai ke bundel.
+          #
+          # Versi pertama gate ini mencari literal `$STAGING_SUPABASE*` di dist/ dan
+          # GAGAL SEBAGAI FALSE POSITIVE (deploy #395): pesan error `env.ts` waktu itu
+          # memuat contoh `"$STAGING_SUPABASE_URL"`, string itu ikut ter-bundle, dan
+          # gate mencocokkan dirinya sendiri. Pelajarannya: memindai bundel untuk
+          # ketiadaan sebuah string rapuh, karena string apa pun bisa muncul sah dari
+          # kode, komentar, atau pesan error.
+          #
+          # Diganti VERIFIKASI POSITIF: host Supabase asli (diturunkan dari env yang
+          # sama) HARUS ada di bundel. Ini membuktikan interpolasi benar-benar terjadi,
+          # dan tidak bisa false-positive oleh teks prosa mana pun.
+          name: Verifikasi nilai env sungguhan masuk ke bundel
           command: |
             set -eu
-            if grep -rlF '$STAGING_SUPABASE' dist/ >/dev/null 2>&1; then
-              echo "GAGAL: bundel memuat literal \$STAGING_SUPABASE* — env tidak terinterpolasi." >&2
-              grep -rlF '$STAGING_SUPABASE' dist/ >&2
+            : "${STAGING_SUPABASE_URL:?STAGING_SUPABASE_URL belum di-set}"
+            HOST=$(printf '%s' "$STAGING_SUPABASE_URL" | sed -E 's#^https?://##; s#/.*$##')
+            [ -n "$HOST" ] || { echo "GAGAL: tidak bisa menurunkan host dari STAGING_SUPABASE_URL." >&2; exit 1; }
+            if ! grep -rqF "$HOST" dist/; then
+              echo "GAGAL: host Supabase tidak ditemukan di dist/ — env tidak sampai ke bundel." >&2
               exit 1
             fi
-            echo "OK: nol literal \$STAGING_SUPABASE* di dist/."
+            echo "OK: host Supabase asli hadir di dist/."
       - run:
           name: Deploy to EAS Hosting (staging alias)
           command: eas deploy --alias staging --non-interactive
@@ -178,11 +189,11 @@ jobs:
           #
           # BATAS YANG JUJUR: `curl` tidak mengeksekusi JavaScript, jadi langkah ini TIDAK
           # membuktikan aplikasi merender. Yang dibuktikan: URL balas 200, tag bundel ada,
-          # bundel yang BENAR-BENAR DILAYANI terunduh, dan isinya bersih dari env yang tak
-          # terinterpolasi. Itu menutup kelas kegagalan yang kita alami — dan hanya itu.
+          # bundel yang BENAR-BENAR DILAYANI terunduh, dan host Supabase asli hadir di
+          # dalamnya. Itu menutup kelas kegagalan yang kita alami — dan hanya itu.
           # Untuk membuktikan render dibutuhkan browser headless di CI; kalau kelak ada
           # kegagalan render yang lolos gate ini, itu jalur peningkatannya.
-          name: Smoke check staging (200 + bundel live bersih)
+          name: Smoke check staging (200 + host Supabase hadir di bundel live)
           command: |
             set -eu
             URL="https://staging.rencanapp.com"
@@ -197,10 +208,16 @@ jobs:
             BUNDLE=$(grep -oE '/_expo/static/js/web/[^"]+\.js' /tmp/staging.html | head -1)
             [ -n "$BUNDLE" ] || { echo "GAGAL: tidak menemukan tag bundel di HTML" >&2; exit 1; }
             curl -sfo /tmp/bundle.js "$URL$BUNDLE" || { echo "GAGAL: bundel $BUNDLE tidak terunduh" >&2; exit 1; }
-            if grep -qF '$STAGING_SUPABASE' /tmp/bundle.js; then
-              echo "GAGAL: bundel LIVE memuat literal \$STAGING_SUPABASE*." >&2; exit 1
+
+            # Verifikasi POSITIF, sejalan dengan gate build-time: cari host Supabase asli,
+            # bukan ketiadaan sebuah string. Pemindaian "string ini tidak boleh ada" rapuh —
+            # ia sempat mencocokkan pesan error env.ts sendiri dan menggagalkan deploy #395.
+            HOST=$(printf '%s' "$STAGING_SUPABASE_URL" | sed -E 's#^https?://##; s#/.*$##')
+            if ! grep -qF "$HOST" /tmp/bundle.js; then
+              echo "GAGAL: host Supabase tidak ada di bundel LIVE — staging melayani build tanpa env." >&2
+              exit 1
             fi
-            echo "OK: $URL 200, bundel $BUNDLE bersih."
+            echo "OK: $URL 200, bundel $BUNDLE memuat host Supabase asli."
 
 workflows:
   version: 2

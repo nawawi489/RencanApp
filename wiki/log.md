@@ -2544,3 +2544,21 @@ Blok itu masuk lewat `a0fbed3` (migrasi GitHub Actions → CircleCI, **2026-07-2
 - **Batas smoke check dinyatakan jujur di komentarnya**: `curl` tidak mengeksekusi JS, jadi langkah itu membuktikan "200 + bundel live bersih", BUKAN "app merender". Komentar awal sempat mengklaim memeriksa `#root` punya anak — dikoreksi sebelum commit. Untuk membuktikan render dibutuhkan browser headless di CI; itu jalur peningkatan bila kelak ada kegagalan render yang lolos.
 
 Verifikasi: jest penuh **1829/1829** (143 suite), `env.test.ts` 12/12, `tsc` bersih, lint 0 error, rename-guard clean, `circleci config validate` OK.
+
+## [2026-07-24] fix | Gate deploy #395 false-positive — pesan guard mencocokkan dirinya sendiri
+
+Deploy staging pertama setelah perbaikan env (PR #174) **gagal**, tapi bukan karena env-nya.
+
+**Log job #395**: `GAGAL: bundel memuat literal $STAGING_SUPABASE* — env tidak terinterpolasi` pada `dist/_expo/static/js/web/entry-3cc69cb5….js`.
+
+**Penyebab: false positive yang dibuat sendiri.** Pesan error `env.ts` dari PR #174 memuat contoh literal `"$STAGING_SUPABASE_URL"`. String itu ikut ter-bundle, dan gate `grep` mencocokkan **pesan guard-nya sendiri** — bukan env yang rusak.
+
+**Sinyal positif yang tersembunyi di kegagalan itu**: `expo export` BERHASIL, artinya guard `:?` lolos ⇒ `STAGING_SUPABASE_URL` memang sudah ter-set di CircleCI project env vars. Hash bundel juga baru (`3cc69cb5…` vs `c915196c…`). Jadi perbaikan inti PR #174 kemungkinan besar benar; yang menghalangi hanya gate-nya.
+
+**Perbaikan:**
+1. Pesan error `env.ts` tidak lagi memuat nama variabel CI mana pun ("nilainya diawali tanda dolar"), dengan komentar yang melarang mengembalikannya.
+2. **Gate diubah dari negatif ke positif** — dari "string ini tidak boleh ada" jadi "host Supabase asli HARUS ada di bundel". Diterapkan di kedua gate (build-time + post-deploy).
+
+**Pelajaran yang lebih penting daripada bug-nya**: memindai artefak untuk **ketiadaan** sebuah string itu rapuh — string apa pun bisa muncul sah dari kode, komentar, atau pesan error, dan gate-nya lalu menuduh hal yang salah. Verifikasi **positif** (nilai yang benar hadir) membuktikan hal yang sebenarnya dipedulikan dan kebal terhadap kelas ini.
+
+Verifikasi: jest penuh **1829/1829** (143 suite), `env.test.ts` 12/12, `tsc` bersih, lint 0 error, rename-guard clean, `circleci config validate` OK. Staging masih melayani bundel lama — deploy gagal sebelum langkah unggah.
