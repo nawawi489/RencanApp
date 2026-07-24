@@ -182,23 +182,37 @@ jobs:
       - run:
           name: Deploy to EAS Hosting (staging alias)
           command: eas deploy --alias staging --non-interactive
+      # Smoke check pasca-deploy SENGAJA DIPINDAH ke job `smoke-check-staging`
+      # terpisah (di bawah). Deploy sudah selesai di titik ini, jadi verifikasi
+      # pasca-deploy tidak boleh ikut menggagalkan status DEPLOY — apalagi karena
+      # false-red timing cache (deploy #402). Status deploy-staging kini hanya
+      # menyatakan "unggahan selesai".
+
+  # Smoke check pasca-deploy — ADVISORY, job terpisah dari deploy-staging.
+  #
+  # KENAPA TERPISAH (non-blocking terhadap deploy): `eas deploy` sudah selesai di
+  # job lain saat ini jalan. Merah di sini berarti "verifikasi pasca-deploy
+  # menandai sesuatu", BUKAN "deploy gagal". Memisahkannya menjaga status
+  # deploy-staging bersih: deploy hijau = unggahan selesai, apa pun hasil smoke.
+  #
+  # JUJUR SOAL BATASNYA: CircleCI tak punya `allow_failure` per-job (seperti
+  # GitLab), jadi job ini TETAP menampilkan status merahnya sendiri bila gagal —
+  # yang tidak lagi bergantung padanya hanyalah STATUS DEPLOY. Itu memang tujuannya:
+  # deploy dan verifikasi jadi dua sinyal berbeda, bukan satu yang saling
+  # mengaburkan. Membuatnya selalu-hijau (exit 0 + warning) DITOLAK — itu mendaur
+  # ulang persis hijau-palsu yang menyembunyikan bug 56 commit.
+  #
+  # Executor `node22-root` (working_directory ~/repo) → path skrip langsung
+  # `scripts/ci/...`, bukan `../scripts` seperti saat masih di dalam deploy-staging
+  # (yang ber-cwd mobile/ dan sempat bikin exit 127 di deploy #409).
+  smoke-check-staging:
+    executor: node22-root
+    steps:
+      - checkout:
+          path: ~/repo
       - run:
-          # Smoke check pasca-deploy. Logikanya di scripts/ci/smoke-check-staging.sh supaya
-          # BISA DIUJI lokal — race propagasi cache sulit dinalar hanya dengan membaca, dan
-          # dua versi sebelumnya cacat (deploy #395 false-positive, #402 merah-palsu karena
-          # retry pada status HTTP alih-alih isi bundel). Skrip itu diuji terhadap server
-          # tiruan (basi→segar dan tak-pernah-segar) sebelum diandalkan di sini.
-          name: Smoke check staging (host Supabase hadir di bundel live, retry propagasi)
-          # `bash <skrip>` — tidak bergantung pada exec bit yang bisa hilang di checkout.
-          #
-          # PATH-nya `../scripts`, BUKAN `scripts` seperti rename-guard & db-contract.
-          # Job itu memakai executor ber-`working_directory: ~/repo` (root repo), sedang
-          # deploy-staging memakai `node22` yang ber-`working_directory: ~/repo/mobile`.
-          # Dari mobile/, skrip repo-root ada satu tingkat di atas. Menyalin `scripts/ci/...`
-          # dari job lain tanpa menyadari selisih cwd ini membuat deploy #409 gagal exit 127
-          # ("No such file or directory") — deploy sehat tercatat merah. `mobile/` selalu
-          # tepat satu tingkat di bawah root repo, jadi `../` adalah invarian yang aman.
-          command: bash ../scripts/ci/smoke-check-staging.sh https://staging.rencanapp.com
+          name: Smoke check staging (advisory — non-blocking terhadap deploy)
+          command: bash scripts/ci/smoke-check-staging.sh https://staging.rencanapp.com
 
 workflows:
   version: 2
@@ -231,6 +245,15 @@ workflows:
             - quality
             - rename-guard
             - db-contract
+          filters:
+            branches:
+              only: staging
+      # Advisory, jalan SETELAH deploy. Statusnya sendiri (bukan status deploy)
+      # yang menandai apakah bundel live membawa env. staging-only + requires
+      # deploy-staging → tidak pernah jalan di PR, tidak jadi gate merge.
+      - smoke-check-staging:
+          requires:
+            - deploy-staging
           filters:
             branches:
               only: staging

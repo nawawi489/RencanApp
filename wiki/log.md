@@ -2597,3 +2597,17 @@ Deploy setelah PR #176 gagal **exit 127** (`No such file or directory`) di smoke
 **Pelajaran, kompas dari empat kegagalan gate berturut**: menguji sebuah gate tidak cukup memvalidasi logikanya — harus mereplikasi KONTEKS EKSEKUSINYA (cwd, env yang di-inject, artefak yang dinilai). Tiga bug pertama soal logika/isi; yang keempat soal konteks, dan lolos justru karena harness lokal saya tidak meniru cwd job-nya.
 
 Verifikasi: `circleci config validate` OK; skrip diuji dari `mobile/` via `../` (path CI sebenarnya), skenario propagasi lolos; rename-guard clean. Tanpa perubahan kode `mobile/`.
+
+## [2026-07-24] change | Smoke check staging → job advisory terpisah (non-blocking terhadap deploy)
+
+Tindak lanjut retro rentetan bug gate CI. Smoke check pasca-deploy dipindah dari langkah di dalam `deploy-staging` menjadi **job `smoke-check-staging` terpisah** yang `requires: deploy-staging`.
+
+**Kenapa**: `eas deploy` sudah selesai saat smoke check jalan. Menyatukan keduanya membuat false-red timing cache (deploy #402) ikut menandai DEPLOY sebagai gagal, padahal unggahannya sukses. Setelah dipisah: status `deploy-staging` = "unggahan selesai"; status `smoke-check-staging` = "bundel live membawa env" — dua sinyal berbeda, tak saling mengaburkan.
+
+**Yang TETAP blocking**: gate build-time (`Verifikasi nilai env sungguhan masuk ke bundel`) sebelum `eas deploy`. Ia deterministik (baca `dist/` lokal, nol timing) dan bundel tanpa env memang deploy rusak — harus mencegah unggahan.
+
+**Batas yang dinyatakan jujur di config**: CircleCI tak punya `allow_failure` per-job, jadi `smoke-check-staging` TETAP menampilkan status merahnya sendiri bila gagal — yang tak lagi bergantung padanya hanya STATUS DEPLOY. Varian selalu-hijau (exit 0 + warning) DITOLAK di komentar: itu mendaur ulang persis hijau-palsu yang menyembunyikan bug 56 commit.
+
+**Detail eksekusi**: job baru pakai executor `node22-root` (working_directory `~/repo`), jadi path skrip jadi `scripts/ci/...` langsung — bukan `../scripts` seperti saat di dalam `deploy-staging` yang ber-cwd `mobile/`. Diuji dari cwd repo-root (meniru node22-root) via `fake-staging.js`: resolusi path OK + skenario propagasi basi→segar lolos. staging-only + `requires deploy-staging` → tidak pernah jalan di PR, bukan gate merge.
+
+Verifikasi: `circleci config validate` OK, uji propagasi dari cwd baru lolos, rename-guard clean.
