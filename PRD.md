@@ -22,6 +22,20 @@ Tujuan dokumen ini adalah menjadi source-of-truth untuk implementasi frontend ag
 
 ---
 
+## 1B. Matriks Amandemen (keputusan final di atas basis revisi)
+
+Satu-satunya rujukan cepat untuk "amandemen apa saja yang sudah final" di atas basis revisi (§1). Catatan detail tetap inline di section masing-masing; kolom **Lokasi / dampak** menunjuk ke sana. Tambahkan baris baru di sini setiap ada keputusan owner yang mengubah PRD, supaya handoff sesi berikutnya tidak perlu menyisir dokumen.
+
+| Ref | Tanggal | Keputusan | Status | Lokasi / dampak |
+| --- | --- | --- | --- | --- |
+| RWT V1.8.3 (warisan V1.82) | — | Katalog keputusan RWT (label & semantik) dari V1.82 tetap berlaku. Yang eksplisit disebut ulang di V1.83: **RWT-04** (membership chat stabil, default A), **RWT-07** (`entity_type` Activity Log = literal historis, default A), **RWT-12** (label UI Indonesia: "Aturan Pecah Target", "Diskusi Rencana Aksi"). Katalog RWT lengkap ada di PRD V1.82. | Final | §1 basis #1; §5 penamaan; §34.4 (label MBR); §34.10 (Activity Log); bagian chat (RWT-04) |
+| Override 2026-06-29 | 2026-06-29 | §18 semula melarang "Satuan" (dianggap bikin UI terasa seperti spreadsheet). Owner meng-override untuk membuka **field opsional target numerik + unit** pada area → "% gap" presisi seperti prototype. | Final (berlaku di V1.83) | §18; migrasi 0032; `lib/strategy-gap.ts`; layar Strategy form/detail; kartu Home "Gap Strategy" |
+| Reposisi V1.83 | rilis V1.83 | EMS → **"Execution Project Management"**. Fitur berat (Score Formula, Governance, Activity Log, Manual Score Override) dipindah ke **Admin/Advanced**; tekanan staff harian diturunkan; **People di-de-score** (urutan kontribusi ringan, tanpa mempermalukan); **MBR opsional**. Label level & istilah UI Indonesia (RWT-12) tetap. | Final | §1 basis #5; §2–§3; §44 AC-24 |
+| Owner decision 2026-07-03 | 2026-07-03 | **"Tampil redup"/dim untuk kartu periode-lewat DICABUT.** Sinyal tunggal periode-lewat = badge teks **"Periode lewat"**. Alasan: `opacity` bersarang jatuh <AA (DESIGN §4). Larangan membuat turunan baru dari kartu periode-lewat TETAP mengikat. | Final — **mengalahkan §7.7 & §11.3**, konsisten dg §37 | §44 AC-9; catatan §7.7 & §33; ref UI-S-W08 (`wiki/concepts/ui-prototype-gap`) |
+| Owner decision 2026-07-22 (BL-07) | 2026-07-22 | Item "Aturan Pecah Target warning" **dipenuhi oleh gerbang MBR inline, BUKAN oleh Notifications.** Tidak ada notifikasi persisten untuk item ini, dan **tidak boleh ditambahkan** (notif akan tiba setelah user meninggalkan konteks pemicunya). | Final | Bagian Notifications (BL-07) |
+
+---
+
 ## 2. Product Overview
 
 Rencanapp adalah Execution Project Management untuk membantu perusahaan memecah target besar menjadi aksi nyata yang bisa dijalankan, dipantau, direview, dibuktikan, dan dituntaskan.

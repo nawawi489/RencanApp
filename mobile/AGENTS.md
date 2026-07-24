@@ -14,6 +14,15 @@ Do not assume APIs from memory — this project pins specific versions.
 - **Supabase** for backend (auth, Postgres, RLS).
 - Routing via **Expo Router** (`src/app/`).
 
+## Supabase env & secrets posture
+
+One posture, applied consistently — do **not** re-flag `eas.json` as inconsistent with the deploy workflow:
+
+- **Real environments (staging + production): env-only.** The Supabase URL and anon key are **never committed**. They are injected at build/deploy time from CI env vars — CircleCI project env (`STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`; see `.circleci/config.yml` job `deploy-staging`) and, for the paused GitHub Actions fallback, `secrets.STAGING_SUPABASE_*`. The `preview` (staging) and `production` profiles in `eas.json` therefore carry no real key — `production` shows `REPLACE_PROD_ANON_KEY` placeholders on purpose.
+- **Local development: the committed key is intentional and safe.** The `development` profile in `eas.json` hardcodes the **universal Supabase local-demo anon key** (`iss: supabase-demo`, `role: anon`) pointing at `http://localhost:54321`. That value is a public constant — identical for every `supabase start` install worldwide and published in Supabase docs — so it is not a secret, and committing it keeps local dev zero-config. Do **not** move it to env; that adds friction for zero security gain.
+
+`eas.json` is strict JSON and cannot hold comments, which is why this rule lives here. RLS — not anon-key secrecy — is what protects data; the anon key is public by design and ships inside the client bundle regardless.
+
 ## Design tokens (binding)
 
 `DESIGN.md` at the repo root is the **source of truth** for design tokens (color, typography, spacing, radius, elevation, motion, a11y). Before touching any UI in `src/`:

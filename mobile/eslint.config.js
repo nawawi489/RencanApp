@@ -21,6 +21,21 @@ module.exports = defineConfig([
       'import/no-duplicates': 'off',
       'import/no-named-as-default': 'off',
       'import/no-named-as-default-member': 'off',
+
+      // Enforce the global logging rule (CLAUDE.md "Log Management"): no raw
+      // console anywhere. Telemetry must route through the logger seam
+      // (src/lib/logger.ts), which emits structured JSON to stdout.
+      'no-console': 'error',
+    },
+  },
+  {
+    // The logger seam is the ONE legitimate console choke point: its
+    // consoleTransport writes the structured-JSON sink to stdout (the sink the
+    // global rule mandates). Test files spy on / assert against console to
+    // verify transport behavior.
+    files: ['src/lib/logger.ts', '**/__tests__/**', '**/*.test.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
     },
   },
 ]);

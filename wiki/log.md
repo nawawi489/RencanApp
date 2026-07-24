@@ -2611,3 +2611,19 @@ Tindak lanjut retro rentetan bug gate CI. Smoke check pasca-deploy dipindah dari
 **Detail eksekusi**: job baru pakai executor `node22-root` (working_directory `~/repo`), jadi path skrip jadi `scripts/ci/...` langsung — bukan `../scripts` seperti saat di dalam `deploy-staging` yang ber-cwd `mobile/`. Diuji dari cwd repo-root (meniru node22-root) via `fake-staging.js`: resolusi path OK + skenario propagasi basi→segar lolos. staging-only + `requires deploy-staging` → tidak pernah jalan di PR, bukan gate merge.
 
 Verifikasi: `circleci config validate` OK, uji propagasi dari cwd baru lolos, rename-guard clean.
+
+## [2026-07-24] change | Eksekusi 4 item Ops/process (no-console, posture anon key, matriks amandemen, branch protection)
+
+Menuntaskan daftar "Ops/process (belum masuk mana pun)" — 3 dieksekusi, 1 hand-off ke owner.
+
+1. **ESLint `no-console` di-enforce.** Rule global "pakai logger seam, bukan console" (CLAUDE.md) sebelumnya murni disiplin. Kini `no-console: error` di `mobile/eslint.config.js`, di-`off` hanya untuk seam `src/lib/logger.ts` (satu-satunya sink stdout sah) + file test. Terbukti wired: `eslint --print-config` → app file `[2,{}]`, seam `[0,{}]`; `npm run lint` = 0 error. Di-gate CircleCI job `quality` + hook pre-push.
+
+2. **Posture anon key didokumentasikan (satu cerita konsisten).** `eas.json` `development` meng-commit anon key **local-demo Supabase** (`iss: supabase-demo`, `localhost:54321`) — konstanta publik universal, aman, zero-config; staging/prod **env-only** dari CI (CircleCI env / GH secrets), `production` pakai placeholder. Bukan inkonsistensi — dua kategori berbeda. Ditulis di `mobile/AGENTS.md` §"Supabase env & secrets posture" (eas.json JSON ketat → tak bisa komentar).
+
+3. **Matriks Amandemen PRD.** Ditambah `## 1B` di `PRD.md` — satu tabel keputusan final di atas basis revisi: RWT V1.8.3 (RWT-04/07/12), override 2026-06-29 (§18 Satuan → migrasi 0032), reposisi V1.83, owner 2026-07-03 (dim dicabut, §44 AC-9), owner 2026-07-22 (BL-07 MBR-vs-Notif). Handoff sesi berikutnya tak perlu menyisir dokumen.
+
+4. **Branch protection — HAND-OFF ke owner (tak bisa dieksekusi).** `gh api .../branches/staging/protection` DAN `.../rulesets` sama-sama HTTP 403 "Upgrade to GitHub Pro or make this repository public". Sebab: repo `nawawi489/RencanApp` **privat di GitHub Free** — fitur terkunci total, bukan soal scope token, bukan "check belum di-set". Tidak ada required-status-check yang bisa dipasang di plan ini. Opsi owner: (a) upgrade GitHub Pro, (b) repo publik (aman untuk anon key; RLS yang melindungi), atau (c) terima status quo (gate = disiplin PR + CircleCI + hook pre-push). Komentar `deploy-staging.yml` yang dulu menyarankan branch protection "di GitHub Settings" sudah dikoreksi karena kini terbukti tak tersedia.
+
+> [!warning] Klarifikasi: memory `seed-password-env-only-pattern` menyebut "Repo public", tapi 403 di atas membuktikan repo saat ini **privat**. Perlu konfirmasi owner (mungkin ada mirror publik terpisah).
+
+Verifikasi: `npm run lint` 0 error; `eslint --print-config` konfirmasi rule; rename-guard tak terpengaruh (PRD.md, wiki/log.md di-exclude; AGENTS.md + eslint.config.js di luar roots scanner).

@@ -31,8 +31,14 @@ defaults:
 #
 # Risiko: kalau ada bypass merge (admin override, direct push tanpa PR), deploy
 # jalan tanpa gate CI. Untuk repo satu-orang dengan disiplin PR-only, risiko rendah.
-# Kalau di kemudian hari perlu backstop, tambahkan branch protection rule
-# "Require status checks to pass before merging" di GitHub Settings.
+#
+# Backstop "Require status checks to pass before merging" TIDAK tersedia di plan
+# saat ini (dicek 2026-07-24): repo privat di GitHub Free → branch protection DAN
+# rulesets sama-sama balas HTTP 403 "Upgrade to GitHub Pro or make this repository
+# public". Untuk mengaktifkan gate merge, owner harus salah satu: (a) upgrade ke
+# GitHub Pro, atau (b) jadikan repo publik (aman untuk anon key — RLS yang
+# melindungi data, lihat mobile/AGENTS.md "Supabase env & secrets posture").
+# Sampai diputuskan, gate efektif = disiplin PR + CircleCI + hook pre-push lokal.
 jobs:
   deploy:
     name: Export & deploy to EAS Hosting
