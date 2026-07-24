@@ -189,9 +189,16 @@ jobs:
           # retry pada status HTTP alih-alih isi bundel). Skrip itu diuji terhadap server
           # tiruan (basi→segar dan tak-pernah-segar) sebelum diandalkan di sini.
           name: Smoke check staging (host Supabase hadir di bundel live, retry propagasi)
-          # `bash <skrip>` — pola sama dengan no-old-names.sh & run-db-contract-tests.sh:
-          # tidak bergantung pada exec bit yang bisa hilang di checkout tertentu.
-          command: bash scripts/ci/smoke-check-staging.sh https://staging.rencanapp.com
+          # `bash <skrip>` — tidak bergantung pada exec bit yang bisa hilang di checkout.
+          #
+          # PATH-nya `../scripts`, BUKAN `scripts` seperti rename-guard & db-contract.
+          # Job itu memakai executor ber-`working_directory: ~/repo` (root repo), sedang
+          # deploy-staging memakai `node22` yang ber-`working_directory: ~/repo/mobile`.
+          # Dari mobile/, skrip repo-root ada satu tingkat di atas. Menyalin `scripts/ci/...`
+          # dari job lain tanpa menyadari selisih cwd ini membuat deploy #409 gagal exit 127
+          # ("No such file or directory") — deploy sehat tercatat merah. `mobile/` selalu
+          # tepat satu tingkat di bawah root repo, jadi `../` adalah invarian yang aman.
+          command: bash ../scripts/ci/smoke-check-staging.sh https://staging.rencanapp.com
 
 workflows:
   version: 2
