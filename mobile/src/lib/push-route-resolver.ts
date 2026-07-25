@@ -9,8 +9,8 @@ export function resolveNotificationRoute(
 ): string | null {
   if (!entityType || !entityId) return null;
 
-  if (entityType === 'action_plan_instance') {
-    return `/(app)/action-plan/instance/${entityId}`;
+  if (entityType === 'task_instance') {
+    return `/(app)/task/instance/${entityId}`;
   }
 
   const segment = ENTITY_ROUTE_SEGMENT[entityType as CardEntityType];
