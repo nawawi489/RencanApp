@@ -48,6 +48,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[workspace-card-progress]] — Server rollup `workspace_card_progress` (orb capaian): evolusi 0037→0074 attainment→**0102 push-down**; gotcha view agregat tanpa filter meng-scan seluruh approved set tiap referensi; resep verifikasi ekuivalensi 0-mismatch
 - [[workspace-lock-audit]] — Audit `mobile/` vs prototype final Workspace (spec lock V1.82 kini dihapus): 20 PASS · 7 PARTIAL · 8 FAIL dari 35 AC; temuan ber-ID WSA-01..20
 - [[workspace-lock-sprint-plan]] — Lima sprint eksekusi perbaikan temuan WSA: copy lock → guard/permission → anatomi tree card → overview/header/switcher → route & tree lengkap
+- [[write-idempotency-keys]] — Spec PROPOSED (follow-up PR #197): client_request_id + partial unique index agar retry-manual user tak menduplikasi INSERT non-idempoten (goals/action_plans/tasks/initiatives/problem_statements + send_chat_message RPC)
 - [[ws-04-governance-debt]] — WS-04 archive-period gating UI-only (2026-07-05 OQ-1 Opsi A); `.insert()` langsung ber-RLS tanpa cek periode; kondisi kapan wajib re-open backend hardening
 
 ## Sources
