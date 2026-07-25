@@ -2,9 +2,23 @@
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native-css/components';
-import { Avatar, Button, EmptyState, ErrorState, IconTile, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SectionCard, SkeletonList, orbToneFor } from '../ui';
+import { Avatar, Button, EmptyState, ErrorState, IconTile, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SectionCard, SectionHeading, SkeletonList, orbToneFor } from '../ui';
 
 jest.setTimeout(30000);
+
+describe('SectionHeading', () => {
+  it('mengekspos judul dengan accessibilityRole="header" (navigasi-heading pembaca layar)', async () => {
+    await render(<SectionHeading title="Prioritas" />);
+    // getByRole('header') hanya cocok bila accessibilityRole="header" terpasang.
+    expect(screen.getByRole('header', { name: 'Prioritas' })).toBeTruthy();
+  });
+
+  it('merender slot `right` opsional di samping judul', async () => {
+    await render(<SectionHeading title="Strategi" right={<Text>3</Text>} />);
+    expect(screen.getByRole('header', { name: 'Strategi' })).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+  });
+});
 
 describe('IconTile (UI-G-011)', () => {
   it('me-render ikon dan disembunyikan dari a11y (label teks pendamping = sumber makna, DESIGN §4)', async () => {
