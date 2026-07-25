@@ -27,10 +27,8 @@ import {
   countCompletedTasksInPeriod,
   getOrgProfileDetail,
   listTasksByPic,
-  listOrgProfiles,
   personLabel,
   type TaskWithPeople,
-  type PersonRef,
 } from '@/lib/cards';
 import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
 import {
@@ -42,8 +40,6 @@ import {
   useUserScoreHistory,
 } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
-
-type Person = NonNullable<PersonRef>;
 
 const ROLE_LEVEL_LABEL: Record<string, string> = {
   staff: 'Staff', management: 'Management', c_level: 'C-Level', ceo: 'CEO',
@@ -72,17 +68,9 @@ export function LivePeopleProfileScreen() {
   const router = useRouter();
   const { profile, can } = useProfile();
 
-  const { data: profiles, isLoading: profilesLoading } = useQuery({
-    queryKey: ['org-profiles'],
-    queryFn: listOrgProfiles,
-  });
-  const person = useMemo(
-    () => ((profiles ?? []) as Person[]).find((p) => p.id === id),
-    [profiles, id],
-  );
-
-  // UI-S-PR1 — detail rich chrome (status, role, position, join date) untuk header.
-  const { data: detail } = useQuery({
+  // UI-S-PR1 — satu-satunya sumber identitas + rich chrome (nama, email, status, role, position,
+  // join date). Header memakai query detail per-orang ini; tidak lagi memuat seluruh roster org.
+  const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ['profile-detail', id],
     queryFn: () => getOrgProfileDetail(id ?? ''),
     enabled: !!id,
@@ -139,10 +127,10 @@ export function LivePeopleProfileScreen() {
     return [];
   }, [activeScore, closedEntry]);
 
-  const label = personLabel(person, 'Anggota');
+  const label = personLabel(detail, 'Anggota');
   const scoreSourceLabel = activeEffective != null ? active?.period_name : closed?.period_name;
 
-  if (profilesLoading) {
+  if (detailLoading) {
     return (
       <View className="flex-1 bg-white p-5 dark:bg-black">
         <Stack.Screen options={{ title: 'Profil' }} />
@@ -153,7 +141,7 @@ export function LivePeopleProfileScreen() {
 
   // PPL-06-Q1 (2026-07-05): not-found state — id deep-link tak match anggota org.
   // Cegah render header 'Anggota' + seksi kosong yang membingungkan.
-  if (!person) {
+  if (!detail) {
     return (
       <View className="flex-1 bg-white p-5 dark:bg-black">
         <Stack.Screen options={{ title: 'Profil' }} />
@@ -192,8 +180,8 @@ export function LivePeopleProfileScreen() {
                 {detail.position_title}
               </Text>
             ) : null}
-            {person?.email ? (
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{person.email}</Text>
+            {detail.email ? (
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{detail.email}</Text>
             ) : null}
             {detail?.created_at ? (
               <Text className="text-xs text-neutral-400">
