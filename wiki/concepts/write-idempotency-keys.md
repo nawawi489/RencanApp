@@ -49,12 +49,12 @@ Affected write paths (all currently carry **no** idempotency key):
 1. Add `client_request_id uuid` (nullable).
 2. Add a **partial unique index** scoped to the natural owner:
    ```sql
-   create unique index concurrently <table>_client_request_id_uidx
+   create unique index <table>_client_request_id_uidx
      on public.<table> (organization_id, created_by, client_request_id)
      where client_request_id is not null;
    ```
-   Scoping to `(organization_id, created_by)` keeps keys collision-free across tenants/users and matches the `created_by = auth.uid()` insert pattern already in each `create*`.
-3. Return-the-original on conflict. **Recommended**: a thin `security invoker` RPC per table (or one generic helper) doing:
+   Scoping to `(organization_id, created_by)` keeps keys collision-free across tenants/users and matches the `created_by = auth.uid()` insert pattern already in each `create*`. **Not `CONCURRENTLY`**: the column is brand-new and nullable, so the partial predicate matches zero existing rows — a plain index builds instantly and stays inside the migration's transaction (the Supabase CLI wraps each migration in a txn; `CREATE INDEX CONCURRENTLY` would abort the `supabase start`/`db reset` contract gate).
+3. Return-the-original on conflict — **this step is mandatory, not just the column+index**. A plain PostgREST `.insert().select().single()` on a duplicate key returns error `23505`, which every `create*` re-throws to the UI (`if (error) throw error`) — so without conflict-handling the retry *errors* instead of returning the first row, failing AC-1 for all five direct-insert paths. **Recommended**: a thin `security invoker` RPC per table (or one generic helper) doing:
    ```sql
    insert into public.<table> (...cols..., organization_id, created_by, client_request_id)
    values (...)
@@ -69,9 +69,9 @@ Affected write paths (all currently carry **no** idempotency key):
 
 **B. Chat RPC** (`send_chat_message`)
 
-1. Add `client_request_id uuid` to `chat_messages` + the same partial unique index scoped to `(chat_room_id, sender_id, client_request_id)`.
+1. Add `client_request_id uuid` to `chat_messages` + the same partial unique index scoped to `(chat_room_id, author_id, client_request_id)`. **Note: the column is `author_id`, not `sender_id`** (`chat_messages` defines `author_id uuid references profiles`; `sender_id` does not exist anywhere in the schema).
 2. Add `p_client_request_id uuid default null` as a **new trailing param**. Per the RPC-signature gotcha ([[../MEMORY|anon-public-rpc-grant-gotcha]]): this means `drop function` the current 6-param signature and `create or replace` the 7-param version, then **re-`grant execute` to `authenticated` and re-`revoke` from `public, anon`** — a DROP resets the ACL. Preserve the existing body byte-for-byte (guards, mention loop, `emit_notification`, attachment validation) and add only the dedup block.
-3. Inside the function, after room/membership guards: if `p_client_request_id is not null`, `select id into v_existing from public.chat_messages where chat_room_id = p_room and sender_id = v_uid and client_request_id = p_client_request_id; if found, return v_existing;` then insert with the key. Keep the unique index as the race backstop (two concurrent calls: loser hits `23505` → catch and return the winner's id).
+3. Inside the function, after room/membership guards: if `p_client_request_id is not null`, `select id into v_existing from public.chat_messages where chat_room_id = p_room and author_id = v_uid and client_request_id = p_client_request_id; if found, return v_existing;` then insert with the key. The unique index is the race backstop, and it **requires an explicit handler** — wrap the insert in `exception when unique_violation then select id into v_existing from public.chat_messages where chat_room_id = p_room and author_id = v_uid and client_request_id = p_client_request_id; return v_existing;` so a concurrent duplicate returns the winner's id instead of surfacing a raw `23505` to the UI (AC-2).
 
 ### Client changes
 
@@ -96,16 +96,22 @@ Affected write paths (all currently carry **no** idempotency key):
 
 ## Rollout / sequencing
 
-1. One migration adds columns + `create index concurrently` (partial unique) for the five direct-insert tables and `chat_messages`. **`concurrently` cannot run inside a txn block** — verify the CI runner applies it outside a transaction, or split into its own statement. Number = next free migration; per [[../MEMORY|migration-preflight-checks]] **verify the remote's highest applied number against `origin/staging` before assigning** (local checkout can lag; 0070 is reserved for the goal-attainment rollup).
+1. One migration adds columns + a plain partial unique index (see §Design — **not** `CONCURRENTLY`, since the new nullable column matches zero existing rows so the index builds instantly inside the migration txn) for the five direct-insert tables and `chat_messages`. Number = next free migration; verified against `origin/staging @ adca441` via `git ls-tree` (highest applied = `0099`), so **next = `0100`** — re-verify at implementation time per [[../MEMORY|verify-baseline-origin-staging]] (the earlier "0070 reserved" note is stale for this baseline; `0070` is already used by `0070_fix_chat_attachments_storage_rls`).
 2. Second logical unit (same or follow-up migration): the `send_chat_message` 7-param rewrite + re-grant, and the direct-insert helper RPCs (if the RPC option is chosen).
 3. Client wiring last, behind the schema — old clients sending null keys keep working, so DB can land first without a lockstep app release.
 4. PR against `staging` per `mobile/AGENTS.md` and [[../MEMORY|pr-base-branch-gotcha]] (`--base staging`).
 
 ## Open questions (owner decision)
 
-- **RPC vs catch-23505** for direct inserts. RPC is atomic, race-safe, single round-trip, returns the row cleanly — but adds five (or one generic) `security invoker` functions to maintain. Catch-23505 is a smaller diff but two round-trips on conflict. **Recommendation: RPC helper**, for race-safety and a single return path.
-- **Key scope**: `(organization_id, created_by, ...)` assumes one logical submit never legitimately repeats within a user+org. True for all six paths today. Confirm no batch/import path needs to reuse a key across rows.
-- **`crypto.randomUUID()` availability** on the pinned Hermes/RN 0.85 runtime — confirm on device before committing to it vs `expo-crypto`.
+- ~~**RPC vs catch-23505**~~ — *LOCKED 2026-07-25: **RPC `security invoker` helper***. The five direct-insert callers change to `supabase.rpc('create_<entity>_idempotent', …)`; each RPC does `insert … on conflict … do update set client_request_id = excluded.… returning *` under invoker RLS. Atomic, race-safe, single round-trip. (Rejected: client-side catch-23505 — two round-trips + separate concurrency handling.)
+- ~~**Key scope**~~ — *settled*: `(organization_id, created_by, ...)` are exactly the two server-injected columns already in every insert payload; no batch/import path reuses a key across rows. No change needed.
+- ~~**`crypto.randomUUID()` availability**~~ — *resolved*: `crypto.randomUUID()` already ships in the production attachment-upload path (`mobile/src/lib/storage.ts`), so on-device availability is proven. Drop the `expo-crypto` contingency unless a device failure actually appears.
+
+## Coverage notes (from TDD-plan critic)
+
+- **Chat attachments path**: `handleSend` in `inbox/[roomId].tsx` has two branches — plain-text `send(...)` and `runAttachmentFlow({...send})`. The `client_request_id` must be threaded through **both**, or a retried image message still duplicates.
+- **`send()` signature change is a regression, not additive**: adding a 4th `opts` arg breaks existing `toHaveBeenCalledWith` assertions in `inbox/__tests__/[roomId].test.tsx` (exact-arg matchers) — those must be updated, not assumed green.
+- **`database.types.ts`**: hand-edit the Insert types + `send_chat_message` Args (the established precedent). Do **not** rely on Supabase MCP `generate_typescript_types`, which targets staging and won't see the new columns until the PR merges (see [[../MEMORY|supabase-local-vs-mcp-gotcha]]).
 
 ## References
 

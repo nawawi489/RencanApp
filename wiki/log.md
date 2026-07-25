@@ -2648,3 +2648,16 @@ Fix perf dari audit query DB 2026-07-24. `public.workspace_card_progress(uuid[])
 - **Pages updated**: `wiki/index.md` (entry Concepts baru).
 - **Inti spec**: kolom `client_request_id uuid` (nullable) + partial unique index `(organization_id, created_by, client_request_id) where not null` di 5 tabel direct-insert (goals/action_plans/tasks/initiatives/problem_statements); untuk chat, kolom + index di `chat_messages` + param `p_client_request_id` di RPC `send_chat_message` (rewrite 6→7 param, DROP+re-grant ACL). Client generate UUID sekali per submit, reuse antar retry.
 - **Open questions**: (1) RPC `security invoker` vs catch-23505 untuk direct insert (rekomendasi: RPC helper, race-safe); (2) scope key `(org, created_by)`; (3) ketersediaan `crypto.randomUUID()` di Hermes/RN 0.85. Migration `concurrently` di luar txn; nomor migrasi verifikasi vs `origin/staging` (0070 reserved).
+
+## [2026-07-25] update | TDD plan write-idempotency-keys (via /tdd-plan)
+
+- **Pages created**: `wiki/concepts/write-idempotency-keys-tdd-plan.md` (rencana red→green→refactor 11 langkah + mocking per-layer + 10 risiko).
+- **Pages updated**: `wiki/concepts/write-idempotency-keys.md` (koreksi critic), `wiki/index.md`.
+- **Dijalankan**: workflow `/tdd-plan` (8 agent, 0 error, ~793k token). Critic verdict "perlu-perbaikan" — menemukan 1 bug BLOCKING + beberapa koreksi, sudah difold ke spec:
+  1. **BLOCKING**: `chat_messages` pakai kolom `author_id`, BUKAN `sender_id` (0 hit `sender_id` di seluruh migrasi). Index/dedup chat dikoreksi ke `(chat_room_id, author_id, client_request_id)`.
+  2. Index partial **JANGAN `CONCURRENTLY`** — kolom baru nullable = 0 baris cocok → index polos build instan & txn-safe; CONCURRENTLY malah gagalkan gate `supabase start` (txn block).
+  3. Nomor migrasi: `origin/staging @ adca441` tertinggi = **0099** → next **0100** (catatan "0070 reserved" basi; 0070 sudah dipakai).
+  4. `database.types.ts`: hand-edit (MCP generate menyasar staging yang belum punya kolom).
+  5. `crypto.randomUUID()` open-question TERTUTUP: sudah dipakai produksi di `storage.ts` → tak perlu expo-crypto.
+  6. Direct-insert WAJIB tangani 23505→return baris asli (bukan cuma passthrough+index), else AC-1 gagal 5/6 path. Path attachment chat + regresi exact-arg `send()` juga di-flag.
+- **GATE terbuka**: OQ-1 (RPC security-invoker helper vs catch-23505) harus dikunci owner SEBELUM red test — menentukan seluruh test surface.

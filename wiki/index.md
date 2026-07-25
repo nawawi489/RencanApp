@@ -49,6 +49,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[workspace-lock-audit]] — Audit `mobile/` vs prototype final Workspace (spec lock V1.82 kini dihapus): 20 PASS · 7 PARTIAL · 8 FAIL dari 35 AC; temuan ber-ID WSA-01..20
 - [[workspace-lock-sprint-plan]] — Lima sprint eksekusi perbaikan temuan WSA: copy lock → guard/permission → anatomi tree card → overview/header/switcher → route & tree lengkap
 - [[write-idempotency-keys]] — Spec PROPOSED (follow-up PR #197): client_request_id + partial unique index agar retry-manual user tak menduplikasi INSERT non-idempoten (goals/action_plans/tasks/initiatives/problem_statements + send_chat_message RPC)
+- [[write-idempotency-keys-tdd-plan]] — Rencana TDD red→green→refactor untuk [[write-idempotency-keys]]: DB(0100)→types(hand-edit)→data→hooks→UI; gate keputusan OQ-1 (RPC helper vs catch-23505); fix critic (author_id≠sender_id, index polos bukan CONCURRENTLY)
 - [[ws-04-governance-debt]] — WS-04 archive-period gating UI-only (2026-07-05 OQ-1 Opsi A); `.insert()` langsung ber-RLS tanpa cek periode; kondisi kapan wajib re-open backend hardening
 
 ## Sources
