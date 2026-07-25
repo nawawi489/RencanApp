@@ -18,7 +18,9 @@ export function Screen({ title, subtitle, scrollable = true, children }: ScreenP
     return (
       <View className="flex-1 bg-white dark:bg-black">
         <View className="gap-1 p-5 pb-3">
-          <Text className="text-2xl font-bold text-black dark:text-white">{title}</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
+            {title}
+          </Text>
           {subtitle ? (
             <Text className="text-base text-neutral-500 dark:text-neutral-400">{subtitle}</Text>
           ) : null}
@@ -31,7 +33,9 @@ export function Screen({ title, subtitle, scrollable = true, children }: ScreenP
     <ScrollView className="flex-1 bg-white dark:bg-black">
       <View className="gap-5 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">{title}</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
+            {title}
+          </Text>
           {subtitle ? (
             <Text className="text-base text-neutral-500 dark:text-neutral-400">{subtitle}</Text>
           ) : null}
