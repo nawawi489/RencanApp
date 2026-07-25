@@ -7,7 +7,7 @@ import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-com
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { DetailChildRow } from '@/components/detail-child-row';
 import { DetailField } from '@/components/detail-field';
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionHeading, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useInitiativeActionPlans } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL } from '@/lib/cards';
@@ -129,7 +129,7 @@ export function LiveInitiativeDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Rencana Aksi</Text>
+              <SectionHeading title="Rencana Aksi" />
 
               {action_plansLoading ? (
                 <SkeletonList count={2} />

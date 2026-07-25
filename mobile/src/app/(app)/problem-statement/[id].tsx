@@ -13,6 +13,7 @@ import {
   EmptyState,
   ErrorState,
   MetaGrid,
+  SectionHeading,
   SkeletonList,
 } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
@@ -141,7 +142,7 @@ export function LiveProblemStatementDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Rencana Aksi</Text>
+              <SectionHeading title="Rencana Aksi" />
 
               {action_plansLoading ? (
                 <SkeletonList count={2} />

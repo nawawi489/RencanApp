@@ -6,7 +6,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 import { MbrCompletionIndicator, guardMbrActivation } from '@/components/mbr-completion';
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { StatTile } from '@/components/stat-tile';
-import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SectionHeading, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { alertFriendlyError } from '@/lib/errors';
 import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
@@ -337,7 +337,7 @@ export function LiveActionPlanDetailScreen() {
             ) : null}
 
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Tugas</Text>
+              <SectionHeading title="Tugas" />
 
               {plansQ.isLoading ? (
                 <SkeletonList count={2} />

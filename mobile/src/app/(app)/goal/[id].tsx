@@ -6,7 +6,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { CardHelpTrigger } from '@/components/card-help-trigger';
 import { DetailChildRow } from '@/components/detail-child-row';
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressBar, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressBar, ProgressOrb, SectionCard, SectionHeading, SkeletonList } from '@/components/ui';
 import { useCardProgress, useGoal, useGoalActions, useStrategies } from '@/hooks/use-workspace';
 import { PLANNING_STATUS_LABEL, STATUS_TONE } from '@/lib/goals';
 import { childrenSublabel, measuredStrategiesSublabel, ratioActiveOfChildren, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
@@ -157,7 +157,7 @@ export function LiveGoalDetailScreen() {
 
             <View className="gap-3">
               <View className="flex-row items-center gap-2">
-                <Text className="text-lg font-bold text-black dark:text-white">Strategi</Text>
+                <SectionHeading title="Strategi" />
                 <CardHelpTrigger topic="strategy" />
               </View>
 

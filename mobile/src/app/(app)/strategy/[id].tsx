@@ -16,6 +16,7 @@ import {
   ProgressBar,
   ProgressOrb,
   SectionCard,
+  SectionHeading,
   SkeletonList,
 } from '@/components/ui';
 import { childrenSublabel, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
@@ -354,7 +355,7 @@ export function LiveStrategyDetailScreen() {
 
             <View className="gap-3">
               <View className="flex-row items-center gap-2">
-                <Text className="text-lg font-bold text-black dark:text-white">Inisiatif</Text>
+                <SectionHeading title="Inisiatif" />
                 <CardHelpTrigger topic="initiative" />
               </View>
 

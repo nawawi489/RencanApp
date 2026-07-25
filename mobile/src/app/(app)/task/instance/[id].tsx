@@ -10,7 +10,7 @@ import { ScrollView, Text, View } from 'react-native-css/components';
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { alertFriendlyError } from '@/lib/errors';
 import { StatTile } from '@/components/stat-tile';
-import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, MetaGrid, SectionCard, SectionHeading, SkeletonList } from '@/components/ui';
 import { SubmissionCard, formatDateTime } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
 import { useInstanceActions, useInstanceReview, useRepeatInstances } from '@/hooks/use-repeat-instances';
@@ -223,7 +223,7 @@ export default function TaskInstanceDetailScreen() {
 
             {/* Riwayat submission */}
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Riwayat Submission</Text>
+              <SectionHeading title="Riwayat Submission" />
               {submissions.length > 0 ? (
                 submissions.map((s) => <SubmissionCard key={s.id} s={s} />)
               ) : (

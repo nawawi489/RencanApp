@@ -5,7 +5,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/comp
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { alertFriendlyError } from '@/lib/errors';
-import { Badge, Button, EmptyState, Field, MetaGrid, ProgressOrb, SectionCard, SkeletonList } from '@/components/ui';
+import { Badge, Button, EmptyState, Field, MetaGrid, ProgressOrb, SectionCard, SectionHeading, SkeletonList } from '@/components/ui';
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
 import { SubmissionCard } from '@/components/submission-card';
 import { useProfile } from '@/hooks/use-profile';
@@ -306,7 +306,7 @@ function RepeatSection({
         </Text>
       </SectionCard>
 
-      <Text className="text-lg font-bold text-black dark:text-white">Instance Terjadwal</Text>
+      <SectionHeading title="Instance Terjadwal" />
       {isLoading ? (
         <ActivityIndicator />
       ) : isError ? (
@@ -568,7 +568,7 @@ export function LiveTaskDetailScreen() {
             {/* ---- Riwayat submission (one-time saja) ---- */}
             {ap.repeat_setting !== 'repeat' ? (
             <View className="gap-3">
-              <Text className="text-lg font-bold text-black dark:text-white">Riwayat Submission</Text>
+              <SectionHeading title="Riwayat Submission" />
               {subsQ.isLoading ? (
                 <ActivityIndicator />
               ) : subsQ.data && subsQ.data.length > 0 ? (
