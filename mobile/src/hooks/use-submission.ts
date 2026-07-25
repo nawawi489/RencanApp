@@ -17,6 +17,7 @@ import {
   type StrategyCurrentValue,
   type ResultValueInput,
 } from '@/lib/cards';
+import { invalidateHomeQueries } from '@/lib/home-queries';
 import { cleanupOrphanUpload, uploadEvidenceFile, type LocalFile } from '@/lib/storage';
 
 export function useKpiCandidates(taskId: string | undefined) {
@@ -116,6 +117,8 @@ export function useSubmissionFlow(taskId: string | undefined) {
       qc.invalidateQueries({ queryKey: ['action-plan-submissions', taskId] });
       qc.invalidateQueries({ queryKey: ['kpi_candidates', taskId] });
       qc.invalidateQueries({ queryKey: ['kpi_current_value'] });
+      // Submit memindah Tugas keluar dari "todo" & masuk antrean reviewer → segarkan Home.
+      invalidateHomeQueries(qc);
     },
   });
 

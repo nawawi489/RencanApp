@@ -14,6 +14,7 @@ import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createTask, getActionPlan, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 import { DATE_HINT, DATE_RE, TIME_RE } from '@/lib/date';
+import { invalidateHomeQueries } from '@/lib/home-queries';
 import { DEFAULT_ORG_TIMEZONE, getOrgTimezone, orgTimezoneLabel } from '@/lib/org-timezone';
 import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
 type Person = NonNullable<PersonRef>;
@@ -218,6 +219,8 @@ export function LiveNewTaskScreen() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['action-plans', actionPlanId] });
+      // Tugas baru muncul di Home ("Task Hari Ini" / mendekati deadline) → segarkan.
+      invalidateHomeQueries(qc);
       router.back();
     },
     onError: (e) => alertFriendlyError('Gagal', e, 'Terjadi kesalahan.'),

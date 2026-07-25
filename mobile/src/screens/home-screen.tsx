@@ -33,6 +33,7 @@ import {
   listTodayRepeatInstances,
   type HomeItem,
 } from '@/lib/home';
+import { HOME_QUERY_PREFIX } from '@/lib/home-queries';
 import { INSTANCE_STATUS_LABEL, INSTANCE_STATUS_TONE } from '@/lib/repeat';
 
 const ONBOARDING_DAYS = 7;
@@ -284,7 +285,7 @@ export default function LiveHomeScreen() {
       void queryClient.refetchQueries({
         type: 'active',
         stale: true,
-        predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith('home-'),
+        predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith(HOME_QUERY_PREFIX),
       });
     }, [queryClient]),
   );

@@ -2,6 +2,7 @@
 // Compliance & progress dibedakan: hook mengekspos metrik compliance read-only dari server.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { invalidateHomeQueries } from '@/lib/home-queries';
 import { getRepeatCompliance, listInstances, reviewInstanceSubmission, type InstanceWithSubmissions } from '@/lib/repeat';
 
 export function useRepeatInstances(taskId: string, options?: { enabled?: boolean }) {
@@ -67,6 +68,8 @@ export function useInstanceReview(inst: ReviewableInstance | null | undefined, i
         qc.invalidateQueries({ queryKey: ['repeat-compliance', inst.task_id] });
       }
       qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
+      // Review instance mengubah antrean "Butuh Review" + "hari ini"/terlewat di Home.
+      invalidateHomeQueries(qc);
     },
   });
 }

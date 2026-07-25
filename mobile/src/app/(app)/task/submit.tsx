@@ -29,6 +29,7 @@ import {
 } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 import { pickEvidenceFiles } from '@/lib/file-picker';
+import { invalidateHomeQueries } from '@/lib/home-queries';
 import { getInstance, submitInstance } from '@/lib/repeat';
 import { classifyKind, type LocalFile } from '@/lib/storage';
 
@@ -227,6 +228,8 @@ export function LiveTaskSubmitScreen() {
       qc.invalidateQueries({ queryKey: ['repeat-instances', apId] });
       qc.invalidateQueries({ queryKey: ['repeat-compliance', apId] });
       qc.invalidateQueries({ queryKey: ['instance', instanceId] });
+      // Submit instance mengubah "hari ini"/terlewat + antrean review instance → segarkan Home.
+      invalidateHomeQueries(qc);
       router.back();
     },
     onError: (e) => alertFriendlyError('Gagal submit', e, 'Terjadi kesalahan.'),

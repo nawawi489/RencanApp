@@ -25,6 +25,7 @@ import {
   type TaskWithPeople,
   type SubmissionDetail,
 } from '@/lib/cards';
+import { invalidateHomeQueries } from '@/lib/home-queries';
 import {
   INSTANCE_STATUS_LABEL,
   INSTANCE_STATUS_TONE,
@@ -361,6 +362,8 @@ export function LiveTaskDetailScreen() {
     qc.invalidateQueries({ queryKey: ['action-plans'] });
     // WSA-15 — perubahan status AP (activate/start/review→done) mengubah %done Rencana Aksi → orb refresh.
     qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
+    // Status Tugas berubah (aktif/mulai/review/tolak) → Home todo/review/terlewat ikut berubah.
+    invalidateHomeQueries(qc);
   }
 
   const activateM = useMutation({
