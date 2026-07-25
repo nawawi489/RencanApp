@@ -12,6 +12,8 @@ import { useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
 import type { GoalTemplate } from '@/lib/goals';
 
+const LIST_CONTENT_STYLE = { gap: 12, padding: 20 };
+
 function TemplateRow({ template, canCreate, onUse }: { template: GoalTemplate; canCreate: boolean; onUse: () => void }) {
   const [expanded, setExpanded] = useState(false);
   // Lazy: id kosong saat collapsed → hook disabled (enabled: !!goalTemplateId).
@@ -112,7 +114,7 @@ export default function SettingsGoalTemplatesScreen() {
     <View className="flex-1 bg-white dark:bg-black">
       <Stack.Screen options={{ title: 'Goal Template' }} />
       <FlatList<GoalTemplate>
-        contentContainerStyle={{ gap: 12, padding: 20 }}
+        contentContainerStyle={LIST_CONTENT_STYLE}
         data={templates}
         keyExtractor={(t) => t.id}
         ListHeaderComponent={header}

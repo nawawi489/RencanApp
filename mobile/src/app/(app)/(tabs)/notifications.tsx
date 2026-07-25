@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Linking from 'expo-linking';
 import { useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { SectionList } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 
@@ -29,6 +29,8 @@ import {
   type NotificationType,
 } from '@/lib/notifications';
 import { useThemePreference } from '@/providers/theme-provider';
+
+const LIST_CONTENT_STYLE = { gap: 12, padding: 20 };
 
 const TABS: { key: NotificationTab; label: string }[] = [
   { key: 'semua', label: 'Semua' },
@@ -287,25 +289,36 @@ export function LiveNotificationsScreen() {
   const brandIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
   const mutedIconColor = effective === 'dark' ? '#a3a3a3' : '#667085';
 
-  const tabs = TABS.map((t) =>
-    t.key === 'perlu_tindakan' && count > 0 ? { ...t, badge: count } : t,
+  const tabs = useMemo(
+    () =>
+      TABS.map((t) => (t.key === 'perlu_tindakan' && count > 0 ? { ...t, badge: count } : t)),
+    [count],
   );
 
-  function openRow(item: Notification) {
-    markRead(item.id);
-    if (item.entity_type === 'task') {
-      router.push(`/task/${item.entity_id}` as Href);
-    } else if (item.entity_type === 'task_instance') {
-      router.push(`/task/instance/${item.entity_id}` as Href);
-    }
-  }
-
-  function openAction(item: Notification, href: Href) {
-    markRead(item.id);
-    router.push(href);
-  }
-
   const sections = useMemo(() => groupByRecency(notifications), [notifications]);
+
+  // Identitas stabil (SectionList tak remount row tiap render). Logika mark-read +
+  // navigasi di-inline; deps hanya markRead & router (keduanya stabil).
+  const renderItem = useCallback(
+    ({ item }: { item: Notification }) => (
+      <NotificationRow
+        item={item}
+        onPress={() => {
+          markRead(item.id);
+          if (item.entity_type === 'task') {
+            router.push(`/task/${item.entity_id}` as Href);
+          } else if (item.entity_type === 'task_instance') {
+            router.push(`/task/instance/${item.entity_id}` as Href);
+          }
+        }}
+        onAction={(href) => {
+          markRead(item.id);
+          router.push(href);
+        }}
+      />
+    ),
+    [markRead, router],
+  );
 
   const controls = (
     <>
@@ -364,18 +377,10 @@ export function LiveNotificationsScreen() {
     );
   }
 
-  const renderItem = ({ item }: { item: Notification }) => (
-    <NotificationRow
-      item={item}
-      onPress={() => openRow(item)}
-      onAction={(href) => openAction(item, href)}
-    />
-  );
-
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <SectionList<Notification, NotifSection>
-        contentContainerStyle={{ gap: 12, padding: 20 }}
+        contentContainerStyle={LIST_CONTENT_STYLE}
         sections={sections}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={header}

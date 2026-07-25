@@ -39,6 +39,7 @@ import { INSTANCE_STATUS_LABEL, INSTANCE_STATUS_TONE } from '@/lib/repeat';
 const ONBOARDING_DAYS = 7;
 const MAX_TASK_ROWS = 5;
 const MAX_UPDATE_ROWS = 3;
+const MAX_REVIEW_ROWS = 5;
 // Home dashboards are considered fresh for this long. On tab re-focus we refetch
 // only the queries that have gone stale (see the focus effect), instead of firing
 // all seven refetches on every focus.
@@ -347,6 +348,19 @@ export default function LiveHomeScreen() {
   const updateLoading = overdueQ.isLoading || nearQ.isLoading;
   const updateAllError = overdueQ.isError && nearQ.isError;
 
+  // Cap "Butuh Review Anda" seperti section Task/Update — sebelumnya me-map penuh dua list
+  // review ke dalam ScrollView (satu node tanpa batas). Jumlah antrean sebenarnya tetap
+  // tampil di PriorityCard "Butuh Review" (reviewCount).
+  const reviewNodes: React.ReactNode[] = [];
+  for (const item of reviewQ.data ?? []) {
+    if (reviewNodes.length >= MAX_REVIEW_ROWS) break;
+    reviewNodes.push(<TaskRow key={`rev-t-${item.id}`} item={item} onPress={() => openTask(item.id)} />);
+  }
+  for (const item of reviewInstQ.data ?? []) {
+    if (reviewNodes.length >= MAX_REVIEW_ROWS) break;
+    reviewNodes.push(<HomeItemRow key={`rev-i-${item.id}`} item={item} onPress={() => openHomeItem(item)} />);
+  }
+
   const name = profile?.full_name?.trim()?.split(' ')[0] || 'Rekan';
   const dateLabel = todayQ.data
     ? new Date(`${todayQ.data}T00:00:00`)
@@ -444,12 +458,7 @@ export default function LiveHomeScreen() {
           isEmpty={reviewTotal === 0}
           emptyTitle="Tidak ada yang menunggu review"
           emptyDesc="Submission yang menunggu persetujuan Anda akan muncul di sini.">
-          {(reviewQ.data ?? []).map((item) => (
-            <TaskRow key={item.id} item={item} onPress={() => openTask(item.id)} />
-          ))}
-          {(reviewInstQ.data ?? []).map((item) => (
-            <HomeItemRow key={item.id} item={item} onPress={() => openHomeItem(item)} />
-          ))}
+          {reviewNodes}
         </Section>
 
         <Section
