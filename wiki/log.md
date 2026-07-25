@@ -2627,3 +2627,17 @@ Menuntaskan daftar "Ops/process (belum masuk mana pun)" — 3 dieksekusi, 1 hand
 > [!warning] Klarifikasi: memory `seed-password-env-only-pattern` menyebut "Repo public", tapi 403 di atas membuktikan repo saat ini **privat**. Perlu konfirmasi owner (mungkin ada mirror publik terpisah).
 
 Verifikasi: `npm run lint` 0 error; `eslint --print-config` konfirmasi rule; rename-guard tak terpengaruh (PRD.md, wiki/log.md di-exclude; AGENTS.md + eslint.config.js di luar roots scanner).
+
+## [2026-07-25] update | Perf push-down workspace_card_progress (migrasi 0102, PR #192)
+
+Fix perf dari audit query DB 2026-07-24. `public.workspace_card_progress(uuid[])` mereferensikan view `strategy_current_values` yang **tak berfilter per-strategy** → tiap request (bahkan 1-card) meng-agregat SELURUH approved result set org (`task_result_values ⋈ task_submissions WHERE review_status='approved'` group by strategy_id). Biaya tumbuh seiring total approved submission, lepas dari `p_card_ids`.
+
+**Fix**: inline agregat `numeric_total` identik sebagai CTE, dibatasi `strategies WHERE id = ANY(p_card_ids) OR goal_id = ANY(p_card_ids)` — superset persis strategy_id yang di-join kedua cabang attainment, jadi nol perubahan output. Scan terbatas dilayani indeks parsial `idx_task_result_values_strategy`. View tak diubah (caller lain bergantung); push-down hanya di dalam fungsi. `CREATE OR REPLACE` → ACL & return shape terjaga; grant `authenticated` di-reassert.
+
+**Verifikasi (staging, read-only, rolled back)**: badan migrasi persis diterapkan ke fungsi live di `begin…rollback` → diff tiap kolom OLD vs NEW atas 37 card nyata semua tipe + kasus adversarial berseed (agregasi non-nol, filter value_type, eksklusi strategi luar-scope) = **0 mismatch**. `EXPLAIN` konfirmasi agregat kini terbatas strategy_id. Grant identik sebelum/sesudah. rename-guard clean.
+
+**Catatan proses**: worktree yang diberikan adalah checkout basi (71 migrasi, diverge dari staging, tanpa 0074). Branch fix dibuat dari `origin/staging` (98 migrasi, 0102 slot bebas & dicek ulang vs semua branch in-flight). PR base `staging` eksplisit.
+
+- Pages created: [[workspace-card-progress]]
+- Pages updated: [[index]], [[workspace-progress-orb-tdd-plan]] (cross-link)
+- Key takeaways: view agregat tanpa parameter = hitung ulang seluruh dataset tiap referensi → dorong filter ke CTE inline, jangan ubah view; perubahan angka user-visible wajib diff OLD-vs-NEW 0-mismatch di transaksi rollback.

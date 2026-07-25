@@ -9,6 +9,9 @@ sources: 1
 
 > [!done] Status: **IMPLEMENTED 2026-07-03** — migration 0037 (lokal), `useCardProgress`, `TreeOrbCell` di 7 row. 91 suite/843 tes pass, verified live. Lihat `wiki/log.md`.
 
+> [!note] Evolusi RPC pasca-plan ini
+> Fungsi `workspace_card_progress` sudah berkembang jauh melewati dokumen TDD-plan ini: **0074** menjadikannya attainment-aware (kolom `is_measured`, capaian Goal/Strategy vs target), **0102** mendorong filter `strategy_id` ke agregat current-values (perf, nol perubahan output). Karakteristik fungsi terkini, gotcha view agregat, dan resep verifikasi ekuivalensi ada di [[workspace-card-progress]]. Halaman ini disimpan sebagai artefak historis rencana orb UI (V1.82).
+
 Rencana TDD untuk item lock terbesar yang tersisa dari [[workspace-lock-sprint-plan]]: progress orb 50px di kolom kanan tiap card tree Workspace (spec §6.4–6.8 & §10). Disusun via orkestrasi multi-agent `tdd-plan`. **Verdict critic: `perlu-perbaikan`** — ada keputusan produk/arsitektur yang harus dikunci owner sebelum tahap green.
 
 ## Ringkasan fitur

@@ -45,6 +45,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[settings-consumers-tdd-plan]] — TDD plan red-green-refactor untuk [[settings-consumers-spec]]: 5 wave (7 SQL contract red → migration 0078 green → 5 client test red → 6 impl green → refactor+regression+integration); dependency graph + owner check-points + 4 follow-up ticket (CI wiring, autonomous-tx, permission UI, wiki correction)
 - [[tech-stack]] — Expo + Supabase + RLS; alasan tiap pilihan diturunkan dari PRD
 - [[ui-prototype-gap]] — Backlog UI ber-ID dari perbandingan `design.html` (46 layar) vs implementasi `mobile/`. Spec turunan pertama: `specs/inbox-chat-ui.md` (UI-S-IN1/IN2, dari sdd-plan 2026-06-26)
+- [[workspace-card-progress]] — Server rollup `workspace_card_progress` (orb capaian): evolusi 0037→0074 attainment→**0102 push-down**; gotcha view agregat tanpa filter meng-scan seluruh approved set tiap referensi; resep verifikasi ekuivalensi 0-mismatch
 - [[workspace-lock-audit]] — Audit `mobile/` vs prototype final Workspace (spec lock V1.82 kini dihapus): 20 PASS · 7 PARTIAL · 8 FAIL dari 35 AC; temuan ber-ID WSA-01..20
 - [[workspace-lock-sprint-plan]] — Lima sprint eksekusi perbaikan temuan WSA: copy lock → guard/permission → anatomi tree card → overview/header/switcher → route & tree lengkap
 - [[ws-04-governance-debt]] — WS-04 archive-period gating UI-only (2026-07-05 OQ-1 Opsi A); `.insert()` langsung ber-RLS tanpa cek periode; kondisi kapan wajib re-open backend hardening

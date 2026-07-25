@@ -1,7 +1,7 @@
 ---
 type: entity
 tags: [database, schema, supabase, postgres]
-updated: 2026-06-22
+updated: 2026-07-25
 sources: 1
 ---
 
@@ -69,4 +69,8 @@ Dua RPC search hidup berdampingan **dengan sengaja**. Keduanya `SECURITY DEFINER
 
 `search_global` memakai `stable` (bukan `volatile`) sebagai **penegak mekanis** nol-emisi audit: Search tidak menulis apa pun, termasuk `activity_logs`. Melonggarkannya demi kemudahan akan membuka kanal enumerasi lewat log.
 
-Berkaitan dengan: [[tech-stack]], [[permission-model]], [[score-formula]], [[audit-governance]].
+## RPC rollup capaian
+
+`public.workspace_card_progress(uuid[])` — server rollup angka orb tree Workspace (`SECURITY INVOKER`, `authenticated` only). Sejak **0102** agregat current-values di-push-down per `strategy_id` (indeks parsial `idx_task_result_values_strategy`) alih-alih meng-agregat seluruh approved set via view `strategy_current_values`. Detail + gotcha: [[workspace-card-progress]].
+
+Berkaitan dengan: [[tech-stack]], [[permission-model]], [[score-formula]], [[audit-governance]], [[workspace-card-progress]].
