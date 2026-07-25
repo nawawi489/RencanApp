@@ -1,19 +1,12 @@
 name: CI
 
-# ⚠️ WORKFLOW DIJEDA — sejak 2026-07-21 CI dipindahkan ke CircleCI
-# (`.circleci/config.yml`) karena kuota GitHub Actions personal habis dan
-# opsi berbayar tidak fit untuk budget. Trigger di-set ke `workflow_dispatch`
-# saja supaya:
-#   - Tidak burn kuota di setiap PR/push
-#   - Bisa run manual dari UI Actions kalau perlu (Actions → CI → Run workflow)
-#   - Anda tetap bisa cepat aktifkan lagi cukup uncomment blok `pull_request`
-#     di bawah + hapus `workflow_dispatch`.
-#
-# Baris asli (untuk restore cepat):
-# on:
-#   pull_request:
-#     branches: [main, staging]
+# CI berjalan di GitHub Actions. Repo dijadikan publik 2026-07-25 → Actions
+# gratis tanpa batas menit untuk repo publik, jadi CI dikembalikan ke sini dari
+# CircleCI (yang terblokir billing). `.circleci/config.yml` dipensiunkan.
+# `workflow_dispatch` dipertahankan agar tetap bisa run manual dari UI Actions.
 on:
+  pull_request:
+    branches: [main, staging]
   workflow_dispatch:
 
 permissions:
