@@ -44,4 +44,19 @@ describe('createQueryClient — choke point error global', () => {
     expect(rawArgs).toContain(boom);
     spy.mockRestore();
   });
+
+  // Regression: mutation TIDAK boleh di-retry pada error mirip-jaringan (tanpa status/code).
+  // Retry write non-idempoten bisa menduplikasi INSERT saat ACK hilang tapi commit sukses.
+  it('TIDAK me-retry mutation pada error jaringan (mutationFn dipanggil tepat sekali)', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const t = mockTransport();
+    addTransport(t);
+    const qc = createQueryClient();
+    const mutationFn = jest.fn(() => Promise.reject(new TypeError('Network request failed')));
+    // Pakai default mutation options dari createQueryClient (tanpa override retry per-call).
+    const observer = new MutationObserver(qc, { mutationFn });
+    await observer.mutate().catch(() => {});
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
 });

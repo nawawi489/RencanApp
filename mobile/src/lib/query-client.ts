@@ -21,7 +21,11 @@ export function createQueryClient(): QueryClient {
     }),
     defaultOptions: {
       queries: { retry: shouldRetry },
-      mutations: { retry: shouldRetry },
+      // Writes tidak boleh di-retry global: INSERT non-idempoten (createGoal/createTask/
+      // sendChatMessage, dll. tanpa idempotency key) bisa duplikat saat ACK hilang tapi
+      // commit sudah terjadi di server. Ini juga default React Query (retry: 0). Bila ada
+      // mutation yang benar-benar idempoten, opt-in per-call via useMutation({ retry }).
+      mutations: { retry: false },
     },
   });
 }
