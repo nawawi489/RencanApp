@@ -218,6 +218,40 @@ export function SectionCard({
   );
 }
 
+// ---------------------------------------------------------------- SectionHeading
+
+/**
+ * Judul seksi di dalam layar (H2). Merender `<Text>` tebal dengan
+ * `accessibilityRole="header"` supaya navigasi-heading TalkBack/VoiceOver
+ * (gestur utama pembaca layar untuk meloncati seksi) berfungsi — mayoritas
+ * heading in-screen sebelumnya `<Text>` polos tanpa role.
+ *
+ * Ukuran default `text-lg font-bold` selaras pola H2 in-screen yang dominan
+ * (DESIGN §3; judul layar/H1 tetap milik `Screen`). Slot `right` opsional untuk
+ * elemen ekor (hitungan, aksi, `CardHelpTrigger`) di baris yang sama —
+ * heading kiri, ekor kanan (`justify-between`).
+ */
+export function SectionHeading({
+  title,
+  right,
+}: {
+  title: string;
+  right?: ReactNode;
+}) {
+  const heading = (
+    <Text accessibilityRole="header" className="text-lg font-bold text-black dark:text-white">
+      {title}
+    </Text>
+  );
+  if (right == null) return heading;
+  return (
+    <View className="flex-row items-center justify-between gap-2">
+      {heading}
+      {right}
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------- Field (display)
 
 export function Field({ label, value }: { label: string; value: ReactNode }) {

@@ -12,6 +12,7 @@ import {
   PriorityCard,
   ProgressBar,
   SectionCard,
+  SectionHeading,
   SkeletonList,
   type Tone,
 } from '@/components/ui';
@@ -137,7 +138,7 @@ function Section({
 }) {
   return (
     <View className="gap-3">
-      <Text className="text-lg font-bold text-black dark:text-white">{title}</Text>
+      <SectionHeading title={title} />
       {isLoading ? (
         <SkeletonList count={2} />
       ) : isError ? (
@@ -214,7 +215,7 @@ function pickFokus(
 function FokusCard({ fokus, onPress }: { fokus: FokusItem; onPress: () => void }) {
   return (
     <View className="gap-3">
-      <Text className="text-lg font-bold text-black dark:text-white">Fokus Hari Ini</Text>
+      <SectionHeading title="Fokus Hari Ini" />
       <Pressable
         onPress={onPress}
         className="gap-3 rounded-2xl border-2 border-brand bg-blue-50 p-4 active:opacity-70 dark:bg-blue-950"
@@ -392,7 +393,7 @@ export default function LiveHomeScreen() {
         {fokus ? <FokusCard fokus={fokus} onPress={fokusPress!} /> : null}
 
         <View className="gap-3">
-          <Text className="text-lg font-bold text-black dark:text-white">Prioritas</Text>
+          <SectionHeading title="Prioritas" />
           <View className="flex-row gap-3">
             <PriorityCard
               icon="!"
