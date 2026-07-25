@@ -7,9 +7,9 @@ describe('resolveNotificationRoute', () => {
     expect(resolveNotificationRoute('action_plan', 'ap-1')).toBe('/(app)/action-plan/ap-1');
   });
 
-  it('[PN-ROUTE-2] action_plan_instance → "/(app)/action-plan/instance/{id}"', () => {
-    expect(resolveNotificationRoute('action_plan_instance', 'inst-1')).toBe(
-      '/(app)/action-plan/instance/inst-1',
+  it('[PN-ROUTE-2] task_instance → "/(app)/task/instance/{id}"', () => {
+    expect(resolveNotificationRoute('task_instance', 'inst-1')).toBe(
+      '/(app)/task/instance/inst-1',
     );
   });
 

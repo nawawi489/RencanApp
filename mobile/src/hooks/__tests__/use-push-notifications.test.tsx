@@ -275,7 +275,7 @@ describe('usePushHandler', () => {
     );
   });
 
-  it('[PN-HDL-4] tap entity_type=action_plan_instance → router.push("/action-plan/instance/{id}")', async () => {
+  it('[PN-HDL-4] tap entity_type=task_instance → router.push("/task/instance/{id}")', async () => {
     let capturedCb: ((r: unknown) => void) | null = null;
     mockAddNotificationResponseReceivedListener.mockImplementation((cb: (r: unknown) => void) => {
       capturedCb = cb;
@@ -288,13 +288,13 @@ describe('usePushHandler', () => {
     await act(async () => {
       capturedCb!({
         notification: {
-          request: { content: { data: { entity_type: 'action_plan_instance', entity_id: 'inst-1' } } },
+          request: { content: { data: { entity_type: 'task_instance', entity_id: 'inst-1' } } },
         },
       });
     });
 
     await waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('action-plan/instance/inst-1')),
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('task/instance/inst-1')),
     );
   });
 
