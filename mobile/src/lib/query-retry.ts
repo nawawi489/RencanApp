@@ -1,6 +1,7 @@
-// Item 3 — kebijakan retry global React Query. Error permanen (klien/otorisasi) percuma
-// di-retry dan hanya menunda user melihat ErrorState; hanya error transient (server/jaringan)
-// yang layak diulang, dengan batas percobaan.
+// Item 3 — kebijakan retry QUERY React Query (read-only). Error permanen (klien/otorisasi)
+// percuma di-retry dan hanya menunda user melihat ErrorState; hanya error transient
+// (server/jaringan) yang layak diulang, dengan batas percobaan. Mutation TIDAK memakai ini:
+// retry write non-idempoten bisa menduplikasi INSERT saat ACK hilang (lihat query-client.ts).
 
 const MAX_RETRIES = 2;
 
@@ -24,7 +25,7 @@ function readCode(error: unknown): string | undefined {
 }
 
 /**
- * Return true bila query/mutation boleh di-retry. Dipakai sebagai `defaultOptions.*.retry`.
+ * Return true bila QUERY boleh di-retry. Dipakai sebagai `defaultOptions.queries.retry`.
  * Berhenti untuk HTTP 4xx dan kode error permanen; sisanya di-retry sampai `MAX_RETRIES`.
  */
 export function shouldRetry(failureCount: number, error: unknown): boolean {

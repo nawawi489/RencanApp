@@ -2641,3 +2641,10 @@ Fix perf dari audit query DB 2026-07-24. `public.workspace_card_progress(uuid[])
 - Pages created: [[workspace-card-progress]]
 - Pages updated: [[index]], [[workspace-progress-orb-tdd-plan]] (cross-link)
 - Key takeaways: view agregat tanpa parameter = hitung ulang seluruh dataset tiap referensi → dorong filter ke CTE inline, jangan ubah view; perubahan angka user-visible wajib diff OLD-vs-NEW 0-mismatch di transaksi rollback.
+## [2026-07-25] update | Spec write-idempotency-keys (follow-up PR #197)
+
+- **Konteks**: PR #197 mematikan retry mutation global (`mutations: { retry: false }`), menghapus pemicu duplikat-INSERT otomatis (ACK hilang di dalam `mutateAsync`). Sisa risiko: user retry MANUAL setelah error jaringan padahal row sudah commit → duplikat asli.
+- **Pages created**: `wiki/concepts/write-idempotency-keys.md` (status PROPOSED, belum dijadwalkan).
+- **Pages updated**: `wiki/index.md` (entry Concepts baru).
+- **Inti spec**: kolom `client_request_id uuid` (nullable) + partial unique index `(organization_id, created_by, client_request_id) where not null` di 5 tabel direct-insert (goals/action_plans/tasks/initiatives/problem_statements); untuk chat, kolom + index di `chat_messages` + param `p_client_request_id` di RPC `send_chat_message` (rewrite 6→7 param, DROP+re-grant ACL). Client generate UUID sekali per submit, reuse antar retry.
+- **Open questions**: (1) RPC `security invoker` vs catch-23505 untuk direct insert (rekomendasi: RPC helper, race-safe); (2) scope key `(org, created_by)`; (3) ketersediaan `crypto.randomUUID()` di Hermes/RN 0.85. Migration `concurrently` di luar txn; nomor migrasi verifikasi vs `origin/staging` (0070 reserved).
