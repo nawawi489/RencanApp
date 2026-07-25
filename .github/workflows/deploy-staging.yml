@@ -1,19 +1,17 @@
 name: Deploy Staging
 
-# ⚠️ WORKFLOW DIJEDA — sejak 2026-07-21 deploy dipindahkan ke CircleCI
-# (`.circleci/config.yml` job `deploy-staging`). Trigger di-set ke
-# `workflow_dispatch` saja untuk jaga-jaga bisa deploy manual dari sini.
-#
-# Baris asli (untuk restore cepat):
-# on:
-#   push:
-#     branches: [staging]
-#     paths:
-#       - 'mobile/**'
-#       - 'supabase/**'
-#       - 'scripts/ci/**'
-#       - '.github/workflows/deploy-staging.yml'
+# Deploy staging berjalan di GitHub Actions. Dikembalikan dari CircleCI setelah
+# repo dijadikan publik 2026-07-25 (Actions gratis untuk repo publik). CircleCI
+# job `deploy-staging` dipensiunkan agar tidak terjadi double-deploy ke EAS.
+# `workflow_dispatch` dipertahankan untuk deploy manual bila perlu.
 on:
+  push:
+    branches: [staging]
+    paths:
+      - 'mobile/**'
+      - 'supabase/**'
+      - 'scripts/ci/**'
+      - '.github/workflows/deploy-staging.yml'
   workflow_dispatch:
 
 concurrency:
