@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
@@ -33,11 +33,16 @@ import {
   listTodayRepeatInstances,
   type HomeItem,
 } from '@/lib/home';
+import { HOME_QUERY_PREFIX } from '@/lib/home-queries';
 import { INSTANCE_STATUS_LABEL, INSTANCE_STATUS_TONE } from '@/lib/repeat';
 
 const ONBOARDING_DAYS = 7;
 const MAX_TASK_ROWS = 5;
 const MAX_UPDATE_ROWS = 3;
+// Home dashboards are considered fresh for this long. On tab re-focus we refetch
+// only the queries that have gone stale (see the focus effect), instead of firing
+// all seven refetches on every focus.
+const HOME_STALE_MS = 30_000;
 
 function TypeBadge({ repeat }: { repeat: boolean }) {
   return (
@@ -249,32 +254,40 @@ export default function LiveHomeScreen() {
         : `/task/${item.task_id}`) as Href,
     );
 
-  const todayQ = useQuery({ queryKey: ['org-today'], queryFn: getOrgToday, staleTime: Infinity });
-  const mineQ = useQuery({ queryKey: ['home-my-plans'], queryFn: listMyTasks });
-  const reviewQ = useQuery({ queryKey: ['home-reviews'], queryFn: listPendingReviews });
-  const reviewInstQ = useQuery({ queryKey: ['home-review-instances'], queryFn: listPendingInstanceReviews });
-  const todayRepeatQ = useQuery({ queryKey: ['home-today-repeat'], queryFn: listTodayRepeatInstances });
-  const overdueQ = useQuery({ queryKey: ['home-overdue'], queryFn: listOverdueItems });
-  const nearQ = useQuery({ queryKey: ['home-near'], queryFn: listNearDeadline });
-  const kpiAttnQ = useQuery({ queryKey: ['home-kpi-attention'], queryFn: listKpiNeedsAttention });
+  const queryClient = useQueryClient();
 
-  const refetchMine = mineQ.refetch;
-  const refetchReview = reviewQ.refetch;
-  const refetchReviewInst = reviewInstQ.refetch;
-  const refetchTodayRepeat = todayRepeatQ.refetch;
-  const refetchOverdue = overdueQ.refetch;
-  const refetchNear = nearQ.refetch;
-  const refetchKpiAttn = kpiAttnQ.refetch;
+  const todayQ = useQuery({ queryKey: ['org-today'], queryFn: getOrgToday, staleTime: Infinity });
+  const mineQ = useQuery({ queryKey: ['home-my-plans'], queryFn: listMyTasks, staleTime: HOME_STALE_MS });
+  const reviewQ = useQuery({ queryKey: ['home-reviews'], queryFn: listPendingReviews, staleTime: HOME_STALE_MS });
+  const reviewInstQ = useQuery({
+    queryKey: ['home-review-instances'],
+    queryFn: listPendingInstanceReviews,
+    staleTime: HOME_STALE_MS,
+  });
+  const todayRepeatQ = useQuery({
+    queryKey: ['home-today-repeat'],
+    queryFn: listTodayRepeatInstances,
+    staleTime: HOME_STALE_MS,
+  });
+  const overdueQ = useQuery({ queryKey: ['home-overdue'], queryFn: listOverdueItems, staleTime: HOME_STALE_MS });
+  const nearQ = useQuery({ queryKey: ['home-near'], queryFn: listNearDeadline, staleTime: HOME_STALE_MS });
+  const kpiAttnQ = useQuery({ queryKey: ['home-kpi-attention'], queryFn: listKpiNeedsAttention, staleTime: HOME_STALE_MS });
+
+  // On tab re-focus, refresh only the Home dashboards that have actually gone
+  // stale (HOME_STALE_MS elapsed). Previously every focus unconditionally
+  // refetched all seven queries, so each tab switch produced up to seven
+  // separate state updates + full-screen re-render passes — noticeable jank on
+  // low-end Android. Gating on `stale` keeps the data current on return without
+  // the refetch storm while it is still fresh. Keyed on the shared `home-`
+  // prefix; `org-today` (staleTime Infinity) is excluded and never refetches.
   useFocusEffect(
     useCallback(() => {
-      refetchMine();
-      refetchReview();
-      refetchReviewInst();
-      refetchTodayRepeat();
-      refetchOverdue();
-      refetchNear();
-      refetchKpiAttn();
-    }, [refetchMine, refetchReview, refetchReviewInst, refetchTodayRepeat, refetchOverdue, refetchNear, refetchKpiAttn]),
+      void queryClient.refetchQueries({
+        type: 'active',
+        stale: true,
+        predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith(HOME_QUERY_PREFIX),
+      });
+    }, [queryClient]),
   );
 
   const mine = mineQ.data ?? [];
