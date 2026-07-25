@@ -51,6 +51,8 @@ const COPY = {
 
 type Section = { scope: SearchScope; title: string; data: SearchHit[] };
 
+const LIST_CONTENT_STYLE = { gap: 12, padding: 20 };
+
 /** Rute tujuan per hit. `null` = baris tidak dapat ditekan (bukan push path rusak). */
 function hrefForHit(h: SearchHit): Href | null {
   if (h.scope === 'chat') {
@@ -212,7 +214,7 @@ export function LiveSearchScreen() {
     <View className="flex-1 bg-neutral-50 dark:bg-black">
       <Stack.Screen options={{ title: COPY.title }} />
       <SectionList<SearchHit, Section>
-        contentContainerStyle={{ gap: 12, padding: 20 }}
+        contentContainerStyle={LIST_CONTENT_STYLE}
         sections={sections}
         keyExtractor={(h) => `${h.scope}:${h.id}`}
         ListHeaderComponent={header}

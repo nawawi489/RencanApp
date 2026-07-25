@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
@@ -23,6 +23,8 @@ import { listOrgProfilesWithRoles, personLabel, type OrgProfileWithRole } from '
 import { useLatestClosedPeriod, useRanking } from '@/hooks/use-people-score';
 
 type Person = OrgProfileWithRole & { score?: number | null };
+
+const LIST_CONTENT_STYLE = { gap: 12, padding: 20 };
 
 function personSubhead(p: Person): string {
   const parts: string[] = [];
@@ -113,6 +115,46 @@ export function LivePeopleScreen() {
     });
   }, [people, search]);
 
+  // Identitas stabil antar-render (FlatList tak perlu remount tiap row). `personLabel(p)`
+  // dihitung sekali per baris lalu dipakai ulang (sebelumnya dipanggil 3×).
+  const renderItem = useCallback(
+    ({ item: p }: { item: Person }) => {
+      const rank = rankByUser.get(p.id);
+      const label = personLabel(p);
+      return (
+        <Pressable
+          className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
+          accessibilityRole="button"
+          accessibilityLabel={`Buka profil ${label}`}
+          onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
+          {rank != null ? (
+            <RankBadge rank={rank} />
+          ) : latestClosed != null ? (
+            <UnrankedPlaceholder roleLevel={p.role_level} />
+          ) : (
+            <View className="w-7" />
+          )}
+          <Avatar name={label} seed={p.id} />
+          <View className="flex-1">
+            <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
+              {label}
+            </Text>
+            <Text className="text-xs text-neutral-400" numberOfLines={2}>
+              {personSubhead(p)}
+            </Text>
+          </View>
+          <Text
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            className="text-xl text-neutral-400">
+            ›
+          </Text>
+        </Pressable>
+      );
+    },
+    [rankByUser, latestClosed, router],
+  );
+
   if (isLoading) {
     return (
       <Screen title="People" subtitle="Anggota organisasi.">
@@ -199,44 +241,10 @@ export function LivePeopleScreen() {
     </View>
   );
 
-  const renderItem = ({ item: p }: { item: Person }) => {
-    const rank = rankByUser.get(p.id);
-    return (
-      <Pressable
-        className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
-        accessibilityRole="button"
-        accessibilityLabel={`Buka profil ${personLabel(p)}`}
-        onPress={() => router.push(`/people-profile/${p.id}` as Href)}>
-        {rank != null ? (
-          <RankBadge rank={rank} />
-        ) : latestClosed != null ? (
-          <UnrankedPlaceholder roleLevel={p.role_level} />
-        ) : (
-          <View className="w-7" />
-        )}
-        <Avatar name={personLabel(p)} seed={p.id} />
-        <View className="flex-1">
-          <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
-            {personLabel(p)}
-          </Text>
-          <Text className="text-xs text-neutral-400" numberOfLines={2}>
-            {personSubhead(p)}
-          </Text>
-        </View>
-        <Text
-          accessibilityElementsHidden
-          importantForAccessibility="no"
-          className="text-xl text-neutral-400">
-          ›
-        </Text>
-      </Pressable>
-    );
-  };
-
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <FlatList<Person>
-        contentContainerStyle={{ gap: 12, padding: 20 }}
+        contentContainerStyle={LIST_CONTENT_STYLE}
         data={filtered}
         keyExtractor={(p) => p.id}
         ListHeaderComponent={header}

@@ -11,7 +11,7 @@
 import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList } from 'react-native';
-import { Text, TextInput, View } from 'react-native-css/components';
+import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Screen } from '@/components/screen';
 import {
@@ -30,6 +30,11 @@ import { useSearchMessages } from '@/hooks/use-search-messages';
 import type { ChatMessageHit, ChatRoom } from '@/lib/inbox';
 
 type Filter = 'all' | 'unread';
+
+// Cap pada node "Pesan" (non-virtualized, di ListFooter): render maksimal N hit lalu tawarkan
+// "Lihat semua". Membatasi ukuran satu node besar tanpa mengubah ke pagination penuh.
+const MAX_MESSAGE_HITS = 5;
+const LIST_CONTENT_STYLE = { gap: 12, padding: 20 };
 
 const FILTER_TABS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Semua' },
@@ -195,12 +200,33 @@ export function LiveInboxScreen() {
   const { rooms, isLoading, isError, refetch } = useInboxRooms();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [showAllHits, setShowAllHits] = useState(false);
   const trimmed = q.trim();
   const isSearching = trimmed.length >= 2;
   const isHint = trimmed.length === 1;
 
+  // Query berubah → kembalikan node "Pesan" ke keadaan ter-cap (reset di handler, bukan useEffect).
+  const handleQueryChange = (next: string) => {
+    setQ(next);
+    setShowAllHits(false);
+  };
+
   const search = useSearchMessages(q);
   const groupedHits = useMemo(() => groupHitsByRoom(search.hits), [search.hits]);
+  const totalHits = search.hits?.length ?? 0;
+  // Cap total hit lintas grup di MAX_MESSAGE_HITS (bukan per-grup), jaga urutan server.
+  const visibleGroups = useMemo(() => {
+    if (showAllHits) return groupedHits;
+    let budget = MAX_MESSAGE_HITS;
+    const out: typeof groupedHits = [];
+    for (const g of groupedHits) {
+      if (budget <= 0) break;
+      const hits = g.hits.slice(0, budget);
+      budget -= hits.length;
+      out.push({ ...g, hits });
+    }
+    return out;
+  }, [groupedHits, showAllHits]);
   // Degrade: RPC belum di-apply (PGRST202) atau error jaringan → jangan hilangkan daftar room
   // hanya karena string filter tak match — user perlu jalur akses ke room-nya. Filter chip
   // (Semua/Belum-dibaca) tetap berjalan.
@@ -264,12 +290,12 @@ export function LiveInboxScreen() {
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <FlatList<ChatRoom>
-        contentContainerStyle={{ gap: 12, padding: 20 }}
+        contentContainerStyle={LIST_CONTENT_STYLE}
         data={visibleRooms}
         keyExtractor={(room) => room.id}
         ListHeaderComponent={
           <View className="gap-3">
-            <InboxHeader q={q} setQ={setQ} filter={filter} setFilter={setFilter} />
+            <InboxHeader q={q} setQ={handleQueryChange} filter={filter} setFilter={setFilter} />
 
             {isHint ? (
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -303,7 +329,7 @@ export function LiveInboxScreen() {
                   (search.hits?.length ?? 0) > 0) && <SectionHeader title="Pesan" />}
                 {showPesanSkeleton ? <SkeletonList count={3} /> : null}
                 {!showPesanSkeleton &&
-                  groupedHits.map((g) => (
+                  visibleGroups.map((g) => (
                     <View className="gap-2" key={g.roomId}>
                       <SubHeader label={g.roomName} />
                       {g.hits.map((hit) => (
@@ -319,6 +345,17 @@ export function LiveInboxScreen() {
                       ))}
                     </View>
                   ))}
+                {!showPesanSkeleton && !showAllHits && totalHits > MAX_MESSAGE_HITS ? (
+                  <Pressable
+                    onPress={() => setShowAllHits(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Lihat semua ${totalHits} hasil pesan`}
+                    className="min-h-[44px] justify-center active:opacity-70">
+                    <Text className="text-sm font-semibold text-brand-dark dark:text-blue-300">
+                      Lihat semua {totalHits} hasil
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
 
@@ -327,7 +364,7 @@ export function LiveInboxScreen() {
                 icon={<Text className="text-2xl">💬</Text>}
                 title={emptyTitle}
                 description={COPY.emptyPesan}
-                action={{ label: COPY.clearSearch, onPress: () => setQ('') }}
+                action={{ label: COPY.clearSearch, onPress: () => handleQueryChange('') }}
               />
             ) : null}
           </View>

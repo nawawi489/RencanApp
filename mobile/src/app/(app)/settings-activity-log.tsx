@@ -18,6 +18,8 @@ import type { ActivityLog, ActivityLogChipKey } from '@/lib/activity-governance'
 import { activityLogActionLabel } from '@/lib/activity-governance';
 import { personLabel } from '@/lib/cards';
 
+const LIST_CONTENT_STYLE = { padding: 20, gap: 8, paddingBottom: 40 };
+
 const ENTITY_LABEL: Record<string, string> = {
   goal: 'Goal',
   kpi_area: 'KPI Area',
@@ -153,7 +155,7 @@ export default function SettingsActivityLogScreen() {
         sections={sections}
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={{ padding: 20, gap: 8, paddingBottom: 40 }}
+        contentContainerStyle={LIST_CONTENT_STYLE}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
         }}
