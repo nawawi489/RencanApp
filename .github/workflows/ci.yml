@@ -75,7 +75,10 @@ jobs:
 
           # .github/** ikut memicu keduanya: perubahan workflow harus diuji oleh
           # workflow itu sendiri, bukan di-skip oleh dirinya.
-          if echo "$FILES" | grep -qE '^(mobile/|\.github/)'; then MOBILE=true; else MOBILE=false; fi
+          # supabase/migrations/** juga memicu quality: dua tes drift jest mem-parse
+          # migrasi saat runtime, jadi PR migrasi-only harus tetap menjalankan tes
+          # jest — else drift tetap lolos (audit 2026-07-26).
+          if echo "$FILES" | grep -qE '^(mobile/|\.github/|supabase/migrations/)'; then MOBILE=true; else MOBILE=false; fi
           if echo "$FILES" | grep -qE '^(supabase/|scripts/ci/|\.github/)'; then DB=true; else DB=false; fi
 
           echo "mobile=$MOBILE" >> "$GITHUB_OUTPUT"

@@ -31,20 +31,34 @@ if [ ! -d "$MOBILE" ]; then
   exit 0
 fi
 
-# Kalau tidak ada perubahan di mobile/ dibanding upstream, skip semua check
-# supaya push docs/wiki/spec/CI tidak diblokir hook mobile.
-if git diff --quiet HEAD 2>/dev/null; then
-  BASE=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "")
-else
-  BASE=""
+# Basis diff = upstream branch. `--onlyChanged` (dipakai sampai 2026-07-24) memakai
+# working tree vs HEAD → tree bersih pasca-commit = 0 tes, exit 0 = gate palsu-hijau.
+# `--changedSince=<ref>` memakai diff commit vs ref, jadi tes benar-benar jalan.
+# Kalau upstream tidak diketahui (branch baru sebelum push -u), fall back ke
+# origin/staging supaya tetap ada baseline yang wajar (bukan skip).
+BASE="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo '')"
+if [ -z "$BASE" ]; then
+  if git rev-parse --verify origin/staging >/dev/null 2>&1; then
+    BASE="origin/staging"
+  elif git rev-parse --verify origin/main >/dev/null 2>&1; then
+    BASE="origin/main"
+  fi
 fi
 
-if [ -n "$BASE" ]; then
-  # Cek apakah ada file di mobile/ yang berubah antara upstream dan HEAD.
-  if ! git diff --name-only "$BASE...HEAD" -- mobile/ 2>/dev/null | grep -q .; then
-    echo "${YELLOW}pre-push: tidak ada perubahan di mobile/ vs $BASE — skip type-check + test.${RESET}"
-    exit 0
+if [ -z "$BASE" ]; then
+  echo "${YELLOW}pre-push: tidak ada upstream/origin, jalankan tes penuh sebagai baseline.${RESET}"
+  MOBILE_CHANGED=1
+else
+  if git diff --name-only "$BASE...HEAD" -- mobile/ 2>/dev/null | grep -q .; then
+    MOBILE_CHANGED=1
+  else
+    MOBILE_CHANGED=0
   fi
+fi
+
+if [ "$MOBILE_CHANGED" = "0" ]; then
+  echo "${YELLOW}pre-push: tidak ada perubahan di mobile/ vs $BASE — skip type-check + test.${RESET}"
+  exit 0
 fi
 
 cd "$MOBILE"
@@ -63,11 +77,20 @@ if ! npm run lint --silent; then
   exit 1
 fi
 
-echo "${BOLD}→ pre-push: jest --onlyChanged${RESET}"
-if ! npx jest --onlyChanged --passWithNoTests --silent; then
-  echo "${RED}✗ test gagal.${RESET} Push dibatalkan."
-  echo "  Bypass emergency: ${BOLD}git push --no-verify${RESET}"
-  exit 1
+if [ -n "$BASE" ]; then
+  echo "${BOLD}→ pre-push: jest --changedSince=$BASE${RESET}"
+  if ! npx jest --changedSince="$BASE" --passWithNoTests --silent; then
+    echo "${RED}✗ test gagal.${RESET} Push dibatalkan."
+    echo "  Bypass emergency: ${BOLD}git push --no-verify${RESET}"
+    exit 1
+  fi
+else
+  echo "${BOLD}→ pre-push: jest (full suite, tanpa baseline)${RESET}"
+  if ! npx jest --passWithNoTests --silent; then
+    echo "${RED}✗ test gagal.${RESET} Push dibatalkan."
+    echo "  Bypass emergency: ${BOLD}git push --no-verify${RESET}"
+    exit 1
+  fi
 fi
 
 echo "${GREEN}✓ pre-push checks lolos.${RESET}"
