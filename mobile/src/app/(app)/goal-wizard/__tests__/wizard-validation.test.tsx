@@ -80,7 +80,7 @@ describe('GoalWizardScreen — validasi (blocking)', () => {
 
     await press(screen.getByText('Lanjut'));
     await screen.findByText('Langkah 3 — Tinjau & Generate');
-    await press(screen.getByText('Generate Goal'));
+    await press(screen.getByText('Buat Goal'));
 
     expect(mockApplyTemplate).not.toHaveBeenCalled();
   });

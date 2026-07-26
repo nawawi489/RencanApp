@@ -41,7 +41,7 @@ beforeEach(() => {
   mockPush.mockReset();
 });
 
-describe('Settings > Repeat Setting (inventory)', () => {
+describe('Settings > Pengaturan Pengulangan (inventory)', () => {
   it('empty state — tidak ada repeat rule', async () => {
     mockListAll.mockResolvedValue([]);
     await render(<SettingsRepeatRulesScreen />, { wrapper: wrapper() });

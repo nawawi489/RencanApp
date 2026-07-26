@@ -157,7 +157,7 @@ export function LivePeopleScreen() {
 
   if (isLoading) {
     return (
-      <Screen title="People" subtitle="Anggota organisasi.">
+      <Screen title="Anggota" subtitle="Anggota organisasi.">
         <SkeletonList count={5} />
       </Screen>
     );
@@ -165,9 +165,9 @@ export function LivePeopleScreen() {
 
   if (isError) {
     return (
-      <Screen title="People" subtitle="Anggota organisasi.">
+      <Screen title="Anggota" subtitle="Anggota organisasi.">
         <ErrorState
-          title="Gagal memuat People"
+          title="Gagal memuat Anggota"
           description="Tidak bisa mengambil daftar anggota organisasi."
           onRetry={() => refetch()}
         />
@@ -177,7 +177,7 @@ export function LivePeopleScreen() {
 
   if (people.length === 0) {
     return (
-      <Screen title="People" subtitle="Anggota organisasi.">
+      <Screen title="Anggota" subtitle="Anggota organisasi.">
         <EmptyState
           icon={<Text className="text-2xl">👥</Text>}
           title="Belum ada anggota"
@@ -200,7 +200,7 @@ export function LivePeopleScreen() {
     <View className="gap-5 pb-3">
       {tablist}
       <View className="gap-1">
-        <Text className="text-2xl font-bold text-black dark:text-white">People</Text>
+        <Text className="text-2xl font-bold text-black dark:text-white">Anggota</Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
           Anggota organisasi.
         </Text>

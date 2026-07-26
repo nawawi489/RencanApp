@@ -158,7 +158,7 @@ export default function TaskInstanceDetailScreen() {
                     textCls="text-emerald-700 dark:text-emerald-300"
                   />
                   <StatTile
-                    label="Submitted"
+                    label="Terkirim"
                     value={todaySubmitted}
                     containerCls="bg-amber-100 dark:bg-amber-950"
                     textCls="text-amber-700 dark:text-amber-300"
@@ -170,7 +170,7 @@ export default function TaskInstanceDetailScreen() {
                     textCls="text-red-700 dark:text-red-300"
                   />
                   <StatTile
-                    label="Grace"
+                    label="Tenggang"
                     value={todayGrace}
                     containerCls="bg-orange-100 dark:bg-orange-950"
                     textCls="text-orange-700 dark:text-orange-300"

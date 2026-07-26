@@ -64,16 +64,16 @@ export default function SettingsGovernanceViolationScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Governance Violation' }} />
+      <Stack.Screen options={{ title: 'Pelanggaran Tata Kelola' }} />
       <View className="gap-3 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Governance Violation</Text>
+          <Text className="text-2xl font-bold text-black dark:text-white">Pelanggaran Tata Kelola</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Pelanggaran guard-rail sistem yang tercatat.
           </Text>
         </View>
         {!allowed ? (
-          <AccessDenied message="Governance Violation hanya untuk pemegang izin Lihat Governance Violation." />
+          <AccessDenied message="Pelanggaran Tata Kelola hanya untuk pemegang izin Lihat Governance Violation." />
         ) : isLoading ? (
           <SkeletonList count={5} />
         ) : (

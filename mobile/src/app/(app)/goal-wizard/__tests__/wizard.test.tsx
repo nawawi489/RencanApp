@@ -102,7 +102,7 @@ describe('GoalWizardScreen', () => {
 
     await press(screen.getByText('Lanjut')); // → step generate
     await screen.findByText('Langkah 3 — Tinjau & Generate');
-    await press(screen.getByText('Generate Goal'));
+    await press(screen.getByText('Buat Goal'));
 
     expect(mockApplyTemplate).toHaveBeenCalledTimes(1);
     expect(mockApplyTemplate).toHaveBeenCalledWith(

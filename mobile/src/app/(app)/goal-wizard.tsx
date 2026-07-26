@@ -159,7 +159,7 @@ export default function GoalWizardScreen() {
             </Text>
             <View className="flex-row gap-3">
               <Button label="Kembali" variant="secondary" onPress={back} />
-              <Button label="Generate Goal" onPress={generate} loading={isPending} />
+              <Button label="Buat Goal" onPress={generate} loading={isPending} />
             </View>
           </SectionCard>
         ) : null}
