@@ -31,8 +31,12 @@ jest.mock('expo-notifications', () => ({
 }));
 
 const mockPush = jest.fn();
+// useRootNavigationState: default "siap" (truthy) agar navigasi cold-start jalan;
+// override ke undefined per-test untuk menguji nav-ready guard (L3).
+let mockRootNavState: unknown = { key: 'root-stack' };
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
+  useRootNavigationState: () => mockRootNavState,
   useFocusEffect: jest.fn((cb: () => unknown) => cb()),
 }));
 
@@ -62,6 +66,7 @@ function makeWrapper() {
 
 beforeEach(() => {
   platformOS = 'ios';
+  mockRootNavState = { key: 'root-stack' };
   mockGetPermissionsAsync.mockReset();
   mockRequestPermissionsAsync.mockReset();
   mockGetExpoPushTokenAsync.mockReset();
@@ -352,7 +357,7 @@ describe('usePushHandler', () => {
     );
   });
 
-  it('[PN-HDL-6] entity_type null/unknown → tidak crash, tidak navigate', async () => {
+  it('[PN-HDL-6] entity_type null/unknown → tidak crash, fallback ke tab Notifikasi (M3)', async () => {
     let capturedCb: ((r: unknown) => void) | null = null;
     mockAddNotificationResponseReceivedListener.mockImplementation((cb: (r: unknown) => void) => {
       capturedCb = cb;
@@ -367,13 +372,10 @@ describe('usePushHandler', () => {
         notification: { request: { content: { data: { entity_type: null, entity_id: 'x' } } } },
       });
     });
-    await act(async () => {
-      capturedCb!({
-        notification: { request: { content: { data: { entity_type: 'unknown_entity', entity_id: 'x' } } } },
-      });
-    });
 
-    expect(mockPush).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('(tabs)/notifications')),
+    );
   });
 
   it('[PN-HDL-7] session null → tap TIDAK navigate', async () => {
@@ -451,6 +453,127 @@ describe('usePushHandler', () => {
 
     await waitFor(() =>
       expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('action-plan/ap-queued')),
+    );
+  });
+
+  it('[PN-HDL-11] cold-start + listener men-deliver id yang sama → navigate SEKALI (M1)', async () => {
+    // Tap peluncuran yang sama dikembalikan getLastNotificationResponseAsync DAN listener.
+    const coldTap = {
+      notification: {
+        request: {
+          identifier: 'tap-abc',
+          content: { data: { entity_type: 'action_plan', entity_id: 'ap-dup' } },
+        },
+      },
+    };
+    mockGetLastNotificationResponseAsync.mockResolvedValue(coldTap);
+
+    let capturedCb: ((r: unknown) => void) | null = null;
+    mockAddNotificationResponseReceivedListener.mockImplementation((cb: (r: unknown) => void) => {
+      capturedCb = cb;
+      return { remove: jest.fn() };
+    });
+
+    const { wrapper } = makeWrapper();
+    await renderHook(() => usePushHandler(session), { wrapper });
+
+    // Cold-start menavigasi sekali.
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('action-plan/ap-dup')),
+    );
+    await waitFor(() => expect(capturedCb).not.toBeNull());
+
+    // Listener men-deliver tap yang sama (identifier identik) → di-dedup, tidak push lagi.
+    await act(async () => { capturedCb!(coldTap); });
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
+  it('[PN-HDL-12] tap saat logged-out (background) → di-queue lalu di-replay setelah login (M2)', async () => {
+    let capturedCb: ((r: unknown) => void) | null = null;
+    mockAddNotificationResponseReceivedListener.mockImplementation((cb: (r: unknown) => void) => {
+      capturedCb = cb;
+      return { remove: jest.fn() };
+    });
+
+    const { wrapper } = makeWrapper();
+    const { rerender } = await renderHook(
+      ({ s }: { s: typeof session | null }) => usePushHandler(s),
+      { wrapper, initialProps: { s: null } },
+    );
+    await waitFor(() => expect(capturedCb).not.toBeNull());
+
+    // Session null → tap di-queue, TIDAK di-drop, belum navigate.
+    await act(async () => {
+      capturedCb!({
+        notification: {
+          request: {
+            identifier: 'tap-bg',
+            content: { data: { entity_type: 'action_plan', entity_id: 'ap-bg' } },
+          },
+        },
+      });
+    });
+    expect(mockPush).not.toHaveBeenCalled();
+
+    // Session tersedia (login) → intent yang di-queue di-replay.
+    rerender({ s: session });
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('action-plan/ap-bg')),
+    );
+  });
+
+  it('[PN-HDL-13] tap tipe tanpa rute (period_snapshot) → fallback tab Notifikasi (M3)', async () => {
+    let capturedCb: ((r: unknown) => void) | null = null;
+    mockAddNotificationResponseReceivedListener.mockImplementation((cb: (r: unknown) => void) => {
+      capturedCb = cb;
+      return { remove: jest.fn() };
+    });
+    const { wrapper } = makeWrapper();
+    await renderHook(() => usePushHandler(session), { wrapper });
+    await waitFor(() => expect(capturedCb).not.toBeNull());
+
+    await act(async () => {
+      capturedCb!({
+        notification: {
+          request: { content: { data: { entity_type: 'period_snapshot', entity_id: 'snap-1' } } },
+        },
+      });
+    });
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('(tabs)/notifications')),
+    );
+  });
+
+  it('[PN-HDL-14] cold-start ditahan sampai root navigator siap (L3)', async () => {
+    mockRootNavState = undefined; // navigator belum siap saat mount
+    mockGetLastNotificationResponseAsync.mockResolvedValue({
+      notification: {
+        request: { content: { data: { entity_type: 'action_plan', entity_id: 'ap-nav' } } },
+      },
+    });
+
+    const { wrapper } = makeWrapper();
+    const { rerender } = await renderHook(
+      ({ n }: { n: number }) => {
+        void n; // paksa re-render saat n berubah tanpa mengubah argumen hook
+        return usePushHandler(session);
+      },
+      { wrapper, initialProps: { n: 0 } },
+    );
+
+    // Navigator belum siap → belum navigate meski session valid & ada tap.
+    await waitFor(() => expect(true).toBe(true));
+    expect(mockPush).not.toHaveBeenCalled();
+
+    // Navigator jadi siap → tap yang di-queue di-replay.
+    mockRootNavState = { key: 'root-stack' };
+    rerender({ n: 1 });
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('action-plan/ap-nav')),
     );
   });
 });

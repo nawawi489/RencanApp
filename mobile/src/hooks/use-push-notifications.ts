@@ -5,14 +5,14 @@
 // Refs pattern: session & router diakses via ref agar listener effect tetap stabil (1 teardown).
 import type { Session } from '@supabase/supabase-js';
 import * as Notifications from 'expo-notifications';
-import { useRouter } from 'expo-router';
+import { useRootNavigationState, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { useQueryClient } from '@tanstack/react-query';
 
 import { reportError } from '@/lib/errors';
-import { resolveNotificationRoute } from '@/lib/push-route-resolver';
+import { NOTIFICATIONS_FALLBACK_ROUTE, resolveNotificationRoute } from '@/lib/push-route-resolver';
 import { registerPushToken, setCurrentPushToken, unregisterPushToken } from '@/lib/push-notifications';
 
 // EAS projectId — dibutuhkan oleh getExpoPushTokenAsync di SDK 56.
@@ -86,16 +86,57 @@ type NotifResponse = Awaited<ReturnType<typeof Notifications.getLastNotification
 export function usePushHandler(session: Session | null) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  // Response tap yang belum bisa diproses (session belum ada / navigator belum siap).
   const queuedRef = useRef<NotifResponse>(null);
+  // Identifier tap yang sudah dinavigasi — cegah double-nav saat cold-start:
+  // getLastNotificationResponseAsync + listener bisa sama-sama fire untuk tap yang sama.
+  const handledIdsRef = useRef<Set<string>>(new Set());
 
-  // Refs: session dan router selalu current tanpa menjadi listener-effect dependency.
+  // useRootNavigationState() = undefined sampai root navigator mount (tipenya optimis
+  // non-null). Cast agar guard nav-ready jujur; navigate ditahan sampai navigator siap.
+  const rootNavState = useRootNavigationState() as
+    | ReturnType<typeof useRootNavigationState>
+    | undefined;
+
+  // Refs: session, router, dan nav-ready selalu current tanpa menjadi listener-effect dependency.
   // Mutation during render adalah pola intentional (stable closure) — lint rule di-suppress.
   const sessionRef = useRef(session);
   const routerRef = useRef(router);
+  const navReadyRef = useRef(false);
   // eslint-disable-next-line react-hooks/refs
   sessionRef.current = session;
   // eslint-disable-next-line react-hooks/refs
   routerRef.current = router;
+  // eslint-disable-next-line react-hooks/refs
+  navReadyRef.current = rootNavState != null;
+
+  // Navigate final: dedup by identifier → resolve rute (fallback ke tab Notifikasi bila
+  // null) → push + invalidate. Dipanggil hanya saat session ADA & navigator siap.
+  function navigate(res: NonNullable<NotifResponse>) {
+    const id = res.notification.request.identifier;
+    // Dedup hanya saat id valid; response sintetis tanpa id tidak pernah di-dedup.
+    if (id) {
+      if (handledIdsRef.current.has(id)) return;
+      handledIdsRef.current.add(id);
+    }
+    const data = (res.notification.request.content.data ?? {}) as Record<string, unknown>;
+    const route =
+      resolveNotificationRoute(data.entity_type as string, data.entity_id as string) ??
+      NOTIFICATIONS_FALLBACK_ROUTE;
+    routerRef.current.push(route as never);
+    void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  }
+
+  // Dispatch: navigate jika session ADA & navigator siap, jika tidak queue untuk di-replay
+  // oleh effect di bawah saat kondisi terpenuhi (cold-start / tap logged-out di background).
+  function dispatch(res: NotifResponse) {
+    if (!res) return;
+    if (!sessionRef.current || !navReadyRef.current) {
+      queuedRef.current = res;
+      return;
+    }
+    navigate(res);
+  }
 
   // Paksa shouldShowAlert=false — notifikasi foreground TIDAK ditampilkan sebagai alert OS.
   useEffect(() => {
@@ -110,37 +151,28 @@ export function usePushHandler(session: Session | null) {
     });
   }, []);
 
-  // Cold-start: proses langsung jika session tersedia, queue bila belum.
-  // Jika session null saat mount, response disimpan di queuedRef — effect berikutnya
-  // (dep: [session, queryClient]) akan memproses queue saat session tersedia.
+  // Cold-start: ambil tap peluncuran; dispatch akan navigate langsung atau queue.
   useEffect(() => {
     // .catch swallow — native bridge kadang reject saat cold-start di simulator/permission edge.
     // Kegagalan cold-start bukan blocker; foreground listener di effect terpisah tetap aktif.
     Notifications.getLastNotificationResponseAsync()
       .then((res) => {
-        if (!res) return;
-        if (sessionRef.current) {
-          const data = (res.notification.request.content.data ?? {}) as Record<string, unknown>;
-          const route = resolveNotificationRoute(data.entity_type as string, data.entity_id as string);
-          if (route) routerRef.current.push(route as never);
-          void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        } else {
-          queuedRef.current = res;
-        }
+        dispatch(res);
       })
       .catch(() => {});
+    // dispatch stabil terhadap refs; hanya perlu re-run bila queryClient berganti.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient]);
 
-  // Proses queue saat session tersedia (trigger hanya saat session berubah).
+  // Replay queue saat session tersedia ATAU navigator jadi siap (mis. tap logged-out
+  // di background yang di-queue listener, atau cold-start sebelum navigator mount).
   useEffect(() => {
     const queued = queuedRef.current;
-    if (!sessionRef.current || !queued) return;
+    if (!queued || !sessionRef.current || !navReadyRef.current) return;
     queuedRef.current = null;
-    const data = (queued.notification.request.content.data ?? {}) as Record<string, unknown>;
-    const route = resolveNotificationRoute(data.entity_type as string, data.entity_id as string);
-    if (route) routerRef.current.push(route as never);
-    void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-  }, [session, queryClient]);
+    navigate(queued);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, rootNavState, queryClient]);
 
   // Foreground + tap listeners digabung dalam satu effect agar satu teardown.
   // session/router diakses via ref agar deps tetap stabil → listener tidak di-recreate tiap render.
@@ -148,16 +180,14 @@ export function usePushHandler(session: Session | null) {
     const recvSub = Notifications.addNotificationReceivedListener(() => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     });
+    // Tap saat logged-out TIDAK di-drop — dispatch akan queue & replay setelah login.
     const respSub = Notifications.addNotificationResponseReceivedListener((res) => {
-      if (!sessionRef.current) return;
-      const data = (res.notification.request.content.data ?? {}) as Record<string, unknown>;
-      const route = resolveNotificationRoute(data.entity_type as string, data.entity_id as string);
-      if (route) routerRef.current.push(route as never);
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      dispatch(res);
     });
     return () => {
       recvSub.remove();
       respSub.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient]);
 }
