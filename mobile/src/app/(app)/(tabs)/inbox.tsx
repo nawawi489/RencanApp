@@ -92,7 +92,12 @@ function InboxHeader({
   return (
     <View className="gap-3 pb-3">
       <View className="gap-1">
-        <Text className="text-2xl font-bold text-black dark:text-white">Inbox</Text>
+        {/* Judul halaman di jalur sukses dirender inline (bukan lewat <Screen>), jadi role="header"
+            ditambah manual agar konsisten dengan Screen (yang sudah role=header) — pembaca layar
+            mulai navigasi-heading dari judul halaman, lalu ke grup di bawahnya. */}
+        <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
+          Inbox
+        </Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
           Khusus chat Rencana Aksi.
         </Text>
@@ -164,16 +169,24 @@ function MessageHitRow({ hit, onPress }: { hit: ChatMessageHit; onPress: () => v
 }
 
 function SectionHeader({ title }: { title: string }) {
+  // accessibilityRole="header": grup hasil pencarian ("Rencana Aksi"/"Pesan") jadi target
+  // navigasi-heading TalkBack/VoiceOver. Gaya text-xs kicker dipertahankan (bukan primitif
+  // SectionHeading text-lg) agar visual tak berubah — role saja yang ditambahkan (DESIGN §4.4).
   return (
-    <Text className="mt-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+    <Text
+      accessibilityRole="header"
+      className="mt-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
       {title}
     </Text>
   );
 }
 
 function SubHeader({ label }: { label: string }) {
+  // Sub-heading per room di dalam grup "Pesan" — role="header" agar bisa diloncati pembaca layar.
   return (
-    <Text className="mt-1 text-sm font-semibold text-black dark:text-white">{label}</Text>
+    <Text accessibilityRole="header" className="mt-1 text-sm font-semibold text-black dark:text-white">
+      {label}
+    </Text>
   );
 }
 

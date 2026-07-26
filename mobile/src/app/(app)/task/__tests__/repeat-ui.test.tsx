@@ -130,6 +130,11 @@ describe('label/tone instance (terpisah dari parent)', () => {
 });
 
 describe('new.tsx — form Repeat', () => {
+  it('[2a] judul seksi form "Detail Tugas" mengekspos accessibilityRole="header" (navigasi-heading pembaca layar)', async () => {
+    await wrap(<NewTaskScreen />);
+    expect(screen.getByRole('header', { name: 'Detail Tugas' })).toBeTruthy();
+  });
+
   it('[3] toggle Repeat memunculkan field konfigurasi (frequency, periode, jam, aturan terlewat)', async () => {
     await wrap(<NewTaskScreen />);
     expect(screen.queryByTestId('repeat-config')).toBeNull();

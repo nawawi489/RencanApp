@@ -151,6 +151,29 @@ describe('InboxScreen — Search Pesan (FTS V1)', () => {
     expect(salesRoomHeaders.length).toBeLessThanOrEqual(2);
   });
 
+  // ------------------------------------------------------------------ [4a] a11y header roles
+  it('[4a] judul halaman + section header hasil pencarian (Rencana Aksi/Pesan/sub-header room) mengekspos role="header"', async () => {
+    mockUseInboxRooms.mockReturnValue({
+      rooms: [makeRoom({ id: 'r-2', name: 'Sales Q3' })],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
+    mockUseSearchMessages.mockReturnValue({
+      ...idleSearch,
+      hits: [makeHit({ messageId: 'm-c', roomId: 'r-2', roomName: 'Sales Q3', snippet: 'sales pipeline naik' })],
+    });
+    await render(<InboxScreen />, { wrapper: wrapper() });
+    // Judul halaman jalur sukses dirender inline (bukan lewat <Screen>) → role=header manual.
+    expect(screen.getByRole('header', { name: 'Inbox' })).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText('Cari Rencana Aksi atau pesan'), 'sales');
+    // Grup hasil: "Rencana Aksi" (SectionHeader), "Pesan" (SectionHeader), nama room (SubHeader).
+    // Nama room di RoomRow bukan header (tanpa role) → getByRole hanya cocok ke SubHeader.
+    expect(await screen.findByRole('header', { name: 'Rencana Aksi' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Pesan' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Sales Q3' })).toBeTruthy();
+  });
+
   // ------------------------------------------------------------------ [5] empty state identik
   it('[5] query ≥2 char + 0 hit + no room match → EmptyState "Tidak ada pesan yang cocok dengan pencarianmu" + tombol "Hapus pencarian" (AC-15)', async () => {
     mockUseInboxRooms.mockReturnValue({
