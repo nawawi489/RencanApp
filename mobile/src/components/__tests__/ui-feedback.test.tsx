@@ -2,7 +2,8 @@
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native-css/components';
-import { Avatar, Button, EmptyState, ErrorState, IconTile, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SectionCard, SectionHeading, SkeletonList, orbToneFor } from '../ui';
+import { Avatar, Banner, Button, EmptyState, ErrorState, IconTile, LabeledInput, PriorityCard, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SectionCard, SectionHeading, SkeletonList, orbToneFor } from '../ui';
+import { StatTile } from '../stat-tile';
 
 jest.setTimeout(30000);
 
@@ -187,6 +188,68 @@ describe('ProgressOrb (UI-G-001)', () => {
   it('[FR18-1] a11y memuat label teks + sublabel', async () => {
     await render(<ProgressOrb value={60} label="Progress" sublabel="3/5 Strategi terukur" />);
     expect(screen.getByLabelText('Progress 60 persen, Berjalan. 3/5 Strategi terukur')).toBeTruthy();
+  });
+});
+
+describe('Banner — degraded/network banner diumumkan pembaca layar (DESIGN §4.4)', () => {
+  it('[UI-BAN-1] container role="alert" + liveRegion="polite" (mirror login-error)', async () => {
+    await render(<Banner tone="warn" message="Pencarian terdegradasi." />);
+    // Container bungkus banner mengekspos a11y (bukan `accessible` agar tombol aksi tetap
+    // fokusabel) → telusuri leluhur dari teks pesan, pola tes login-error [7].
+    const messageText = screen.getByText('Pencarian terdegradasi.');
+    let node: typeof messageText | null = messageText;
+    while (node) {
+      if ((node.props as { accessibilityRole?: string }).accessibilityRole === 'alert') {
+        expect((node.props as { accessibilityLiveRegion?: string }).accessibilityLiveRegion).toBe(
+          'polite',
+        );
+        return;
+      }
+      node = node.parent;
+    }
+    throw new Error('Banner tidak menyediakan accessibilityRole="alert".');
+  });
+
+  it('[UI-BAN-2] tombol aksi tetap dirender sebagai sibling (bukan lebur ke alert)', async () => {
+    const onPress = jest.fn();
+    await render(
+      <Banner tone="error" message="Gagal memuat." action={{ label: 'Coba lagi', onPress }} />,
+    );
+    // Tombol harus ada dan bisa ditemukan lewat label sendiri — bukan tersembunyi di node alert.
+    expect(screen.getByLabelText('Coba lagi')).toBeTruthy();
+  });
+});
+
+describe('LabeledInput — field wajib diumumkan (WCAG 3.3.2)', () => {
+  it('[UI-LI-1] required → accessibilityLabel menambah " wajib"', async () => {
+    await render(<LabeledInput label="Nama" value="" onChangeText={() => {}} required />);
+    expect(screen.getByLabelText('Nama wajib')).toBeTruthy();
+  });
+
+  it('[UI-LI-2] tanpa required → label apa adanya', async () => {
+    await render(<LabeledInput label="Catatan" value="" onChangeText={() => {}} />);
+    expect(screen.getByLabelText('Catatan')).toBeTruthy();
+    expect(screen.queryByLabelText('Catatan wajib')).toBeNull();
+  });
+});
+
+describe('StatTile — satu metrik = satu swipe pembaca layar (DESIGN §4)', () => {
+  it('[UI-ST-1] menggabungkan label + nilai jadi "label: value"', async () => {
+    await render(<StatTile label="Deadline" value={3} containerCls="" textCls="" />);
+    expect(screen.getByLabelText('Deadline: 3')).toBeTruthy();
+  });
+
+  it('[UI-ST-2] varian md juga tergabung', async () => {
+    await render(<StatTile label="Selesai" value="80%" containerCls="" textCls="" size="md" />);
+    expect(screen.getByLabelText('Selesai: 80%')).toBeTruthy();
+  });
+});
+
+describe('PriorityCard — varian statis satu node (DESIGN §4)', () => {
+  it('[UI-PC-1] tanpa onPress: satu node ber-label, tanpa role button', async () => {
+    await render(<PriorityCard icon="!" title="Lewat deadline" subtitle="2 kartu" tone="danger" />);
+    expect(screen.getByLabelText('Lewat deadline. 2 kartu')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
 

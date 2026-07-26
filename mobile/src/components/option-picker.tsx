@@ -30,6 +30,8 @@ export function OptionPicker({
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value) ?? null;
+  // A11y: `*` merah tak terdengar → sisipkan " wajib" di label field (DESIGN §4 rule 2/4).
+  const fieldLabel = required ? `${label} wajib` : label;
 
   return (
     <View className="gap-1.5">
@@ -41,7 +43,7 @@ export function OptionPicker({
         className="min-h-[44px] flex-row items-center justify-between rounded-xl border border-neutral-300 px-4 py-3 active:opacity-70 dark:border-neutral-700"
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${selected ? selected.label : 'belum dipilih'}`}>
+        accessibilityLabel={`${fieldLabel}: ${selected ? selected.label : 'belum dipilih'}`}>
         <Text className={selected ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
           {selected ? selected.label : placeholder}
         </Text>

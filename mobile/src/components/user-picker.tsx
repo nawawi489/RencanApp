@@ -27,6 +27,8 @@ export function UserPicker({
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ['org-profiles'], queryFn: listOrgProfiles });
   const options = (data ?? []).filter((p) => p.id !== excludeId && !excludeIds?.has(p.id));
+  // A11y: `*` merah tak terdengar → sisipkan " wajib" di label field (DESIGN §4 rule 2/4).
+  const fieldLabel = required ? `${label} wajib` : label;
 
   return (
     <View className="gap-1.5">
@@ -38,7 +40,7 @@ export function UserPicker({
         className="flex-row items-center justify-between rounded-xl border border-neutral-300 px-4 py-3 active:opacity-70 dark:border-neutral-700"
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${value ? personLabel(value) : 'belum dipilih'}`}>
+        accessibilityLabel={`${fieldLabel}: ${value ? personLabel(value) : 'belum dipilih'}`}>
         <Text className={value ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
           {value ? personLabel(value) : 'Pilih orang…'}
         </Text>

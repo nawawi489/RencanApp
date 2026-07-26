@@ -31,7 +31,7 @@ function PrioritySelector({ value, onChange }: { value: string | null; onChange:
       <Text className="text-sm font-semibold text-black dark:text-white">
         Prioritas<Text className="text-red-600 dark:text-red-400"> *</Text>
       </Text>
-      <View className="flex-row flex-wrap gap-2">
+      <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
         {PRIORITIES.map((p) => {
           const active = value === p;
           return (
@@ -39,7 +39,8 @@ function PrioritySelector({ value, onChange }: { value: string | null; onChange:
               key={p}
               className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
               onPress={() => onChange(p)}
-              accessibilityRole="tab"
+              // Pilihan tunggal → radio (bukan tab); chip multi-pilih hari mingguan tetap checkbox.
+              accessibilityRole="radio"
               accessibilityState={{ selected: active }}
               accessibilityLabel={`Prioritas ${PRIORITY_LABEL[p]}`}>
               <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>
@@ -69,7 +70,7 @@ function ChipSelector({
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-semibold text-black dark:text-white">{label}</Text>
-      <View className="flex-row flex-wrap gap-2">
+      <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
         {options.map((o) => {
           const active = value === o.key;
           return (
@@ -78,7 +79,8 @@ function ChipSelector({
               testID={testIDPrefix ? `${testIDPrefix}-${o.key}` : undefined}
               className={`min-h-[44px] justify-center rounded-full border px-4 py-2 active:opacity-70 ${active ? 'border-brand-dark bg-brand-dark' : 'border-neutral-300 dark:border-neutral-700'}`}
               onPress={() => onChange(o.key)}
-              accessibilityRole="tab"
+              // Pilihan tunggal → radio (bukan tab); chip multi-pilih hari mingguan tetap checkbox.
+              accessibilityRole="radio"
               accessibilityState={{ selected: active }}
               accessibilityLabel={`${label}: ${o.label}`}>
               <Text className={active ? 'text-sm font-semibold text-white' : 'text-sm text-black dark:text-white'}>

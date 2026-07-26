@@ -71,7 +71,7 @@ describe('ManualScoreOverrideScreen', () => {
     mockCan.mockReturnValue(false);
     await render(<ManualScoreOverrideScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Anda tidak berwenang mengelola Score Formula.')).toBeTruthy();
-    expect(screen.queryByLabelText('Skor manual (0–100)')).toBeNull();
+    expect(screen.queryByLabelText('Skor manual (0–100) wajib')).toBeNull();
   });
 
   it('[2] target = diri sendiri → pesan anti-self', async () => {
@@ -83,7 +83,7 @@ describe('ManualScoreOverrideScreen', () => {
   it('[3] reason kosong → error inline, override tak dipanggil', async () => {
     await render(<ManualScoreOverrideScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.changeText(await screen.findByLabelText('Skor manual (0–100)'), '82');
+      fireEvent.changeText(await screen.findByLabelText('Skor manual (0–100) wajib'), '82');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Simpan Override'));
@@ -95,8 +95,8 @@ describe('ManualScoreOverrideScreen', () => {
   it('[4] skor di luar 0–100 → error rentang', async () => {
     await render(<ManualScoreOverrideScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.changeText(await screen.findByLabelText('Skor manual (0–100)'), '150');
-      fireEvent.changeText(screen.getByLabelText('Alasan override'), 'koreksi data');
+      fireEvent.changeText(await screen.findByLabelText('Skor manual (0–100) wajib'), '150');
+      fireEvent.changeText(screen.getByLabelText('Alasan override wajib'), 'koreksi data');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Simpan Override'));
@@ -108,8 +108,8 @@ describe('ManualScoreOverrideScreen', () => {
   it('[5] valid → override dipanggil dengan args + kembali', async () => {
     await render(<ManualScoreOverrideScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.changeText(await screen.findByLabelText('Skor manual (0–100)'), '82');
-      fireEvent.changeText(screen.getByLabelText('Alasan override'), 'koreksi data instance');
+      fireEvent.changeText(await screen.findByLabelText('Skor manual (0–100) wajib'), '82');
+      fireEvent.changeText(screen.getByLabelText('Alasan override wajib'), 'koreksi data instance');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Simpan Override'));

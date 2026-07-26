@@ -1073,6 +1073,8 @@ export default function ChatRoomScreen() {
               <ChatAttachButton disabled={isSending} onPress={handleAttach} />
               <TextInput
                 className="max-h-32 flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+                // A11y: placeholder hilang setelah ada teks (WCAG 3.3.2) → label eksplisit persisten.
+                accessibilityLabel={composerPlaceholder(room?.name)}
                 placeholder={composerPlaceholder(room?.name)}
                 placeholderTextColor={placeholderColor}
                 value={text}

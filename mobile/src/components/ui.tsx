@@ -309,7 +309,8 @@ export function LabeledInput({
       </Text>
       <TextInput
         className={`rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white ${multiline ? 'h-24' : ''}`}
-        accessibilityLabel={label}
+        // A11y: `*` merah tak terdengar pembaca layar → sertakan " wajib" di label (WCAG 3.3.2).
+        accessibilityLabel={required ? `${label} wajib` : label}
         placeholder={placeholder}
         placeholderTextColor={placeholderColor}
         value={value}
@@ -901,9 +902,14 @@ export function PriorityCard({
     <Wrap
       className={`min-h-[44px] flex-1 gap-1.5 rounded-2xl border p-3 ${PRIORITY_CLASS[tone]} ${onPress ? 'active:opacity-70' : ''}`}
       onPress={onPress}
+      // A11y: varian statis (tanpa onPress) tetap satu node ber-label agar dibaca sekali;
+      // varian pressable sudah `accessible` default via Pressable (DESIGN §4).
+      accessible={onPress ? undefined : true}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={onPress ? `${title}. ${subtitle}` : undefined}>
-      <View className={`h-7 w-7 items-center justify-center rounded-lg ${PRIORITY_ICON_BG[tone]}`}>
+      accessibilityLabel={`${title}. ${subtitle}`}>
+      <View
+        className={`h-7 w-7 items-center justify-center rounded-lg ${PRIORITY_ICON_BG[tone]}`}
+        importantForAccessibility="no-hide-descendants">
         <Text className={`text-xs font-bold ${PRIORITY_ICON_TEXT[tone]}`}>
           {icon}
         </Text>
@@ -1214,7 +1220,13 @@ export function Banner({
       ? 'text-red-800 dark:text-red-200'
       : 'text-amber-800 dark:text-amber-200';
   return (
-    <View className={`gap-2 rounded-xl border p-3 ${bg}`}>
+    // A11y: role="alert" + liveRegion="polite" agar pembaca layar mengumumkan banner
+    // (degraded-search / network-error) saat muncul — mirror pola login-error. JANGAN set
+    // `accessible` di container: tombol aksi harus tetap fokusabel sebagai sibling (DESIGN §4.6).
+    <View
+      className={`gap-2 rounded-xl border p-3 ${bg}`}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite">
       <Text className={`text-sm ${textCls}`}>{message}</Text>
       {action ? (
         <View className="self-start">
