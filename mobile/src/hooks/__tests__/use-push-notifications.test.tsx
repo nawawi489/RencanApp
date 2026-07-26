@@ -51,7 +51,7 @@ jest.mock('@/lib/errors', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import { usePushHandler, usePushRegistration } from '../use-push-notifications';
+import { ensureAndroidNotificationChannel, usePushHandler, usePushRegistration } from '../use-push-notifications';
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -199,17 +199,44 @@ describe('usePushRegistration', () => {
     expect(result.current.permissionStatus).toBe('granted');
   });
 
-  it('[PN-REG-10] Android → setNotificationChannelAsync("default", {...}) dipanggil saat mount', async () => {
+  it('[PN-REG-10] usePushRegistration mount TIDAK lagi membuat channel (dipindah ke root)', async () => {
     platformOS = 'android';
     const { wrapper } = makeWrapper();
     await renderHook(() => usePushRegistration(), { wrapper });
 
+    // Channel kini dibuat di root _layout via ensureAndroidNotificationChannel, bukan di hook.
+    await waitFor(() => expect(mockGetPermissionsAsync).toHaveBeenCalled());
+    expect(mockSetNotificationChannelAsync).not.toHaveBeenCalled();
+  });
+});
+
+// ======================================================= ensureAndroidNotificationChannel =======================================================
+
+describe('ensureAndroidNotificationChannel', () => {
+  it('[PN-CH-1] Android → setNotificationChannelAsync("default", {importance: MAX})', async () => {
+    platformOS = 'android';
+    ensureAndroidNotificationChannel();
+
     await waitFor(() =>
       expect(mockSetNotificationChannelAsync).toHaveBeenCalledWith(
         'default',
-        expect.objectContaining({ importance: 5 }),
+        expect.objectContaining({ name: 'default', importance: 5 }),
       ),
     );
+  });
+
+  it('[PN-CH-2] non-Android (ios) → tidak membuat channel', () => {
+    platformOS = 'ios';
+    ensureAndroidNotificationChannel();
+
+    expect(mockSetNotificationChannelAsync).not.toHaveBeenCalled();
+  });
+
+  it('[PN-CH-3] reject native bridge di-swallow (best-effort, tidak throw)', () => {
+    platformOS = 'android';
+    mockSetNotificationChannelAsync.mockRejectedValueOnce(new Error('bridge fail'));
+
+    expect(() => ensureAndroidNotificationChannel()).not.toThrow();
   });
 });
 

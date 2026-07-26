@@ -18,6 +18,20 @@ import { registerPushToken, setCurrentPushToken, unregisterPushToken } from '@/l
 // EAS projectId — dibutuhkan oleh getExpoPushTokenAsync di SDK 56.
 const EXPO_PROJECT_ID = '198a4371-d0ca-4598-9628-619a24d97d43';
 
+// ─── Android notification channel ────────────────────────────────────────────
+
+// Android 8+ (API 26+): notifikasi TIDAK bisa tampil tanpa channel. Buat channel 'default'
+// sedini mungkin — dipanggil di module scope root `_layout` — agar push yang tiba sebelum
+// user pernah membuka tab Notifikasi tetap tampil. No-op di platform non-Android.
+// Best-effort: reject native bridge di-swallow (channel setup bukan blocker startup).
+export function ensureAndroidNotificationChannel(): void {
+  if (Platform.OS !== 'android') return;
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'default',
+    importance: Notifications.AndroidImportance.MAX,
+  }).catch(() => {});
+}
+
 // ─── Blok B: usePushRegistration ─────────────────────────────────────────────
 
 export function usePushRegistration() {
@@ -28,13 +42,8 @@ export function usePushRegistration() {
     Notifications.getPermissionsAsync()
       .then((p) => setPermissionStatus(p.status as string))
       .catch(() => {});
-
-    if (Platform.OS === 'android') {
-      Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-      }).catch(() => {});
-    }
+    // Channel Android 'default' dibuat di root `_layout` (ensureAndroidNotificationChannel)
+    // agar tersedia sejak launch, bukan hanya saat tab Notifikasi mount.
   }, []);
 
   async function register(deviceId?: string): Promise<void> {
