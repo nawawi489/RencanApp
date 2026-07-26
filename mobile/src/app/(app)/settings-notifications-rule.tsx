@@ -33,16 +33,16 @@ export default function SettingsNotificationsRuleScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Notifications Rule' }} />
+      <Stack.Screen options={{ title: 'Aturan Notifikasi' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Notifications Rule</Text>
+          <Text className="text-2xl font-bold text-black dark:text-white">Aturan Notifikasi</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Aturan pengiriman notifikasi.
           </Text>
         </View>
         {!allowed ? (
-          <AccessDenied message="Notifications Rule hanya untuk pemegang izin Ubah Settings." />
+          <AccessDenied message="Aturan Notifikasi hanya untuk pemegang izin Ubah Settings." />
         ) : (
           <SectionCard>
             <LabeledInput

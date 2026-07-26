@@ -86,7 +86,7 @@ describe('PeopleScreen — 4 state fondasi', () => {
   it('error → ErrorState (role alert) + retry', async () => {
     mockListOrgProfiles.mockRejectedValue(new Error('boom'));
     await render(<PeopleScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Gagal memuat People')).toBeTruthy();
+    expect(await screen.findByText('Gagal memuat Anggota')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     expect(screen.getByText('Coba lagi')).toBeTruthy();
   });

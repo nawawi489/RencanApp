@@ -357,7 +357,7 @@ export function LiveNotificationsScreen() {
 
   if (isLoading) {
     return (
-      <Screen title="Notifications" subtitle="Notifikasi resmi dan respons.">
+      <Screen title="Notifikasi" subtitle="Notifikasi resmi dan respons.">
         {controls}
         <SkeletonList count={4} />
       </Screen>
@@ -366,7 +366,7 @@ export function LiveNotificationsScreen() {
 
   if (isError) {
     return (
-      <Screen title="Notifications" subtitle="Notifikasi resmi dan respons.">
+      <Screen title="Notifikasi" subtitle="Notifikasi resmi dan respons.">
         {controls}
         <ErrorState
           title="Gagal memuat notifikasi"

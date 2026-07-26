@@ -119,16 +119,16 @@ export default function AppLayout() {
       <Stack.Screen name="settings-activity-log" options={{ headerShown: true, title: 'Log Aktivitas' }} />
       <Stack.Screen
         name="settings-governance-violation"
-        options={{ headerShown: true, title: 'Governance Violation' }}
+        options={{ headerShown: true, title: 'Pelanggaran Tata Kelola' }}
       />
       <Stack.Screen name="settings-confidential-access" options={{ headerShown: true, title: 'Akses Rahasia' }} />
       <Stack.Screen
         name="settings-card-completion-rule"
-        options={{ headerShown: true, title: 'Card Completion Rule' }}
+        options={{ headerShown: true, title: 'Aturan Penyelesaian Card' }}
       />
       <Stack.Screen name="settings-card-guidance" options={{ headerShown: true, title: 'Keterangan Card' }} />
-      <Stack.Screen name="settings-notifications-rule" options={{ headerShown: true, title: 'Notifications Rule' }} />
-      <Stack.Screen name="settings-repeat-rules" options={{ headerShown: true, title: 'Repeat Setting' }} />
+      <Stack.Screen name="settings-notifications-rule" options={{ headerShown: true, title: 'Aturan Notifikasi' }} />
+      <Stack.Screen name="settings-repeat-rules" options={{ headerShown: true, title: 'Pengaturan Pengulangan' }} />
       <Stack.Screen name="settings-archive" options={{ headerShown: true, title: 'Arsip' }} />
       <Stack.Screen name="settings-goal-templates" options={{ headerShown: true, title: 'Goal Template' }} />
       <Stack.Screen
@@ -141,7 +141,7 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="settings-permission-users"
-        options={{ headerShown: true, title: 'User & Permission' }}
+        options={{ headerShown: true, title: 'Pengguna & Hak Akses' }}
       />
       <Stack.Screen
         name="settings-user-new"
@@ -154,7 +154,7 @@ export default function AppLayout() {
       <Stack.Screen name="search" options={{ headerShown: true, title: 'Cari' }} />
 
       {/* Fase 7 — People & Score (surface) */}
-      <Stack.Screen name="people" options={{ headerShown: true, title: 'People' }} />
+      <Stack.Screen name="people" options={{ headerShown: true, title: 'Anggota' }} />
       <Stack.Screen name="people-profile/[id]" options={{ headerShown: true, title: 'Profil' }} />
       <Stack.Screen
         name="manual-score-override"

@@ -91,19 +91,19 @@ const ORG_SETTINGS_PERMISSIONS = [
 
 // Akses Cepat — §31: People / Archive / Pusat Bantuan (Log Aktivitas pindah Admin Lanjutan).
 const AKSES_CEPAT: MenuItem[] = [
-  { label: 'People', description: 'Ranking & profil', icon: 'people-outline', tone: 'info', href: '/people' as Href },
-  { label: 'Archive', description: 'Card selesai', icon: 'archive-outline', tone: 'danger', href: '/settings-archive' as Href },
+  { label: 'Anggota', description: 'Ranking & profil', icon: 'people-outline', tone: 'info', href: '/people' as Href },
+  { label: 'Arsip', description: 'Card selesai', icon: 'archive-outline', tone: 'danger', href: '/settings-archive' as Href },
   { label: 'Pusat Bantuan', description: 'Panduan Rencanapp', text: '?', tone: 'success', toast: true },
 ];
 
 const TEMPLATE_ITEMS: MenuItem[] = [
-  { label: 'Goal Template', description: 'Library Goal', icon: 'document-text-outline', tone: 'success', href: '/settings-goal-templates' as Href },
+  { label: 'Goal Template', description: 'Pustaka Goal', icon: 'document-text-outline', tone: 'success', href: '/settings-goal-templates' as Href },
   { label: 'Strategi Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-strategy-templates' as Href, permission: 'manage_kpi_area_templates' },
 ];
 
 // Bantuan — §31: Pusat Bantuan pindah ke Akses Cepat; sisa hanya Support.
 const BANTUAN_ITEMS: MenuItem[] = [
-  { label: 'Support', description: 'Hubungi admin', text: 'CS', tone: 'success', toast: true },
+  { label: 'Dukungan', description: 'Hubungi admin', text: 'CS', tone: 'success', toast: true },
 ];
 
 // Pengaturan — §31: Score Formula + Aturan Pecah Target pindah ke Admin Lanjutan.
@@ -114,21 +114,21 @@ const PENGATURAN_ITEMS: MenuItem[] = [
   { label: 'Profil Saya', description: 'Ubah nama', icon: 'person-outline', tone: 'info', href: '/settings-profile' as Href },
   { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permissionAny: ORG_SETTINGS_PERMISSIONS },
   { label: 'Profil Organisasi', description: 'Nama & zona waktu', icon: 'globe-outline', tone: 'warn', href: '/settings-organization' as Href, permission: 'manage_settings' },
-  { label: 'Repeat Setting', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
-  { label: 'Permission Settings', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
-  { label: 'Card Completion Rule', description: 'Aturan selesai', icon: 'checkbox-outline', tone: 'info', href: '/settings-card-completion-rule' as Href, permission: 'manage_card_completion_rule' },
+  { label: 'Pengaturan Pengulangan', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
+  { label: 'Pengaturan Hak Akses', description: 'Role & akses', icon: 'shield-checkmark-outline', tone: 'success', href: '/settings-permission-users' as Href, permission: 'manage_users_permissions' },
+  { label: 'Aturan Penyelesaian Card', description: 'Aturan selesai', icon: 'checkbox-outline', tone: 'info', href: '/settings-card-completion-rule' as Href, permission: 'manage_card_completion_rule' },
   { label: 'Keterangan Card', description: 'Panduan isi card', icon: 'information-circle-outline', tone: 'info', href: '/settings-card-guidance' as Href, permission: 'manage_card_completion_rule' },
-  { label: 'Notifications Rule', description: 'Aturan notifikasi', icon: 'notifications-outline', tone: 'info', href: '/settings-notifications-rule' as Href, permission: 'manage_settings' },
+  { label: 'Aturan Notifikasi', description: 'Aturan notifikasi', icon: 'notifications-outline', tone: 'info', href: '/settings-notifications-rule' as Href, permission: 'manage_settings' },
 ];
 
 // Admin Lanjutan — §31: Score Formula/MBR/Log Aktivitas masuk sini (staff tak melihat
 // sebagai shortcut utama). Semua item WAJIB punya `permission` agar adminVisible gating benar.
 const ADMIN_ITEMS: MenuItem[] = [
   { label: 'Aturan Pecah Target', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
-  { label: 'Score Formula', description: 'Rumus score', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
-  { label: 'Governance', description: 'Guard violation', icon: 'warning-outline', tone: 'danger', href: '/settings-governance-violation' as Href, permission: 'view_governance_violation' },
-  { label: 'Confidential', description: 'Akses khusus', icon: 'lock-closed-outline', tone: 'warn', href: '/settings-confidential-access' as Href, permission: 'manage_confidential_access' },
-  { label: 'Override Score', description: 'Akses berwenang', icon: 'ribbon-outline', tone: 'violet', href: '/manual-score-override' as Href, permission: 'manage_score_formula' },
+  { label: 'Score Formula', description: 'Rumus skor', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
+  { label: 'Tata Kelola', description: 'Pelanggaran aturan', icon: 'warning-outline', tone: 'danger', href: '/settings-governance-violation' as Href, permission: 'view_governance_violation' },
+  { label: 'Rahasia', description: 'Akses khusus', icon: 'lock-closed-outline', tone: 'warn', href: '/settings-confidential-access' as Href, permission: 'manage_confidential_access' },
+  { label: 'Override Skor', description: 'Akses berwenang', icon: 'ribbon-outline', tone: 'violet', href: '/manual-score-override' as Href, permission: 'manage_score_formula' },
   { label: 'Log Aktivitas', description: 'Riwayat sistem', icon: 'time-outline', tone: 'success', href: '/settings-activity-log' as Href, permission: 'view_activity_log' },
 ];
 

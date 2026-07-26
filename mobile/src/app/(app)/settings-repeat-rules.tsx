@@ -17,19 +17,19 @@ export default function SettingsRepeatRulesScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Repeat Setting' }} />
+      <Stack.Screen options={{ title: 'Pengaturan Pengulangan' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Repeat Setting</Text>
+          <Text className="text-2xl font-bold text-black dark:text-white">Pengaturan Pengulangan</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Daftar Tugas dengan jadwal berulang.
           </Text>
         </View>
         <SectionCard>
-          <Text className="text-sm font-bold text-black dark:text-white">Tentang Repeat Setting</Text>
+          <Text className="text-sm font-bold text-black dark:text-white">Tentang Pengaturan Pengulangan</Text>
           <Text className="text-xs text-neutral-500 dark:text-neutral-400">
             Daftar Tugas dengan jadwal berulang. Edit jadwal dilakukan di tiap Tugas
-            (Repeat Setting adalah pengaturan per-AP, bukan template global).
+            (Pengaturan Pengulangan adalah pengaturan per-AP, bukan template global).
           </Text>
         </SectionCard>
 

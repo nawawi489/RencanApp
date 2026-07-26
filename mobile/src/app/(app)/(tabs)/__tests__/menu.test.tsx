@@ -72,17 +72,17 @@ describe('Menu §31 — profile card', () => {
 });
 
 describe('Menu §31 — Akses Cepat', () => {
-  it('berisi tepat 3 fitur: People, Archive, Pusat Bantuan', async () => {
+  it('berisi tepat 3 fitur: Anggota, Arsip, Pusat Bantuan', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
-    expect(await screen.findByLabelText('People')).toBeTruthy();
-    expect(screen.getByLabelText('Archive')).toBeTruthy();
+    expect(await screen.findByLabelText('Anggota')).toBeTruthy();
+    expect(screen.getByLabelText('Arsip')).toBeTruthy();
     expect(screen.getByLabelText('Pusat Bantuan')).toBeTruthy();
     expect(screen.getByText('3 fitur')).toBeTruthy();
   });
 
-  it('People card → push /people', async () => {
+  it('Anggota card → push /people', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByLabelText('People'));
+    fireEvent.press(await screen.findByLabelText('Anggota'));
     expect(mockPush).toHaveBeenCalledWith('/people');
   });
 
@@ -95,7 +95,7 @@ describe('Menu §31 — Akses Cepat', () => {
 
   it('Log Aktivitas TIDAK ada di Akses Cepat (pindah ke Admin Lanjutan)', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
-    await screen.findByLabelText('People');
+    await screen.findByLabelText('Anggota');
     expect(screen.queryByLabelText('Log Aktivitas')).toBeNull();
   });
 });
@@ -103,14 +103,14 @@ describe('Menu §31 — Akses Cepat', () => {
 describe('Menu §31 — Template conditional accordion', () => {
   it('Template accordion TIDAK tampil tanpa manage_kpi_area_templates', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
-    await screen.findByLabelText('People');
+    await screen.findByLabelText('Anggota');
     expect(screen.queryByLabelText('Template')).toBeNull();
   });
 
   it('Template accordion tampil + collapsed saat user punya manage_kpi_area_templates', async () => {
     mockCan.mockImplementation((k: string) => k === 'manage_kpi_area_templates');
     await render(<MenuScreen />, { wrapper: wrapper() });
-    await screen.findByLabelText('People');
+    await screen.findByLabelText('Anggota');
     expect(screen.queryByText('Goal Template')).toBeNull();
     fireEvent.press(screen.getByLabelText('Template'));
     expect(await screen.findByText('Goal Template')).toBeTruthy();
@@ -126,10 +126,10 @@ describe('Menu §31 — Template conditional accordion', () => {
 });
 
 describe('Menu §31 — Bantuan', () => {
-  it('Support → toast "Segera hadir", bukan navigasi', async () => {
+  it('Dukungan → toast "Segera hadir", bukan navigasi', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Bantuan'));
-    fireEvent.press(await screen.findByLabelText('Support'));
+    fireEvent.press(await screen.findByLabelText('Dukungan'));
     expect(Alert.alert).toHaveBeenCalledWith('Segera hadir', expect.any(String));
     expect(mockPush).not.toHaveBeenCalled();
   });
@@ -146,10 +146,10 @@ describe('Menu §31 — Pengaturan', () => {
     expect(pengaturanLabels).not.toContain('Aturan Pecah Target');
   });
 
-  it('Repeat Setting (ungated) → push /settings-repeat-rules', async () => {
+  it('Pengaturan Pengulangan (ungated) → push /settings-repeat-rules', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Pengaturan'));
-    fireEvent.press(await screen.findByLabelText('Repeat Setting'));
+    fireEvent.press(await screen.findByLabelText('Pengaturan Pengulangan'));
     expect(mockPush).toHaveBeenCalledWith('/settings-repeat-rules');
   });
 });
@@ -157,7 +157,7 @@ describe('Menu §31 — Pengaturan', () => {
 describe('Menu §31 — Admin Lanjutan (permission-based)', () => {
   it('disembunyikan saat user tak punya permission admin apapun', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
-    await screen.findByLabelText('People');
+    await screen.findByLabelText('Anggota');
     expect(screen.queryByText('Admin Lanjutan')).toBeNull();
   });
 
@@ -165,7 +165,7 @@ describe('Menu §31 — Admin Lanjutan (permission-based)', () => {
     mockCan.mockImplementation((k: string) => k === 'view_governance_violation');
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Admin Lanjutan'));
-    fireEvent.press(await screen.findByLabelText('Governance'));
+    fireEvent.press(await screen.findByLabelText('Tata Kelola'));
     expect(mockPush).toHaveBeenCalledWith('/settings-governance-violation');
   });
 
@@ -197,7 +197,7 @@ describe('Menu §31 — Admin Lanjutan (permission-based)', () => {
 describe('Menu §31 — header & logout', () => {
   it('gear TIDAK tampil untuk user tanpa create_department (hindari dead-end akses-ditolak)', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
-    await screen.findByLabelText('People');
+    await screen.findByLabelText('Anggota');
     expect(screen.queryByLabelText('Pengaturan organisasi')).toBeNull();
   });
 

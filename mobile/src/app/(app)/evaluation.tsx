@@ -178,7 +178,7 @@ export function LiveEvaluationScreen() {
             multiline
             placeholder="Satu faktor per baris."
           />
-          <LabeledInput label="Lesson learned" value={lessons} onChangeText={setLessons} multiline />
+          <LabeledInput label="Pelajaran yang Dipetik" value={lessons} onChangeText={setLessons} multiline />
 
           <View className="gap-2">
             <Text className="px-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Tindak lanjut</Text>

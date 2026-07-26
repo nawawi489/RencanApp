@@ -122,7 +122,7 @@ export default function SettingsPermissionUsersScreen() {
   if (profileLoading) {
     return (
       <View className="flex-1 bg-white p-5 dark:bg-black">
-        <Stack.Screen options={{ title: 'User & Permission' }} />
+        <Stack.Screen options={{ title: 'Pengguna & Hak Akses' }} />
         <SkeletonList count={4} />
       </View>
     );
@@ -131,7 +131,7 @@ export default function SettingsPermissionUsersScreen() {
   if (!can('manage_users_permissions')) {
     return (
       <View className="flex-1 bg-white p-5 dark:bg-black">
-        <Stack.Screen options={{ title: 'User & Permission' }} />
+        <Stack.Screen options={{ title: 'Pengguna & Hak Akses' }} />
         <AccessDenied message="Hanya pemegang izin Kelola User & Permission yang dapat membuka bagian ini." />
       </View>
     );
@@ -170,13 +170,13 @@ export default function SettingsPermissionUsersScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
-      <Stack.Screen options={{ title: 'User & Permission' }} />
+      <Stack.Screen options={{ title: 'Pengguna & Hak Akses' }} />
       <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }}>
         {!selected ? (
           // ----- Daftar anggota
           <View className="gap-5">
             <View className="gap-1">
-              <Text className="text-2xl font-bold text-black dark:text-white">User & Permission</Text>
+              <Text className="text-2xl font-bold text-black dark:text-white">Pengguna & Hak Akses</Text>
               <Text className="text-base text-neutral-500 dark:text-neutral-400">
                 Pilih anggota untuk mengatur hak akses. Perubahan tercatat di Activity Log.
               </Text>
