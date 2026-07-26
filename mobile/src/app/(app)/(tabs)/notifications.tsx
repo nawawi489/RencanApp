@@ -224,7 +224,12 @@ function groupByRecency(items: Notification[]): NotifSection[] {
 function SectionHeader({ title }: { title: string }) {
   return (
     <View className="bg-white pb-1 pt-2 dark:bg-black">
-      <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      {/* accessibilityRole="header": grup rekap ("Baru"/"Sebelumnya") jadi target navigasi-heading
+          pembaca layar. Gaya kicker text-xs dipertahankan (bukan primitif SectionHeading) supaya
+          visual tak berubah — hanya role yang ditambahkan (DESIGN §4.4). */}
+      <Text
+        accessibilityRole="header"
+        className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
         {title}
       </Text>
     </View>
@@ -342,7 +347,11 @@ export function LiveNotificationsScreen() {
   const header = (
     <View className="gap-4 pb-3">
       <View className="gap-1">
-        <Text className="text-2xl font-bold text-black dark:text-white">Notifikasi</Text>
+        {/* Judul halaman jalur sukses dirender inline (bukan lewat <Screen>), jadi role="header"
+            ditambah manual agar konsisten dengan Screen (yang sudah role=header). */}
+        <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
+          Notifikasi
+        </Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
           Notifikasi resmi dan respons.
         </Text>

@@ -297,7 +297,12 @@ export function LiveNewTaskScreen() {
         />
 
         <SectionCard>
-          <Text className="text-sm font-bold text-black dark:text-white">Detail Tugas</Text>
+          {/* Judul seksi form — role="header" agar navigasi-heading pembaca layar bisa meloncatinya.
+              Ukuran text-sm dipertahankan (bukan primitif SectionHeading text-lg) supaya visual
+              form tak berubah — hanya role a11y yang ditambahkan (DESIGN §4.4). */}
+          <Text accessibilityRole="header" className="text-sm font-bold text-black dark:text-white">
+            Detail Tugas
+          </Text>
           <LabeledInput label="Nama Tugas" value={name} onChangeText={setName} required placeholder="mis. Buat 20 Konten Iklan" />
           <UserPicker label="PIC (eksekutor)" required value={pic} onChange={setPic} excludeId={reviewer?.id} />
           <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />

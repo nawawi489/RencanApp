@@ -105,6 +105,14 @@ describe('NotificationsScreen', () => {
     expect(screen.getByText('Permintaan Review')).toBeTruthy(); // NOTIFICATION_TYPE_LABEL
   });
 
+  it('judul halaman + section header rekap mengekspos accessibilityRole="header" (navigasi-heading pembaca layar)', async () => {
+    await render(<NotificationsScreen />, { wrapper: wrapper() });
+    // Judul halaman jalur sukses dirender inline (bukan lewat <Screen>) → role=header manual.
+    expect(screen.getByRole('header', { name: 'Notifikasi' })).toBeTruthy();
+    // ROW tanpa created_at → groupByRecency menaruhnya di grup "Sebelumnya".
+    expect(screen.getByRole('header', { name: 'Sebelumnya' })).toBeTruthy();
+  });
+
   it('loading → SkeletonList aksesibel', async () => {
     primeList({ isLoading: true, notifications: [] });
     await render(<NotificationsScreen />, { wrapper: wrapper() });
