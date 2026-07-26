@@ -65,7 +65,10 @@ begin
   raise notice 'PASS a: DDL kolom + constraint + FK reply_to ada';
 end $$;
 
--- ============================================================ (b) send_chat_message signature (5→6 param after 0059)
+-- ============================================================ (b) send_chat_message signature (6→7 param after 0103)
+-- 0059 took it 5→6 (p_attachments); 0103 adds p_client_request_id (7th, default null)
+-- for write idempotency. The extra trailing default-param leaves existing positional
+-- calls below (4–6 args) working unchanged.
 do $$
 declare
   v_nargs int;
@@ -75,10 +78,10 @@ begin
   if v_nargs is null then
     raise exception 'FAIL b: send_chat_message function not found';
   end if;
-  if v_nargs <> 6 then
-    raise exception 'FAIL b: send_chat_message has % args, expected 6 (after 0059)', v_nargs;
+  if v_nargs <> 7 then
+    raise exception 'FAIL b: send_chat_message has % args, expected 7 (after 0103)', v_nargs;
   end if;
-  raise notice 'PASS b: send_chat_message memiliki 6 parameter (v2 after 0059)';
+  raise notice 'PASS b: send_chat_message memiliki 7 parameter (v3 after 0103)';
 end $$;
 
 -- ============================================================ (c) send konteks sah → context_label = server snapshot nama AP

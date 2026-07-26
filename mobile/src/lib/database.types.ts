@@ -37,6 +37,7 @@ export type Database = {
       action_plans: {
         Row: {
           archived_at: string | null
+          client_request_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -55,6 +56,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -73,6 +75,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -455,6 +458,7 @@ export type Database = {
           author_id: string | null
           body: string
           chat_room_id: string
+          client_request_id: string | null
           context_entity_id: string | null
           context_entity_type: string | null
           context_label: string | null
@@ -471,6 +475,7 @@ export type Database = {
           author_id?: string | null
           body: string
           chat_room_id: string
+          client_request_id?: string | null
           context_entity_id?: string | null
           context_entity_type?: string | null
           context_label?: string | null
@@ -487,6 +492,7 @@ export type Database = {
           author_id?: string | null
           body?: string
           chat_room_id?: string
+          client_request_id?: string | null
           context_entity_id?: string | null
           context_entity_type?: string | null
           context_label?: string | null
@@ -1123,6 +1129,7 @@ export type Database = {
       goals: {
         Row: {
           archived_at: string | null
+          client_request_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1139,6 +1146,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1155,6 +1163,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1274,6 +1283,7 @@ export type Database = {
         Row: {
           alternative: string | null
           archived_at: string | null
+          client_request_id: string | null
           contribution_pct: number | null
           created_at: string
           created_by: string | null
@@ -1293,6 +1303,7 @@ export type Database = {
         Insert: {
           alternative?: string | null
           archived_at?: string | null
+          client_request_id?: string | null
           contribution_pct?: number | null
           created_at?: string
           created_by?: string | null
@@ -1312,6 +1323,7 @@ export type Database = {
         Update: {
           alternative?: string | null
           archived_at?: string | null
+          client_request_id?: string | null
           contribution_pct?: number | null
           created_at?: string
           created_by?: string | null
@@ -1731,6 +1743,7 @@ export type Database = {
       problem_statements: {
         Row: {
           archived_at: string | null
+          client_request_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1748,6 +1761,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1765,6 +1779,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2933,6 +2948,7 @@ export type Database = {
         Row: {
           action_plan_id: string
           archived_at: string | null
+          client_request_id: string | null
           created_at: string
           created_by: string | null
           current_submission_id: string | null
@@ -2959,6 +2975,7 @@ export type Database = {
         Insert: {
           action_plan_id: string
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           current_submission_id?: string | null
@@ -2985,6 +3002,7 @@ export type Database = {
         Update: {
           action_plan_id?: string
           archived_at?: string | null
+          client_request_id?: string | null
           created_at?: string
           created_by?: string | null
           current_submission_id?: string | null
@@ -3548,6 +3566,45 @@ export type Database = {
         Args: { p_end: string; p_org: string; p_start: string; p_user: string }
         Returns: number
       }
+      create_action_plan_idempotent: {
+        Args: {
+          p_client_request_id?: string
+          p_description?: string
+          p_initiative_id?: string
+          p_name: string
+          p_period_end?: string
+          p_period_start?: string
+          p_pic_id?: string
+          p_problem_statement_id?: string
+          p_target_result?: string
+          p_team_id?: string
+        }
+        Returns: {
+          archived_at: string | null
+          client_request_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          initiative_id: string | null
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          problem_statement_id: string | null
+          status: string
+          target_result: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "action_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_comment: {
         Args: {
           p_body: string
@@ -3572,6 +3629,81 @@ export type Database = {
         Args: { p_description: string; p_name: string }
         Returns: string
       }
+      create_goal_idempotent: {
+        Args: {
+          p_client_request_id?: string
+          p_description?: string
+          p_name: string
+          p_period_end?: string
+          p_period_start?: string
+          p_pic_id?: string
+          p_target_value?: string
+        }
+        Returns: {
+          archived_at: string | null
+          client_request_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          goal_template_id: string | null
+          id: string
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          target_value: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "goals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_initiative_idempotent: {
+        Args: {
+          p_alternative?: string
+          p_client_request_id?: string
+          p_contribution_pct?: number
+          p_description?: string
+          p_main_risk?: string
+          p_name: string
+          p_period_end?: string
+          p_period_start?: string
+          p_pic_id?: string
+          p_reason?: string
+          p_strategy_id: string
+        }
+        Returns: {
+          alternative: string | null
+          archived_at: string | null
+          client_request_id: string | null
+          contribution_pct: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          main_risk: string | null
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          reason: string | null
+          status: string
+          strategy_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "initiatives"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_position: {
         Args: {
           p_department_id?: string
@@ -3579,6 +3711,43 @@ export type Database = {
           p_name: string
         }
         Returns: string
+      }
+      create_problem_statement_idempotent: {
+        Args: {
+          p_client_request_id?: string
+          p_description?: string
+          p_development_area_id: string
+          p_impact?: string
+          p_initial_evidence?: string
+          p_name: string
+          p_period_end?: string
+          p_period_start?: string
+          p_pic_id?: string
+        }
+        Returns: {
+          archived_at: string | null
+          client_request_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          development_area_id: string
+          id: string
+          impact: string | null
+          initial_evidence: string | null
+          name: string
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          pic_id: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "problem_statements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_role_template: {
         Args: { p_level: string; p_name: string }
@@ -3596,6 +3765,58 @@ export type Database = {
       create_submission_draft: {
         Args: { p_action_plan_id: string; p_attachment_count: number }
         Returns: string
+      }
+      create_task_idempotent: {
+        Args: {
+          p_action_plan_id: string
+          p_client_request_id?: string
+          p_deadline?: string
+          p_deadline_time?: string
+          p_definition_of_done?: string
+          p_description?: string
+          p_evidence_description?: string
+          p_evidence_required?: boolean
+          p_expected_output?: string
+          p_name: string
+          p_pic_id?: string
+          p_priority?: string
+          p_result_value_required?: boolean
+          p_reviewer_id?: string
+          p_start_date?: string
+        }
+        Returns: {
+          action_plan_id: string
+          archived_at: string | null
+          client_request_id: string | null
+          created_at: string
+          created_by: string | null
+          current_submission_id: string | null
+          deadline: string | null
+          deadline_time: string | null
+          definition_of_done: string | null
+          description: string | null
+          evidence_description: string | null
+          evidence_required: boolean
+          expected_output: string | null
+          id: string
+          name: string
+          organization_id: string
+          pic_id: string | null
+          priority: string | null
+          repeat_setting: string
+          result_value_required: boolean
+          review_required: boolean
+          reviewer_id: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_team: {
         Args: {
@@ -3939,6 +4160,7 @@ export type Database = {
         Args: {
           p_attachments?: Json
           p_body: string
+          p_client_request_id?: string
           p_context_action_plan?: string
           p_mentions?: string[]
           p_reply_to?: string

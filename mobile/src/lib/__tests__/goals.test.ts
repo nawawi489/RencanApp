@@ -40,32 +40,6 @@ function makeQueryThenable(result: { data: unknown; error: unknown }) {
   return { builder, calls };
 }
 
-/** Builder profiles: .select().eq().single() → Promise. */
-function makeProfilesBuilder(orgId: string | null) {
-  const builder: Record<string, unknown> = {};
-  builder.select = jest.fn(() => builder);
-  builder.eq = jest.fn(() => builder);
-  // getOrgContext memakai maybeSingle (profil 0 baris → null, bukan 406); `single` tetap
-  // disediakan agar builder ini juga dipakai pemanggil lain tanpa berubah perilaku.
-  const resolveProfile = () => Promise.resolve({ data: { organization_id: orgId }, error: null });
-  builder.single = jest.fn(resolveProfile);
-  builder.maybeSingle = jest.fn(resolveProfile);
-  return builder;
-}
-
-/** Builder INSERT: .insert().select().single() → Promise; menyimpan payload insert. */
-function makeInsertBuilder(result: { data: unknown; error: unknown }) {
-  const calls: Record<string, unknown[]> = {};
-  const builder: Record<string, unknown> = {};
-  builder.insert = jest.fn((...args: unknown[]) => {
-    calls.insert = args;
-    return builder;
-  });
-  builder.select = jest.fn(() => builder);
-  builder.single = jest.fn(() => Promise.resolve(result));
-  return { builder, calls };
-}
-
 beforeEach(() => {
   mockRpc.mockReset();
   mockFrom.mockReset();
@@ -74,15 +48,10 @@ beforeEach(() => {
 });
 
 describe('createGoal', () => {
-  it('[1] INSERT menyertakan organization_id + created_by + field input; RPC tidak dipanggil', async () => {
-    const profiles = makeProfilesBuilder('org1');
-    const { builder: insertB, calls: insertCalls } = makeInsertBuilder({
-      data: { id: 'g1', name: 'Goal A' },
-      error: null,
-    });
-    mockFrom.mockImplementation((table: string) =>
-      table === 'profiles' ? profiles : insertB,
-    );
+  // 0103: createGoal memanggil RPC idempoten (org/created_by diturunkan server-side),
+  // bukan lagi .from('goals').insert(); client_request_id diteruskan sebagai p_client_request_id.
+  it('[1] memanggil rpc create_goal_idempotent dgn param + client_request_id; from tidak dipakai', async () => {
+    mockRpc.mockResolvedValue({ data: { id: 'g1', name: 'Goal A' }, error: null });
 
     const goal = await createGoal({
       name: 'Goal A',
@@ -90,38 +59,33 @@ describe('createGoal', () => {
       pic_id: 'p1',
       period_start: '2026-01-01',
       period_end: '2026-12-31',
+      client_request_id: 'idem-1',
     });
 
-    expect(mockFrom).toHaveBeenCalledWith('profiles');
-    expect(mockFrom).toHaveBeenCalledWith('goals');
-    expect(insertCalls.insert).toEqual([
-      {
-        name: 'Goal A',
-        description: 'desc',
-        pic_id: 'p1',
-        period_start: '2026-01-01',
-        period_end: '2026-12-31',
-        organization_id: 'org1',
-        created_by: 'u1',
-      },
-    ]);
-    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledWith('create_goal_idempotent', {
+      p_name: 'Goal A',
+      p_description: 'desc',
+      p_pic_id: 'p1',
+      p_period_start: '2026-01-01',
+      p_period_end: '2026-12-31',
+      p_target_value: undefined,
+      p_client_request_id: 'idem-1',
+    });
+    expect(mockFrom).not.toHaveBeenCalled();
     expect(goal).toEqual({ id: 'g1', name: 'Goal A' });
   });
 
-  it('[2] propagasi error dari INSERT', async () => {
-    const profiles = makeProfilesBuilder('org1');
-    const { builder: insertB } = makeInsertBuilder({ data: null, error: { message: 'rls' } });
-    mockFrom.mockImplementation((table: string) =>
-      table === 'profiles' ? profiles : insertB,
-    );
+  it('[1b] tanpa client_request_id → p_client_request_id undefined (opt-out tetap jalan)', async () => {
+    mockRpc.mockResolvedValue({ data: { id: 'g2' }, error: null });
+    await createGoal({ name: 'x', pic_id: null, period_start: null, period_end: null });
+    expect(mockRpc.mock.calls[0][0]).toBe('create_goal_idempotent');
+    expect((mockRpc.mock.calls[0][1] as { p_client_request_id?: string }).p_client_request_id).toBeUndefined();
+  });
+
+  it('[2] propagasi error dari rpc', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'rls' } });
     await expect(
-      createGoal({
-        name: 'x',
-        pic_id: null,
-        period_start: null,
-        period_end: null,
-      }),
+      createGoal({ name: 'x', pic_id: null, period_start: null, period_end: null }),
     ).rejects.toEqual({ message: 'rls' });
   });
 });

@@ -2648,3 +2648,33 @@ Fix perf dari audit query DB 2026-07-24. `public.workspace_card_progress(uuid[])
 - **Pages updated**: `wiki/index.md` (entry Concepts baru).
 - **Inti spec**: kolom `client_request_id uuid` (nullable) + partial unique index `(organization_id, created_by, client_request_id) where not null` di 5 tabel direct-insert (goals/action_plans/tasks/initiatives/problem_statements); untuk chat, kolom + index di `chat_messages` + param `p_client_request_id` di RPC `send_chat_message` (rewrite 6→7 param, DROP+re-grant ACL). Client generate UUID sekali per submit, reuse antar retry.
 - **Open questions**: (1) RPC `security invoker` vs catch-23505 untuk direct insert (rekomendasi: RPC helper, race-safe); (2) scope key `(org, created_by)`; (3) ketersediaan `crypto.randomUUID()` di Hermes/RN 0.85. Migration `concurrently` di luar txn; nomor migrasi verifikasi vs `origin/staging` (0070 reserved).
+
+## [2026-07-25] update | TDD plan write-idempotency-keys (via /tdd-plan)
+
+- **Pages created**: `wiki/concepts/write-idempotency-keys-tdd-plan.md` (rencana red→green→refactor 11 langkah + mocking per-layer + 10 risiko).
+- **Pages updated**: `wiki/concepts/write-idempotency-keys.md` (koreksi critic), `wiki/index.md`.
+- **Dijalankan**: workflow `/tdd-plan` (8 agent, 0 error, ~793k token). Critic verdict "perlu-perbaikan" — menemukan 1 bug BLOCKING + beberapa koreksi, sudah difold ke spec:
+  1. **BLOCKING**: `chat_messages` pakai kolom `author_id`, BUKAN `sender_id` (0 hit `sender_id` di seluruh migrasi). Index/dedup chat dikoreksi ke `(chat_room_id, author_id, client_request_id)`.
+  2. Index partial **JANGAN `CONCURRENTLY`** — kolom baru nullable = 0 baris cocok → index polos build instan & txn-safe; CONCURRENTLY malah gagalkan gate `supabase start` (txn block).
+  3. Nomor migrasi: `origin/staging @ adca441` tertinggi = **0099** → next **0100** (catatan "0070 reserved" basi; 0070 sudah dipakai).
+  4. `database.types.ts`: hand-edit (MCP generate menyasar staging yang belum punya kolom).
+  5. `crypto.randomUUID()` open-question TERTUTUP: sudah dipakai produksi di `storage.ts` → tak perlu expo-crypto.
+  6. Direct-insert WAJIB tangani 23505→return baris asli (bukan cuma passthrough+index), else AC-1 gagal 5/6 path. Path attachment chat + regresi exact-arg `send()` juga di-flag.
+- **GATE terbuka**: OQ-1 (RPC security-invoker helper vs catch-23505) harus dikunci owner SEBELUM red test — menentukan seluruh test surface.
+
+## [2026-07-26] update | write-idempotency-keys DB layer (Step 1-2) GREEN
+
+- **Files created**: `supabase/migrations/0100_write_idempotency_keys.sql`, `supabase/tests/0100_write_idempotency_keys_contract.sql`.
+- **Files updated**: `supabase/tests/0056_chat_message_context_reply_contract.sql` (pronargs 6→7), `wiki/concepts/write-idempotency-keys.md` (DO NOTHING sync).
+- **RED→GREEN** (local docker DB): contract 0100-DB-1..6 merah (objek absen) → migrasi diterapkan → 6/6 hijau. Regresi 0056/0061 dicek hijau.
+- **Keputusan terkunci**: OQ-1 = RPC `security invoker` helper (Option B). Refinement: `ON CONFLICT DO NOTHING` + re-SELECT (bukan DO UPDATE) → tanpa UPDATE policy / audit churn, race-safe.
+- **Baseline lokal**: DB di 0079, origin/staging di 0099; 0100 di-apply manual (0080-0099 tak sentuh objek fitur). CI replay penuh saat merge.
+- **Sisa**: client layer (types hand-edit, 5 data fn→rpc, hooks, screens, UI tests, refactor). Branch `feat/write-idempotency-keys`.
+
+## [2026-07-26] update | write-idempotency-keys — DB renumber 0103 + client layer SHIPPED (branch)
+
+- **Migration renumber**: 0100 → **0103**. origin/staging sudah punya 0100/0101/0102; cek baseline awal salah baca "highest 0099" karena regex `00[0-9]{2}` tak match "0100"+. `supabase db reset` (replay 0001→0103) yang menangkap tabrakan schema_migrations PK. 0080-0102 tak menyentuh objek fitur → 0103 apply bersih in-sequence.
+- **Client layer** (commit 8addfe5): 5 data fn `create*` → `supabase.rpc('create_*_idempotent')`; `database.types.ts` regen dari local DB @ 0103 (superset bersih); helper `newClientRequestId()` + `useIdempotencyKey()` (mint-once/reuse/reset); hooks + 2 layar create + chat `handleSend` (kedua cabang: plain send + runAttachmentFlow) meneruskan key, reset onSuccess.
+- **Refinement**: RPC pakai `ON CONFLICT DO NOTHING` + re-SELECT (bukan DO UPDATE) — tanpa UPDATE policy / audit churn, race-safe.
+- **Verifikasi**: DB contract 0103-DB-1..6 hijau; regresi 0056 (pronargs 6→7) & 0061 hijau; `npm run type-check` bersih; lint 0 error; **full suite 143 suites / 1833 test hijau**.
+- **Sisa**: buka PR `--base staging`. UI screen test [IDK-AP*/TA*/CH*] dari plan tidak ditulis terpisah — perilaku ter-cover via data-layer passthrough test + chat send() 4th-arg assertion + use-idempotency-key lifecycle test.

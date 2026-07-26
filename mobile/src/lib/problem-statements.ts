@@ -2,7 +2,6 @@
 // lifecycle lewat RPC SECURITY DEFINER. Mirror pola initiatives.ts (Inisiatif) byte-for-byte.
 import { STATUS_TONE } from './cards';
 import type { Tables } from './database.types';
-import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type ProblemStatement = Tables<'problem_statements'>;
@@ -49,17 +48,24 @@ export type NewProblemStatement = {
   impact?: string | null;
   /** UI-S-PR1 — Bukti awal (deskripsi/link bukti problem ini nyata). */
   initial_evidence?: string | null;
+  /** Kunci idempotensi (0103): retry-manual dgn key sama mengembalikan baris asli, bukan duplikat. */
+  client_request_id?: string | null;
 };
 
 export async function createProblemStatement(input: NewProblemStatement): Promise<ProblemStatement> {
-  const { uid, orgId } = await getOrgContext();
-  const { data, error } = await supabase
-    .from('problem_statements')
-    .insert({ ...input, organization_id: orgId, created_by: uid })
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc('create_problem_statement_idempotent', {
+    p_development_area_id: input.development_area_id,
+    p_name: input.name,
+    p_description: input.description ?? undefined,
+    p_pic_id: input.pic_id ?? undefined,
+    p_period_start: input.period_start ?? undefined,
+    p_period_end: input.period_end ?? undefined,
+    p_impact: input.impact ?? undefined,
+    p_initial_evidence: input.initial_evidence ?? undefined,
+    p_client_request_id: input.client_request_id ?? undefined,
+  });
   if (error) throw error;
-  return data;
+  return data as ProblemStatement;
 }
 
 // ---------------------------------------------------------------- RPC (lifecycle)

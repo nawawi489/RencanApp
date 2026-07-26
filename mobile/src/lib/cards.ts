@@ -1,7 +1,6 @@
 // Data layer Fase 1 — Card Engine + Loop Eksekusi.
 // Semua otorisasi ditegakkan di server (RLS + RPC); fungsi di sini hanya pemanggil tipis.
 import type { Tables } from './database.types';
-import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type ActionPlan = Tables<'action_plans'>;
@@ -328,17 +327,25 @@ export type NewActionPlan = {
   problem_statement_id?: string | null;
   /** UI-S-I01 — PRD §21 "Tim" wajib. NULL diizinkan saat Draft. */
   team_id?: string | null;
+  /** Kunci idempotensi (0103): retry-manual dgn key sama mengembalikan baris asli, bukan duplikat. */
+  client_request_id?: string | null;
 };
 
 export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan> {
-  const { uid, orgId } = await getOrgContext();
-  const { data, error } = await supabase
-    .from('action_plans')
-    .insert({ ...input, organization_id: orgId, created_by: uid })
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc('create_action_plan_idempotent', {
+    p_name: input.name,
+    p_target_result: input.target_result ?? undefined,
+    p_pic_id: input.pic_id ?? undefined,
+    p_period_start: input.period_start ?? undefined,
+    p_period_end: input.period_end ?? undefined,
+    p_description: input.description ?? undefined,
+    p_initiative_id: input.initiative_id ?? undefined,
+    p_problem_statement_id: input.problem_statement_id ?? undefined,
+    p_team_id: input.team_id ?? undefined,
+    p_client_request_id: input.client_request_id ?? undefined,
+  });
   if (error) throw error;
-  return data;
+  return data as ActionPlan;
 }
 
 export type NewTask = {
@@ -358,17 +365,30 @@ export type NewTask = {
   /** PRD §22.5 "Bukti yang diminta" — deskripsi apa bukti yang diharapkan PIC sertakan. */
   evidence_description?: string | null;
   description?: string | null;
+  /** Kunci idempotensi (0103): retry-manual dgn key sama mengembalikan baris asli, bukan duplikat. */
+  client_request_id?: string | null;
 };
 
 export async function createTask(input: NewTask): Promise<Tugas> {
-  const { uid, orgId } = await getOrgContext();
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert({ ...input, organization_id: orgId, created_by: uid })
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc('create_task_idempotent', {
+    p_action_plan_id: input.action_plan_id,
+    p_name: input.name,
+    p_pic_id: input.pic_id ?? undefined,
+    p_reviewer_id: input.reviewer_id ?? undefined,
+    p_start_date: input.start_date ?? undefined,
+    p_deadline: input.deadline ?? undefined,
+    p_deadline_time: input.deadline_time ?? undefined,
+    p_expected_output: input.expected_output ?? undefined,
+    p_definition_of_done: input.definition_of_done ?? undefined,
+    p_priority: input.priority ?? undefined,
+    p_evidence_required: input.evidence_required,
+    p_result_value_required: input.result_value_required,
+    p_evidence_description: input.evidence_description ?? undefined,
+    p_description: input.description ?? undefined,
+    p_client_request_id: input.client_request_id ?? undefined,
+  });
   if (error) throw error;
-  return data;
+  return data as Tugas;
 }
 
 // ---------------------------------------------------------------- RPC (lifecycle & loop)

@@ -98,27 +98,33 @@ describe('createProblemStatement', () => {
     period_end: null,
   };
 
-  function setup() {
-    const profiles = makeSingleBuilder({ data: { organization_id: 'org1' }, error: null });
-    const inserts = makeSingleBuilder({ data: { id: 'p-new' }, error: null });
-    mockFrom.mockImplementation((table: string) =>
-      table === 'profiles' ? profiles.builder : inserts.builder,
-    );
-    return { profiles, inserts };
-  }
-
-  it('[5] payload memuat development_area_id + org + created_by', async () => {
-    const { inserts } = setup();
-    await createProblemStatement(base);
-    const payload = (inserts.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect(payload.development_area_id).toBe('d1');
-    expect(payload.organization_id).toBe('org1');
-    expect(payload.created_by).toBe('u1');
+  // 0103: RPC idempoten (org/created_by + auth guard di server), bukan .from().insert()+getOrgContext.
+  it('[5] memanggil rpc create_problem_statement_idempotent dgn param + client_request_id; from tidak dipakai', async () => {
+    mockRpc.mockResolvedValue({ data: { id: 'p-new' }, error: null });
+    const row = await createProblemStatement({
+      ...base,
+      impact: 'high',
+      initial_evidence: 'bukti',
+      client_request_id: 'idem-1',
+    });
+    expect(mockRpc).toHaveBeenCalledWith('create_problem_statement_idempotent', {
+      p_development_area_id: 'd1',
+      p_name: 'Bug X',
+      p_description: undefined,
+      p_pic_id: undefined,
+      p_period_start: undefined,
+      p_period_end: undefined,
+      p_impact: 'high',
+      p_initial_evidence: 'bukti',
+      p_client_request_id: 'idem-1',
+    });
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(row).toEqual({ id: 'p-new' });
   });
 
-  it('[6] tanpa auth user → throw "Not authenticated"', async () => {
-    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
-    await expect(createProblemStatement(base)).rejects.toThrow('Not authenticated');
+  it('[6] propagasi error dari rpc', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
+    await expect(createProblemStatement(base)).rejects.toEqual({ message: 'denied' });
   });
 });
 

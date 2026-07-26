@@ -18,6 +18,7 @@ import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatAttachmentFlow } from '@/hooks/use-chat-attachment-flow';
+import { useIdempotencyKey } from '@/hooks/use-idempotency-key';
 import {
   useChatActions,
   useChatMessages,
@@ -695,6 +696,7 @@ export default function ChatRoomScreen() {
   const { send, markRead, isSending, toggleReaction, isTogglingReaction } =
     useChatActions(safeRoomId);
   const { run: runAttachmentFlow } = useChatAttachmentFlow();
+  const idk = useIdempotencyKey();
   const { profile } = useProfile();
   const { room } = useChatRoom(safeRoomId);
   const { members } = useChatRoomMembers(safeRoomId);
@@ -892,14 +894,17 @@ export default function ChatRoomScreen() {
       if (attachSendingRef.current) return;
       attachSendingRef.current = true;
       try {
+        // Thread the idempotency key through the attachment flow's internal send() so a
+        // retried image message dedups too (0103). Key is reused on retry, reset on success.
         await runAttachmentFlow({
           orgId: profile?.organization_id ?? '',
           roomId: safeRoomId,
           body,
           mentions: collectMentionIds(body, mentions),
           files: pendingFiles,
-          send,
+          send: (b, m, o, opts) => send(b, m, o, { ...opts, clientRequestId: idk.key() }),
         });
+        idk.reset();
         setText('');
         setSelection(undefined);
         setMentions([]);
@@ -922,7 +927,8 @@ export default function ChatRoomScreen() {
     };
     const mentionIds = collectMentionIds(body, mentions);
     try {
-      await send(body, mentionIds, optimistic);
+      await send(body, mentionIds, optimistic, { clientRequestId: idk.key() });
+      idk.reset();
       setText('');
       setSelection(undefined);
       setMentions([]);

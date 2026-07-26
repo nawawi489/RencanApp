@@ -167,6 +167,8 @@ describe('ChatRoomScreen — state dasar (existing)', () => {
         'Pesan baru',
         [],
         expect.objectContaining({ body: 'Pesan baru', author_id: 'me' }),
+        // 0103: idempotency key sebagai arg ke-4 (SendChatMessageOpts).
+        expect.objectContaining({ clientRequestId: expect.any(String) }),
       ),
     );
     await waitFor(() => expect(screen.getByPlaceholderText('Tulis pesan…').props.value).toBe(''));
@@ -604,6 +606,7 @@ describe('ChatRoomScreen — konteks room & @mention', () => {
         'halo @Budi',
         ['u2'],
         expect.objectContaining({ body: 'halo @Budi' }),
+        expect.objectContaining({ clientRequestId: expect.any(String) }),
       ),
     );
   });
@@ -743,7 +746,12 @@ describe('ChatRoomScreen — konteks room & @mention', () => {
     );
     fireEvent.press(screen.getByLabelText('Kirim pesan'));
     await waitFor(() =>
-      expect(mockSend).toHaveBeenCalledWith('halo semua', [], expect.any(Object)),
+      expect(mockSend).toHaveBeenCalledWith(
+        'halo semua',
+        [],
+        expect.any(Object),
+        expect.objectContaining({ clientRequestId: expect.any(String) }),
+      ),
     );
   });
 });

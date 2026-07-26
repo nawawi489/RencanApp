@@ -2,11 +2,13 @@
 // Menguji label maps (murni) + Fase 4: listActionPlans filter initiative_id & createActionPlan passthrough initiative_id.
 const mockFrom = jest.fn();
 const mockGetUser = jest.fn();
+const mockRpc = jest.fn();
 
 jest.mock('../supabase', () => ({
   supabase: {
     auth: { getUser: (...a: unknown[]) => mockGetUser(...a) },
     from: (...a: unknown[]) => mockFrom(...a),
+    rpc: (...a: unknown[]) => mockRpc(...a),
   },
 }));
 
@@ -17,11 +19,13 @@ import {
   STATUS_TONE,
   countCompletedTasksInPeriod,
   createActionPlan,
+  createTask,
   getPersonRef,
   listActionPlans,
   listActionPlansByProblemStatementIds,
   listStrategyResultValueSources,
   type NewActionPlan,
+  type NewTask,
 } from '../cards';
 
 /** Builder thenable: metode chainable kembalikan builder; await resolve di titik mana pun. */
@@ -57,6 +61,7 @@ function makeSingleBuilder(result: { data: unknown; error: unknown }) {
 beforeEach(() => {
   mockFrom.mockReset();
   mockGetUser.mockReset();
+  mockRpc.mockReset();
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
 });
 
@@ -129,7 +134,7 @@ describe('listActionPlans — filter initiative_id (Fase 4)', () => {
   });
 });
 
-describe('createActionPlan — passthrough initiative_id (Fase 4)', () => {
+describe('createActionPlan — passthrough via RPC idempoten (Fase 4 / 0103)', () => {
   const base: NewActionPlan = {
     name: 'Init',
     target_result: null,
@@ -137,49 +142,77 @@ describe('createActionPlan — passthrough initiative_id (Fase 4)', () => {
     period_start: null,
     period_end: null,
   };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
 
-  function setup() {
-    const profiles = makeSingleBuilder({ data: { organization_id: 'org1' }, error: null });
-    const inits = makeSingleBuilder({ data: { id: 'i-new' }, error: null });
-    mockFrom.mockImplementation((table: string) => (table === 'profiles' ? profiles.builder : inits.builder));
-    return { profiles, inits };
-  }
+  beforeEach(() => mockRpc.mockResolvedValue({ data: { id: 'i-new' }, error: null }));
 
-  it('[8] meneruskan initiative_id ke payload INSERT + org & created_by', async () => {
-    const { inits } = setup();
-    await createActionPlan({ ...base, initiative_id: 's1' });
-    const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect(payload.initiative_id).toBe('s1');
-    expect(payload.organization_id).toBe('org1');
-    expect(payload.created_by).toBe('u1');
+  it('[8] meneruskan initiative_id + client_request_id ke create_action_plan_idempotent; from tidak dipakai', async () => {
+    await createActionPlan({ ...base, initiative_id: 's1', client_request_id: 'idem-1' });
+    expect(mockRpc.mock.calls[0][0]).toBe('create_action_plan_idempotent');
+    expect(rpcArgs().p_initiative_id).toBe('s1');
+    expect(rpcArgs().p_client_request_id).toBe('idem-1');
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 
-  it('[9] initiative_id:null eksplisit tetap diteruskan (backward-compat datar)', async () => {
-    const { inits } = setup();
+  it('[9] initiative_id:null → p_initiative_id undefined (RPC default null; hasil sama)', async () => {
     await createActionPlan({ ...base, initiative_id: null });
-    const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect(payload.initiative_id).toBeNull();
+    expect(rpcArgs().p_initiative_id).toBeUndefined();
   });
 
-  it('[10] tanpa initiative_id → payload tidak memuat field itu (Fase 1 tak berubah)', async () => {
-    const { inits } = setup();
+  it('[10] tanpa initiative_id → p_initiative_id undefined (Fase 1 tak berubah)', async () => {
     await createActionPlan(base);
-    const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect('initiative_id' in payload).toBe(false);
+    expect(rpcArgs().p_initiative_id).toBeUndefined();
   });
 
-  it('[10a] meneruskan problem_statement_id ke payload INSERT (Fase 6)', async () => {
-    const { inits } = setup();
+  it('[10a] meneruskan problem_statement_id ke RPC (Fase 6)', async () => {
     await createActionPlan({ ...base, problem_statement_id: 'ps1' });
-    const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect(payload.problem_statement_id).toBe('ps1');
+    expect(rpcArgs().p_problem_statement_id).toBe('ps1');
   });
 
-  it('[10b] tanpa problem_statement_id → payload tidak memuat field itu', async () => {
-    const { inits } = setup();
+  it('[10b] tanpa problem_statement_id → p_problem_statement_id undefined', async () => {
     await createActionPlan(base);
-    const payload = (inits.calls.insert as unknown[])[0] as Record<string, unknown>;
-    expect('problem_statement_id' in payload).toBe(false);
+    expect(rpcArgs().p_problem_statement_id).toBeUndefined();
+  });
+
+  it('[10c] propagasi error dari rpc', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'rls' } });
+    await expect(createActionPlan(base)).rejects.toEqual({ message: 'rls' });
+  });
+});
+
+describe('createTask — passthrough via RPC idempoten (0103)', () => {
+  const base: NewTask = {
+    action_plan_id: 'ap1',
+    name: 'Tugas',
+    pic_id: null,
+    reviewer_id: null,
+    start_date: null,
+    deadline: null,
+    expected_output: null,
+    definition_of_done: null,
+    priority: null,
+    evidence_required: false,
+    result_value_required: false,
+  };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
+
+  beforeEach(() => mockRpc.mockResolvedValue({ data: { id: 't-new' }, error: null }));
+
+  it('[ID-2] memanggil create_task_idempotent dgn action_plan_id + booleans + client_request_id; from tidak dipakai', async () => {
+    const task = await createTask({ ...base, evidence_required: true, client_request_id: 'idem-2' });
+    expect(mockRpc.mock.calls[0][0]).toBe('create_task_idempotent');
+    expect(rpcArgs().p_action_plan_id).toBe('ap1');
+    expect(rpcArgs().p_name).toBe('Tugas');
+    expect(rpcArgs().p_evidence_required).toBe(true);
+    expect(rpcArgs().p_result_value_required).toBe(false);
+    expect(rpcArgs().p_client_request_id).toBe('idem-2');
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(task).toEqual({ id: 't-new' });
+  });
+
+  it('[ID-2b] tanpa client_request_id → p_client_request_id undefined', async () => {
+    await createTask(base);
+    expect(rpcArgs().p_client_request_id).toBeUndefined();
   });
 });
 

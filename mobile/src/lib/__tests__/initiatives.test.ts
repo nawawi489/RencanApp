@@ -32,19 +32,6 @@ function makeQueryThenable(result: { data: unknown; error: unknown }) {
   return { builder, calls };
 }
 
-/** Builder untuk profiles: .select().eq().single() → Promise (single resolve). */
-function makeProfilesBuilder(organizationId: string) {
-  const builder: Record<string, unknown> = {};
-  builder.select = jest.fn(() => builder);
-  builder.eq = jest.fn(() => builder);
-  // getOrgContext memakai maybeSingle (profil 0 baris → null, bukan 406).
-  const resolveProfile = () =>
-    Promise.resolve({ data: { organization_id: organizationId }, error: null });
-  builder.single = jest.fn(resolveProfile);
-  builder.maybeSingle = jest.fn(resolveProfile);
-  return builder;
-}
-
 beforeEach(() => {
   mockRpc.mockReset();
   mockFrom.mockReset();
@@ -65,39 +52,32 @@ const NEW: Parameters<typeof createInitiative>[0] = {
 };
 
 describe('createInitiative', () => {
-  it('[1] INSERT memuat strategy_id + field kedalaman + organization_id + created_by; rpc tidak dipanggil', async () => {
-    const profiles = makeProfilesBuilder('org1');
-    const { builder, calls } = makeQueryThenable({ data: { id: 's1' }, error: null });
-    mockFrom.mockImplementation((table: string) => (table === 'profiles' ? profiles : builder));
+  // 0103: RPC idempoten (org/created_by diturunkan server-side), bukan .from('initiatives').insert();
+  // client_request_id diteruskan sebagai p_client_request_id.
+  it('[1] memanggil rpc create_initiative_idempotent dgn param + client_request_id; from tidak dipakai', async () => {
+    mockRpc.mockResolvedValue({ data: { id: 's1' }, error: null });
 
-    const result = await createInitiative(NEW);
+    const result = await createInitiative({ ...NEW, client_request_id: 'idem-1' });
 
-    expect(mockFrom).toHaveBeenCalledWith('profiles');
-    expect(mockFrom).toHaveBeenCalledWith('initiatives');
-    expect(calls.insert).toEqual([
-      {
-        strategy_id: 'k1',
-        name: 'Strategi A',
-        description: 'desc',
-        reason: 'alasan',
-        main_risk: 'risiko',
-        alternative: 'alt',
-        pic_id: 'p1',
-        period_start: '2026-01-01',
-        period_end: '2026-12-31',
-        organization_id: 'org1',
-        created_by: 'u1',
-      },
-    ]);
-    expect(calls.select).toEqual(['*']);
-    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledWith('create_initiative_idempotent', {
+      p_strategy_id: 'k1',
+      p_name: 'Strategi A',
+      p_description: 'desc',
+      p_reason: 'alasan',
+      p_main_risk: 'risiko',
+      p_alternative: 'alt',
+      p_pic_id: 'p1',
+      p_period_start: '2026-01-01',
+      p_period_end: '2026-12-31',
+      p_contribution_pct: undefined,
+      p_client_request_id: 'idem-1',
+    });
+    expect(mockFrom).not.toHaveBeenCalled();
     expect(result).toEqual({ id: 's1' });
   });
 
-  it('[2] propagasi error dari INSERT', async () => {
-    const profiles = makeProfilesBuilder('org1');
-    const { builder } = makeQueryThenable({ data: null, error: { message: 'insert gagal' } });
-    mockFrom.mockImplementation((table: string) => (table === 'profiles' ? profiles : builder));
+  it('[2] propagasi error dari rpc', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'insert gagal' } });
     await expect(createInitiative(NEW)).rejects.toEqual({ message: 'insert gagal' });
   });
 });

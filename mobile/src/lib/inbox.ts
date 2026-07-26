@@ -125,6 +125,8 @@ export type SendChatMessageOpts = {
   contextActionPlan?: string;
   replyTo?: string;
   attachments?: ChatAttachment[];
+  /** Kunci idempotensi (0103): retry-manual dgn key sama mengembalikan pesan asli, bukan duplikat. */
+  clientRequestId?: string;
 };
 
 /** Kirim pesan. mentions = id user (hanya yang anggota room yang diproses server). */
@@ -141,6 +143,7 @@ export async function sendChatMessage(
     p_attachments: opts?.attachments ?? undefined,
     p_context_action_plan: opts?.contextActionPlan ?? undefined,
     p_reply_to: opts?.replyTo ?? undefined,
+    p_client_request_id: opts?.clientRequestId ?? undefined,
   });
   if (error) throw error;
   return data as string;
