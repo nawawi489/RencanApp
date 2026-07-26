@@ -2670,3 +2670,11 @@ Fix perf dari audit query DB 2026-07-24. `public.workspace_card_progress(uuid[])
 - **Keputusan terkunci**: OQ-1 = RPC `security invoker` helper (Option B). Refinement: `ON CONFLICT DO NOTHING` + re-SELECT (bukan DO UPDATE) → tanpa UPDATE policy / audit churn, race-safe.
 - **Baseline lokal**: DB di 0079, origin/staging di 0099; 0100 di-apply manual (0080-0099 tak sentuh objek fitur). CI replay penuh saat merge.
 - **Sisa**: client layer (types hand-edit, 5 data fn→rpc, hooks, screens, UI tests, refactor). Branch `feat/write-idempotency-keys`.
+
+## [2026-07-26] update | write-idempotency-keys — DB renumber 0103 + client layer SHIPPED (branch)
+
+- **Migration renumber**: 0100 → **0103**. origin/staging sudah punya 0100/0101/0102; cek baseline awal salah baca "highest 0099" karena regex `00[0-9]{2}` tak match "0100"+. `supabase db reset` (replay 0001→0103) yang menangkap tabrakan schema_migrations PK. 0080-0102 tak menyentuh objek fitur → 0103 apply bersih in-sequence.
+- **Client layer** (commit 8addfe5): 5 data fn `create*` → `supabase.rpc('create_*_idempotent')`; `database.types.ts` regen dari local DB @ 0103 (superset bersih); helper `newClientRequestId()` + `useIdempotencyKey()` (mint-once/reuse/reset); hooks + 2 layar create + chat `handleSend` (kedua cabang: plain send + runAttachmentFlow) meneruskan key, reset onSuccess.
+- **Refinement**: RPC pakai `ON CONFLICT DO NOTHING` + re-SELECT (bukan DO UPDATE) — tanpa UPDATE policy / audit churn, race-safe.
+- **Verifikasi**: DB contract 0103-DB-1..6 hijau; regresi 0056 (pronargs 6→7) & 0061 hijau; `npm run type-check` bersih; lint 0 error; **full suite 143 suites / 1833 test hijau**.
+- **Sisa**: buka PR `--base staging`. UI screen test [IDK-AP*/TA*/CH*] dari plan tidak ditulis terpisah — perilaku ter-cover via data-layer passthrough test + chat send() 4th-arg assertion + use-idempotency-key lifecycle test.
