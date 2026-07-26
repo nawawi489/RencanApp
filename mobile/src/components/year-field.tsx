@@ -29,6 +29,9 @@ export function YearField({
 }: Props) {
   const parsed = /^\d{4}$/.test(value) ? Number(value) : CURRENT_YEAR;
   const year = Math.min(max, Math.max(min, parsed));
+  // A11y: `*` merah tak terdengar → sisipkan " wajib" di label identitas field (kontrol nilai
+  // utama). Tombol −/+/edit membawa nama aksi, bukan identitas, jadi tetap pakai `label` polos.
+  const fieldLabel = required ? `${label} wajib` : label;
   const canDec = year > min;
   const canInc = year < max;
 
@@ -92,7 +95,7 @@ export function YearField({
         ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${label}: ${year} — ketuk untuk mengubah`}
+            accessibilityLabel={`${fieldLabel}: ${year} — ketuk untuk mengubah`}
             onPress={startEdit}
             className="min-h-[44px] flex-1 items-center justify-center rounded-xl border border-neutral-300 px-4 active:opacity-70 dark:border-neutral-700">
             <Text className="text-base font-semibold text-black dark:text-white">{year}</Text>
