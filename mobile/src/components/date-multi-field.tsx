@@ -15,6 +15,9 @@ type Props = {
 
 export function DateMultiField({ label, values, onChange, required }: Props) {
   const [draft, setDraft] = useState('');
+  // A11y: `*` merah tak terdengar → sisipkan " wajib" di ringkasan grup (satu-satunya node
+  // ber-label yang membawa identitas field). Nested DateField "Tambah tanggal" tak wajib.
+  const fieldLabel = required ? `${label} wajib` : label;
 
   function addDraft() {
     if (!DATE_RE.test(draft)) return;
@@ -38,7 +41,7 @@ export function DateMultiField({ label, values, onChange, required }: Props) {
         {required ? <Text className="text-red-500"> *</Text> : null}
       </Text>
       {values.length > 0 ? (
-        <View className="flex-row flex-wrap gap-2" accessibilityLabel={`${label} — ${values.length} tanggal terpilih`}>
+        <View className="flex-row flex-wrap gap-2" accessibilityLabel={`${fieldLabel} — ${values.length} tanggal terpilih`}>
           {values.map((d) => (
             <Pressable
               key={d}

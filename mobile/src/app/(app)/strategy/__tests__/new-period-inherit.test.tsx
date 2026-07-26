@@ -77,9 +77,9 @@ async function renderAndFill(periodLabel: string) {
   await screen.findByText(periodLabel);
   // setState dari fireEvent butuh flush eksplisit sebelum event berikutnya (pola [E0]
   // di inbox/[roomId].test.tsx) — tanpa await, submit membaca state kosong.
-  await typeInto('Nama Strategi', 'Pertumbuhan Pendapatan');
-  await typeInto('Target', 'Naik 20% YoY');
-  await typeInto('Ekspektasi Hasil', 'Pendapatan naik');
+  await typeInto('Nama Strategi wajib', 'Pertumbuhan Pendapatan');
+  await typeInto('Target wajib', 'Naik 20% YoY');
+  await typeInto('Ekspektasi Hasil wajib', 'Pendapatan naik');
 }
 
 async function typeInto(label: string, text: string) {

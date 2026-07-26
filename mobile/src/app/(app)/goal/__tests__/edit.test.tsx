@@ -93,7 +93,7 @@ describe('Ubah Goal', () => {
   it('[D-02] Goal aktif → periode & target dikirim apa adanya, target null tetap null', async () => {
     await render(<EditGoalRoute />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama Goal'), 'Nama diperbarui');
+    fireEvent.changeText(await screen.findByLabelText('Nama Goal wajib'), 'Nama diperbarui');
     fireEvent.press(await screen.findByLabelText('Simpan perubahan'));
 
     await waitFor(() =>
@@ -134,7 +134,7 @@ describe('Ubah Goal', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<EditGoalRoute />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama Goal'), '   ');
+    fireEvent.changeText(await screen.findByLabelText('Nama Goal wajib'), '   ');
     fireEvent.press(await screen.findByLabelText('Simpan perubahan'));
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
@@ -155,6 +155,6 @@ describe('Ubah Goal', () => {
     await render(<EditGoalRoute />, { wrapper: wrapper() });
 
     expect(await screen.findByText(/tidak ditemukan/i)).toBeTruthy();
-    expect(screen.queryByLabelText('Nama Goal')).toBeNull();
+    expect(screen.queryByLabelText('Nama Goal wajib')).toBeNull();
   });
 });

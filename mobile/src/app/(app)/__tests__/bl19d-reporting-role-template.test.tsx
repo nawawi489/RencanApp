@@ -168,9 +168,9 @@ describe('Tambah User — Role Template kustom', () => {
   it('[D-06] template kustom ikut terkirim ke createUser', async () => {
     await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama lengkap'), 'Orang Baru');
-    fireEvent.changeText(await screen.findByLabelText('Email'), 'baru@x.id');
-    fireEvent.changeText(await screen.findByLabelText('Password sementara'), 'rahasia123');
+    fireEvent.changeText(await screen.findByLabelText('Nama lengkap wajib'), 'Orang Baru');
+    fireEvent.changeText(await screen.findByLabelText('Email wajib'), 'baru@x.id');
+    fireEvent.changeText(await screen.findByLabelText('Password sementara wajib'), 'rahasia123');
 
     fireEvent.press(await screen.findByLabelText('Role Template (opsional): belum dipilih'));
     fireEvent.press(await screen.findByLabelText('Sales Lead'));
@@ -186,9 +186,9 @@ describe('Tambah User — Role Template kustom', () => {
   it('[D-07] tanpa memilih template tetap boleh — terkirim null', async () => {
     await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama lengkap'), 'Orang Baru');
-    fireEvent.changeText(await screen.findByLabelText('Email'), 'baru@x.id');
-    fireEvent.changeText(await screen.findByLabelText('Password sementara'), 'rahasia123');
+    fireEvent.changeText(await screen.findByLabelText('Nama lengkap wajib'), 'Orang Baru');
+    fireEvent.changeText(await screen.findByLabelText('Email wajib'), 'baru@x.id');
+    fireEvent.changeText(await screen.findByLabelText('Password sementara wajib'), 'rahasia123');
     fireEvent.press(await screen.findByLabelText('Buat User'));
 
     await waitFor(() =>

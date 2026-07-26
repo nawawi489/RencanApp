@@ -52,9 +52,9 @@ beforeEach(() => {
 
 async function fillValidForm() {
   await act(async () => {
-    fireEvent.changeText(screen.getByLabelText('Nama lengkap'), 'Rina Jaya');
-    fireEvent.changeText(screen.getByLabelText('Email'), 'Rina@N.ID');
-    fireEvent.changeText(screen.getByLabelText('Password sementara'), 'rahasia123');
+    fireEvent.changeText(screen.getByLabelText('Nama lengkap wajib'),'Rina Jaya');
+    fireEvent.changeText(screen.getByLabelText('Email wajib'),'Rina@N.ID');
+    fireEvent.changeText(screen.getByLabelText('Password sementara wajib'),'rahasia123');
   });
 }
 
@@ -77,8 +77,8 @@ describe('SettingsUserNewScreen', () => {
   it('[U-UI-03] email tidak valid → alert, createUser tak dipanggil', async () => {
     await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Nama lengkap'), 'Rina');
-      fireEvent.changeText(screen.getByLabelText('Email'), 'bukan-email');
+      fireEvent.changeText(screen.getByLabelText('Nama lengkap wajib'),'Rina');
+      fireEvent.changeText(screen.getByLabelText('Email wajib'),'bukan-email');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Buat User'));
@@ -90,9 +90,9 @@ describe('SettingsUserNewScreen', () => {
   it('[U-UI-04] password < 8 karakter → alert, createUser tak dipanggil', async () => {
     await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Nama lengkap'), 'Rina');
-      fireEvent.changeText(screen.getByLabelText('Email'), 'rina@n.id');
-      fireEvent.changeText(screen.getByLabelText('Password sementara'), 'pendek');
+      fireEvent.changeText(screen.getByLabelText('Nama lengkap wajib'),'Rina');
+      fireEvent.changeText(screen.getByLabelText('Email wajib'),'rina@n.id');
+      fireEvent.changeText(screen.getByLabelText('Password sementara wajib'),'pendek');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Buat User'));

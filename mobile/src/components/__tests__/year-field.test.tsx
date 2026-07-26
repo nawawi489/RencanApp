@@ -7,7 +7,8 @@ describe('YearField', () => {
   it('menampilkan tahun terpilih & marker required', async () => {
     await render(<YearField label="Tahun Goal" value="2026" onChange={jest.fn()} required />);
     expect(screen.getByText('2026')).toBeTruthy();
-    expect(screen.getByLabelText(/Tahun Goal: 2026/)).toBeTruthy();
+    // required → identitas field mengumumkan " wajib" (bukan hanya `*` merah visual).
+    expect(screen.getByLabelText(/Tahun Goal wajib: 2026/)).toBeTruthy();
     expect(screen.getByText('*')).toBeTruthy();
   });
 

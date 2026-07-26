@@ -23,16 +23,25 @@ export function StatTile({
   textCls: string;
   size?: 'sm' | 'md';
 }) {
+  // A11y: gabungkan label+nilai jadi satu node ("label: value") agar tiap metrik = satu swipe
+  // pembaca layar, bukan dua potong terpisah (DESIGN §4).
+  const a11yLabel = `${label}: ${value}`;
   if (size === 'md') {
     return (
-      <View className={`flex-1 gap-0.5 rounded-lg px-3 py-2 ${containerCls}`}>
+      <View
+        className={`flex-1 gap-0.5 rounded-lg px-3 py-2 ${containerCls}`}
+        accessible
+        accessibilityLabel={a11yLabel}>
         <Text className={`text-[10px] ${textCls}`}>{label}</Text>
         <Text className={`text-base font-bold ${textCls}`}>{value}</Text>
       </View>
     );
   }
   return (
-    <View className={`rounded-lg px-3 py-1.5 ${containerCls}`}>
+    <View
+      className={`rounded-lg px-3 py-1.5 ${containerCls}`}
+      accessible
+      accessibilityLabel={a11yLabel}>
       <Text className={`text-[10px] ${textCls}`}>{label}</Text>
       <Text className={`text-sm font-semibold ${textCls}`}>{value}</Text>
     </View>

@@ -101,7 +101,7 @@ describe('layar anggota Tim', () => {
     await render(<SettingsTeamMembersScreen />, { wrapper: wrapper() });
 
     fireEvent.press(await screen.findByLabelText('+ Anggota Baru'));
-    fireEvent.press(await screen.findByLabelText('Anggota: belum dipilih'));
+    fireEvent.press(await screen.findByLabelText('Anggota wajib: belum dipilih'));
     fireEvent.press(await screen.findByLabelText('Dewi'));
     fireEvent.changeText(await screen.findByLabelText('Peran di Tim'), 'Koordinator');
     fireEvent.press(await screen.findByLabelText('Tambahkan ke Tim'));
@@ -123,7 +123,7 @@ describe('layar anggota Tim', () => {
     await render(<SettingsTeamMembersScreen />, { wrapper: wrapper() });
 
     fireEvent.press(await screen.findByLabelText('+ Anggota Baru'));
-    fireEvent.press(await screen.findByLabelText('Anggota: belum dipilih'));
+    fireEvent.press(await screen.findByLabelText('Anggota wajib: belum dipilih'));
 
     // RPC menolak duplikat lewat unique(team_id, profile_id) — menawarkan pilihan
     // yang pasti gagal itu jebakan, bukan kelonggaran.

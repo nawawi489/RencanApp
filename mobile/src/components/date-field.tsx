@@ -82,6 +82,9 @@ export function DateField({
   const placeholderColor = usePlaceholderColor();
   const { effective } = useThemePreference();
   const a11yLabel = accessibilityLabel ?? label;
+  // A11y: `*` merah tak terdengar pembaca layar → sisipkan " wajib" di label field.
+  // Web memakai aria-required (semantik native), jadi hanya jalur RN yang menambah teks.
+  const fieldLabel = required ? `${a11yLabel} wajib` : a11yLabel;
   const buttonPlaceholder = placeholder ?? 'Pilih tanggal';
   const inputPlaceholder = placeholder ?? DATE_HINT;
   const current = parseISODate(value) ?? new Date();
@@ -166,7 +169,7 @@ export function DateField({
         </Text>
         {chips}
         <TextInput
-          accessibilityLabel={a11yLabel}
+          accessibilityLabel={fieldLabel}
           className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
           placeholder={inputPlaceholder}
           placeholderTextColor={placeholderColor}
@@ -187,7 +190,7 @@ export function DateField({
       {chips}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${a11yLabel}: ${value || buttonPlaceholder}`}
+        accessibilityLabel={`${fieldLabel}: ${value || buttonPlaceholder}`}
         onPress={() => setShow(true)}
         className="min-h-[44px] justify-center rounded-xl border border-neutral-300 px-4 py-3 active:opacity-70 dark:border-neutral-700">
         <Text className={value ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
@@ -199,6 +202,7 @@ export function DateField({
         <Modal transparent animationType="slide" onRequestClose={() => setShow(false)}>
           <Pressable
             className="flex-1 bg-black/50"
+            accessibilityRole="button"
             accessibilityLabel="Tutup pemilih tanggal"
             onPress={() => setShow(false)}
           />

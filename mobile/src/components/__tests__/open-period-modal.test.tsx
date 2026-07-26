@@ -37,9 +37,9 @@ async function renderModal(onClose = jest.fn()) {
 
 async function fillValidForm() {
   await act(async () => {
-    fireEvent.changeText(screen.getByLabelText('Nama Periode'), 'Juli 2026');
-    fireEvent.changeText(screen.getByLabelText('Tanggal Mulai'), '2026-07-01');
-    fireEvent.changeText(screen.getByLabelText('Tanggal Selesai'), '2026-07-31');
+    fireEvent.changeText(screen.getByLabelText('Nama Periode wajib'), 'Juli 2026');
+    fireEvent.changeText(screen.getByLabelText('Tanggal Mulai wajib'), '2026-07-01');
+    fireEvent.changeText(screen.getByLabelText('Tanggal Selesai wajib'), '2026-07-31');
   });
 }
 
@@ -49,16 +49,16 @@ const CONFIRM = 'Saya paham, buka periode ini';
 describe('OpenPeriodModal — langkah 1 (formulir)', () => {
   it('[T-OP-M-1] render formulir: nama + rentang tanggal', async () => {
     await renderModal();
-    expect(screen.getByLabelText('Nama Periode')).toBeTruthy();
-    expect(screen.getByLabelText('Tanggal Mulai')).toBeTruthy();
-    expect(screen.getByLabelText('Tanggal Selesai')).toBeTruthy();
+    expect(screen.getByLabelText('Nama Periode wajib')).toBeTruthy();
+    expect(screen.getByLabelText('Tanggal Mulai wajib')).toBeTruthy();
+    expect(screen.getByLabelText('Tanggal Selesai wajib')).toBeTruthy();
   });
 
   it('[T-OP-M-2] nama kosong → Lanjut tidak memindahkan ke konfirmasi', async () => {
     await renderModal();
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai'), '2026-07-01');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai'), '2026-07-31');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai wajib'), '2026-07-01');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai wajib'), '2026-07-31');
     });
     await act(async () => { fireEvent.press(screen.getByLabelText(NEXT)); });
     expect(screen.queryByLabelText(CONFIRM)).toBeNull();
@@ -67,9 +67,9 @@ describe('OpenPeriodModal — langkah 1 (formulir)', () => {
   it('[T-OP-M-3] nama hanya spasi → ditolak (server hanya cek NOT NULL)', async () => {
     await renderModal();
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Nama Periode'), '   ');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai'), '2026-07-01');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai'), '2026-07-31');
+      fireEvent.changeText(screen.getByLabelText('Nama Periode wajib'), '   ');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai wajib'), '2026-07-01');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai wajib'), '2026-07-31');
     });
     await act(async () => { fireEvent.press(screen.getByLabelText(NEXT)); });
     expect(screen.queryByLabelText(CONFIRM)).toBeNull();
@@ -78,8 +78,8 @@ describe('OpenPeriodModal — langkah 1 (formulir)', () => {
   it('[T-OP-M-4] tanggal belum lengkap → ditolak', async () => {
     await renderModal();
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Nama Periode'), 'Juli 2026');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai'), '2026-07-01');
+      fireEvent.changeText(screen.getByLabelText('Nama Periode wajib'), 'Juli 2026');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai wajib'), '2026-07-01');
     });
     await act(async () => { fireEvent.press(screen.getByLabelText(NEXT)); });
     expect(screen.queryByLabelText(CONFIRM)).toBeNull();
@@ -88,9 +88,9 @@ describe('OpenPeriodModal — langkah 1 (formulir)', () => {
   it('[T-OP-M-5] selesai < mulai → ditolak + pesan rentang tampil', async () => {
     await renderModal();
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Nama Periode'), 'Juli 2026');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai'), '2026-07-31');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai'), '2026-07-01');
+      fireEvent.changeText(screen.getByLabelText('Nama Periode wajib'), 'Juli 2026');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai wajib'), '2026-07-31');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai wajib'), '2026-07-01');
     });
     expect(screen.getByText(/tidak boleh sebelum tanggal mulai/i)).toBeTruthy();
     await act(async () => { fireEvent.press(screen.getByLabelText(NEXT)); });
@@ -100,9 +100,9 @@ describe('OpenPeriodModal — langkah 1 (formulir)', () => {
   it('[T-OP-M-6] periode 1 hari (mulai == selesai) DIIZINKAN — CHECK DB period_end >= period_start', async () => {
     await renderModal();
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Nama Periode'), 'Hari Tunggal');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai'), '2026-07-01');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai'), '2026-07-01');
+      fireEvent.changeText(screen.getByLabelText('Nama Periode wajib'), 'Hari Tunggal');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai wajib'), '2026-07-01');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai wajib'), '2026-07-01');
     });
     await act(async () => { fireEvent.press(screen.getByLabelText(NEXT)); });
     expect(screen.getByLabelText(CONFIRM)).toBeTruthy();
@@ -134,16 +134,16 @@ describe('OpenPeriodModal — langkah 2 (konfirmasi ireversibel)', () => {
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Kembali ke formulir periode'));
     });
-    expect(screen.getByLabelText('Nama Periode').props.value).toBe('Juli 2026');
-    expect(screen.getByLabelText('Tanggal Mulai').props.value).toBe('2026-07-01');
+    expect(screen.getByLabelText('Nama Periode wajib').props.value).toBe('Juli 2026');
+    expect(screen.getByLabelText('Tanggal Mulai wajib').props.value).toBe('2026-07-01');
   });
 
   it('[T-OP-M-10] konfirmasi → openPeriod dipanggil dengan payload trimmed', async () => {
     await renderModal();
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Nama Periode'), '  Juli 2026  ');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai'), '2026-07-01');
-      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai'), '2026-07-31');
+      fireEvent.changeText(screen.getByLabelText('Nama Periode wajib'), '  Juli 2026  ');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Mulai wajib'), '2026-07-01');
+      fireEvent.changeText(screen.getByLabelText('Tanggal Selesai wajib'), '2026-07-31');
     });
     await act(async () => { fireEvent.press(screen.getByLabelText(NEXT)); });
     await act(async () => { fireEvent.press(screen.getByLabelText(CONFIRM)); });

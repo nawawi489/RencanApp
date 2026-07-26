@@ -77,7 +77,7 @@ describe('Profil Saya', () => {
   it('[C-01] nama tersimpan ter-trim', async () => {
     await render(<SettingsProfileScreen />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama lengkap'), '  Siti Rahmawati  ');
+    fireEvent.changeText(await screen.findByLabelText('Nama lengkap wajib'), '  Siti Rahmawati  ');
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
     await waitFor(() => expect(mockUpdateOwnProfile).toHaveBeenCalledWith('Siti Rahmawati'));
@@ -90,7 +90,7 @@ describe('Profil Saya', () => {
 
     // Whitespace, bukan string kosong: `trim` di klien mencerminkan `trim` di RPC, jadi
     // nama tak terlihat tidak pernah sampai ke DB maupun ke round-trip yang sia-sia.
-    fireEvent.changeText(await screen.findByLabelText('Nama lengkap'), '   ');
+    fireEvent.changeText(await screen.findByLabelText('Nama lengkap wajib'), '   ');
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
@@ -102,7 +102,7 @@ describe('Profil Saya', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<SettingsProfileScreen />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama lengkap'), 'x'.repeat(121));
+    fireEvent.changeText(await screen.findByLabelText('Nama lengkap wajib'), 'x'.repeat(121));
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
@@ -130,13 +130,13 @@ describe('Profil Organisasi', () => {
     await render(<SettingsOrganizationScreen />, { wrapper: wrapper() });
 
     expect(await screen.findByText(/tidak memiliki akses/i)).toBeTruthy();
-    expect(screen.queryByLabelText('Nama Organisasi')).toBeNull();
+    expect(screen.queryByLabelText('Nama Organisasi wajib')).toBeNull();
   });
 
   it('[C-06] simpan mengirim nama ter-trim + zona waktu', async () => {
     await render(<SettingsOrganizationScreen />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama Organisasi'), '  PT Rencana Nusantara ');
+    fireEvent.changeText(await screen.findByLabelText('Nama Organisasi wajib'), '  PT Rencana Nusantara ');
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
     await waitFor(() =>
@@ -153,7 +153,7 @@ describe('Profil Organisasi', () => {
 
     // Server menerima zona apa pun dari katalog Postgres; picker yang hanya kenal 3 zona
     // Indonesia tidak boleh jadi alasan nilai tersimpan lenyap saat layar dibuka.
-    expect(await screen.findByLabelText('Zona waktu: Asia/Kuala_Lumpur')).toBeTruthy();
+    expect(await screen.findByLabelText('Zona waktu wajib: Asia/Kuala_Lumpur')).toBeTruthy();
 
     fireEvent.press(await screen.findByLabelText('Simpan'));
     await waitFor(() =>
@@ -168,7 +168,7 @@ describe('Profil Organisasi', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<SettingsOrganizationScreen />, { wrapper: wrapper() });
 
-    fireEvent.changeText(await screen.findByLabelText('Nama Organisasi'), '  ');
+    fireEvent.changeText(await screen.findByLabelText('Nama Organisasi wajib'), '  ');
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
