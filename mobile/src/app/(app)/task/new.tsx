@@ -12,6 +12,7 @@ import { MonthDaysPicker } from '@/components/month-days-picker';
 import { TimeField } from '@/components/time-field';
 import { UserPicker } from '@/components/user-picker';
 import { PRIORITY_LABEL, createTask, getActionPlan, type PersonRef } from '@/lib/cards';
+import { useIdempotencyKey } from '@/hooks/use-idempotency-key';
 import { alertFriendlyError } from '@/lib/errors';
 import { DATE_HINT, DATE_RE, TIME_RE } from '@/lib/date';
 import { invalidateHomeQueries } from '@/lib/home-queries';
@@ -185,6 +186,7 @@ export function LiveNewTaskScreen() {
     setWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
   }
 
+  const idk = useIdempotencyKey();
   const mutation = useMutation({
     mutationFn: async () => {
       const ap = await createTask({
@@ -201,6 +203,7 @@ export function LiveNewTaskScreen() {
         priority,
         evidence_required: evidenceRequired,
         result_value_required: resultRequired,
+        client_request_id: idk.key(),
       });
       if (repeat) {
         await setRepeatRule(ap.id, {
@@ -218,6 +221,7 @@ export function LiveNewTaskScreen() {
       return ap;
     },
     onSuccess: () => {
+      idk.reset();
       qc.invalidateQueries({ queryKey: ['action-plans', actionPlanId] });
       // Tugas baru muncul di Home ("Task Hari Ini" / mendekati deadline) → segarkan.
       invalidateHomeQueries(qc);

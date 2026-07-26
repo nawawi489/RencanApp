@@ -3,7 +3,6 @@
 // Otorisasi ditegakkan di server.
 import { STATUS_TONE } from './cards';
 import type { Tables } from './database.types';
-import { getOrgContext } from './org-context';
 import { supabase } from './supabase';
 
 export type Inisiatif = Tables<'initiatives'>;
@@ -52,17 +51,26 @@ export type NewInitiative = {
   period_end: string | null;
   /** UI-S-S01 — PRD §20 "Kontribusi Quarter" (% ke parent Strategi); NULL diizinkan saat Draft. */
   contribution_pct?: number | null;
+  /** Kunci idempotensi (0103): retry-manual dgn key sama mengembalikan baris asli, bukan duplikat. */
+  client_request_id?: string | null;
 };
 
 export async function createInitiative(input: NewInitiative): Promise<Inisiatif> {
-  const { uid, orgId } = await getOrgContext();
-  const { data, error } = await supabase
-    .from('initiatives')
-    .insert({ ...input, organization_id: orgId, created_by: uid })
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc('create_initiative_idempotent', {
+    p_strategy_id: input.strategy_id,
+    p_name: input.name,
+    p_description: input.description ?? undefined,
+    p_reason: input.reason ?? undefined,
+    p_main_risk: input.main_risk ?? undefined,
+    p_alternative: input.alternative ?? undefined,
+    p_pic_id: input.pic_id ?? undefined,
+    p_period_start: input.period_start ?? undefined,
+    p_period_end: input.period_end ?? undefined,
+    p_contribution_pct: input.contribution_pct ?? undefined,
+    p_client_request_id: input.client_request_id ?? undefined,
+  });
   if (error) throw error;
-  return data;
+  return data as Inisiatif;
 }
 
 // ---------------------------------------------------------------- RPC (lifecycle)

@@ -229,6 +229,22 @@ describe('sendChatMessage', () => {
       p_reply_to: 'm-old',
     });
   });
+
+  // 0103: idempotency key diteruskan sebagai p_client_request_id (present bila diberi,
+  // undefined bila absen → server tak dedup).
+  it('[ID-CH] opts.clientRequestId diteruskan ke p_client_request_id', async () => {
+    mockRpc.mockResolvedValue({ data: 'm-idem', error: null });
+    await sendChatMessage('r1', 'halo', [], { clientRequestId: 'idem-1' });
+    expect(mockRpc.mock.calls[0][1]).toMatchObject({ p_client_request_id: 'idem-1' });
+  });
+
+  it('[ID-CH2] tanpa clientRequestId → p_client_request_id undefined', async () => {
+    mockRpc.mockResolvedValue({ data: 'm', error: null });
+    await sendChatMessage('r1', 'halo');
+    expect(
+      (mockRpc.mock.calls[0][1] as { p_client_request_id?: string }).p_client_request_id,
+    ).toBeUndefined();
+  });
 });
 
 describe('markChatMessagesRead', () => {

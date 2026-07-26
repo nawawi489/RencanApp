@@ -8,7 +8,8 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
 import { usePerson } from '@/hooks/use-workspace';
-import { createActionPlan, type PersonRef } from '@/lib/cards';
+import { createActionPlan, type NewActionPlan, type PersonRef } from '@/lib/cards';
+import { useIdempotencyKey } from '@/hooks/use-idempotency-key';
 import { periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
 import { getInitiative } from '@/lib/initiatives';
@@ -107,9 +108,12 @@ export function LiveNewActionPlanScreen() {
   // UI-S-I01 — PRD §21 "Tim" wajib.
   const [teamId, setTeamId] = useState<string | null>(null);
 
+  const idk = useIdempotencyKey();
   const mutation = useMutation({
-    mutationFn: createActionPlan,
+    mutationFn: (input: NewActionPlan) =>
+      createActionPlan({ ...input, client_request_id: idk.key() }),
     onSuccess: (created) => {
+      idk.reset();
       qc.invalidateQueries({ queryKey: ['action_plans'] });
       router.replace(`/action-plan/${created.id}`);
     },

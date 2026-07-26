@@ -66,6 +66,8 @@ import {
 } from '@/lib/problem-statements';
 import { fetchCardProgress } from '@/lib/workspace-progress';
 
+import { useIdempotencyKey } from '@/hooks/use-idempotency-key';
+
 // ---------------------------------------------------------------- queries
 
 /**
@@ -248,10 +250,12 @@ export function useGoalTemplates() {
 /** Aksi tulis Goal: create, activate, applyTemplate, restore. */
 export function useGoalActions() {
   const qc = useQueryClient();
+  const idk = useIdempotencyKey();
 
   const createM = useMutation({
-    mutationFn: (input: NewGoal) => createGoal(input),
+    mutationFn: (input: NewGoal) => createGoal({ ...input, client_request_id: idk.key() }),
     onSuccess: () => {
+      idk.reset();
       qc.invalidateQueries({ queryKey: ['goals'] });
     },
   });
@@ -459,9 +463,12 @@ export function useDevelopmentAreaActions() {
 /** Aksi tulis Problem Statement di bawah satu Development Area. */
 export function useProblemStatementActions(developmentAreaId: string) {
   const qc = useQueryClient();
+  const idk = useIdempotencyKey();
   const createM = useMutation({
-    mutationFn: (input: NewProblemStatement) => createProblemStatement(input),
+    mutationFn: (input: NewProblemStatement) =>
+      createProblemStatement({ ...input, client_request_id: idk.key() }),
     onSuccess: () => {
+      idk.reset();
       qc.invalidateQueries({ queryKey: ['development_area', developmentAreaId] });
       qc.invalidateQueries({ queryKey: ['development_areas'] });
       qc.invalidateQueries({ queryKey: ['problem_statements', developmentAreaId] });
@@ -490,10 +497,12 @@ export function useProblemStatementActions(developmentAreaId: string) {
 /** Aksi tulis Inisiatif di bawah satu Strategi: create, activate. */
 export function useInitiativeActions(strategyId: string) {
   const qc = useQueryClient();
+  const idk = useIdempotencyKey();
 
   const createM = useMutation({
-    mutationFn: (input: NewInitiative) => createInitiative(input),
+    mutationFn: (input: NewInitiative) => createInitiative({ ...input, client_request_id: idk.key() }),
     onSuccess: () => {
+      idk.reset();
       qc.invalidateQueries({ queryKey: ['initiatives', strategyId] });
       // Strategi & Goal punya embedded count anak → wajib refresh agar badge tidak basi.
       // Tidak ada goalId di scope; pakai prefix.
