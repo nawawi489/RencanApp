@@ -51,6 +51,22 @@ function readMessage(error: unknown): string | undefined {
   return undefined;
 }
 
+// Copy tunggal untuk kegagalan konektivitas. Error jaringan (fetch putus, socket
+// hung + abort timeout, offline) tidak punya SQLSTATE/PostgREST code sehingga lolos
+// dari CODE_MESSAGES — kita deteksi dari bentuknya lalu beri panduan actionable.
+const NETWORK_ERROR_MESSAGE = 'Koneksi bermasalah. Periksa jaringan Anda lalu coba lagi.';
+
+// `TypeError` = fetch gagal di level transport (RN/web); `AbortError` = timeout kita
+// sendiri (lihat supabase.ts) atau request dibatalkan. Substring menutup kasus di
+// mana error dibungkus ulang sehingga instance-nya hilang.
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  if (error instanceof Error && error.name === 'AbortError') return true;
+  const message = readMessage(error);
+  if (message && /Network request failed|Failed to fetch|Aborted|aborted/i.test(message)) return true;
+  return false;
+}
+
 /**
  * Petakan error backend (Postgres/PostgREST/RAISE EXCEPTION) ke copy ramah non-teknis.
  * Mengembalikan `undefined` bila tidak ada mapping — pemanggil memakai fallback sendiri.
@@ -65,6 +81,11 @@ export function friendlyErrorMessage(error: unknown): string | undefined {
     const domain = DOMAIN_MESSAGES.find((d) => d.marker.test(message));
     if (domain) return domain.message;
   }
+
+  // Setelah code & penanda domain: error jaringan tak punya code, deteksi terakhir
+  // sebelum menyerah agar user dapat hint "periksa koneksi" bukan fallback generik.
+  if (isNetworkError(error)) return NETWORK_ERROR_MESSAGE;
+
   return undefined;
 }
 

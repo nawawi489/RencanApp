@@ -52,6 +52,77 @@ describe('supabase wiring (AC-CFG01-1..2 integrasi)', () => {
     expect(call[1]).toBe('anon-test');
   });
 
+  it('[3] global.fetch di-wire dengan wrapper timeout (AbortController), meng-clear timer saat selesai', async () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+
+    const underlyingFetch = jest.fn().mockResolvedValue({ ok: true });
+    const originalFetch = global.fetch;
+    (global as { fetch: unknown }).fetch = underlyingFetch;
+    const clearSpy = jest.spyOn(global, 'clearTimeout');
+
+    try {
+      jest.isolateModules(() => {
+        require('../supabase');
+      });
+
+      const options = mockCreateClient.mock.calls[0][2] as { global?: { fetch?: typeof fetch } };
+      const wrappedFetch = options?.global?.fetch;
+      expect(typeof wrappedFetch).toBe('function');
+
+      await wrappedFetch!('http://127.0.0.1:54321/rest/v1/x');
+
+      // Meneruskan ke fetch underlying dengan signal AbortController.
+      expect(underlyingFetch).toHaveBeenCalledTimes(1);
+      const passedInit = underlyingFetch.mock.calls[0][1] as RequestInit;
+      expect(passedInit.signal).toBeInstanceOf(AbortSignal);
+      // Timer dibersihkan setelah request selesai (tidak bocor).
+      expect(clearSpy).toHaveBeenCalled();
+    } finally {
+      clearSpy.mockRestore();
+      (global as { fetch: unknown }).fetch = originalFetch;
+    }
+  });
+
+  it('[4] wrapper meng-abort request saat REQUEST_TIMEOUT_MS terlewati', async () => {
+    jest.useFakeTimers();
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+
+    let capturedSignal: AbortSignal | undefined;
+    const underlyingFetch = jest.fn(
+      (_input: unknown, init?: RequestInit) =>
+        new Promise<never>((_resolve, reject) => {
+          capturedSignal = init?.signal ?? undefined;
+          init?.signal?.addEventListener('abort', () =>
+            reject(Object.assign(new Error('Aborted'), { name: 'AbortError' })),
+          );
+        }),
+    );
+    const originalFetch = global.fetch;
+    (global as { fetch: unknown }).fetch = underlyingFetch;
+
+    try {
+      jest.isolateModules(() => {
+        require('../supabase');
+      });
+      const options = mockCreateClient.mock.calls[0][2] as { global?: { fetch?: typeof fetch } };
+      const wrappedFetch = options!.global!.fetch!;
+
+      const promise = wrappedFetch('http://127.0.0.1:54321/rest/v1/x');
+      const assertion = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+
+      expect(capturedSignal?.aborted).toBe(false);
+      jest.advanceTimersByTime(20_000);
+      expect(capturedSignal?.aborted).toBe(true);
+
+      await assertion;
+    } finally {
+      (global as { fetch: unknown }).fetch = originalFetch;
+      jest.useRealTimers();
+    }
+  });
+
   it('[2] Platform native (ios) → storage adalah secureStorage (SecureStore), bukan AsyncStorage langsung', () => {
     process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';

@@ -12,6 +12,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { ensureAndroidNotificationChannel } from '@/hooks/use-push-notifications';
 import { installGlobalErrorHandler } from '@/lib/global-handler';
+import { installOnlineManager } from '@/lib/online-manager';
 import { createQueryClient } from '@/lib/query-client';
 import { initSentry, type InjectableSentry } from '@/lib/sentry-init';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
@@ -26,6 +27,10 @@ import { ThemeProvider, useThemePreference } from '@/providers/theme-provider';
 initSentry({ sentry: Sentry as unknown as InjectableSentry });
 
 const queryClient = createQueryClient();
+
+// Jembatani status jaringan device → React Query: jeda retry saat offline, lanjutkan saat
+// pulih. Dipasang di module scope agar aktif sebelum tree pertama dirender.
+installOnlineManager();
 
 // Uncaught error di luar React tree (async yang tak di-catch, promise rejection tanpa handler)
 // → logger (choke point telemetry). Dipasang di module scope agar aktif sebelum tree pertama

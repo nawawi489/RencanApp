@@ -157,6 +157,27 @@ describe('friendlyErrorMessage', () => {
     expect(friendlyErrorMessage(new Error('boom'))).toBeUndefined();
   });
 
+  it('memetakan TypeError jaringan (fetch putus) ke copy periksa koneksi', () => {
+    const msg = friendlyErrorMessage(new TypeError('Network request failed'));
+    expect(msg).toMatch(/koneksi|jaringan/i);
+  });
+
+  it('memetakan "Failed to fetch" (web) ke copy periksa koneksi', () => {
+    const msg = friendlyErrorMessage(new Error('Failed to fetch'));
+    expect(msg).toMatch(/koneksi|jaringan/i);
+  });
+
+  it('memetakan AbortError (timeout request) ke copy periksa koneksi', () => {
+    const abort = Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
+    expect(friendlyErrorMessage(abort)).toMatch(/koneksi|jaringan/i);
+  });
+
+  it('code teknis dikenal tetap menang atas deteksi jaringan', () => {
+    // TypeError yang kebetulan membawa code SQLSTATE dikenal → mapping code diutamakan.
+    const msg = friendlyErrorMessage(Object.assign(new TypeError('x'), { code: '42501' }));
+    expect(msg).toMatch(/tidak (memiliki |punya )?izin/i);
+  });
+
   it('menerima code numerik (dinormalisasi ke string)', () => {
     const msg = friendlyErrorMessage(Object.assign(new Error('x'), { code: 42501 }));
     expect(msg).toMatch(/tidak (memiliki |punya )?izin/i);
