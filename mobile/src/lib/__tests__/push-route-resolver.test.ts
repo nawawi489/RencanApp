@@ -1,6 +1,6 @@
 // Step 8 REFACTOR — Unit tests untuk resolveNotificationRoute (pure function).
 import { ENTITY_ROUTE_SEGMENT } from '../entity-routes';
-import { resolveNotificationRoute } from '../push-route-resolver';
+import { NOTIFICATIONS_FALLBACK_ROUTE, resolveNotificationRoute } from '../push-route-resolver';
 
 describe('resolveNotificationRoute', () => {
   it('[PN-ROUTE-1] action_plan → "/(app)/action-plan/{id}"', () => {
@@ -27,5 +27,10 @@ describe('resolveNotificationRoute', () => {
       expect(route).not.toBeNull();
       expect(route).toContain('some-id');
     }
+  });
+
+  it('[PN-ROUTE-5] NOTIFICATIONS_FALLBACK_ROUTE menunjuk ke tab Notifikasi (M3)', () => {
+    // Caller memakai konstanta ini saat resolver mengembalikan null, agar tap tetap mendarat.
+    expect(NOTIFICATIONS_FALLBACK_ROUTE).toBe('/(app)/(tabs)/notifications');
   });
 });
