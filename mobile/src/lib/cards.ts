@@ -1,6 +1,7 @@
 // Data layer Fase 1 — Card Engine + Loop Eksekusi.
 // Semua otorisasi ditegakkan di server (RLS + RPC); fungsi di sini hanya pemanggil tipis.
 import type { Tables } from './database.types';
+import type { RepeatRuleInput } from './repeat';
 import { supabase } from './supabase';
 
 export type ActionPlan = Tables<'action_plans'>;
@@ -386,6 +387,50 @@ export async function createTask(input: NewTask): Promise<Tugas> {
     p_evidence_description: input.evidence_description ?? undefined,
     p_description: input.description ?? undefined,
     p_client_request_id: input.client_request_id ?? undefined,
+  });
+  if (error) throw error;
+  return data as Tugas;
+}
+
+/**
+ * Buat Tugas + Repeat Rule dalam SATU transaksi server (RPC atomik).
+ *
+ * Menggantikan pola dua-write terpisah (createTask lalu setRepeatRule) di layar
+ * buat Tugas. Dua write terpisah tidak atomik: bila koneksi putus setelah Tugas
+ * terbuat tapi sebelum/di tengah repeat rule, `onError` menyala, user tekan Simpan
+ * lagi → Tugas DUPLIKAT (yang pertama sudah ada sebagai draft tanpa repeat rule).
+ * RPC ini melipat keduanya jadi satu txn: bila repeat rule gagal, insert Tugas
+ * ikut rollback → tak ada draft yatim → retry tak menduplikasi.
+ *
+ * `repeat === null` → Tugas one-time (param repeat diabaikan server).
+ */
+export async function createTaskWithRepeat(input: NewTask, repeat: RepeatRuleInput | null): Promise<Tugas> {
+  const { data, error } = await supabase.rpc('create_task_with_repeat_idempotent', {
+    p_action_plan_id: input.action_plan_id,
+    p_name: input.name,
+    p_pic_id: input.pic_id ?? undefined,
+    p_reviewer_id: input.reviewer_id ?? undefined,
+    p_start_date: input.start_date ?? undefined,
+    p_deadline: input.deadline ?? undefined,
+    p_deadline_time: input.deadline_time ?? undefined,
+    p_expected_output: input.expected_output ?? undefined,
+    p_definition_of_done: input.definition_of_done ?? undefined,
+    p_priority: input.priority ?? undefined,
+    p_evidence_required: input.evidence_required,
+    p_result_value_required: input.result_value_required,
+    p_evidence_description: input.evidence_description ?? undefined,
+    p_description: input.description ?? undefined,
+    p_client_request_id: input.client_request_id ?? undefined,
+    p_repeat: repeat != null,
+    p_frequency: repeat?.frequency ?? undefined,
+    p_weekdays: (repeat?.weekdays ?? undefined) as never,
+    p_month_days: (repeat?.monthDays ?? undefined) as never,
+    p_custom_dates: (repeat?.customDates ?? undefined) as never,
+    p_repeat_start_date: repeat?.repeatStartDate ?? undefined,
+    p_repeat_end_date: repeat?.repeatEndDate ?? undefined,
+    p_time_of_day: repeat?.timeOfDay ?? undefined,
+    p_missed_rule: repeat?.missedRule ?? undefined,
+    p_grace_period_minutes: (repeat?.gracePeriodMinutes ?? undefined) as never,
   });
   if (error) throw error;
   return data as Tugas;

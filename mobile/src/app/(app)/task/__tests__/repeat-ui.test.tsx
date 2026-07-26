@@ -43,6 +43,7 @@ jest.mock('@/lib/cards', () => ({
   startTask: jest.fn(),
   reviewSubmission: jest.fn(),
   createTask: jest.fn(),
+  createTaskWithRepeat: jest.fn(),
 }));
 
 // Label zona waktu dipertahankan asli (requireActual) — yang di-stub cuma pengambilan datanya.

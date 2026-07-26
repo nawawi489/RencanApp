@@ -3818,6 +3818,68 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_task_with_repeat_idempotent: {
+        Args: {
+          p_action_plan_id: string
+          p_client_request_id?: string
+          p_custom_dates?: string[]
+          p_deadline?: string
+          p_deadline_time?: string
+          p_definition_of_done?: string
+          p_description?: string
+          p_evidence_description?: string
+          p_evidence_required?: boolean
+          p_expected_output?: string
+          p_frequency?: string
+          p_grace_period_minutes?: number
+          p_missed_rule?: string
+          p_month_days?: number[]
+          p_name: string
+          p_pic_id?: string
+          p_priority?: string
+          p_repeat?: boolean
+          p_repeat_end_date?: string
+          p_repeat_start_date?: string
+          p_result_value_required?: boolean
+          p_reviewer_id?: string
+          p_start_date?: string
+          p_time_of_day?: string
+          p_weekdays?: number[]
+        }
+        Returns: {
+          action_plan_id: string
+          archived_at: string | null
+          client_request_id: string | null
+          created_at: string
+          created_by: string | null
+          current_submission_id: string | null
+          deadline: string | null
+          deadline_time: string | null
+          definition_of_done: string | null
+          description: string | null
+          evidence_description: string | null
+          evidence_required: boolean
+          expected_output: string | null
+          id: string
+          name: string
+          organization_id: string
+          pic_id: string | null
+          priority: string | null
+          repeat_setting: string
+          result_value_required: boolean
+          review_required: boolean
+          reviewer_id: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_team: {
         Args: {
           p_department_id: string

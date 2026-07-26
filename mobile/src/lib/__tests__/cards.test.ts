@@ -20,6 +20,7 @@ import {
   countCompletedTasksInPeriod,
   createActionPlan,
   createTask,
+  createTaskWithRepeat,
   getPersonRef,
   listActionPlans,
   listActionPlansByProblemStatementIds,
@@ -213,6 +214,72 @@ describe('createTask — passthrough via RPC idempoten (0103)', () => {
   it('[ID-2b] tanpa client_request_id → p_client_request_id undefined', async () => {
     await createTask(base);
     expect(rpcArgs().p_client_request_id).toBeUndefined();
+  });
+});
+
+// Fix bug partial-failure: Tugas + repeat rule ditulis dalam SATU RPC atomik
+// (create_task_with_repeat_idempotent), bukan dua write terpisah (createTask lalu
+// setRepeatRule) yang bisa meninggalkan draft yatim → duplikat saat retry.
+describe('createTaskWithRepeat — satu RPC atomik (task + repeat)', () => {
+  const base: NewTask = {
+    action_plan_id: 'ap1',
+    name: 'Tutup Buku',
+    pic_id: null,
+    reviewer_id: null,
+    start_date: null,
+    deadline: null,
+    deadline_time: '23:00',
+    expected_output: null,
+    definition_of_done: null,
+    priority: null,
+    evidence_required: false,
+    result_value_required: false,
+  };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
+
+  beforeEach(() => mockRpc.mockResolvedValue({ data: { id: 't-new' }, error: null }));
+
+  it('[ID-R1] one-time (repeat null) → SATU panggilan RPC, p_repeat false, param repeat undefined', async () => {
+    const task = await createTaskWithRepeat({ ...base, client_request_id: 'idem-r1' }, null);
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc.mock.calls[0][0]).toBe('create_task_with_repeat_idempotent');
+    expect(rpcArgs().p_action_plan_id).toBe('ap1');
+    expect(rpcArgs().p_client_request_id).toBe('idem-r1');
+    expect(rpcArgs().p_repeat).toBe(false);
+    expect(rpcArgs().p_frequency).toBeUndefined();
+    expect(rpcArgs().p_time_of_day).toBeUndefined();
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(task).toEqual({ id: 't-new' });
+  });
+
+  it('[ID-R2] repeat aktif → SATU panggilan RPC membawa task + param repeat (p_repeat true)', async () => {
+    await createTaskWithRepeat(base, {
+      frequency: 'weekly',
+      weekdays: [1, 3],
+      monthDays: null,
+      customDates: null,
+      repeatStartDate: '2026-06-01',
+      repeatEndDate: '2026-06-30',
+      timeOfDay: '23:00',
+      missedRule: 'grace_period',
+      gracePeriodMinutes: 30,
+    });
+    // Kunci anti-regresi: TIDAK dua write terpisah — hanya satu RPC atomik.
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc.mock.calls[0][0]).toBe('create_task_with_repeat_idempotent');
+    expect(rpcArgs().p_repeat).toBe(true);
+    expect(rpcArgs().p_frequency).toBe('weekly');
+    expect(rpcArgs().p_weekdays).toEqual([1, 3]);
+    expect(rpcArgs().p_repeat_start_date).toBe('2026-06-01');
+    expect(rpcArgs().p_repeat_end_date).toBe('2026-06-30');
+    expect(rpcArgs().p_time_of_day).toBe('23:00');
+    expect(rpcArgs().p_missed_rule).toBe('grace_period');
+    expect(rpcArgs().p_grace_period_minutes).toBe(30);
+  });
+
+  it('[ID-R3] error RPC dipropagasi (form dipertahankan oleh pemanggil)', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'jaringan' } });
+    await expect(createTaskWithRepeat(base, null)).rejects.toEqual({ message: 'jaringan' });
   });
 });
 
