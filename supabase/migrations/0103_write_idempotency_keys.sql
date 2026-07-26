@@ -1,4 +1,4 @@
--- 0100_write_idempotency_keys.sql — client_request_id dedup for non-idempotent writes.
+-- 0103_write_idempotency_keys.sql — client_request_id dedup for non-idempotent writes.
 --
 -- WHY: PR #197 stopped the AUTOMATIC write-retry (React Query mutations.retry=false),
 -- but a user who taps Save/Send again after a lost-ACK network error still creates a
@@ -18,7 +18,7 @@
 --   • send_chat_message rewritten 6->7 params (+ p_client_request_id), same DO NOTHING
 --     dedup, DROP + re-grant ACL (a DROP resets EXECUTE to PUBLIC — re-revoke anon/public).
 --
--- Contract: supabase/tests/0100_write_idempotency_keys_contract.sql (0100-DB-1..6).
+-- Contract: supabase/tests/0103_write_idempotency_keys_contract.sql (0103-DB-1..6).
 
 -- ---------------------------------------------------------------------------
 -- 1. Columns

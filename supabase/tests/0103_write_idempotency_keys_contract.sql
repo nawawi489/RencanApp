@@ -1,4 +1,4 @@
--- Migration 0100 contract test — Write Idempotency Keys (client_request_id).
+-- Migration 0103 contract test — Write Idempotency Keys (client_request_id).
 --
 -- Guards, ordered by cost-if-broken:
 --   • DEDUP CORRECTNESS. A retried submit carrying the same client_request_id must
@@ -17,9 +17,9 @@
 -- Fixture constants (supabase/tests/_fixtures.sql):
 --   org A = 4b07a19f-550d-4952-b0d8-44f38f651d89, CEO A = ca8c1471-b870-4f09-a149-25e5eae99d6f
 -- Run (local docker dev DB):
---   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0100_write_idempotency_keys_contract.sql
+--   docker exec -i supabase_db_supabase psql -U postgres -d postgres -f supabase/tests/0103_write_idempotency_keys_contract.sql
 
--- ============================================================ 0100-DB-1: kolom client_request_id (uuid, nullable) di 6 tabel
+-- ============================================================ 0103-DB-1: kolom client_request_id (uuid, nullable) di 6 tabel
 do $$
 declare
   v_tbls text[] := array['goals','action_plans','tasks','initiatives','problem_statements','chat_messages'];
@@ -33,11 +33,11 @@ begin
     if v_type <> 'uuid' then fails := fails || v_t||'.wrong_type('||v_type||'); '; end if;
     if v_nullable <> 'YES' then fails := fails || v_t||'.not_nullable; '; end if;
   end loop;
-  if fails <> '' then raise exception 'FAIL 0100-DB-1: %', fails; end if;
-  raise notice 'PASS 0100-DB-1: client_request_id uuid nullable pada 6 tabel';
+  if fails <> '' then raise exception 'FAIL 0103-DB-1: %', fails; end if;
+  raise notice 'PASS 0103-DB-1: client_request_id uuid nullable pada 6 tabel';
 end $$;
 
--- ============================================================ 0100-DB-2: partial unique index per tabel
+-- ============================================================ 0103-DB-2: partial unique index per tabel
 -- Direct-insert 5 tabel: (organization_id, created_by, client_request_id) WHERE client_request_id IS NOT NULL.
 -- chat_messages: (chat_room_id, author_id, client_request_id) WHERE ... (kolom = author_id, BUKAN sender_id).
 do $$
@@ -65,11 +65,11 @@ begin
       fails := fails || v_t||'.index_cols_mismatch{'||v_def||'}; ';
     end if;
   end loop;
-  if fails <> '' then raise exception 'FAIL 0100-DB-2: %', fails; end if;
-  raise notice 'PASS 0100-DB-2: partial unique index (org/created_by|room/author, client_request_id) per tabel';
+  if fails <> '' then raise exception 'FAIL 0103-DB-2: %', fails; end if;
+  raise notice 'PASS 0103-DB-2: partial unique index (org/created_by|room/author, client_request_id) per tabel';
 end $$;
 
--- ============================================================ 0100-DB-3: 5 RPC create_*_idempotent — security INVOKER + ACL authenticated-only
+-- ============================================================ 0103-DB-3: 5 RPC create_*_idempotent — security INVOKER + ACL authenticated-only
 do $$
 declare
   v_fns text[] := array['create_goal_idempotent','create_action_plan_idempotent','create_task_idempotent',
@@ -87,11 +87,11 @@ begin
     end if;
     if has_function_privilege('anon', v_oid, 'EXECUTE') then fails := fails || v_fn||'_anon_can_execute; '; end if;
   end loop;
-  if fails <> '' then raise exception 'FAIL 0100-DB-3: %', fails; end if;
-  raise notice 'PASS 0100-DB-3: 5 create_*_idempotent — security invoker, authenticated-only';
+  if fails <> '' then raise exception 'FAIL 0103-DB-3: %', fails; end if;
+  raise notice 'PASS 0103-DB-3: 5 create_*_idempotent — security invoker, authenticated-only';
 end $$;
 
--- ============================================================ 0100-DB-4: send_chat_message rewrite 6->7 param + ACL
+-- ============================================================ 0103-DB-4: send_chat_message rewrite 6->7 param + ACL
 do $$
 declare
   v_oid oid; v_args text; v_nargs int; fails text := '';
@@ -102,7 +102,7 @@ begin
    where n.nspname='public' and p.proname='send_chat_message'
      and pg_get_function_arguments(p.oid) ilike '%p_client_request_id uuid%';
   if v_oid is null then
-    raise exception 'FAIL 0100-DB-4: send_chat_message dgn param p_client_request_id uuid tidak ada';
+    raise exception 'FAIL 0103-DB-4: send_chat_message dgn param p_client_request_id uuid tidak ada';
   end if;
   if v_nargs <> 7 then fails := fails || 'expected_7_args_got_'||v_nargs||'{'||v_args||'}; '; end if;
   if not has_function_privilege('authenticated', v_oid, 'EXECUTE') then fails := fails || 'authenticated_cannot_execute; '; end if;
@@ -112,11 +112,11 @@ begin
         where n.nspname='public' and p.proname='send_chat_message') <> 1 then
     fails := fails || 'multiple_send_chat_message_overloads(old_6arg_not_dropped); ';
   end if;
-  if fails <> '' then raise exception 'FAIL 0100-DB-4: %', fails; end if;
-  raise notice 'PASS 0100-DB-4: send_chat_message 7-arg (p_client_request_id) authenticated-only, satu overload';
+  if fails <> '' then raise exception 'FAIL 0103-DB-4: %', fails; end if;
+  raise notice 'PASS 0103-DB-4: send_chat_message 7-arg (p_client_request_id) authenticated-only, satu overload';
 end $$;
 
--- ============================================================ 0100-DB-5: dedup direct-insert (create_goal_idempotent)
+-- ============================================================ 0103-DB-5: dedup direct-insert (create_goal_idempotent)
 -- same key -> id sama + 1 baris; key beda -> 2 baris; key NULL -> tak dedup (2 baris).
 begin;
 do $$
@@ -158,12 +158,12 @@ begin
   if n_null <> 2 then fails := fails || 'null_key_row_count='||n_null||'(expected 2); '; end if;
 
   execute 'reset role';
-  if fails <> '' then raise exception 'FAIL 0100-DB-5: %', fails; end if;
-  raise notice 'PASS 0100-DB-5: dedup goal — same key 1 baris/id stabil, key beda 2 baris, key NULL tak dedup';
+  if fails <> '' then raise exception 'FAIL 0103-DB-5: %', fails; end if;
+  raise notice 'PASS 0103-DB-5: dedup goal — same key 1 baris/id stabil, key beda 2 baris, key NULL tak dedup';
 end $$;
 rollback;
 
--- ============================================================ 0100-DB-6: dedup chat (send_chat_message p_client_request_id)
+-- ============================================================ 0103-DB-6: dedup chat (send_chat_message p_client_request_id)
 -- same key -> message id sama + 1 baris.
 begin;
 do $$
@@ -195,7 +195,7 @@ begin
     where chat_room_id=v_room and author_id=v_ceo and client_request_id=v_key;
   if n_rows <> 1 then fails := fails || 'same_key_message_count='||n_rows||'(expected 1); '; end if;
 
-  if fails <> '' then raise exception 'FAIL 0100-DB-6: %', fails; end if;
-  raise notice 'PASS 0100-DB-6: dedup chat — send_chat_message same key -> 1 pesan/id stabil';
+  if fails <> '' then raise exception 'FAIL 0103-DB-6: %', fails; end if;
+  raise notice 'PASS 0103-DB-6: dedup chat — send_chat_message same key -> 1 pesan/id stabil';
 end $$;
 rollback;
