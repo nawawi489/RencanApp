@@ -13,12 +13,36 @@ import { resolveSupabaseUrl } from './supabase-url';
 // tanpa meregresi native (ios sim ke 127.0.0.1, android emu ke 10.0.2.2).
 const supabaseUrl = resolveSupabaseUrl(Platform.OS, env.supabaseUrl);
 
+// Poor-network UX: tanpa timeout aplikasi, socket yang hung menahan spinner sampai
+// timeout platform (~60s) × retry. Kita batasi tiap request ke REQUEST_TIMEOUT_MS lalu
+// abort — rejection-nya (AbortError) dipetakan ke copy "periksa koneksi" oleh
+// friendlyErrorMessage (errors.ts) alih-alih spinner tak berujung.
+const REQUEST_TIMEOUT_MS = 20_000;
+
+// Bungkus fetch dengan AbortController. Tetap hormati signal caller (mis. Supabase
+// membatalkan refresh token) dengan meneruskan abort-nya, dan selalu bersihkan timer.
+function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  const callerSignal = init?.signal;
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+
 export const supabase = createClient<Database>(supabaseUrl, env.supabaseAnonKey, {
   auth: {
     storage: secureStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+  },
+  global: {
+    fetch: fetchWithTimeout,
   },
 });
 
