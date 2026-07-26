@@ -54,18 +54,21 @@ Affected write paths (all currently carry **no** idempotency key):
      where client_request_id is not null;
    ```
    Scoping to `(organization_id, created_by)` keeps keys collision-free across tenants/users and matches the `created_by = auth.uid()` insert pattern already in each `create*`. **Not `CONCURRENTLY`**: the column is brand-new and nullable, so the partial predicate matches zero existing rows — a plain index builds instantly and stays inside the migration's transaction (the Supabase CLI wraps each migration in a txn; `CREATE INDEX CONCURRENTLY` would abort the `supabase start`/`db reset` contract gate).
-3. Return-the-original on conflict — **this step is mandatory, not just the column+index**. A plain PostgREST `.insert().select().single()` on a duplicate key returns error `23505`, which every `create*` re-throws to the UI (`if (error) throw error`) — so without conflict-handling the retry *errors* instead of returning the first row, failing AC-1 for all five direct-insert paths. **Recommended**: a thin `security invoker` RPC per table (or one generic helper) doing:
+3. Return-the-original on conflict — **this step is mandatory, not just the column+index**. A plain PostgREST `.insert().select().single()` on a duplicate key returns error `23505`, which every `create*` re-throws to the UI (`if (error) throw error`) — so without conflict-handling the retry *errors* instead of returning the first row, failing AC-1 for all five direct-insert paths. **Implemented (migration 0100)**: a `security invoker` RPC per table (`create_<entity>_idempotent`) that derives `organization_id`/`created_by` server-side from `auth.uid()` (mirrors `getOrgContext`) and does:
    ```sql
    insert into public.<table> (...cols..., organization_id, created_by, client_request_id)
    values (...)
    on conflict (organization_id, created_by, client_request_id)
      where client_request_id is not null
-     do update set client_request_id = excluded.client_request_id  -- no-op, lets RETURNING fire
-   returning *;
+     do nothing
+   returning * into v_row;
+   if v_row.id is null then          -- conflict (or lost a concurrent race)
+     select * into v_row from public.<table>
+      where organization_id = v_org and created_by = v_uid and client_request_id = p_client_request_id;
+   end if;
+   return v_row;
    ```
-   The no-op `do update` is what makes `RETURNING` yield the **existing** row on a duplicate without mutating data or firing meaningful audit churn. `security invoker` preserves existing RLS (no new SECURITY DEFINER surface — see [[permission-model]]).
-
-   **Lighter alternative** (no RPC): keep the PostgREST `.insert()`, and on `23505` against the new index, re-`select` the existing row by `(organization_id, created_by, client_request_id)` and return it. Simpler diff, but two round-trips on the conflict path and a small TOCTOU window that the unique index still makes safe. **Decision needed** — see Open questions.
+   `do nothing` + re-`select` (not `do update`) needs only INSERT+SELECT privileges (no UPDATE policy), fires no audit-trigger churn, and is race-safe: the loser of a concurrent insert gets no row from `do nothing`, then reads the winner's committed row. `security invoker` preserves existing RLS (no new SECURITY DEFINER surface — see [[permission-model]]). A NULL key never matches the partial index → always inserts (opt-out path intact).
 
 **B. Chat RPC** (`send_chat_message`)
 
