@@ -2661,3 +2661,12 @@ Fix perf dari audit query DB 2026-07-24. `public.workspace_card_progress(uuid[])
   5. `crypto.randomUUID()` open-question TERTUTUP: sudah dipakai produksi di `storage.ts` → tak perlu expo-crypto.
   6. Direct-insert WAJIB tangani 23505→return baris asli (bukan cuma passthrough+index), else AC-1 gagal 5/6 path. Path attachment chat + regresi exact-arg `send()` juga di-flag.
 - **GATE terbuka**: OQ-1 (RPC security-invoker helper vs catch-23505) harus dikunci owner SEBELUM red test — menentukan seluruh test surface.
+
+## [2026-07-26] update | write-idempotency-keys DB layer (Step 1-2) GREEN
+
+- **Files created**: `supabase/migrations/0100_write_idempotency_keys.sql`, `supabase/tests/0100_write_idempotency_keys_contract.sql`.
+- **Files updated**: `supabase/tests/0056_chat_message_context_reply_contract.sql` (pronargs 6→7), `wiki/concepts/write-idempotency-keys.md` (DO NOTHING sync).
+- **RED→GREEN** (local docker DB): contract 0100-DB-1..6 merah (objek absen) → migrasi diterapkan → 6/6 hijau. Regresi 0056/0061 dicek hijau.
+- **Keputusan terkunci**: OQ-1 = RPC `security invoker` helper (Option B). Refinement: `ON CONFLICT DO NOTHING` + re-SELECT (bukan DO UPDATE) → tanpa UPDATE policy / audit churn, race-safe.
+- **Baseline lokal**: DB di 0079, origin/staging di 0099; 0100 di-apply manual (0080-0099 tak sentuh objek fitur). CI replay penuh saat merge.
+- **Sisa**: client layer (types hand-edit, 5 data fn→rpc, hooks, screens, UI tests, refactor). Branch `feat/write-idempotency-keys`.
