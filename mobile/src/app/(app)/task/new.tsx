@@ -11,13 +11,13 @@ import { DateRangeField } from '@/components/date-range-field';
 import { MonthDaysPicker } from '@/components/month-days-picker';
 import { TimeField } from '@/components/time-field';
 import { UserPicker } from '@/components/user-picker';
-import { PRIORITY_LABEL, createTask, getActionPlan, type PersonRef } from '@/lib/cards';
+import { PRIORITY_LABEL, createTaskWithRepeat, getActionPlan, type PersonRef } from '@/lib/cards';
 import { useIdempotencyKey } from '@/hooks/use-idempotency-key';
 import { alertFriendlyError } from '@/lib/errors';
 import { DATE_HINT, DATE_RE, TIME_RE } from '@/lib/date';
 import { invalidateHomeQueries } from '@/lib/home-queries';
 import { DEFAULT_ORG_TIMEZONE, getOrgTimezone, orgTimezoneLabel } from '@/lib/org-timezone';
-import { FREQUENCY_LABEL, MISSED_RULE_LABEL, setRepeatRule } from '@/lib/repeat';
+import { FREQUENCY_LABEL, MISSED_RULE_LABEL, type RepeatRuleInput } from '@/lib/repeat';
 type Person = NonNullable<PersonRef>;
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
@@ -189,36 +189,41 @@ export function LiveNewTaskScreen() {
   const idk = useIdempotencyKey();
   const mutation = useMutation({
     mutationFn: async () => {
-      const ap = await createTask({
-        action_plan_id: actionPlanId,
-        name: name.trim(),
-        pic_id: pic?.id ?? null,
-        reviewer_id: reviewer?.id ?? null,
-        start_date: startDate || null,
-        deadline: deadline || null,
-        deadline_time: deadlineTime || null,
-        expected_output: output.trim() || null,
-        definition_of_done: dod.trim() || null,
-        evidence_description: evidenceDescription.trim() || null,
-        priority,
-        evidence_required: evidenceRequired,
-        result_value_required: resultRequired,
-        client_request_id: idk.key(),
-      });
-      if (repeat) {
-        await setRepeatRule(ap.id, {
-          frequency,
-          weekdays: frequency === 'weekly' ? weekdays : null,
-          monthDays: frequency === 'monthly' ? monthDays : null,
-          customDates: frequency === 'custom' ? customDates : null,
-          repeatStartDate: repeatStart,
-          repeatEndDate: repeatEnd,
-          timeOfDay: deadlineTime,
-          missedRule,
-          gracePeriodMinutes: missedRule === 'grace_period' ? parseInt(gracePeriod, 10) || null : null,
-        });
-      }
-      return ap;
+      // Tugas + repeat rule ditulis dalam SATU RPC atomik. Bila repeat rule gagal,
+      // insert Tugas ikut rollback → tak ada draft yatim → tekan Simpan lagi tak
+      // menduplikasi Tugas. (Dulu dua write terpisah; lihat createTaskWithRepeat.)
+      const repeatInput: RepeatRuleInput | null = repeat
+        ? {
+            frequency,
+            weekdays: frequency === 'weekly' ? weekdays : null,
+            monthDays: frequency === 'monthly' ? monthDays : null,
+            customDates: frequency === 'custom' ? customDates : null,
+            repeatStartDate: repeatStart,
+            repeatEndDate: repeatEnd,
+            timeOfDay: deadlineTime,
+            missedRule,
+            gracePeriodMinutes: missedRule === 'grace_period' ? parseInt(gracePeriod, 10) || null : null,
+          }
+        : null;
+      return createTaskWithRepeat(
+        {
+          action_plan_id: actionPlanId,
+          name: name.trim(),
+          pic_id: pic?.id ?? null,
+          reviewer_id: reviewer?.id ?? null,
+          start_date: startDate || null,
+          deadline: deadline || null,
+          deadline_time: deadlineTime || null,
+          expected_output: output.trim() || null,
+          definition_of_done: dod.trim() || null,
+          evidence_description: evidenceDescription.trim() || null,
+          priority,
+          evidence_required: evidenceRequired,
+          result_value_required: resultRequired,
+          client_request_id: idk.key(),
+        },
+        repeatInput,
+      );
     },
     onSuccess: () => {
       idk.reset();
