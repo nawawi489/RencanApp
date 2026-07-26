@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/components/error-boundary';
+import { ensureAndroidNotificationChannel } from '@/hooks/use-push-notifications';
 import { installGlobalErrorHandler } from '@/lib/global-handler';
 import { createQueryClient } from '@/lib/query-client';
 import { initSentry, type InjectableSentry } from '@/lib/sentry-init';
@@ -30,6 +31,11 @@ const queryClient = createQueryClient();
 // → logger (choke point telemetry). Dipasang di module scope agar aktif sebelum tree pertama
 // dirender. Chains handler sebelumnya sehingga LogBox default dev tetap jalan.
 installGlobalErrorHandler();
+
+// Android 8+: channel notifikasi wajib ada sebelum notifikasi pertama tampil. Dibuat di
+// module scope (bukan di dalam effect tab Notifikasi) agar tersedia sejak launch — push
+// yang tiba sebelum user membuka tab Notifikasi tetap ditampilkan. No-op non-Android.
+ensureAndroidNotificationChannel();
 
 function RootNavigator() {
   const { initializing } = useAuth();
