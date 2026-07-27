@@ -14,6 +14,61 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          id: string
+          organization_id: string | null
+          reason: string | null
+          requested_at: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          organization_id?: string | null
+          reason?: string | null
+          requested_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string | null
+          reason?: string | null
+          requested_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_deletion_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_deletion_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_deletion_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       action_plans: {
         Row: {
           archived_at: string | null
@@ -3459,6 +3514,10 @@ export type Database = {
           repeat_compliance: number
         }[]
       }
+      anonymize_account: {
+        Args: { p_reason?: string; p_target_user_id: string }
+        Returns: undefined
+      }
       apply_goal_template: {
         Args: {
           p_goal_template_id: string
@@ -3962,6 +4021,7 @@ export type Database = {
         Args: { p_card_type: string; p_required: string[]; p_row: Json }
         Returns: undefined
       }
+      export_my_data: { Args: never; Returns: Json }
       generate_action_plan_instances: {
         Args: { p_action_plan_id: string; p_through_date: string }
         Returns: number
@@ -4418,6 +4478,7 @@ export type Database = {
         Args: { p_profile_id: string; p_team_id: string }
         Returns: undefined
       }
+      request_account_deletion: { Args: { p_reason?: string }; Returns: string }
       resolve_governance_violation: {
         Args: {
           p_resolution_note: string
