@@ -29,10 +29,13 @@ insert into public.initiatives (id, organization_id, strategy_id, name, created_
 insert into public.action_plans (id, organization_id, initiative_id, name, created_by, pic_id, status)
   select ap_b, org_b, init_b, 'AP B', user_b, user_b, 'active' from _c;
 
+-- action_plans_pic_ne_reviewer constraint: PIC ≠ Reviewer. Use user_a
+-- as the (dummy) reviewer for org_b's draft task — cross-org guard fires
+-- BEFORE any org-scoped reviewer check, and we never actually activate.
 insert into public.tasks (id, organization_id, action_plan_id, name, created_by, pic_id, reviewer_id,
                           status, repeat_setting, expected_output, definition_of_done, priority, deadline_time,
                           start_date, deadline)
-  select task_b, org_b, ap_b, 'Task B', user_b, user_b, user_b, 'draft', 'one_time',
+  select task_b, org_b, ap_b, 'Task B', user_b, user_b, user_a, 'draft', 'one_time',
          'out', 'dod', 'high', '17:00', now()::date, now()::date + 1 from _c;
 
 create or replace function pg_temp.act_as_a() returns void language plpgsql as $$

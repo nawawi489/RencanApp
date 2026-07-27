@@ -58,10 +58,12 @@ select ps_a, org_a, da_a, 'PS A', user_a, user_a, 'active' from _c
 union all
 select ps_b, org_b, da_b, 'PS B', user_b, user_b, 'active' from _c;
 
-insert into public.action_plans (id, organization_id, initiative_id, problem_statement_id, name, created_by, pic_id, status)
-select ap_a, org_a, init_a, ps_a, 'AP A', user_a, user_a, 'active' from _c
+-- action_plans_single_parent constraint: exactly one of initiative_id /
+-- problem_statement_id must be set. Attach these to initiatives only.
+insert into public.action_plans (id, organization_id, initiative_id, name, created_by, pic_id, status)
+select ap_a, org_a, init_a, 'AP A', user_a, user_a, 'active' from _c
 union all
-select ap_b, org_b, init_b, ps_b, 'AP B', user_b, user_b, 'active' from _c;
+select ap_b, org_b, init_b, 'AP B', user_b, user_b, 'active' from _c;
 
 insert into public.tasks (id, organization_id, action_plan_id, name, created_by, pic_id, status, repeat_setting)
 select task_a, org_a, ap_a, 'Task A', user_a, user_a, 'draft', 'one_time' from _c

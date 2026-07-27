@@ -243,8 +243,10 @@ begin
     values (v_orgB, v_stratB, 'B-init-rev', v_userB, v_userB, 'active') returning id into v_initB;
   insert into public.action_plans (organization_id, initiative_id, name, created_by, pic_id, status)
     values (v_orgB, v_initB, 'B-ap-rev', v_userB, v_userB, 'active') returning id into v_apB;
+  -- action_plans_pic_ne_reviewer check requires distinct users; the review
+  -- flow is not exercised here so any distinct UUID works.
   insert into public.tasks (organization_id, action_plan_id, name, created_by, pic_id, reviewer_id, status, repeat_setting)
-    values (v_orgB, v_apB, 'B-task-rev', v_userB, v_userB, v_userB, 'submitted', 'one_time')
+    values (v_orgB, v_apB, 'B-task-rev', v_userB, v_userB, 'ca8c1471-b870-4f09-a149-25e5eae99d6f'::uuid, 'submitted', 'one_time')
     returning id into v_taskB;
   insert into public.task_submissions (task_id, version_number, submitted_by, review_status, status)
     values (v_taskB, 1, v_userB, 'pending', 'submitted') returning id into v_subB;
