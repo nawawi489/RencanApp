@@ -34,6 +34,9 @@ begin
       lateral plpgsql_check_function_tb(p.oid) chk
     where n.nspname = 'public'
       and p.prolang = (select oid from pg_language where lanname = 'plpgsql')
+      -- plpgsql_check_function_tb(oid) minta trigger relation utk fungsi trigger;
+      -- lewatkan (trigger diperiksa saat DDL trigger dibuat, bukan di sini).
+      and p.prorettype <> 'trigger'::regtype
       and chk.level = 'warning'
     order by p.proname, chk.lineno
   loop
@@ -64,6 +67,7 @@ begin
       lateral plpgsql_check_function_tb(p.oid) chk
     where n.nspname = 'public'
       and p.prolang = (select oid from pg_language where lanname = 'plpgsql')
+      and p.prorettype <> 'trigger'::regtype
       and chk.level = 'error'
       and not (
         p.proname = 'calculate_period_scores'

@@ -65,7 +65,7 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:ci": "jest --ci --runInBand",
+    "test:ci": "jest --ci --runInBand --forceExit",
     "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "jest": {

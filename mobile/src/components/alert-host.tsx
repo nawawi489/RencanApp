@@ -22,15 +22,23 @@ export function AlertHost(): React.ReactElement | null {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     let counter = 0;
+    // Track pending timers agar cleanup unmount tak meninggalkan timer aktif —
+    // tanpa ini jest `--ci` (strict) menganggap suite tidak selesai (5m hang).
+    const pending = new Set<ReturnType<typeof setTimeout>>();
     const unsub = subscribeBanner((event) => {
       const id = ++counter;
       setQueue((prev) => [...prev, { ...event, id }]);
-      // Auto-dismiss agar antrian error tidak menumpuk permanen.
-      setTimeout(() => {
+      const t = setTimeout(() => {
+        pending.delete(t);
         setQueue((prev) => prev.filter((b) => b.id !== id));
       }, AUTO_DISMISS_MS);
+      pending.add(t);
     });
-    return unsub;
+    return () => {
+      unsub();
+      for (const t of pending) clearTimeout(t);
+      pending.clear();
+    };
   }, []);
 
   if (Platform.OS !== 'web' || queue.length === 0) return null;
