@@ -16,7 +16,9 @@ import {
   createProblemStatement,
   getProblemStatement,
   listProblemStatements,
+  updateProblemStatement,
   type NewProblemStatement,
+  type ProblemStatementPatch,
 } from '../problem-statements';
 
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
@@ -140,5 +142,38 @@ describe('activateProblemStatement — RPC', () => {
   it('[8] propagasi RPC error', async () => {
     mockRpc.mockResolvedValue({ error: { message: 'denied' } });
     await expect(activateProblemStatement('p1')).rejects.toEqual({ message: 'denied' });
+  });
+});
+
+// S4-3 — updateProblemStatement passthrough via RPC update_problem_statement.
+describe('updateProblemStatement', () => {
+  const patch: ProblemStatementPatch = {
+    name: 'PS Diubah',
+    description: null,
+    pic_id: 'u1',
+    impact: 'medium',
+    initial_evidence: null,
+    period_start: null,
+    period_end: null,
+  };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
+
+  it('[9] meneruskan id + patch ke update_problem_statement', async () => {
+    mockRpc.mockResolvedValue({ error: null });
+    await updateProblemStatement('p1', patch);
+    expect(mockRpc.mock.calls[0][0]).toBe('update_problem_statement');
+    expect(rpcArgs().p_problem_statement_id).toBe('p1');
+    expect(rpcArgs().p_name).toBe('PS Diubah');
+    expect(rpcArgs().p_impact).toBe('medium');
+    expect(rpcArgs().p_pic_id).toBe('u1');
+  });
+
+  it('[10] propagasi error server (mis. "Impact terkunci")', async () => {
+    mockRpc.mockResolvedValue({
+      error: { message: 'Impact Problem Statement terkunci.' },
+    });
+    await expect(updateProblemStatement('p1', patch)).rejects.toEqual({
+      message: 'Impact Problem Statement terkunci.',
+    });
   });
 });

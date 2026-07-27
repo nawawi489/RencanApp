@@ -68,6 +68,38 @@ export async function createProblemStatement(input: NewProblemStatement): Promis
   return data as ProblemStatement;
 }
 
+/**
+ * S4-3 — sunting Problem Statement. Periode + Impact TERKUNCI pasca-aktivasi
+ * (dasar skor + severity weighting governance). Server MENOLAK perubahannya
+ * eksplisit; kirim nilai apa adanya (termasuk `null`).
+ */
+export type ProblemStatementPatch = {
+  name: string;
+  description: string | null;
+  pic_id: string | null;
+  impact: string | null;
+  initial_evidence: string | null;
+  period_start: string | null;
+  period_end: string | null;
+};
+
+export async function updateProblemStatement(
+  id: string,
+  patch: ProblemStatementPatch,
+): Promise<void> {
+  const { error } = await supabase.rpc('update_problem_statement', {
+    p_problem_statement_id: id,
+    p_name: patch.name,
+    p_description: (patch.description ?? null) as unknown as string,
+    p_pic_id: (patch.pic_id ?? null) as unknown as string,
+    p_impact: (patch.impact ?? null) as unknown as string,
+    p_initial_evidence: (patch.initial_evidence ?? null) as unknown as string,
+    p_period_start: (patch.period_start ?? null) as unknown as string,
+    p_period_end: (patch.period_end ?? null) as unknown as string,
+  });
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------- RPC (lifecycle)
 
 export async function activateProblemStatement(id: string): Promise<void> {

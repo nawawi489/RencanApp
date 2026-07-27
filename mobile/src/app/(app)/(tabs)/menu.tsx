@@ -7,7 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Avatar, Badge, IconTile, ScoreBadge, SkeletonCard, type IconTileTone } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
@@ -67,9 +67,13 @@ function ThemeSwitch() {
   );
 }
 
-// Satu item Menu. `href` = navigasi; `toast` = fitur belum dibangun (Bantuan) → alert "Segera hadir";
-// `permission` = gate opsional (non-pressable + dim bila can() false). `permissionAny` = gate bila
-// user punya SALAH SATU izin (layar multi-tab dg gate per-tab). `icon` XOR `text` (glyph).
+// Satu item Menu. `href` = navigasi; `permission` = gate opsional (non-pressable + dim
+// bila can() false). `permissionAny` = gate bila user punya SALAH SATU izin (layar
+// multi-tab dg gate per-tab). `icon` XOR `text` (glyph).
+//
+// S4-7: field `toast` dihapus. Dulu dipakai untuk item yang menampilkan "Segera hadir"
+// (Pusat Bantuan, Dukungan) — audit menandai tile mati. Kembalikan bila fitur berikutnya
+// perlu placeholder yang eksplisit alih-alih diam.
 type MenuItem = {
   label: string;
   description: string;
@@ -79,7 +83,6 @@ type MenuItem = {
   href?: Href;
   permission?: string;
   permissionAny?: readonly string[];
-  toast?: boolean;
 };
 
 // Layar Organisasi punya 4 tab dengan gate per-tab (create_department / manage_positions /
@@ -89,21 +92,18 @@ const ORG_SETTINGS_PERMISSIONS = [
   'create_department', 'manage_positions', 'manage_teams', 'manage_settings',
 ] as const;
 
-// Akses Cepat — §31: People / Archive / Pusat Bantuan (Log Aktivitas pindah Admin Lanjutan).
+// Akses Cepat — §31: People / Archive.
+// S4-7: "Pusat Bantuan" dihapus — sebelumnya `toast: true` → alert "Segera hadir"
+// (fitur belum dibangun); audit menandai sebagai tile mati. Sudah tak ditawarkan
+// dari mana pun; ketika Pusat Bantuan siap, cukup kembalikan entry-nya.
 const AKSES_CEPAT: MenuItem[] = [
   { label: 'Anggota', description: 'Ranking & profil', icon: 'people-outline', tone: 'info', href: '/people' as Href },
   { label: 'Arsip', description: 'Card selesai', icon: 'archive-outline', tone: 'danger', href: '/settings-archive' as Href },
-  { label: 'Pusat Bantuan', description: 'Panduan Rencanapp', text: '?', tone: 'success', toast: true },
 ];
 
 const TEMPLATE_ITEMS: MenuItem[] = [
   { label: 'Goal Template', description: 'Pustaka Goal', icon: 'document-text-outline', tone: 'success', href: '/settings-goal-templates' as Href },
   { label: 'Strategi Template', description: 'Buat & edit', icon: 'bar-chart-outline', tone: 'warn', href: '/settings-strategy-templates' as Href, permission: 'manage_kpi_area_templates' },
-];
-
-// Bantuan — §31: Pusat Bantuan pindah ke Akses Cepat; sisa hanya Support.
-const BANTUAN_ITEMS: MenuItem[] = [
-  { label: 'Dukungan', description: 'Hubungi admin', text: 'CS', tone: 'success', toast: true },
 ];
 
 // Pengaturan — §31: Score Formula + Aturan Pecah Target pindah ke Admin Lanjutan.
@@ -123,12 +123,18 @@ const PENGATURAN_ITEMS: MenuItem[] = [
 
 // Admin Lanjutan — §31: Score Formula/MBR/Log Aktivitas masuk sini (staff tak melihat
 // sebagai shortcut utama). Semua item WAJIB punya `permission` agar adminVisible gating benar.
+//
+// S4-7: dua tile dihapus karena mengarah ke layar yang butuh konteks-per-entitas dan
+// mendarat di "Data target tidak lengkap"/rules-kosong bila diketuk dari sini:
+//   • "Override Skor" (/manual-score-override) — butuh userId + periodId; dibuka dari
+//     profil anggota (people-profile), bukan tile top-level.
+//   • "Rahasia" (/settings-confidential-access) — butuh entity_type + entity_id;
+//     dibuka dari detail card, dan `grant lewat detail card` masih di-defer.
+// Layar kedua tetap ada untuk saat sudah dijangkau dengan konteks yang benar.
 const ADMIN_ITEMS: MenuItem[] = [
   { label: 'Aturan Pecah Target', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
   { label: 'Score Formula', description: 'Rumus skor', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
   { label: 'Tata Kelola', description: 'Pelanggaran aturan', icon: 'warning-outline', tone: 'danger', href: '/settings-governance-violation' as Href, permission: 'view_governance_violation' },
-  { label: 'Rahasia', description: 'Akses khusus', icon: 'lock-closed-outline', tone: 'warn', href: '/settings-confidential-access' as Href, permission: 'manage_confidential_access' },
-  { label: 'Override Skor', description: 'Akses berwenang', icon: 'ribbon-outline', tone: 'violet', href: '/manual-score-override' as Href, permission: 'manage_score_formula' },
   { label: 'Log Aktivitas', description: 'Riwayat sistem', icon: 'time-outline', tone: 'success', href: '/settings-activity-log' as Href, permission: 'view_activity_log' },
 ];
 
@@ -155,7 +161,7 @@ function MenuCard({ item, onPress }: { item: MenuItem; onPress: (item: MenuItem)
   const permitted =
     (!item.permission || can(item.permission)) &&
     (!item.permissionAny || item.permissionAny.some((k) => can(k)));
-  const active = item.toast ? true : !!item.href && permitted;
+  const active = !!item.href && permitted;
   const body = (
     <View
       className={`min-h-[112px] justify-between rounded-2xl border p-3.5 ${
@@ -247,12 +253,7 @@ export default function MenuScreen() {
 
   const openMyProfile = userId ? () => router.push(`/people-profile/${userId}` as Href) : undefined;
 
-  // Handler tunggal: toast (fitur belum ada) vs navigasi.
   const onItemPress = (item: MenuItem) => {
-    if (item.toast) {
-      Alert.alert('Segera hadir', `${item.label} akan tersedia di versi berikutnya.`);
-      return;
-    }
     if (item.href) router.push(item.href);
   };
 
@@ -311,7 +312,8 @@ export default function MenuScreen() {
         {can('manage_kpi_area_templates') ? (
           <MenuAccordion title="Template" items={TEMPLATE_ITEMS} onPress={onItemPress} />
         ) : null}
-        <MenuAccordion title="Bantuan" items={BANTUAN_ITEMS} onPress={onItemPress} />
+        {/* S4-7: accordion "Bantuan" dihapus — satu-satunya isinya ("Dukungan") berupa
+            toast "Segera hadir". Kembalikan ketika Pusat Bantuan/Dukungan siap. */}
         <MenuAccordion title="Pengaturan" items={PENGATURAN_ITEMS} onPress={onItemPress} />
         {adminVisible ? <MenuAccordion title="Admin Lanjutan" items={ADMIN_ITEMS} onPress={onItemPress} /> : null}
 

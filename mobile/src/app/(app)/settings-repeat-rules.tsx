@@ -28,8 +28,10 @@ export default function SettingsRepeatRulesScreen() {
         <SectionCard>
           <Text className="text-sm font-bold text-black dark:text-white">Tentang Pengaturan Pengulangan</Text>
           <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-            Daftar Tugas dengan jadwal berulang. Edit jadwal dilakukan di tiap Tugas
-            (Pengaturan Pengulangan adalah pengaturan per-AP, bukan template global).
+            Daftar Tugas dengan jadwal berulang. Ketuk salah satu untuk buka Tugas induk;
+            di sana ada tombol Ubah Jadwal Repeat. Jadwal bisa diubah selama instance
+            pertama belum ter-generate — setelah itu jadwal terkunci untuk menjaga
+            konsistensi angka compliance historis.
           </Text>
         </SectionCard>
 

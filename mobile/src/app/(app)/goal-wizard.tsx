@@ -7,7 +7,7 @@ import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { DateRangeField } from '@/components/date-range-field';
-import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { Button, ErrorState, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useGoalActions, useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
@@ -18,7 +18,7 @@ type Person = NonNullable<PersonRef>;
 
 export default function GoalWizardScreen() {
   const router = useRouter();
-  const { templates } = useGoalTemplates();
+  const { templates, isError: templatesError } = useGoalTemplates();
   const { applyTemplate, isPending } = useGoalActions();
 
   const [step, setStep] = useState(0);
@@ -85,14 +85,24 @@ export default function GoalWizardScreen() {
             <Text className="text-base font-semibold text-black dark:text-white">
               Langkah 1 — Pilih Goal Template
             </Text>
-            {templates.map((t) => (
-              <Button
-                key={t.id}
-                label={t.name}
-                variant={t.id === templateId ? 'primary' : 'secondary'}
-                onPress={() => setTemplateId(t.id)}
+            {/* S4-6 — dulu daftar template kosong terlihat identik saat fetch gagal
+                vs org memang belum punya template — user diam-diam ter-nudge ke
+                "Buat Goal Kosong" alih-alih tahu ada masalah koneksi. */}
+            {templatesError ? (
+              <ErrorState
+                title="Gagal memuat template"
+                description="Tidak bisa mengambil daftar Goal Template. Anda tetap bisa membuat Goal kosong di bawah."
               />
-            ))}
+            ) : (
+              templates.map((t) => (
+                <Button
+                  key={t.id}
+                  label={t.name}
+                  variant={t.id === templateId ? 'primary' : 'secondary'}
+                  onPress={() => setTemplateId(t.id)}
+                />
+              ))
+            )}
             <Button label="Lanjut" onPress={next} />
             <Text className="text-center text-xs text-neutral-500 dark:text-neutral-400">atau</Text>
             <Button

@@ -179,6 +179,15 @@ export function LiveDevelopmentAreaDetailScreen() {
               />
             ) : null}
 
+            {/* S4-3 — sunting. Draft/aktif diterima RPC update_development_area. */}
+            {devArea.status === 'draft' || devArea.status === 'active' ? (
+              <Button
+                label="Ubah Development Area"
+                variant="secondary"
+                onPress={() => router.push(`/development-area/edit/${id}` as Href)}
+              />
+            ) : null}
+
             <View className="gap-3">
               <SectionHeading title="Problem Statement" />
 

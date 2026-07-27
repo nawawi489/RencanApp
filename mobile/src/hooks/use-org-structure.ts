@@ -53,6 +53,7 @@ export function usePositions() {
     positions: (q.data ?? []) as Position[],
     isLoading: q.isLoading,
     isError: q.isError,
+    refetch: q.refetch,
   };
 }
 
@@ -65,6 +66,7 @@ export function useTeams() {
     teams: (q.data ?? []) as Team[],
     isLoading: q.isLoading,
     isError: q.isError,
+    refetch: q.refetch,
   };
 }
 

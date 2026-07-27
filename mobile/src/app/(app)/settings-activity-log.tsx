@@ -11,7 +11,7 @@ import { ActivityIndicator, SectionList, TextInput } from 'react-native';
 import { Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { EmptyState, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
+import { EmptyState, ErrorState, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useActivityLog } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
 import type { ActivityLog, ActivityLogChipKey } from '@/lib/activity-governance';
@@ -118,6 +118,8 @@ export default function SettingsActivityLogScreen() {
   const {
     logs,
     isLoading,
+    isError,
+    refetch,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
@@ -227,6 +229,14 @@ export default function SettingsActivityLogScreen() {
         ListEmptyComponent={
           isLoading ? (
             <SkeletonList count={5} />
+          ) : isError ? (
+            // S4-6 — sebelumnya fetch gagal jatuh ke EmptyState "Belum ada aktivitas",
+            // membuat admin percaya log kosong dan menutup insiden tanpa jejak.
+            <ErrorState
+              title="Gagal memuat log aktivitas"
+              description="Tidak bisa mengambil riwayat aktivitas organisasi. Periksa koneksi lalu coba lagi."
+              onRetry={() => refetch()}
+            />
           ) : (
             <EmptyState
               title={qDebounced || chip !== 'semua' ? 'Tidak ada yang cocok' : 'Belum ada aktivitas'}

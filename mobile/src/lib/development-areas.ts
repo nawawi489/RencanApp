@@ -65,6 +65,35 @@ export async function createDevelopmentArea(input: NewDevelopmentArea): Promise<
   return data;
 }
 
+/**
+ * S4-3 — sunting Development Area. Periode TERKUNCI pasca-aktivasi (dasar
+ * mapping Action Plan development → periode skor). Server MENOLAK
+ * perubahannya eksplisit; kirim nilai apa adanya (termasuk `null`) supaya
+ * panggilan yang tidak menyentuhnya tidak ikut tertolak.
+ */
+export type DevelopmentAreaPatch = {
+  name: string;
+  description: string | null;
+  pic_id: string | null;
+  period_start: string | null;
+  period_end: string | null;
+};
+
+export async function updateDevelopmentArea(
+  id: string,
+  patch: DevelopmentAreaPatch,
+): Promise<void> {
+  const { error } = await supabase.rpc('update_development_area', {
+    p_development_area_id: id,
+    p_name: patch.name,
+    p_description: (patch.description ?? null) as unknown as string,
+    p_pic_id: (patch.pic_id ?? null) as unknown as string,
+    p_period_start: (patch.period_start ?? null) as unknown as string,
+    p_period_end: (patch.period_end ?? null) as unknown as string,
+  });
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------- RPC (lifecycle)
 
 export async function activateDevelopmentArea(id: string): Promise<void> {
