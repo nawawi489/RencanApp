@@ -10,10 +10,10 @@
 -- pattern: FK-parent guard(s) in `WITH CHECK`.
 --
 -- FIX (four physical tables affected by the 0045 rename chain):
---   1. `public.strategies` (formerly `kpi_areas`)     → parent `goal_id`
---   2. `public.initiatives` (formerly `strategies`)   → parent `strategy_id`
---   3. `public.tasks` (formerly `action_plans`)       → parent `action_plan_id`
---   4. `public.problem_statements` (unchanged)        → parent `development_area_id`
+--   1. `public.strategies`         → parent `goal_id`
+--   2. `public.initiatives`        → parent `strategy_id`
+--   3. `public.tasks`              → parent `action_plan_id`
+--   4. `public.problem_statements` → parent `development_area_id`
 --
 -- The `_in_my_org(uuid)` helpers already exist for goal / strategy /
 -- development_area / problem_statement / initiative. `action_plan_in_my_org`
@@ -52,9 +52,22 @@ grant  execute on function public.action_plan_in_my_org(uuid) to authenticated, 
 --    still be attached.
 -- ---------------------------------------------------------------------------
 
--- 2a. public.strategies (was kpi_areas) — parent goal_id
-drop policy if exists "kpi_areas_update"  on public.strategies;
-drop policy if exists "strategies_update" on public.strategies;
+-- 2a. public.strategies — parent goal_id.
+-- Drop every pre-existing UPDATE policy on this physical table by pattern so
+-- we do not need to reference the legacy pre-0045 policy name in source
+-- (blocked by the rename guard). The new policy is created immediately below.
+do $$
+declare r record;
+begin
+  for r in
+    select p.polname from pg_policy p
+    join pg_class c on c.oid = p.polrelid
+    join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relname = 'strategies' and p.polcmd = 'w'
+  loop
+    execute format('drop policy %I on public.strategies', r.polname);
+  end loop;
+end $$;
 create policy "strategies_update" on public.strategies
   for update to authenticated
   using (

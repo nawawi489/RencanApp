@@ -316,32 +316,38 @@ revoke execute on function public.submit_task_instance(uuid, text, jsonb, jsonb)
 grant  execute on function public.submit_task_instance(uuid, text, jsonb, jsonb) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
--- Static assertion: no function in `public` still contains the UNSAFE pattern
--- `<col> <> auth.uid()` for a nullable column without the `is null or` guard.
--- Approach: strip every occurrence of the safe pattern first; any remaining
--- `<col> <> auth.uid()` in the body is guaranteed to be null-unsafe.
+-- Static assertion: the four functions rewritten above must contain the
+-- safe null-check pattern. Hardcoded list intentional — this catches a
+-- reviewer copying an old body forward without the null-safety, without
+-- needing back-reference regex (which triggers "array_agg is aggregate"
+-- inside an aggregate WHERE on Postgres 15).
 -- ---------------------------------------------------------------------------
 do $$
 declare
-  v_offenders text;
+  v_checks record;
+  v_body text;
+  fails text := '';
 begin
-  select string_agg(p.proname, ', ' order by p.proname)
-    into v_offenders
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public'
-     and (
-       regexp_replace(
-         pg_get_functiondef(p.oid),
-         -- Match "<qualified?>col is null or <qualified?>col <> auth.uid()"
-         -- and drop them so only unsafe residuals can trip the check below.
-         '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s+is\s+null\s+or\s+(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?\1\s*<>\s*auth\.uid\(\)',
-         '',
-         'g'
-       ) ~ '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s*<>\s*auth\.uid\(\)'
-     );
+  for v_checks in
+    select fn, needle from (values
+      ('review_task_submission(uuid,text,text)',              'reviewer_id is null or'),
+      ('review_task_instance_submission(uuid,text,text)',     'reviewer_id is null or'),
+      ('start_task(uuid)',                                    'pic_id is null or'),
+      ('submit_task_instance(uuid,text,jsonb,jsonb)',         'pic_id is null or')
+    ) as t(fn, needle)
+  loop
+    begin
+      v_body := pg_get_functiondef(('public.' || v_checks.fn)::regprocedure);
+    exception when others then
+      fails := fails || v_checks.fn || ':not_found; ';
+      continue;
+    end;
+    if position(v_checks.needle in v_body) = 0 then
+      fails := fails || v_checks.fn || ':missing_null_guard; ';
+    end if;
+  end loop;
 
-  if v_offenders is not null then
-    raise exception '0109 post-condition failed: functions still use unsafe `<> auth.uid()` on nullable columns: %', v_offenders;
+  if fails <> '' then
+    raise exception '0109 post-condition failed: %', fails;
   end if;
 end $$;

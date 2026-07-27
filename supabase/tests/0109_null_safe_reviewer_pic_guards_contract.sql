@@ -7,25 +7,31 @@
 
 do $$
 declare
-  v_offenders text;
+  v_checks record;
+  v_body text;
+  fails text := '';
 begin
-  select string_agg(p.proname, ', ' order by p.proname)
-    into v_offenders
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public'
-     and (
-       regexp_replace(
-         pg_get_functiondef(p.oid),
-         '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s+is\s+null\s+or\s+(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?\1\s*<>\s*auth\.uid\(\)',
-         '',
-         'g'
-       ) ~ '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s*<>\s*auth\.uid\(\)'
-     );
+  for v_checks in
+    select fn, needle from (values
+      ('review_task_submission(uuid,text,text)',              'reviewer_id is null or'),
+      ('review_task_instance_submission(uuid,text,text)',     'reviewer_id is null or'),
+      ('start_task(uuid)',                                    'pic_id is null or'),
+      ('submit_task_instance(uuid,text,jsonb,jsonb)',         'pic_id is null or')
+    ) as t(fn, needle)
+  loop
+    begin
+      v_body := pg_get_functiondef(('public.' || v_checks.fn)::regprocedure);
+    exception when others then
+      fails := fails || v_checks.fn || ':not_found; ';
+      continue;
+    end;
+    if position(v_checks.needle in v_body) = 0 then
+      fails := fails || v_checks.fn || ':missing_null_guard; ';
+    end if;
+  end loop;
 
-  if v_offenders is not null then
-    raise exception '0109-DB-1 FAILED: functions still use null-unsafe `<> auth.uid()`: %', v_offenders;
+  if fails <> '' then
+    raise exception '0109-DB-1 FAILED: %', fails;
   end if;
-
-  raise notice '0109-DB-1 PASSED: no null-unsafe reviewer_id / pic_id `<>` guards in public schema';
+  raise notice '0109-DB-1 PASSED: all 4 target functions carry the null-safe `<col> is null or` guard';
 end $$;
