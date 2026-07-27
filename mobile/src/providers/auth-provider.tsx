@@ -7,6 +7,7 @@ import { env } from '@/lib/env';
 import { reportError } from '@/lib/errors';
 import { parseRecoveryUrl } from '@/lib/parse-recovery-url';
 import { getCurrentPushToken, setCurrentPushToken, unregisterPushToken } from '@/lib/push-notifications';
+import { setSentryUser } from '@/lib/sentry-init';
 import { supabase } from '@/lib/supabase';
 import { isRecoveryTokenForProject } from '@/lib/verify-recovery-token';
 
@@ -34,6 +35,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  // S5-6 — kaitkan Sentry event ke user aktif memakai Supabase auth `user.id`
+  // (UUID acak, non-PII). Email/nama TIDAK boleh dikirim. Reset ke null pada
+  // sign-out agar event pasca-logout tidak masih ter-tag ke user lama.
+  useEffect(() => {
+    setSentryUser(session?.user?.id ? { id: session.user.id } : null);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     // getSession bisa reject (mis. storage/koneksi bermasalah). Tanpa .catch, `initializing`

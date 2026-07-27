@@ -83,6 +83,13 @@ jobs:
       EXPO_PUBLIC_APP_ENV: staging
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+      # S5-6 — Sentry release/dist tag di-bake ke bundel via env EXPO_PUBLIC_*.
+      # `release` = commit SHA (stabil lintas re-run workflow); `dist` = run_id
+      # (membedakan re-run atas commit sama). Sourcemap upload di step berikut
+      # WAJIB memakai nilai release yg sama biar stacktrace ter-symbolicate.
+      EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
+      EXPO_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+      EXPO_PUBLIC_SENTRY_DIST: ${{ github.run_id }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -98,7 +105,28 @@ jobs:
         run: npm install -g eas-cli
 
       - name: Export web bundle
-        run: npx expo export --platform web
+        # Sourcemap wajib ada di dist/ agar upload di step berikut punya
+        # sesuatu untuk ditunjuk. `--source-maps` tersedia di expo-cli >= v50.
+        run: npx expo export --platform web --source-maps
+
+      # S5-6 — upload sourcemap web bundle ke Sentry supaya stacktrace
+      # produksi bisa ter-symbolicate. Skip gracefully bila SENTRY_AUTH_TOKEN
+      # belum di-set (owner belum provisioning Sentry project); staging tetap
+      # deploy, hanya symbolication yang absen. Setelah owner isi 3 secret ini
+      # step-nya jalan otomatis di deploy berikutnya.
+      - name: Upload sourcemaps to Sentry
+        if: ${{ env.SENTRY_AUTH_TOKEN != '' && env.SENTRY_ORG != '' && env.SENTRY_PROJECT != '' }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_DIST: ${{ github.run_id }}
+        run: |
+          npx --yes @sentry/cli@2 releases new "$SENTRY_RELEASE"
+          npx --yes @sentry/cli@2 releases files "$SENTRY_RELEASE" \
+            upload-sourcemaps ./dist --dist "$SENTRY_DIST" --url-prefix '~/'
+          npx --yes @sentry/cli@2 releases finalize "$SENTRY_RELEASE"
 
       - name: Deploy to EAS Hosting (staging alias)
         run: eas deploy --alias staging --non-interactive

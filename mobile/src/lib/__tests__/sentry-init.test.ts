@@ -1,19 +1,24 @@
 import { _resetForTest, createLogger, getTransports } from '../logger';
-import { initSentry, type InjectableSentry } from '../sentry-init';
+import { _resetSentryForTest, initSentry, setSentryUser, type InjectableSentry } from '../sentry-init';
 
 function mockSentry(): InjectableSentry & {
   init: jest.Mock;
   captureException: jest.Mock;
   captureMessage: jest.Mock;
+  setUser: jest.Mock;
 } {
   return {
     init: jest.fn(),
     captureException: jest.fn(),
     captureMessage: jest.fn(),
+    setUser: jest.fn(),
   };
 }
 
-afterEach(() => _resetForTest());
+afterEach(() => {
+  _resetForTest();
+  _resetSentryForTest();
+});
 
 describe('initSentry', () => {
   it('mengembalikan null (no-op) bila EXPO_PUBLIC_SENTRY_DSN tidak di-set', () => {
@@ -175,6 +180,93 @@ describe('initSentry', () => {
       });
       const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
       expect(opts.tracesSampleRate).toBe(0);
+    });
+  });
+
+  // S5-6 — release + dist tag menempatkan event Sentry di build tertentu; sourcemap
+  // yang di-upload workflow dicocokkan pada nilai `release`.
+  describe('release + dist tag (S5-6)', () => {
+    it('EXPO_PUBLIC_SENTRY_RELEASE + _DIST diset → diteruskan ke Sentry.init', () => {
+      const sentry = mockSentry();
+      initSentry({
+        env: {
+          EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
+          EXPO_PUBLIC_SENTRY_RELEASE: 'abc123',
+          EXPO_PUBLIC_SENTRY_DIST: '42',
+        },
+        sentry,
+      });
+      const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+      expect(opts.release).toBe('abc123');
+      expect(opts.dist).toBe('42');
+    });
+
+    it('tanpa release env → key `release` TIDAK dikirim (SDK pakai default plugin)', () => {
+      const sentry = mockSentry();
+      initSentry({
+        env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' },
+        sentry,
+      });
+      const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+      expect('release' in opts).toBe(false);
+      expect('dist' in opts).toBe(false);
+    });
+
+    it('release/dist BLANK string diperlakukan sbg tak-diset (bukan literal "")', () => {
+      const sentry = mockSentry();
+      initSentry({
+        env: {
+          EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1',
+          EXPO_PUBLIC_SENTRY_RELEASE: '   ',
+          EXPO_PUBLIC_SENTRY_DIST: '',
+        },
+        sentry,
+      });
+      const opts = sentry.init.mock.calls[0][0] as Record<string, unknown>;
+      expect('release' in opts).toBe(false);
+      expect('dist' in opts).toBe(false);
+    });
+  });
+
+  // S5-6 — Sentry.setUser hanya boleh menerima id (Supabase auth user_id UUID);
+  // email/nama TIDAK boleh diteruskan.
+  describe('setSentryUser (S5-6)', () => {
+    it('no-op sebelum init: TIDAK memanggil Sentry.setUser', () => {
+      const sentry = mockSentry();
+      setSentryUser({ id: 'u1' });
+      expect(sentry.setUser).not.toHaveBeenCalled();
+    });
+
+    it('setelah init: setSentryUser({id}) → sentry.setUser({id}) tanpa email/nama', () => {
+      const sentry = mockSentry();
+      initSentry({ env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' }, sentry });
+      setSentryUser({ id: 'user-uuid-42' });
+      expect(sentry.setUser).toHaveBeenCalledTimes(1);
+      const arg = sentry.setUser.mock.calls[0][0] as Record<string, unknown> | null;
+      expect(arg).toEqual({ id: 'user-uuid-42' });
+      // Regression pin: TIDAK boleh ada email/nama key
+      expect(arg).not.toHaveProperty('email');
+      expect(arg).not.toHaveProperty('username');
+      expect(arg).not.toHaveProperty('name');
+    });
+
+    it('setSentryUser(null) → sentry.setUser(null) untuk clear di sign-out', () => {
+      const sentry = mockSentry();
+      initSentry({ env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' }, sentry });
+      setSentryUser(null);
+      expect(sentry.setUser).toHaveBeenCalledWith(null);
+    });
+
+    it('init gagal (dsn malformed → throw) → setSentryUser tetap no-op (bukan crash)', () => {
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const sentry = mockSentry();
+      sentry.init.mockImplementationOnce(() => {
+        throw new Error('bad dsn');
+      });
+      initSentry({ env: { EXPO_PUBLIC_SENTRY_DSN: 'https://k@s.io/1' }, sentry });
+      expect(() => setSentryUser({ id: 'u1' })).not.toThrow();
+      expect(sentry.setUser).not.toHaveBeenCalled();
+      spy.mockRestore();
     });
   });
 });
