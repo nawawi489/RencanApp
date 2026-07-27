@@ -9,6 +9,7 @@ import { ActivityIndicator, View } from 'react-native-css/components';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AlertHost } from '@/components/alert-host';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { ensureAndroidNotificationChannel } from '@/hooks/use-push-notifications';
 import { installGlobalErrorHandler } from '@/lib/global-handler';
@@ -77,6 +78,7 @@ export default function RootLayout() {
               <PeriodFocusProvider>
                 <AuthProvider>
                   <RootNavigator />
+                  <AlertHost />
                 </AuthProvider>
               </PeriodFocusProvider>
             </ThemeProvider>

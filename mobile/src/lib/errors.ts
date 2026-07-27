@@ -2,8 +2,7 @@
 // teknis (message backend, SQLSTATE, stack) dikirim ke console/telemetry untuk developer.
 //
 // `alertImpl`/`logImpl` injectable agar pure di unit test.
-import { Alert } from 'react-native';
-
+import { showAlert } from './alert';
 import { createLogger } from './logger';
 
 type AlertFn = (title: string, message: string) => void;
@@ -129,6 +128,8 @@ export function alertFriendlyError(
 ): void {
   const log = opts?.logImpl ?? ((...a: unknown[]) => createLogger(title).error(...a));
   log(`[${title}]`, error);
-  const alert = opts?.alertImpl ?? (Alert.alert as AlertFn);
+  // `showAlert` seam: native → Alert.alert modal; web → banner in-app (react-native-web
+  // membuat Alert.alert no-op sehingga tanpa seam ini seluruh error surface diam di web).
+  const alert = opts?.alertImpl ?? ((t: string, m: string) => showAlert(t, m));
   alert(title, friendlyErrorMessage(error) ?? fallbackMessage);
 }

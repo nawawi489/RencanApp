@@ -176,6 +176,14 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: bash scripts/ci/run-db-contract-tests.sh
 
+      - name: plpgsql_check gate (S3-3)
+        # Statik-check semua fungsi plpgsql di skema `public` setelah migrasi
+        # ter-apply. Gagalkan build bila ada issue level `error` (kolom hilang,
+        # tipe tak kompatibel, rename tak menyeluruh). Warning dilog non-blocking.
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci/plpgsql-check.sql
+
       - name: Stop Supabase stack
         if: always()
         run: supabase stop --no-backup

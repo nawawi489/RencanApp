@@ -22,6 +22,10 @@ import {
 import { usePushRegistration } from '@/hooks/use-push-notifications';
 import { useNotificationActions, useNotifications, useUnreadCount } from '@/hooks/use-notifications';
 import {
+  NOTIFICATIONS_FALLBACK_ROUTE,
+  resolveNotificationRoute,
+} from '@/lib/push-route-resolver';
+import {
   NOTIFICATION_TYPE_LABEL,
   NOTIFICATION_TYPE_TONE,
   type Notification,
@@ -310,11 +314,12 @@ export function LiveNotificationsScreen() {
         item={item}
         onPress={() => {
           markRead(item.id);
-          if (item.entity_type === 'task') {
-            router.push(`/task/${item.entity_id}` as Href);
-          } else if (item.entity_type === 'task_instance') {
-            router.push(`/task/instance/${item.entity_id}` as Href);
-          }
+          // S3-7: pakai resolver bersama (bukan hardcode 2 tipe). Rute yang tak
+          // dikenal jatuh ke tab Notifikasi supaya tap tetap responsif.
+          const route =
+            resolveNotificationRoute(item.entity_type, item.entity_id ?? '') ??
+            NOTIFICATIONS_FALLBACK_ROUTE;
+          router.push(route as Href);
         }}
         onAction={(href) => {
           markRead(item.id);
