@@ -128,6 +128,15 @@ export function LiveInitiativeDetailScreen() {
               />
             ) : null}
 
+            {/* S4-2 — sunting. Draft/aktif diterima RPC update_initiative; done/archived tak. */}
+            {initiative.status === 'draft' || initiative.status === 'active' ? (
+              <Button
+                label="Ubah Inisiatif"
+                variant="secondary"
+                onPress={() => router.push(`/initiative/edit/${id}`)}
+              />
+            ) : null}
+
             <View className="gap-3">
               <SectionHeading title="Rencana Aksi" />
 

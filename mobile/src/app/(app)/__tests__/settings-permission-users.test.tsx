@@ -10,9 +10,26 @@ jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 const mockListOrgProfiles = jest.fn();
 jest.mock('@/lib/cards', () => ({
   __esModule: true,
-  listOrgProfiles: () => mockListOrgProfiles(),
+  // S4-4/S4-5 — screen sekarang pakai list admin (include inactive + role); test
+  // mock tetap satu fn karena panggilannya juga tunggal per render.
+  listOrgProfilesAdmin: () => mockListOrgProfiles(),
   personLabel: (p: { full_name?: string | null; email?: string | null } | null | undefined, fallback = 'Tanpa nama') =>
     p?.full_name?.trim() || p?.email || fallback,
+}));
+
+// S4-5 — dropdown role di modal ubah role; kosongkan supaya empty-state kepakai
+// (kita hanya butuh render tanpa crash — assertion role change ada di test terpisah).
+jest.mock('@/hooks/use-org-structure', () => ({
+  __esModule: true,
+  useRoleTemplates: () => ({ roleTemplates: [], isLoading: false, isError: false }),
+}));
+
+// S4-4 / S4-5 — RPC wrappers dipanggil di modal konfirmasi. Layar tak menyentuh
+// modul kecuali user membuka modal; test permission-flow tak buka modal ini.
+jest.mock('@/lib/users-admin', () => ({
+  __esModule: true,
+  setUserActive: jest.fn(),
+  updateUserRole: jest.fn(),
 }));
 
 const mockCan = jest.fn();
@@ -63,8 +80,8 @@ beforeEach(() => {
   mockSetPermission.mockReset();
   mockCan.mockReturnValue(true);
   mockListOrgProfiles.mockResolvedValue([
-    { id: 'me', full_name: 'Aku', email: 'me@n.id' },
-    { id: 'u2', full_name: 'Rina Jaya', email: 'rina@n.id' },
+    { id: 'me', full_name: 'Aku', email: 'me@n.id', is_active: true, role_template_id: null, role_name: null },
+    { id: 'u2', full_name: 'Rina Jaya', email: 'rina@n.id', is_active: true, role_template_id: null, role_name: null },
   ]);
   mockUseUserPerms.mockReturnValue({ rows: ROWS, isLoading: false, isError: false });
   mockSetPermission.mockResolvedValue(undefined);

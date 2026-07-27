@@ -15,7 +15,14 @@ jest.mock('../supabase', () => ({
 }));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
-import { activateInitiative, createInitiative, getInitiative, listInitiatives } from '../initiatives';
+import {
+  activateInitiative,
+  createInitiative,
+  getInitiative,
+  listInitiatives,
+  updateInitiative,
+  type InitiativePatch,
+} from '../initiatives';
 
 /** Builder thenable: metode chainable kembalikan builder; await resolve di titik mana pun. */
 function makeQueryThenable(result: { data: unknown; error: unknown }) {
@@ -134,5 +141,39 @@ describe('getInitiative', () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'tidak ada' } });
     mockFrom.mockReturnValue(builder);
     await expect(getInitiative('s1')).rejects.toEqual({ message: 'tidak ada' });
+  });
+});
+
+// S4-2b — updateInitiative passthrough via RPC update_initiative.
+describe('updateInitiative', () => {
+  const patch: InitiativePatch = {
+    name: 'Init Diubah',
+    description: null,
+    pic_id: 'u1',
+    reason: 'Alasan',
+    main_risk: null,
+    alternative: null,
+    contribution_pct: 25,
+    period_start: null,
+    period_end: null,
+  };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
+
+  it('[10] meneruskan id + patch ke update_initiative', async () => {
+    mockRpc.mockResolvedValue({ error: null });
+    await updateInitiative('i1', patch);
+    expect(mockRpc.mock.calls[0][0]).toBe('update_initiative');
+    expect(rpcArgs().p_initiative_id).toBe('i1');
+    expect(rpcArgs().p_name).toBe('Init Diubah');
+    expect(rpcArgs().p_pic_id).toBe('u1');
+    expect(rpcArgs().p_contribution_pct).toBe(25);
+    expect(rpcArgs().p_main_risk).toBeNull();
+  });
+
+  it('[11] propagasi error dari server (mis. "Kontribusi terkunci")', async () => {
+    mockRpc.mockResolvedValue({ error: { message: 'Kontribusi Inisiatif terkunci.' } });
+    await expect(updateInitiative('i1', patch)).rejects.toEqual({
+      message: 'Kontribusi Inisiatif terkunci.',
+    });
   });
 });

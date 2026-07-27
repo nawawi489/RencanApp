@@ -2,7 +2,11 @@
 // Gate manage_users_permissions (server penegak akhir di set_user_permission). Default-role terkunci
 // (badge "Bawaan role"). Grant/revoke butuh reason (modal in-tree, bukan Alert native — testable);
 // revoke = destruktif (danger). Token DESIGN.md: brand-dark, min-h-44, warna+label.
-import { useQuery } from '@tanstack/react-query';
+//
+// S4-4 (nonaktifkan pengguna) + S4-5 (penugasan ulang role) menempel di panel
+// detail pengguna yang sama — dua kapabilitas operator ini tak butuh layar
+// tersendiri dan konsumennya identik.
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
@@ -16,11 +20,13 @@ import {
   useUserPermissionsAdmin,
 } from '@/hooks/use-permissions-admin';
 import { useProfile } from '@/hooks/use-profile';
-import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
+import { useRoleTemplates } from '@/hooks/use-org-structure';
+import { listOrgProfilesAdmin, personLabel, type OrgProfileAdminRow } from '@/lib/cards';
 import { alertFriendlyError, surfaceServerError } from '@/lib/errors';
 import type { AdminPermissionRow } from '@/lib/permissions-admin';
+import { setUserActive, updateUserRole } from '@/lib/users-admin';
 
-type Person = NonNullable<PersonRef>;
+type Person = OrgProfileAdminRow;
 const REASON_MAX = 500;
 
 const SCOPE_OPTIONS: { value: 'own' | 'team' | 'dept' | 'org'; label: string }[] = [
@@ -111,13 +117,42 @@ export default function SettingsPermissionUsersScreen() {
   const [modalError, setModalError] = useState<string | null>(null);
 
   const { data: profiles, isLoading: membersLoading, isError: membersError, refetch } = useQuery({
-    queryKey: ['org-profiles'],
-    queryFn: listOrgProfiles,
+    queryKey: ['org-profiles-admin'],
+    queryFn: listOrgProfilesAdmin,
   });
   const { rows, isLoading: permsLoading, isError: permsError, refetch: refetchPerms } = useUserPermissionsAdmin(selectedId ?? '');
   const { scopes } = useUserPermissionScopes(selectedId ?? '');
   const { setPermission, isPending } = usePermissionActions(profile?.id ?? null);
   const { setScope } = useScopeActions();
+  const { roleTemplates } = useRoleTemplates();
+  const qc = useQueryClient();
+
+  // S4-4 — modal konfirmasi nonaktifkan/aktifkan; S4-5 — modal pilih role.
+  const [pendingActive, setPendingActive] = useState<{ next: boolean } | null>(null);
+  const [pendingRoleId, setPendingRoleId] = useState<string | null>(null);
+  const [rolePickerOpen, setRolePickerOpen] = useState(false);
+
+  const activeM = useMutation({
+    mutationFn: (args: { targetId: string; active: boolean }) =>
+      setUserActive(args.targetId, args.active),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['org-profiles-admin'] });
+      qc.invalidateQueries({ queryKey: ['org-profiles'] });
+      setPendingActive(null);
+    },
+    onError: (e) => alertFriendlyError('Gagal', e, 'Perubahan status pengguna gagal.'),
+  });
+  const roleM = useMutation({
+    mutationFn: (args: { targetId: string; roleTemplateId: string }) =>
+      updateUserRole(args.targetId, args.roleTemplateId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['org-profiles-admin'] });
+      qc.invalidateQueries({ queryKey: ['profile', selectedId] });
+      setPendingRoleId(null);
+      setRolePickerOpen(false);
+    },
+    onError: (e) => alertFriendlyError('Gagal', e, 'Perubahan role gagal.'),
+  });
 
   if (profileLoading) {
     return (
@@ -205,18 +240,28 @@ export default function SettingsPermissionUsersScreen() {
               members.map((p) => (
                 <Pressable
                   key={p.id}
-                  className="flex-row items-center gap-3 rounded-2xl border border-neutral-200 p-4 active:opacity-70 dark:border-neutral-800"
+                  className={`flex-row items-center gap-3 rounded-2xl border p-4 active:opacity-70 ${p.is_active ? 'border-neutral-200 dark:border-neutral-800' : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950'}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`Atur hak akses ${personLabel(p)}`}
+                  accessibilityLabel={`Atur hak akses ${personLabel(p)}${p.is_active ? '' : ' (nonaktif)'}`}
                   onPress={() => setSelectedId(p.id)}>
                   <Avatar name={personLabel(p)} seed={p.id} />
-                  <View className="flex-1">
-                    <Text className="text-base font-bold text-black dark:text-white" numberOfLines={1}>
-                      {personLabel(p)}
-                    </Text>
+                  <View className="flex-1 gap-0.5">
+                    <View className="flex-row items-center gap-2">
+                      <Text
+                        className={`flex-1 text-base font-bold ${p.is_active ? 'text-black dark:text-white' : 'text-neutral-500 dark:text-neutral-500'}`}
+                        numberOfLines={1}>
+                        {personLabel(p)}
+                      </Text>
+                      {p.is_active ? null : <Badge label="Nonaktif" tone="warn" />}
+                    </View>
                     {p.email ? (
                       <Text className="text-xs text-neutral-400" numberOfLines={1}>
                         {p.email}
+                      </Text>
+                    ) : null}
+                    {p.role_name ? (
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-500" numberOfLines={1}>
+                        {p.role_name}
                       </Text>
                     ) : null}
                   </View>
@@ -238,15 +283,70 @@ export default function SettingsPermissionUsersScreen() {
 
             <View className="flex-row items-center gap-3">
               <Avatar name={personLabel(selected)} seed={selected.id} size={52} />
-              <View className="flex-1">
-                <Text className="text-xl font-bold text-black dark:text-white" numberOfLines={1}>
-                  {personLabel(selected)}
-                </Text>
+              <View className="flex-1 gap-0.5">
+                <View className="flex-row items-center gap-2">
+                  <Text
+                    className="flex-1 text-xl font-bold text-black dark:text-white"
+                    numberOfLines={1}>
+                    {personLabel(selected)}
+                  </Text>
+                  {selected.is_active ? null : <Badge label="Nonaktif" tone="warn" />}
+                </View>
                 {selected.email ? (
                   <Text className="text-sm text-neutral-500 dark:text-neutral-400" numberOfLines={1}>
                     {selected.email}
                   </Text>
                 ) : null}
+              </View>
+            </View>
+
+            {/* S4-4 + S4-5 — kapabilitas operator: nonaktifkan akun (offboarding) &
+                pindahkan role (promosi/demosi). Server tolak self-target dan cakupan
+                lintas-org; UI hanya menampilkan tombol + minta konfirmasi via modal. */}
+            <View className="gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+              <View className="flex-row items-center justify-between gap-3">
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-sm font-semibold text-black dark:text-white">
+                    Status akun
+                  </Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {selected.is_active
+                      ? 'Aktif — bisa login dan mengakses workspace.'
+                      : 'Nonaktif — login diblokir; data tetap terjaga untuk riwayat.'}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: selected.is_active }}
+                  accessibilityLabel="Aktifkan akun"
+                  onPress={() =>
+                    setPendingActive({ next: !selected.is_active })
+                  }
+                  hitSlop={10}
+                  className={`h-7 w-12 justify-center rounded-full px-0.5 active:opacity-70 ${
+                    selected.is_active ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
+                  }`}>
+                  <View
+                    className={`h-6 w-6 rounded-full bg-white ${selected.is_active ? 'self-end' : 'self-start'}`}
+                  />
+                </Pressable>
+              </View>
+              <View className="h-px bg-neutral-200 dark:bg-neutral-800" />
+              <View className="flex-row items-center justify-between gap-3">
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-sm font-semibold text-black dark:text-white">Role</Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {selected.role_name ?? 'Belum ada role'}
+                  </Text>
+                </View>
+                <Button
+                  label="Ubah"
+                  variant="secondary"
+                  onPress={() => {
+                    setPendingRoleId(selected.role_template_id);
+                    setRolePickerOpen(true);
+                  }}
+                />
               </View>
             </View>
 
@@ -332,6 +432,115 @@ export default function SettingsPermissionUsersScreen() {
                   setPending(null);
                   setReason('');
                   setModalError(null);
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {/* S4-4 — konfirmasi aktifkan/nonaktifkan akun. Tidak perlu reason (bukan perubahan
+          hak akses, cuma flip is_active). Server tolak self-deactivate. */}
+      {pendingActive && selected ? (
+        <View className="absolute inset-0 items-center justify-center bg-black/40 p-6">
+          <View
+            className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
+            accessibilityViewIsModal>
+            <Text className="text-lg font-bold text-black dark:text-white">
+              {pendingActive.next ? 'Aktifkan akun' : 'Nonaktifkan akun'}
+            </Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+              {pendingActive.next
+                ? `${personLabel(selected)} akan bisa login dan mengakses workspace lagi.`
+                : `${personLabel(selected)} tidak akan bisa login. Data card & log tetap terjaga (nonaktif ≠ hapus).`}
+            </Text>
+            <View className="gap-2">
+              <Button
+                label={pendingActive.next ? 'Aktifkan' : 'Nonaktifkan'}
+                variant={pendingActive.next ? 'primary' : 'danger'}
+                loading={activeM.isPending}
+                disabled={activeM.isPending}
+                onPress={() =>
+                  activeM.mutate({ targetId: selected.id, active: pendingActive.next })
+                }
+              />
+              <Button
+                label="Batal"
+                variant="secondary"
+                onPress={() => setPendingActive(null)}
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {/* S4-5 — pilih role baru. Server tolak self-promote + role dari org lain. */}
+      {rolePickerOpen && selected ? (
+        <View className="absolute inset-0 items-center justify-center bg-black/40 p-6">
+          <View
+            className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
+            accessibilityViewIsModal>
+            <Text className="text-lg font-bold text-black dark:text-white">Ubah Role</Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+              Pilih role baru untuk {personLabel(selected)}. Permission bawaan role
+              akan langsung berlaku; permission kustom (non-bawaan) tetap.
+            </Text>
+            <View className="gap-1.5">
+              {roleTemplates.length === 0 ? (
+                <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+                  Belum ada role di organisasi ini. Buat lewat Governance dulu.
+                </Text>
+              ) : (
+                roleTemplates.map((rt) => {
+                  const active = pendingRoleId === rt.id;
+                  return (
+                    <Pressable
+                      key={rt.id}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`Role ${rt.name}`}
+                      onPress={() => setPendingRoleId(rt.id)}
+                      className={`min-h-[44px] flex-row items-center justify-between gap-3 rounded-xl border px-4 py-3 active:opacity-70 ${
+                        active
+                          ? 'border-brand-dark bg-brand-dark/10 dark:bg-brand-dark/20'
+                          : 'border-neutral-300 dark:border-neutral-700'
+                      }`}>
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-black dark:text-white">
+                          {rt.name}
+                        </Text>
+                        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {rt.level}
+                        </Text>
+                      </View>
+                      {active ? (
+                        <Text className="text-lg text-brand-dark">✓</Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })
+              )}
+            </View>
+            <View className="gap-2">
+              <Button
+                label="Simpan role"
+                loading={roleM.isPending}
+                disabled={
+                  roleM.isPending ||
+                  !pendingRoleId ||
+                  pendingRoleId === selected.role_template_id
+                }
+                onPress={() =>
+                  pendingRoleId &&
+                  roleM.mutate({ targetId: selected.id, roleTemplateId: pendingRoleId })
+                }
+              />
+              <Button
+                label="Batal"
+                variant="secondary"
+                onPress={() => {
+                  setRolePickerOpen(false);
+                  setPendingRoleId(null);
                 }}
               />
             </View>

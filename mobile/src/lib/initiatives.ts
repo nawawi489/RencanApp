@@ -73,6 +73,40 @@ export async function createInitiative(input: NewInitiative): Promise<Inisiatif>
   return data as Inisiatif;
 }
 
+/**
+ * S4-2 — sunting Inisiatif. Periode & kontribusi TERKUNCI pasca-aktivasi
+ * (dasar skor); server MENOLAK perubahannya dengan error, bukan mengabaikan
+ * diam-diam. Kirim nilai apa adanya (termasuk `null`) supaya panggilan yang
+ * tidak menyentuh keduanya tidak ikut tertolak.
+ */
+export type InitiativePatch = {
+  name: string;
+  description: string | null;
+  pic_id: string | null;
+  reason: string | null;
+  main_risk: string | null;
+  alternative: string | null;
+  contribution_pct: number | null;
+  period_start: string | null;
+  period_end: string | null;
+};
+
+export async function updateInitiative(id: string, patch: InitiativePatch): Promise<void> {
+  const { error } = await supabase.rpc('update_initiative', {
+    p_initiative_id: id,
+    p_name: patch.name,
+    p_description: (patch.description ?? null) as unknown as string,
+    p_pic_id: (patch.pic_id ?? null) as unknown as string,
+    p_reason: (patch.reason ?? null) as unknown as string,
+    p_main_risk: (patch.main_risk ?? null) as unknown as string,
+    p_alternative: (patch.alternative ?? null) as unknown as string,
+    p_contribution_pct: (patch.contribution_pct ?? null) as unknown as number,
+    p_period_start: (patch.period_start ?? null) as unknown as string,
+    p_period_end: (patch.period_end ?? null) as unknown as string,
+  });
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------- RPC (lifecycle)
 
 export async function activateInitiative(id: string): Promise<void> {

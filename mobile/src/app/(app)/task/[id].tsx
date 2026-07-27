@@ -508,6 +508,17 @@ export function LiveTaskDetailScreen() {
               <Button label="Aktifkan Tugas" onPress={() => activateM.mutate()} loading={activateM.isPending} />
             ) : null}
 
+            {/* S4-1 — sunting. Status yang menerima sunting dibatasi ke status yang RPC
+                update_task terima ('draft', 'assigned', 'in_progress', 'submitted', 'revision').
+                Kewenangan tetap ditegakkan server; tombol tak ditawarkan saat done/archived. */}
+            {['draft', 'assigned', 'in_progress', 'submitted', 'revision'].includes(ap.status) ? (
+              <Button
+                label="Ubah Tugas"
+                variant="secondary"
+                onPress={() => router.push(`/task/edit/${id}` as Href)}
+              />
+            ) : null}
+
             {/* ---- Repeat (Fase 2): compliance + daftar instance ---- */}
             {ap.repeat_setting === 'repeat' && ap.status !== 'draft' ? (
               <RepeatSection

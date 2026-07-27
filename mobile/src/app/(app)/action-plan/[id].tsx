@@ -316,6 +316,16 @@ export function LiveActionPlanDetailScreen() {
               />
             ) : null}
 
+            {/* S4-2 — sunting. Server hanya menerima draft/active (RPC update_action_plan);
+                pada done/archived tombol tak ditawarkan agar copy sinkron dengan gerbang. */}
+            {action_plan.status === 'draft' || action_plan.status === 'active' ? (
+              <Button
+                label="Ubah Rencana Aksi"
+                variant="secondary"
+                onPress={() => router.push(`/action-plan/edit/${id}` as Href)}
+              />
+            ) : null}
+
             {/* PRD §26 — Evaluation muncul saat Rencana Aksi mendekati selesai atau selesai. */}
             {/* Anti-self gating ditangani oleh layar evaluation (picId dibandingkan dgn profile). */}
             {action_plan.status === 'active' || action_plan.status === 'done' ? (
