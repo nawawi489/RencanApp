@@ -112,6 +112,7 @@ export default function AppLayout() {
       {/* BL-19c — Self-service profil/organisasi (butuh header + back seperti settings lain).
           Tanpa registrasi ini keduanya mewarisi headerShown:false global → tak ada header/back. */}
       <Stack.Screen name="settings-profile" options={{ headerShown: true, title: 'Profil Saya' }} />
+      <Stack.Screen name="settings-account" options={{ headerShown: true, title: 'Kelola Akun' }} />
       <Stack.Screen name="settings-organization" options={{ headerShown: true, title: 'Profil Organisasi' }} />
 
       {/* Fase 8 — Governance & Admin */}

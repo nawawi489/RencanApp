@@ -112,6 +112,9 @@ const TEMPLATE_ITEMS: MenuItem[] = [
 const PENGATURAN_ITEMS: MenuItem[] = [
   // BL-19c — tanpa `permission`: ini baris milik user sendiri, bukan aksi admin.
   { label: 'Profil Saya', description: 'Ubah nama', icon: 'person-outline', tone: 'info', href: '/settings-profile' as Href },
+  // S5-8 — jalur user-owned untuk ekspor data + permintaan penghapusan akun.
+  // Wajib ada demi UU 27/2022 PDP + Play Data safety; tak berjenjang permission.
+  { label: 'Kelola Akun', description: 'Ekspor & hapus', icon: 'shield-outline', tone: 'danger', href: '/settings-account' as Href },
   { label: 'Organisasi', description: 'Tim dan role', icon: 'business-outline', tone: 'warn', href: '/settings-org-structure' as Href, permissionAny: ORG_SETTINGS_PERMISSIONS },
   { label: 'Profil Organisasi', description: 'Nama & zona waktu', icon: 'globe-outline', tone: 'warn', href: '/settings-organization' as Href, permission: 'manage_settings' },
   { label: 'Pengaturan Pengulangan', description: 'Jadwal Tugas', text: 'R', tone: 'success', href: '/settings-repeat-rules' as Href },
