@@ -519,6 +519,17 @@ export function LiveTaskDetailScreen() {
               />
             ) : null}
 
+            {/* S4-8 — sunting jadwal repeat. Server RPC set_task_repeat_rule menolak
+                begitu instance pertama ter-generate; layar edit menampilkan read-only
+                + guidance dalam kondisi tsb, jadi tombol tetap aman ditawarkan. */}
+            {ap.repeat_setting === 'repeat' ? (
+              <Button
+                label="Ubah Jadwal Repeat"
+                variant="secondary"
+                onPress={() => router.push(`/task/repeat-edit/${id}` as Href)}
+              />
+            ) : null}
+
             {/* ---- Repeat (Fase 2): compliance + daftar instance ---- */}
             {ap.repeat_setting === 'repeat' && ap.status !== 'draft' ? (
               <RepeatSection

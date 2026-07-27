@@ -18,6 +18,8 @@ import {
   getDevelopmentArea,
   listDevelopmentAreas,
   problemCountOf,
+  updateDevelopmentArea,
+  type DevelopmentAreaPatch,
   type DevelopmentAreaWithProblemCount,
   type NewDevelopmentArea,
 } from '../development-areas';
@@ -146,5 +148,34 @@ describe('activateDevelopmentArea — RPC', () => {
   it('[10] propagasi RPC error', async () => {
     mockRpc.mockResolvedValue({ error: { message: 'denied' } });
     await expect(activateDevelopmentArea('d1')).rejects.toEqual({ message: 'denied' });
+  });
+});
+
+// S4-3 — updateDevelopmentArea passthrough via RPC update_development_area.
+describe('updateDevelopmentArea', () => {
+  const patch: DevelopmentAreaPatch = {
+    name: 'DA Diubah',
+    description: null,
+    pic_id: 'u1',
+    period_start: null,
+    period_end: null,
+  };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
+
+  it('[11] meneruskan id + patch ke update_development_area', async () => {
+    mockRpc.mockResolvedValue({ error: null });
+    await updateDevelopmentArea('d1', patch);
+    expect(mockRpc.mock.calls[0][0]).toBe('update_development_area');
+    expect(rpcArgs().p_development_area_id).toBe('d1');
+    expect(rpcArgs().p_name).toBe('DA Diubah');
+    expect(rpcArgs().p_pic_id).toBe('u1');
+    expect(rpcArgs().p_period_start).toBeNull();
+  });
+
+  it('[12] propagasi error server (mis. "Periode terkunci")', async () => {
+    mockRpc.mockResolvedValue({ error: { message: 'Periode Development Area terkunci.' } });
+    await expect(updateDevelopmentArea('d1', patch)).rejects.toEqual({
+      message: 'Periode Development Area terkunci.',
+    });
   });
 });

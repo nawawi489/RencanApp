@@ -8,7 +8,7 @@ import { Modal, TextInput } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
-import { Badge, Button, EmptyState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import {
   GOVERNANCE_VIOLATION_SEVERITY_LABEL,
   GOVERNANCE_VIOLATION_SEVERITY_TONE,
@@ -37,7 +37,7 @@ export default function SettingsGovernanceViolationScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { can } = useProfile();
-  const { violations, isLoading } = useGovernanceViolations();
+  const { violations, isLoading, isError, refetch } = useGovernanceViolations();
   const allowed = can('view_governance_violation');
 
   const [statusChip, setStatusChip] = useState<'semua' | 'open' | 'resolved' | 'dismissed'>('open');
@@ -76,6 +76,14 @@ export default function SettingsGovernanceViolationScreen() {
           <AccessDenied message="Pelanggaran Tata Kelola hanya untuk pemegang izin Lihat Governance Violation." />
         ) : isLoading ? (
           <SkeletonList count={5} />
+        ) : isError ? (
+          // S4-6 — dulu fetch error jatuh ke render list kosong (default `violations = []`)
+          // → admin bisa mengira semua bersih.
+          <ErrorState
+            title="Gagal memuat pelanggaran"
+            description="Tidak bisa mengambil daftar pelanggaran governance. Periksa koneksi lalu coba lagi."
+            onRetry={() => refetch()}
+          />
         ) : (
           <>
             <TabBar tabs={STATUS_CHIPS} active={statusChip} onChange={setStatusChip} />

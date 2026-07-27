@@ -8,7 +8,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { OptionPicker, type PickerOption } from '@/components/option-picker';
-import { Button, EmptyState, LabeledInput, SectionCard, SkeletonList, TabBar } from '@/components/ui';
+import { Button, EmptyState, ErrorState, LabeledInput, SectionCard, SkeletonList, TabBar } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import {
   useOrgActions,
@@ -100,6 +100,8 @@ type OrgItem = { id: string; name: string; description: string | null; is_active
 function SimpleOrgTab<T extends OrgItem>({
   items,
   isLoading,
+  isError,
+  onRetry,
   isPending,
   onCreate,
   entity,
@@ -113,6 +115,10 @@ function SimpleOrgTab<T extends OrgItem>({
 }: {
   items: T[];
   isLoading: boolean;
+  /** S4-6 — fetch error jangan jatuh ke EmptyState "Belum ada Departemen" — admin
+   *  bisa mengira org benar-benar kosong lalu membuat ulang data yang sudah ada. */
+  isError?: boolean;
+  onRetry?: () => void;
   isPending: boolean;
   onCreate: (name: string) => Promise<unknown>;
   entity: string;
@@ -144,6 +150,15 @@ function SimpleOrgTab<T extends OrgItem>({
   }
 
   if (isLoading) return <SkeletonList count={4} />;
+  if (isError) {
+    return (
+      <ErrorState
+        title={`Gagal memuat ${entity}`}
+        description={`Tidak bisa mengambil daftar ${entity}. Periksa koneksi lalu coba lagi.`}
+        onRetry={onRetry}
+      />
+    );
+  }
   return (
     <View className="gap-3">
       <Text className="text-sm text-neutral-500 dark:text-neutral-400">{subhead}</Text>
@@ -182,7 +197,7 @@ function SimpleOrgTab<T extends OrgItem>({
 }
 
 function DepartmentTab() {
-  const { departments, isLoading } = useOrgStructure();
+  const { departments, isLoading, isError, refetch } = useOrgStructure();
   const { createDepartment, setDepartmentActive, isPending } = useOrgActions();
   // Jumlah tautan hanya untuk teks konfirmasi — keduanya sudah di-cache tab lain.
   const { positions } = usePositions();
@@ -221,6 +236,8 @@ function DepartmentTab() {
     <SimpleOrgTab
       items={departments}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => refetch()}
       isPending={isPending}
       onCreate={(name) => createDepartment({ name })}
       entity="Departemen"
@@ -257,7 +274,7 @@ function useDepartmentOptions(): { options: PickerOption[]; nameOf: (id: string 
 const DEPARTMENT_EMPTY_HINT = 'Belum ada Departemen aktif. Buat lebih dulu di tab Departemen.';
 
 function PositionTab() {
-  const { positions, isLoading } = usePositions();
+  const { positions, isLoading, isError, refetch } = usePositions();
   const { createPosition, isPending } = useOrgActions();
   const { options, nameOf } = useDepartmentOptions();
   const [departmentId, setDepartmentId] = useState<string | null>(null);
@@ -266,6 +283,8 @@ function PositionTab() {
     <SimpleOrgTab
       items={positions}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => refetch()}
       isPending={isPending}
       onCreate={(name) => createPosition({ name, departmentId })}
       entity="Posisi"
@@ -293,7 +312,7 @@ function PositionTab() {
 
 function TeamTab() {
   const router = useRouter();
-  const { teams, isLoading } = useTeams();
+  const { teams, isLoading, isError, refetch } = useTeams();
   const { createTeam, isPending } = useOrgActions();
   const { options, nameOf } = useDepartmentOptions();
   const [departmentId, setDepartmentId] = useState<string | null>(null);
@@ -311,6 +330,8 @@ function TeamTab() {
     <SimpleOrgTab
       items={teams}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => refetch()}
       isPending={isPending}
       onCreate={(name) => createTeam({ name, departmentId, leadId: lead?.id ?? null })}
       entity="Tim"

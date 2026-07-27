@@ -72,25 +72,19 @@ describe('Menu §31 — profile card', () => {
 });
 
 describe('Menu §31 — Akses Cepat', () => {
-  it('berisi tepat 3 fitur: Anggota, Arsip, Pusat Bantuan', async () => {
+  // S4-7: "Pusat Bantuan" dihapus dari tile — tile mati (toast "Segera hadir").
+  it('berisi tepat 2 fitur: Anggota, Arsip', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Anggota')).toBeTruthy();
     expect(screen.getByLabelText('Arsip')).toBeTruthy();
-    expect(screen.getByLabelText('Pusat Bantuan')).toBeTruthy();
-    expect(screen.getByText('3 fitur')).toBeTruthy();
+    expect(screen.queryByLabelText('Pusat Bantuan')).toBeNull();
+    expect(screen.getByText('2 fitur')).toBeTruthy();
   });
 
   it('Anggota card → push /people', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Anggota'));
     expect(mockPush).toHaveBeenCalledWith('/people');
-  });
-
-  it('Pusat Bantuan → toast "Segera hadir", bukan navigasi', async () => {
-    await render(<MenuScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByLabelText('Pusat Bantuan'));
-    expect(Alert.alert).toHaveBeenCalledWith('Segera hadir', expect.any(String));
-    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('Log Aktivitas TIDAK ada di Akses Cepat (pindah ke Admin Lanjutan)', async () => {
@@ -126,12 +120,13 @@ describe('Menu §31 — Template conditional accordion', () => {
 });
 
 describe('Menu §31 — Bantuan', () => {
-  it('Dukungan → toast "Segera hadir", bukan navigasi', async () => {
+  // S4-7: accordion Bantuan seluruhnya dihapus — satu-satunya item ("Dukungan") juga
+  // toast "Segera hadir". Kembalikan tes ini bila accordion di-restore.
+  it('accordion Bantuan tidak ditawarkan (dead surface dihapus S4-7)', async () => {
     await render(<MenuScreen />, { wrapper: wrapper() });
-    fireEvent.press(await screen.findByLabelText('Bantuan'));
-    fireEvent.press(await screen.findByLabelText('Dukungan'));
-    expect(Alert.alert).toHaveBeenCalledWith('Segera hadir', expect.any(String));
-    expect(mockPush).not.toHaveBeenCalled();
+    await screen.findByLabelText('Anggota');
+    expect(screen.queryByLabelText('Bantuan')).toBeNull();
+    expect(screen.queryByLabelText('Dukungan')).toBeNull();
   });
 });
 

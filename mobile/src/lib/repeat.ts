@@ -122,6 +122,36 @@ export type RepeatRuleInput = {
   gracePeriodMinutes: number | null;
 };
 
+/**
+ * S4-8 — ambil aturan repeat aktif untuk satu Tugas (untuk prefill layar edit).
+ * `maybeSingle()` supaya Tugas repeat yg belum punya rule (edge case) tidak
+ * error 406.
+ */
+export async function getRepeatRule(taskId: string): Promise<RepeatRule | null> {
+  const { data, error } = await supabase
+    .from('task_repeat_rules')
+    .select('*')
+    .eq('task_id', taskId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as RepeatRule | null;
+}
+
+/**
+ * S4-8 — cek apakah Tugas sudah punya instance ter-generate. Repeat rule
+ * dikunci oleh RPC `set_task_repeat_rule` begitu instance pertama ada
+ * (`0067:336`). UI pakai ini untuk menampilkan form editable vs read-only.
+ * Pakai `count: 'exact'` + `head: true` supaya tak menarik payload baris.
+ */
+export async function hasRepeatInstances(taskId: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from('task_instances')
+    .select('*', { count: 'exact', head: true })
+    .eq('task_id', taskId);
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
 export async function setRepeatRule(taskId: string, input: RepeatRuleInput): Promise<string> {
   const { data, error } = await supabase.rpc('set_task_repeat_rule', {
     p_action_plan_id: taskId,

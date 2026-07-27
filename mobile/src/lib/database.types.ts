@@ -4644,6 +4644,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_development_area: {
+        Args: {
+          p_description: string
+          p_development_area_id: string
+          p_name: string
+          p_period_end: string
+          p_period_start: string
+          p_pic_id: string
+        }
+        Returns: undefined
+      }
       update_goal: {
         Args: {
           p_description: string
@@ -4676,6 +4687,19 @@ export type Database = {
         Returns: undefined
       }
       update_own_profile: { Args: { p_full_name: string }; Returns: undefined }
+      update_problem_statement: {
+        Args: {
+          p_description: string
+          p_impact: string
+          p_initial_evidence: string
+          p_name: string
+          p_period_end: string
+          p_period_start: string
+          p_pic_id: string
+          p_problem_statement_id: string
+        }
+        Returns: undefined
+      }
       update_score_formula_version_weights: {
         Args: {
           p_categories: Json

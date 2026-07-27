@@ -141,6 +141,15 @@ export function LiveProblemStatementDetailScreen() {
               />
             ) : null}
 
+            {/* S4-3 — sunting. Draft/aktif diterima RPC update_problem_statement. */}
+            {ps.status === 'draft' || ps.status === 'active' ? (
+              <Button
+                label="Ubah Problem Statement"
+                variant="secondary"
+                onPress={() => router.push(`/problem-statement/edit/${id}`)}
+              />
+            ) : null}
+
             <View className="gap-3">
               <SectionHeading title="Rencana Aksi" />
 
