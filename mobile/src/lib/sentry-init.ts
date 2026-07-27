@@ -4,8 +4,11 @@
 import { addTransport, createLogger, sanitize } from './logger';
 import { createSentryTransport, type SentryClient } from './sentry-logger';
 
+export type SentryUser = { id: string } | null;
+
 export type InjectableSentry = SentryClient & {
   init: (options: Record<string, unknown>) => void;
+  setUser?: (user: SentryUser) => void;
 };
 
 export type InitSentryDeps = {
@@ -38,6 +41,41 @@ function parseSampleRate(raw: string | undefined): number | undefined {
   return n;
 }
 
+// Release + dist tag Sentry event ke build tertentu. Sourcemap yang di-upload
+// oleh workflow deploy dicocokkan pada `release`; tanpa nilai ini stacktrace
+// produksi berhenti pada file bundle terminifikasi tanpa mapping. `dist`
+// membedakan build ulang atas release yang sama (mis. re-run workflow → SHA
+// sama, run_id beda).
+function normalizeTag(raw: string | undefined): string | undefined {
+  if (raw == null) return undefined;
+  const trimmed = raw.trim();
+  if (trimmed === '') return undefined;
+  return trimmed;
+}
+
+// Module-level ref ke SDK Sentry aktif setelah init. Dipakai `setSentryUser` di
+// bawah agar auth-provider tak perlu import langsung `@sentry/react-native`
+// (menjaga seam-injection yg dipakai `initSentry`). Null bila DSN kosong /
+// init gagal → semua panggilan `setSentryUser` menjadi no-op.
+let activeSentry: InjectableSentry | null = null;
+
+/**
+ * Kaitkan Sentry event dengan user aktif. Terima Supabase `auth.user.id` (UUID
+ * random tanpa PII); email/nama TIDAK boleh dikirim. Panggil dgn `null` saat
+ * sign-out agar event pasca-logout tidak masih ter-tag ke user lama.
+ *
+ * No-op bila Sentry belum di-init (DSN kosong / init gagal / test env).
+ */
+export function setSentryUser(user: SentryUser): void {
+  if (!activeSentry?.setUser) return;
+  activeSentry.setUser(user);
+}
+
+/** @internal untuk unit test — reset module state antar case. */
+export function _resetSentryForTest(): void {
+  activeSentry = null;
+}
+
 function samplingFor(environment: string, env: Record<string, string | undefined>) {
   const isDev = environment === 'development';
   const tracesOverride = parseSampleRate(env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE);
@@ -68,6 +106,9 @@ export function initSentry(deps: InitSentryDeps): InjectableSentry | null {
   // ErrorBoundary sempat render. Kalau DSN malformed (mis. salah copy dari dashboard),
   // Sentry.init throw → app tak boot (white screen). Fail-safe: catat lewat console
   // transport yang sudah aktif, transport Sentry tidak didaftar, app tetap jalan.
+  const release = normalizeTag(env.EXPO_PUBLIC_SENTRY_RELEASE);
+  const dist = normalizeTag(env.EXPO_PUBLIC_SENTRY_DIST);
+
   try {
     deps.sentry.init({
       dsn,
@@ -77,6 +118,11 @@ export function initSentry(deps: InitSentryDeps): InjectableSentry | null {
       // Cegah SDK mengirim IP + cookie by default (drift-safe).
       sendDefaultPii: false,
       beforeSend: scrubSentryEvent,
+      // Hanya set bila terisi — SDK default (bila undefined) memakai release
+      // yang di-embed plugin @sentry/react-native saat native build. Melempar
+      // undefined bisa menimpanya dengan literal 'undefined'.
+      ...(release ? { release } : {}),
+      ...(dist ? { dist } : {}),
       ...samplingFor(environment, env),
     });
   } catch (e) {
@@ -85,5 +131,6 @@ export function initSentry(deps: InitSentryDeps): InjectableSentry | null {
   }
 
   addTransport(createSentryTransport(deps.sentry));
+  activeSentry = deps.sentry;
   return deps.sentry;
 }

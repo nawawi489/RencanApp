@@ -15,6 +15,7 @@ const mockUnsubscribe = jest.fn();
 const mockGetInitialURL = jest.fn();
 const mockAddEventListener = jest.fn();
 const mockLinkingRemove = jest.fn();
+const mockSetSentryUser = jest.fn();
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -35,6 +36,12 @@ jest.mock('expo-linking', () => ({
 // env.supabaseUrl needs to match the `iss` in test JWTs so
 // isRecoveryTokenForProject accepts them.
 jest.mock('@/lib/env', () => ({ env: { supabaseUrl: 'https://abc.supabase.co', supabaseAnonKey: 'anon' } }));
+
+// S5-6 — auth-provider hooks Sentry setUser on session change. Mock so tests
+// verify the CALL contract (id-only, non-PII) without needing the SDK.
+jest.mock('@/lib/sentry-init', () => ({
+  setSentryUser: (...a: unknown[]) => mockSetSentryUser(...a),
+}));
 
 // eslint-disable-next-line import/first -- jest.mock must precede the imports it mocks
 import { AuthProvider, useAuth } from '../auth-provider';
@@ -264,6 +271,43 @@ describe('AuthProvider — signOut', () => {
       await result.current.signOut();
     });
     expect(qc.getQueryData(['goals'])).toBeUndefined();
+  });
+
+  // S5-6 — Sentry user tag mengikuti session user id (Supabase UUID, non-PII).
+  // Reset (setSentryUser(null)) saat sign-out agar event pasca-logout tidak
+  // masih ter-tag ke user lama.
+  it('[S5-6-1] session dgn user.id → setSentryUser({id}) dipanggil (tanpa email/nama)', async () => {
+    const session = { user: { id: 'user-uuid-1' } };
+    mockGetSession.mockResolvedValueOnce({ data: { session } });
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.initializing).toBe(false));
+    await waitFor(() => expect(mockSetSentryUser).toHaveBeenCalledWith({ id: 'user-uuid-1' }));
+    // Regression pin: TIDAK boleh diteruskan properti PII apa pun.
+    const calls = mockSetSentryUser.mock.calls;
+    const identityCalls = calls.filter((c) => c[0] && typeof c[0] === 'object');
+    for (const c of identityCalls) {
+      expect(c[0]).not.toHaveProperty('email');
+      expect(c[0]).not.toHaveProperty('username');
+    }
+  });
+
+  it('[S5-6-2] signOut → setSentryUser(null) dipanggil (clear tag pasca-logout)', async () => {
+    const session = { user: { id: 'user-uuid-2' } };
+    mockGetSession.mockResolvedValueOnce({ data: { session } });
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.initializing).toBe(false));
+    await waitFor(() => expect(mockSetSentryUser).toHaveBeenCalledWith({ id: 'user-uuid-2' }));
+    // Simulate the SIGNED_OUT event from supabase → session becomes null.
+    const authCb = mockOnAuthStateChange.mock.calls[0][0] as (
+      ev: string,
+      s: unknown,
+    ) => void;
+    await act(async () => {
+      authCb('SIGNED_OUT', null);
+    });
+    await waitFor(() => expect(mockSetSentryUser).toHaveBeenCalledWith(null));
   });
 
   // AC-14 regression pin (Wave 5.2, spec settings-consumers §5.1):
