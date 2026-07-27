@@ -171,11 +171,13 @@ Berlaku untuk **staging (`preview`) dan production**. Per go-public repo,
 1. EAS Dashboard → Project → **Environment Variables** → scope **`production`**:
    - `EXPO_PUBLIC_SUPABASE_URL` = prod Project URL
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY` = prod anon key
-2. In `mobile/eas.json`, under `build.production.env`, **leave the two keys empty**
-   (empty string, not deleted) so the dashboard value wins and the committed file
-   carries no secret. `.env.example` lines 8–11 already document this pattern.
-   > The P3-F guard means a stray `REPLACE…` left in `eas.json` now hard-fails the
-   > build rather than shipping — intentional. Empty is the correct state.
+2. In `mobile/eas.json`, under `build.production.env`, **omit the two keys entirely**
+   — same rule as the `preview` block above. Do not leave them as empty strings
+   (EAS CLI rejects `""` with "is not allowed to be empty") and do not leave the
+   `REPLACE…` placeholders (the P3-F guard in `src/lib/env.ts` hard-fails the build
+   on purpose when it sees them). A key present with any value in `eas.json` would
+   silently **override** the dashboard value. `.env.example` lines 8–11 document the
+   same posture.
 3. Verify the build reads env from the dashboard, not the repo file:
    ```bash
    cd mobile
