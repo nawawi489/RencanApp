@@ -14,8 +14,14 @@ begin
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public'
-     and (pg_get_functiondef(p.oid) ~ 'reviewer_id\s*<>\s*auth\.uid\(\)'
-       or pg_get_functiondef(p.oid) ~ 'pic_id\s*<>\s*auth\.uid\(\)');
+     and (
+       regexp_replace(
+         pg_get_functiondef(p.oid),
+         '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s+is\s+null\s+or\s+(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?\1\s*<>\s*auth\.uid\(\)',
+         '',
+         'g'
+       ) ~ '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s*<>\s*auth\.uid\(\)'
+     );
 
   if v_offenders is not null then
     raise exception '0109-DB-1 FAILED: functions still use null-unsafe `<> auth.uid()`: %', v_offenders;

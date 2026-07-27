@@ -316,10 +316,10 @@ revoke execute on function public.submit_task_instance(uuid, text, jsonb, jsonb)
 grant  execute on function public.submit_task_instance(uuid, text, jsonb, jsonb) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
--- Static assertion: no function in `public` still contains the naked pattern
--- `reviewer_id <>` or `pic_id <>` (with a preceding space, to skip identifiers
--- that happen to share the substring). This catches regressions the moment a
--- reviewer copies an old body forward without the null-safety.
+-- Static assertion: no function in `public` still contains the UNSAFE pattern
+-- `<col> <> auth.uid()` for a nullable column without the `is null or` guard.
+-- Approach: strip every occurrence of the safe pattern first; any remaining
+-- `<col> <> auth.uid()` in the body is guaranteed to be null-unsafe.
 -- ---------------------------------------------------------------------------
 do $$
 declare
@@ -330,8 +330,16 @@ begin
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public'
-     and (pg_get_functiondef(p.oid) ~ 'reviewer_id\s*<>\s*auth\.uid\(\)'
-       or pg_get_functiondef(p.oid) ~ 'pic_id\s*<>\s*auth\.uid\(\)');
+     and (
+       regexp_replace(
+         pg_get_functiondef(p.oid),
+         -- Match "<qualified?>col is null or <qualified?>col <> auth.uid()"
+         -- and drop them so only unsafe residuals can trip the check below.
+         '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s+is\s+null\s+or\s+(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?\1\s*<>\s*auth\.uid\(\)',
+         '',
+         'g'
+       ) ~ '(?:[a-zA-Z_][a-zA-Z0-9_]*\.)?(reviewer_id|pic_id)\s*<>\s*auth\.uid\(\)'
+     );
 
   if v_offenders is not null then
     raise exception '0109 post-condition failed: functions still use unsafe `<> auth.uid()` on nullable columns: %', v_offenders;
