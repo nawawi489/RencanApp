@@ -21,6 +21,7 @@ set local row_security = off;
 create temporary table _c on commit drop as
 select
   '4b07a19f-550d-4952-b0d8-44f38f651d89'::uuid as org_a,
+
   '52b0ebe1-d8bd-466d-b491-526ee6518b70'::uuid as org_b,
   'ca8c1471-b870-4f09-a149-25e5eae99d6f'::uuid as user_a,   -- CEO Fixture
   '11111111-1111-1111-1111-000000000001'::uuid as user_b,   -- DCR CEO
@@ -31,6 +32,9 @@ select
   gen_random_uuid() as task_a,   gen_random_uuid() as task_b,
   gen_random_uuid() as da_a,     gen_random_uuid() as da_b,
   gen_random_uuid() as ps_a,     gen_random_uuid() as ps_b;
+
+-- Grant read so the authenticated impersonation blocks below can `select * from _c`.
+grant select on _c to public;
 
 -- Full parent chain per org.
 insert into public.goals (id, organization_id, name, created_by, pic_id, status, target_value, period_start, period_end)

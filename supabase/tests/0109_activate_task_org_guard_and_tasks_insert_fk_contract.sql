@@ -18,6 +18,7 @@ select
   gen_random_uuid() as goal_b,  gen_random_uuid() as strat_b,
   gen_random_uuid() as init_b,  gen_random_uuid() as ap_b,
   gen_random_uuid() as task_b;
+grant select on _c to public;
 
 -- Parent chain in Org B (for the draft task we'll try to activate cross-org).
 insert into public.goals (id, organization_id, name, created_by, pic_id, status, target_value, period_start, period_end)
