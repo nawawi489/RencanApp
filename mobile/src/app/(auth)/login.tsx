@@ -8,6 +8,7 @@ import { BRAND_TAGLINE, BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui';
 import { AUTH_COPY } from '@/lib/auth-copy';
 import { env } from '@/lib/env';
+import { LEGAL_LINKS } from '@/lib/legal-links';
 import { supabase } from '@/lib/supabase';
 import { useThemePreference } from '@/providers/theme-provider';
 
@@ -212,6 +213,25 @@ export default function LoginScreen() {
 
         <View className="mt-3">
           <Button label="Hubungi Admin" variant="secondary" onPress={contactAdmin} />
+        </View>
+
+        {/* S5-7 — tautan legal wajib tayang di layar login (UU PDP + Play Data safety). */}
+        <View className="mt-5 flex-row items-center justify-center gap-3">
+          <Pressable
+            className="min-h-[44px] items-center justify-center py-1 active:opacity-60"
+            onPress={() => Linking.openURL(LEGAL_LINKS.privacyPolicy)}
+            accessibilityRole="link"
+            accessibilityLabel="Buka Kebijakan Privasi">
+            <Text className="text-xs font-semibold text-brand-dark underline dark:text-brand">Kebijakan Privasi</Text>
+          </Pressable>
+          <Text className="text-xs text-neutral-400">·</Text>
+          <Pressable
+            className="min-h-[44px] items-center justify-center py-1 active:opacity-60"
+            onPress={() => Linking.openURL(LEGAL_LINKS.termsOfService)}
+            accessibilityRole="link"
+            accessibilityLabel="Buka Ketentuan Layanan">
+            <Text className="text-xs font-semibold text-brand-dark underline dark:text-brand">Ketentuan Layanan</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </LinearGradient>

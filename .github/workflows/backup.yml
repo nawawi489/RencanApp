@@ -1,0 +1,45 @@
+name: Backup Postgres (prod)
+
+# S5-10 blueprint — backup terjadwal per jam dari Supabase prod ke object
+# storage S3-compatible. WAJIB SEBELUM AKTIVASI: owner set 4 secret berikut
+# di GitHub Environment `prod-backup`:
+#   - PROD_SUPABASE_DB_URL      (postgres://... dari Supabase dashboard)
+#   - PROD_BACKUP_BUCKET        (mis. s3://rencanapp-backups)
+#   - PROD_BACKUP_AWS_KEY       (IAM user dgn s3:PutObject saja)
+#   - PROD_BACKUP_AWS_SECRET
+#
+# Setelah keempatnya di-set, hapus baris `if: false` di job dumper. Sengaja
+# false-gate default agar workflow tak coba jalan di repo yg belum siap dan
+# memicu notifikasi gagal terus-menerus.
+
+on:
+  schedule:
+    - cron: "0 * * * *" # setiap jam
+  workflow_dispatch:
+
+concurrency:
+  group: backup-prod
+  cancel-in-progress: false # jangan potong dump yg sudah jalan
+
+jobs:
+  dump:
+    name: pg_dump → object storage
+    runs-on: ubuntu-latest
+    # Aktifkan setelah 4 secret di GitHub Environment `prod-backup` di-set.
+    if: false
+    environment: prod-backup
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install postgres-client + aws-cli
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client awscli
+
+      - name: Run backup script
+        env:
+          SUPABASE_DB_URL: ${{ secrets.PROD_SUPABASE_DB_URL }}
+          BACKUP_BUCKET: ${{ secrets.PROD_BACKUP_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_BACKUP_AWS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_BACKUP_AWS_SECRET }}
+        run: bash scripts/ops/pg-dump-backup.sh
