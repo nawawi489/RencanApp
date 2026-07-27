@@ -90,6 +90,9 @@ begin
     )::text,
     true);
   perform set_config('role', 'authenticated', true);
+  -- Re-enable RLS enforcement for the impersonated SELECT (the outer BEGIN
+  -- disabled it so the postgres-role INSERTs above wouldn't trip anything).
+  perform set_config('row_security', 'on', true);
 end $$;
 
 -- ==========================================================================

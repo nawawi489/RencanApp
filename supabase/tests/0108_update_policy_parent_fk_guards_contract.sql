@@ -2,64 +2,35 @@
 --
 -- Enforces that cross-tenant re-parenting is rejected on the four card-parent
 -- UPDATE policies (strategies, initiatives, tasks, problem_statements), and
--- that `activate_goal` still enforces the "at least 1 KPI Area" rule with an
--- organization-scoped count.
+-- that `action_plan_in_my_org` is null-safe + org-scoped.
 --
--- Runs against the Postgres started by `supabase start` in the CI job
--- `DB contract tests (Postgres)`. Uses SET LOCAL role/JWT to impersonate an
--- authenticated user of a specific org.
+-- Uses the CEO fixture users from _fixtures.sql instead of creating new
+-- profiles (auth.users FK). Contract Fixtures Org = Org A; DCR-05 Fixtures
+-- Org = Org B. Fixture CEOs already carry a role template with the create/
+-- manage permissions we exercise.
 
 \set ON_ERROR_STOP on
 
 begin;
+set local row_security = off;
 
 -- --------------------------------------------------------------------------
--- Fixture: two orgs, each with a full parent chain and one card at every
--- level. User A belongs to Org A; user B to Org B.
+-- Fixture handles + parent chains per org. Inserts run as postgres (BYPASSRLS)
+-- so `set local row_security = off` is belt-and-suspenders.
 -- --------------------------------------------------------------------------
 create temporary table _c on commit drop as
 select
-  gen_random_uuid() as org_a,
-  gen_random_uuid() as org_b,
-  gen_random_uuid() as user_a,
-  gen_random_uuid() as user_b,
+  '4b07a19f-550d-4952-b0d8-44f38f651d89'::uuid as org_a,
+  '52b0ebe1-d8bd-466d-b491-526ee6518b70'::uuid as org_b,
+  'ca8c1471-b870-4f09-a149-25e5eae99d6f'::uuid as user_a,   -- CEO Fixture
+  '11111111-1111-1111-1111-000000000001'::uuid as user_b,   -- DCR CEO
   gen_random_uuid() as goal_a,   gen_random_uuid() as goal_b,
   gen_random_uuid() as strat_a,  gen_random_uuid() as strat_b,
   gen_random_uuid() as init_a,   gen_random_uuid() as init_b,
   gen_random_uuid() as ap_a,     gen_random_uuid() as ap_b,
   gen_random_uuid() as task_a,   gen_random_uuid() as task_b,
   gen_random_uuid() as da_a,     gen_random_uuid() as da_b,
-  gen_random_uuid() as ps_a,     gen_random_uuid() as ps_b,
-  gen_random_uuid() as rt;
-
--- Bypass RLS as the migration/seed user; app-facing checks below run as
--- `authenticated` with a JWT claim.
-insert into public.organizations (id, name)
-select org_a, 'Org A' from _c
-union all
-select org_b, 'Org B' from _c;
-
-insert into public.role_templates (id, organization_id, name, level)
-select rt, org_a, 'RT-A', 'staff' from _c
-union all
-select rt, org_b, 'RT-B', 'staff' from _c
-on conflict do nothing;
-
-insert into public.profiles (id, organization_id, full_name, role_template_id, is_active)
-select user_a, org_a, 'User A', rt, true from _c
-union all
-select user_b, org_b, 'User B', rt, true from _c;
-
--- Grant every relevant permission to both role templates so gating comes from
--- policies, not from role permissions.
-insert into public.role_template_permissions (role_template_id, permission_id)
-select rt, p.id
-  from _c, public.permissions p
- where p.key in (
-   'manage_others_cards','create_goal','create_kpi_area','create_strategy',
-   'create_initiative','create_action_plan','create_development_area'
- )
-on conflict do nothing;
+  gen_random_uuid() as ps_a,     gen_random_uuid() as ps_b;
 
 -- Full parent chain per org.
 insert into public.goals (id, organization_id, name, created_by, pic_id, status, target_value, period_start, period_end)
@@ -98,7 +69,8 @@ union all
 select task_b, org_b, ap_b, 'Task B', user_b, user_b, 'draft', 'one_time' from _c;
 
 -- --------------------------------------------------------------------------
--- Helper: run a block as `authenticated` with sub=user_a, org_id=org_a.
+-- Helper: run as `authenticated` with sub=user_a, org_id=org_a. Also flips
+-- row_security back ON so the impersonated queries are subject to RLS.
 -- --------------------------------------------------------------------------
 create or replace function pg_temp.act_as_a() returns void language plpgsql as $$
 declare c record;
@@ -109,39 +81,26 @@ begin
     jsonb_build_object('sub', c.user_a::text, 'role', 'authenticated', 'org_id', c.org_a::text)::text,
     true);
   perform set_config('role', 'authenticated', true);
+  perform set_config('row_security', 'on', true);
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0108-DB-1: strategies UPDATE — cross-org re-parent to goal in Org B is
--- rejected. Same-org UPDATE still works.
+-- 0108-DB-1 strategies UPDATE — cross-org re-parent rejected.
 -- --------------------------------------------------------------------------
 do $$
-declare
-  c record;
-  v_rows integer;
-  v_ok boolean := false;
+declare c record; v_rows integer;
 begin
   select * into c from _c;
   perform pg_temp.act_as_a();
-
-  -- Attempt: move Org A's strategy under a Goal owned by Org B.
   begin
     update public.strategies set goal_id = c.goal_b where id = c.strat_a;
     get diagnostics v_rows = row_count;
-    -- If we ever get here with v_rows > 0, the WITH CHECK failed to bite.
     if v_rows > 0 then
       raise exception '0108-DB-1 FAILED: strategies WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
-  exception
-    when insufficient_privilege or check_violation then
-      v_ok := true;
+  exception when insufficient_privilege or check_violation then null;
   end;
-  if not v_ok then
-    -- v_rows = 0 also acceptable (policy silently filtered).
-    perform 1;
-  end if;
 
-  -- Same-org UPDATE still allowed (rename).
   update public.strategies set name = 'Strat A renamed' where id = c.strat_a;
   get diagnostics v_rows = row_count;
   if v_rows <> 1 then
@@ -152,11 +111,10 @@ begin
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0108-DB-2: initiatives UPDATE — cross-org re-parent to strategy in Org B
--- rejected.
+-- 0108-DB-2 initiatives UPDATE — cross-org re-parent rejected.
 -- --------------------------------------------------------------------------
 do $$
-declare c record; v_rows integer; v_ok boolean := false;
+declare c record; v_rows integer;
 begin
   select * into c from _c;
   perform pg_temp.act_as_a();
@@ -166,7 +124,7 @@ begin
     if v_rows > 0 then
       raise exception '0108-DB-2 FAILED: initiatives WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
-  exception when insufficient_privilege or check_violation then v_ok := true;
+  exception when insufficient_privilege or check_violation then null;
   end;
 
   update public.initiatives set name = 'Init A renamed' where id = c.init_a;
@@ -179,11 +137,10 @@ begin
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0108-DB-3: tasks UPDATE — cross-org re-parent to action_plan in Org B
--- rejected.
+-- 0108-DB-3 tasks UPDATE — cross-org re-parent rejected.
 -- --------------------------------------------------------------------------
 do $$
-declare c record; v_rows integer; v_ok boolean := false;
+declare c record; v_rows integer;
 begin
   select * into c from _c;
   perform pg_temp.act_as_a();
@@ -193,7 +150,7 @@ begin
     if v_rows > 0 then
       raise exception '0108-DB-3 FAILED: tasks WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
-  exception when insufficient_privilege or check_violation then v_ok := true;
+  exception when insufficient_privilege or check_violation then null;
   end;
 
   update public.tasks set name = 'Task A renamed' where id = c.task_a;
@@ -206,11 +163,10 @@ begin
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0108-DB-4: problem_statements UPDATE — cross-org re-parent to
--- development_area in Org B rejected.
+-- 0108-DB-4 problem_statements UPDATE — cross-org re-parent rejected.
 -- --------------------------------------------------------------------------
 do $$
-declare c record; v_rows integer; v_ok boolean := false;
+declare c record; v_rows integer;
 begin
   select * into c from _c;
   perform pg_temp.act_as_a();
@@ -220,7 +176,7 @@ begin
     if v_rows > 0 then
       raise exception '0108-DB-4 FAILED: problem_statements WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
-  exception when insufficient_privilege or check_violation then v_ok := true;
+  exception when insufficient_privilege or check_violation then null;
   end;
 
   update public.problem_statements set name = 'PS A renamed' where id = c.ps_a;
@@ -233,7 +189,7 @@ begin
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0108-DB-5: action_plan_in_my_org helper is null-safe and org-scoped.
+-- 0108-DB-5 action_plan_in_my_org helper — null-safe + org-scoped.
 -- --------------------------------------------------------------------------
 do $$
 declare c record; v_null boolean; v_own boolean; v_other boolean;
