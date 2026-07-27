@@ -1,4 +1,4 @@
--- 0106-DB-1: backfill_resolve_stale_notifications must not exist.
+-- 0107-DB-1: backfill_resolve_stale_notifications must not exist.
 -- Sprint 2, S2-2. Tripwire against re-introducing the cross-tenant mass-write
 -- surface documented in `anon-public-rpc-grant-gotcha` memory.
 --
@@ -19,8 +19,8 @@ begin
      and p.proname = 'backfill_resolve_stale_notifications';
 
   if v_count <> 0 then
-    raise exception '0106-DB-1 FAILED: backfill_resolve_stale_notifications must be dropped (found % overloads)', v_count;
+    raise exception '0107-DB-1 FAILED: backfill_resolve_stale_notifications must be dropped (found % overloads)', v_count;
   end if;
 
-  raise notice '0106-DB-1 PASSED: backfill_resolve_stale_notifications is not present';
+  raise notice '0107-DB-1 PASSED: backfill_resolve_stale_notifications is not present';
 end $$;

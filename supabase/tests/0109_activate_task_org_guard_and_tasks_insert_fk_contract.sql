@@ -1,8 +1,8 @@
--- 0108-DB contract — Sprint 2, S2-4.
+-- 0109-DB contract — Sprint 2, S2-4.
 -- Verifies:
---   0108-DB-1: activate_task rejects a cross-org call with the exact
+--   0109-DB-1: activate_task rejects a cross-org call with the exact
 --              same-organization error message used by other activate_*.
---   0108-DB-2: tasks INSERT policy rejects a task whose action_plan_id
+--   0109-DB-2: tasks INSERT policy rejects a task whose action_plan_id
 --              belongs to a different org.
 
 \set ON_ERROR_STOP on
@@ -24,16 +24,16 @@ select
 
 insert into public.organizations (id, name)
   select org_a, 'Org A' from _c union all select org_b, 'Org B' from _c;
-insert into public.role_templates (id, organization_id, name, level_index)
-  select rt, org_a, 'RT-A', 1 from _c on conflict do nothing;
-insert into public.role_templates (id, organization_id, name, level_index)
-  select rt, org_b, 'RT-B', 1 from _c on conflict do nothing;
+insert into public.role_templates (id, organization_id, name, level)
+  select rt, org_a, 'RT-A', 'staff' from _c on conflict do nothing;
+insert into public.role_templates (id, organization_id, name, level)
+  select rt, org_b, 'RT-B', 'staff' from _c on conflict do nothing;
 insert into public.profiles (id, organization_id, full_name, role_template_id, is_active)
   select user_a, org_a, 'User A', rt, true from _c union all
   select user_b, org_b, 'User B', rt, true from _c;
 insert into public.role_template_permissions (role_template_id, permission_id)
   select rt, p.id from _c, public.permissions p
-   where p.name in ('manage_others_cards','create_goal','create_task','create_action_plan')
+   where p.key in ('manage_others_cards','create_goal','create_action_plan')
   on conflict do nothing;
 
 -- Parent chain per org (all active).
@@ -69,7 +69,7 @@ begin
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0108-DB-1: activate_task on a task in Org B, called by user in Org A →
+-- 0109-DB-1: activate_task on a task in Org B, called by user in Org A →
 -- must raise the cross-org error, NOT any state / permission error.
 -- --------------------------------------------------------------------------
 do $$
@@ -85,16 +85,16 @@ begin
   end;
 
   if not v_raised then
-    raise exception '0108-DB-1 FAILED: activate_task accepted a cross-org call (no exception)';
+    raise exception '0109-DB-1 FAILED: activate_task accepted a cross-org call (no exception)';
   end if;
   if v_msg not ilike '%lintas-organisasi%' then
-    raise exception '0108-DB-1 FAILED: expected cross-org message, got: %', v_msg;
+    raise exception '0109-DB-1 FAILED: expected cross-org message, got: %', v_msg;
   end if;
-  raise notice '0108-DB-1 PASSED: activate_task rejects cross-org caller';
+  raise notice '0109-DB-1 PASSED: activate_task rejects cross-org caller';
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0108-DB-2: tasks INSERT with a foreign action_plan_id is rejected by the
+-- 0109-DB-2: tasks INSERT with a foreign action_plan_id is rejected by the
 -- new WITH CHECK (action_plan_in_my_org).
 -- --------------------------------------------------------------------------
 do $$
@@ -109,12 +109,12 @@ begin
     values (v_new_task, c.org_a, c.ap_b, 'sneaky', c.user_a, c.user_a, 'draft', 'one_time');
     get diagnostics v_rows = row_count;
     if v_rows > 0 then
-      raise exception '0108-DB-2 FAILED: WITH CHECK allowed cross-org action_plan_id (rows=%)', v_rows;
+      raise exception '0109-DB-2 FAILED: WITH CHECK allowed cross-org action_plan_id (rows=%)', v_rows;
     end if;
   exception when insufficient_privilege or check_violation then
     v_ok := true;
   end;
-  raise notice '0108-DB-2 PASSED: tasks INSERT rejects cross-org action_plan_id';
+  raise notice '0109-DB-2 PASSED: tasks INSERT rejects cross-org action_plan_id';
 end $$;
 
 rollback;

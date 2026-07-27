@@ -1,4 +1,4 @@
--- 0107_update_policy_parent_fk_guards.sql — Sprint 2, S2-3.
+-- 0108_update_policy_parent_fk_guards.sql — Sprint 2, S2-3.
 --
 -- WHY: Every card-parent table has an INSERT policy that validates the new
 -- parent belongs to the caller's org, but the UPDATE policies stopped at
@@ -24,7 +24,7 @@
 -- omitting the `organization_id` filter — cheap defense-in-depth even though
 -- the FK plus RLS make cross-org children impossible today.
 --
--- Contract: supabase/tests/0107_update_policy_parent_fk_guards_contract.sql
+-- Contract: supabase/tests/0108_update_policy_parent_fk_guards_contract.sql
 
 -- ---------------------------------------------------------------------------
 -- 1. Helper: action_plan_in_my_org(uuid). Null-safe, mirrors strategy_in_my_org.

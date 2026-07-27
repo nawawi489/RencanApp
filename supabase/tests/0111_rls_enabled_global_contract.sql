@@ -1,4 +1,4 @@
--- 0110-DB Global RLS enable contract — Sprint 2, S2-8.
+-- 0111-DB Global RLS enable contract — Sprint 2, S2-8.
 --
 -- WHY: The existing `rls_select_policy_coverage_contract.sql` finds tables
 -- that have RLS enabled but no SELECT policy. It does NOT catch a table
@@ -30,8 +30,8 @@ begin
      );
 
   if offenders is not null then
-    raise exception '0110-DB-1 FAILED: table(s) in public schema without RLS enabled: %', offenders;
+    raise exception '0111-DB-1 FAILED: table(s) in public schema without RLS enabled: %', offenders;
   end if;
 
-  raise notice '0110-DB-1 PASSED: every public base table has RLS enabled';
+  raise notice '0111-DB-1 PASSED: every public base table has RLS enabled';
 end $$;

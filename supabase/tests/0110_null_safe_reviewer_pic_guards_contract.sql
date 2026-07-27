@@ -1,4 +1,4 @@
--- 0109-DB contract — Sprint 2, S2-5.
+-- 0110-DB contract — Sprint 2, S2-5.
 -- Static assertion: no `public` function contains a null-unsafe `<>` guard on
 -- `reviewer_id` or `pic_id`. If a future migration reintroduces the pattern
 -- the CI job fails immediately.
@@ -31,7 +31,7 @@ begin
   end loop;
 
   if fails <> '' then
-    raise exception '0109-DB-1 FAILED: %', fails;
+    raise exception '0110-DB-1 FAILED: %', fails;
   end if;
-  raise notice '0109-DB-1 PASSED: all 4 target functions carry the null-safe `<col> is null or` guard';
+  raise notice '0110-DB-1 PASSED: all 4 target functions carry the null-safe `<col> is null or` guard';
 end $$;

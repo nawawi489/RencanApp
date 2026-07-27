@@ -1,4 +1,4 @@
--- 0108_activate_task_org_guard_and_tasks_insert_fk.sql — Sprint 2, S2-4.
+-- 0109_activate_task_org_guard_and_tasks_insert_fk.sql — Sprint 2, S2-4.
 --
 -- WHY:
 -- 1. `activate_task` missed the sweep in 0067/0068 that added the cross-org
@@ -20,9 +20,9 @@
 --   `enforce_card_completion_rule` so operator-tunable rules apply here too.
 -- - Rewrite the tasks INSERT policy to include
 --   `action_plan_in_my_org(action_plan_id)` — using the helper added in
---   0107.
+--   0108.
 --
--- Contract: supabase/tests/0108_activate_task_org_guard_and_tasks_insert_fk_contract.sql
+-- Contract: supabase/tests/0109_activate_task_org_guard_and_tasks_insert_fk_contract.sql
 
 -- ---------------------------------------------------------------------------
 -- 1. Rewrite tasks INSERT policy with parent-FK guard.
@@ -34,7 +34,10 @@ create policy "tasks_insert" on public.tasks
   with check (
     organization_id = public.current_user_org()
     and created_by = auth.uid()
-    and public.has_permission('create_task')
+    -- Permission key is `create_action_plan` (kept from pre-0045 for
+    -- backwards compat with existing role_template_permissions rows —
+    -- the table rename did not cascade to permission `key` values).
+    and public.has_permission('create_action_plan')
     and public.action_plan_in_my_org(action_plan_id)
   );
 

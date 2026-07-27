@@ -1,4 +1,4 @@
--- 0109_null_safe_reviewer_pic_guards.sql — Sprint 2, S2-5.
+-- 0110_null_safe_reviewer_pic_guards.sql — Sprint 2, S2-5.
 --
 -- WHY: Four functions compare a nullable column with plain `<>`. In Postgres
 -- `NULL <> auth.uid()` evaluates to NULL, which is falsy in an `if` clause,
@@ -15,7 +15,7 @@
 -- `if col is null or col <> auth.uid() then ...`. The rest of each body is
 -- reproduced verbatim (bodies are copied wholesale to avoid drift).
 --
--- Contract: supabase/tests/0109_null_safe_reviewer_pic_guards_contract.sql
+-- Contract: supabase/tests/0110_null_safe_reviewer_pic_guards_contract.sql
 
 -- ---------------------------------------------------------------------------
 -- 1. review_task_submission — reviewer_id null-safe
@@ -348,6 +348,6 @@ begin
   end loop;
 
   if fails <> '' then
-    raise exception '0109 post-condition failed: %', fails;
+    raise exception '0110 post-condition failed: %', fails;
   end if;
 end $$;

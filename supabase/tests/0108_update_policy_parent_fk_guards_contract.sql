@@ -1,4 +1,4 @@
--- 0107-DB contract — Sprint 2, S2-3.
+-- 0108-DB contract — Sprint 2, S2-3.
 --
 -- Enforces that cross-tenant re-parenting is rejected on the four card-parent
 -- UPDATE policies (strategies, initiatives, tasks, problem_statements), and
@@ -39,10 +39,10 @@ select org_a, 'Org A' from _c
 union all
 select org_b, 'Org B' from _c;
 
-insert into public.role_templates (id, organization_id, name, level_index)
-select rt, org_a, 'RT-A', 1 from _c
+insert into public.role_templates (id, organization_id, name, level)
+select rt, org_a, 'RT-A', 'staff' from _c
 union all
-select rt, org_b, 'RT-B', 1 from _c
+select rt, org_b, 'RT-B', 'staff' from _c
 on conflict do nothing;
 
 insert into public.profiles (id, organization_id, full_name, role_template_id, is_active)
@@ -55,10 +55,9 @@ select user_b, org_b, 'User B', rt, true from _c;
 insert into public.role_template_permissions (role_template_id, permission_id)
 select rt, p.id
   from _c, public.permissions p
- where p.name in (
+ where p.key in (
    'manage_others_cards','create_goal','create_kpi_area','create_strategy',
-   'create_initiative','create_action_plan','create_task','create_dev_area',
-   'create_problem_statement'
+   'create_initiative','create_action_plan','create_development_area'
  )
 on conflict do nothing;
 
@@ -113,7 +112,7 @@ begin
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0107-DB-1: strategies UPDATE — cross-org re-parent to goal in Org B is
+-- 0108-DB-1: strategies UPDATE — cross-org re-parent to goal in Org B is
 -- rejected. Same-org UPDATE still works.
 -- --------------------------------------------------------------------------
 do $$
@@ -131,7 +130,7 @@ begin
     get diagnostics v_rows = row_count;
     -- If we ever get here with v_rows > 0, the WITH CHECK failed to bite.
     if v_rows > 0 then
-      raise exception '0107-DB-1 FAILED: strategies WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
+      raise exception '0108-DB-1 FAILED: strategies WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
   exception
     when insufficient_privilege or check_violation then
@@ -146,14 +145,14 @@ begin
   update public.strategies set name = 'Strat A renamed' where id = c.strat_a;
   get diagnostics v_rows = row_count;
   if v_rows <> 1 then
-    raise exception '0107-DB-1 FAILED: same-org UPDATE on strategies did not affect the row (rows=%)', v_rows;
+    raise exception '0108-DB-1 FAILED: same-org UPDATE on strategies did not affect the row (rows=%)', v_rows;
   end if;
 
-  raise notice '0107-DB-1 PASSED: strategies UPDATE rejects cross-org re-parent';
+  raise notice '0108-DB-1 PASSED: strategies UPDATE rejects cross-org re-parent';
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0107-DB-2: initiatives UPDATE — cross-org re-parent to strategy in Org B
+-- 0108-DB-2: initiatives UPDATE — cross-org re-parent to strategy in Org B
 -- rejected.
 -- --------------------------------------------------------------------------
 do $$
@@ -165,7 +164,7 @@ begin
     update public.initiatives set strategy_id = c.strat_b where id = c.init_a;
     get diagnostics v_rows = row_count;
     if v_rows > 0 then
-      raise exception '0107-DB-2 FAILED: initiatives WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
+      raise exception '0108-DB-2 FAILED: initiatives WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
   exception when insufficient_privilege or check_violation then v_ok := true;
   end;
@@ -173,14 +172,14 @@ begin
   update public.initiatives set name = 'Init A renamed' where id = c.init_a;
   get diagnostics v_rows = row_count;
   if v_rows <> 1 then
-    raise exception '0107-DB-2 FAILED: same-org UPDATE on initiatives did not affect the row (rows=%)', v_rows;
+    raise exception '0108-DB-2 FAILED: same-org UPDATE on initiatives did not affect the row (rows=%)', v_rows;
   end if;
 
-  raise notice '0107-DB-2 PASSED: initiatives UPDATE rejects cross-org re-parent';
+  raise notice '0108-DB-2 PASSED: initiatives UPDATE rejects cross-org re-parent';
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0107-DB-3: tasks UPDATE — cross-org re-parent to action_plan in Org B
+-- 0108-DB-3: tasks UPDATE — cross-org re-parent to action_plan in Org B
 -- rejected.
 -- --------------------------------------------------------------------------
 do $$
@@ -192,7 +191,7 @@ begin
     update public.tasks set action_plan_id = c.ap_b where id = c.task_a;
     get diagnostics v_rows = row_count;
     if v_rows > 0 then
-      raise exception '0107-DB-3 FAILED: tasks WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
+      raise exception '0108-DB-3 FAILED: tasks WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
   exception when insufficient_privilege or check_violation then v_ok := true;
   end;
@@ -200,14 +199,14 @@ begin
   update public.tasks set name = 'Task A renamed' where id = c.task_a;
   get diagnostics v_rows = row_count;
   if v_rows <> 1 then
-    raise exception '0107-DB-3 FAILED: same-org UPDATE on tasks did not affect the row (rows=%)', v_rows;
+    raise exception '0108-DB-3 FAILED: same-org UPDATE on tasks did not affect the row (rows=%)', v_rows;
   end if;
 
-  raise notice '0107-DB-3 PASSED: tasks UPDATE rejects cross-org re-parent';
+  raise notice '0108-DB-3 PASSED: tasks UPDATE rejects cross-org re-parent';
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0107-DB-4: problem_statements UPDATE — cross-org re-parent to
+-- 0108-DB-4: problem_statements UPDATE — cross-org re-parent to
 -- development_area in Org B rejected.
 -- --------------------------------------------------------------------------
 do $$
@@ -219,7 +218,7 @@ begin
     update public.problem_statements set development_area_id = c.da_b where id = c.ps_a;
     get diagnostics v_rows = row_count;
     if v_rows > 0 then
-      raise exception '0107-DB-4 FAILED: problem_statements WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
+      raise exception '0108-DB-4 FAILED: problem_statements WITH CHECK allowed cross-org re-parent (rows=%)', v_rows;
     end if;
   exception when insufficient_privilege or check_violation then v_ok := true;
   end;
@@ -227,14 +226,14 @@ begin
   update public.problem_statements set name = 'PS A renamed' where id = c.ps_a;
   get diagnostics v_rows = row_count;
   if v_rows <> 1 then
-    raise exception '0107-DB-4 FAILED: same-org UPDATE on problem_statements did not affect the row (rows=%)', v_rows;
+    raise exception '0108-DB-4 FAILED: same-org UPDATE on problem_statements did not affect the row (rows=%)', v_rows;
   end if;
 
-  raise notice '0107-DB-4 PASSED: problem_statements UPDATE rejects cross-org re-parent';
+  raise notice '0108-DB-4 PASSED: problem_statements UPDATE rejects cross-org re-parent';
 end $$;
 
 -- --------------------------------------------------------------------------
--- 0107-DB-5: action_plan_in_my_org helper is null-safe and org-scoped.
+-- 0108-DB-5: action_plan_in_my_org helper is null-safe and org-scoped.
 -- --------------------------------------------------------------------------
 do $$
 declare c record; v_null boolean; v_own boolean; v_other boolean;
@@ -245,15 +244,15 @@ begin
   select public.action_plan_in_my_org(c.ap_a)   into v_own;
   select public.action_plan_in_my_org(c.ap_b)   into v_other;
   if v_null is not true then
-    raise exception '0107-DB-5 FAILED: action_plan_in_my_org(null) must be true (null-safe), got %', v_null;
+    raise exception '0108-DB-5 FAILED: action_plan_in_my_org(null) must be true (null-safe), got %', v_null;
   end if;
   if v_own is not true then
-    raise exception '0107-DB-5 FAILED: action_plan_in_my_org(own) must be true, got %', v_own;
+    raise exception '0108-DB-5 FAILED: action_plan_in_my_org(own) must be true, got %', v_own;
   end if;
   if v_other is not false then
-    raise exception '0107-DB-5 FAILED: action_plan_in_my_org(cross-org) must be false, got %', v_other;
+    raise exception '0108-DB-5 FAILED: action_plan_in_my_org(cross-org) must be false, got %', v_other;
   end if;
-  raise notice '0107-DB-5 PASSED: action_plan_in_my_org null-safe + org-scoped';
+  raise notice '0108-DB-5 PASSED: action_plan_in_my_org null-safe + org-scoped';
 end $$;
 
 rollback;
