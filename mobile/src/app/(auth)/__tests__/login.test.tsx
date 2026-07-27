@@ -28,6 +28,15 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+// S2-7: env.appLinkHost drives whether redirectTo uses verified HTTPS or the
+// ems:// fallback. Individual tests override this via `mockEnv.appLinkHost`.
+const mockEnv: { supabaseUrl: string; supabaseAnonKey: string; appLinkHost: string | undefined } = {
+  supabaseUrl: 'http://localhost:54321',
+  supabaseAnonKey: 'anon',
+  appLinkHost: undefined,
+};
+jest.mock('@/lib/env', () => ({ get env() { return mockEnv; } }));
+
 jest.mock('@/providers/theme-provider', () => ({
   useThemePreference: () => ({ effective: 'light', preference: 'system', setMode: jest.fn() }),
 }));
@@ -288,12 +297,25 @@ describe('LoginScreen — password guard AUTH-02b', () => {
     expect(screen.getByText(AUTH_COPY.unexpected)).toBeTruthy();
   });
 
-  it('[12] AC-RESET-1: resetPasswordForEmail dikirim dengan redirectTo deep-link ems://reset-password', async () => {
+  it('[12] AC-RESET-1: resetPasswordForEmail dikirim dengan redirectTo fallback ems://reset-password (env.appLinkHost kosong)', async () => {
+    mockEnv.appLinkHost = undefined;
     const { fillForm } = await setup();
     await fillForm('a@b.co', '');
     await press(screen.getByLabelText('Lupa kata sandi, kirim link reset'));
     expect(mockReset).toHaveBeenCalledTimes(1);
     expect(mockReset.mock.calls[0][1]).toEqual({ redirectTo: 'ems://reset-password' });
+  });
+
+  it('[S2-7] AC-RESET-2: env.appLinkHost di-set → redirectTo pakai https terverifikasi', async () => {
+    mockEnv.appLinkHost = 'https://staging.rencanapp.com';
+    const { fillForm } = await setup();
+    await fillForm('a@b.co', '');
+    await press(screen.getByLabelText('Lupa kata sandi, kirim link reset'));
+    expect(mockReset).toHaveBeenCalledTimes(1);
+    expect(mockReset.mock.calls[0][1]).toEqual({
+      redirectTo: 'https://staging.rencanapp.com/reset-password',
+    });
+    mockEnv.appLinkHost = undefined;
   });
 
   it('[11] critic regression: koreksi password (dari "123" → "123456") + submit ulang → feedback lama ter-clear', async () => {

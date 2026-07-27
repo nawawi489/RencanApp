@@ -70,7 +70,34 @@ try {
   );
 }
 
+// S2-7: verified-host origin used as `redirectTo` for password recovery. Must
+// be an HTTPS origin registered for Universal Links (iOS AASA) and Android
+// App Links (assetlinks.json). Dev/local falls back to the app's ems:// deep
+// link if unset, but staging/prod builds MUST set this env — the CI has a
+// gate that fails the deploy if it's blank.
+const rawAppLinkHost = process.env.EXPO_PUBLIC_APP_LINK_HOST;
+let appLinkHost: string | undefined;
+if (rawAppLinkHost && rawAppLinkHost.trim() !== '') {
+  try {
+    const parsed = new URL(rawAppLinkHost);
+    if (parsed.protocol !== 'https:') {
+      throw new Error('EXPO_PUBLIC_APP_LINK_HOST must be https:// to be verifiable as a Universal/App Link');
+    }
+    // Normalize — no trailing slash so callers can concatenate a path safely.
+    appLinkHost = parsed.origin;
+  } catch (err) {
+    throw new Error(
+      `EXPO_PUBLIC_APP_LINK_HOST bukan URL https valid: "${rawAppLinkHost}". ` +
+        `Perbaiki nilai env (staging/prod wajib set; dev lokal boleh kosong). ` +
+        `Detail: ${(err as Error).message}`,
+    );
+  }
+}
+
 export const env = {
   supabaseUrl,
   supabaseAnonKey,
+  // App Links / Universal Links origin. `undefined` at dev-local time; login
+  // screen falls back to the ems:// scheme in that case.
+  appLinkHost,
 };

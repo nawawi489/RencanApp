@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/c
 import { BRAND_TAGLINE, BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui';
 import { AUTH_COPY } from '@/lib/auth-copy';
+import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 import { useThemePreference } from '@/providers/theme-provider';
 
@@ -90,7 +91,14 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const redirectTo = Linking.createURL('/reset-password');
+      // S2-7: prefer the verified HTTPS host (Universal Links / App Links) so
+      // Android/iOS accept the token only when the OS-verified handler owns
+      // the domain. The `ems://` fallback is unverified — any Android app
+      // could declare the scheme and hijack the recovery token — but is safe
+      // to keep for local dev where no domain is registered yet.
+      const redirectTo = env.appLinkHost
+        ? `${env.appLinkHost}/reset-password`
+        : Linking.createURL('/reset-password');
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
       if (error) throw error;
       // Pesan netral (tak membocorkan apakah email terdaftar).

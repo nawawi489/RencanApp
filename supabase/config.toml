@@ -2,6 +2,57 @@
 # project_id "supabase" mengikuti nama container stack lokal existing (supabase_db_supabase).
 project_id = "supabase"
 
+# ---------------------------------------------------------------------------
+# Sprint 2, S2-1 — Auth surface lockdown.
+#
+# Why this lives in config.toml (not just the dashboard): staging and prod
+# receive their auth config from Supabase's dashboard, but pinning the same
+# invariants HERE means every future PR that touches auth is reviewable in
+# the diff, and `supabase start` locally boots with the same posture. Any
+# time a reviewer needs to answer "is self-signup off?" they check this file
+# rather than logging in to the console.
+#
+# The audit (2026-07-26) found `disable_signup: false` on staging; a Supabase
+# project with a single organization has no counterweight to unwanted signups
+# (staging survived only because it happened to have 3 orgs and the
+# `handle_new_user` trigger requires an org match). Prod must ship with
+# self-signup off. All account provisioning goes through the `create-user`
+# Edge Function which validates the caller's `manage_users` permission.
+# ---------------------------------------------------------------------------
+[auth]
+# Public site URL used for magic-link / recovery redirects.
+site_url = "https://staging.rencanapp.com"
+# Allowlist of redirects accepted after auth flows. Any URL NOT listed here is
+# rejected by GoTrue — closes open-redirect + phishing-via-recovery vectors.
+additional_redirect_urls = [
+  "https://staging.rencanapp.com",
+  "https://staging.rencanapp.com/*",
+  "https://rencanapp.com",
+  "https://rencanapp.com/*",
+  "ems://reset-password",
+  "com.rencanapp.mobile://reset-password"
+]
+# Blocker for the audit finding. `enable_signup=false` maps to
+# `disable_signup: true` in `/auth/v1/settings`.
+enable_signup = false
+
+[auth.email]
+# Signup via email/password path is off — belt-and-suspenders with enable_signup.
+enable_signup = false
+# Users cannot silently change their email; must confirm via link. Blocks a
+# session-hijack primitive where a compromised token lets the attacker
+# switch the recovery address.
+double_confirm_changes = true
+
+# Leaked-password protection (HIBP): NOT expressible in this CLI's config.toml
+# schema — it is a dashboard-only toggle on hosted projects. The audit
+# (2026-07-26) called it out because the flag was simply off.
+#
+# OWNER ACTION (per environment): enable at
+#   Dashboard → Auth → Providers → Email → "Leaked password protection"
+# for both staging and prod. Track via advisor category
+# "Leaked Password Protection Disabled" — should drop to 0.
+
 # create-user memverifikasi JWT + permission pemanggil di dalam function;
 # verify_jwt gateway tetap aktif sebagai lapisan pertama.
 [functions.create-user]
