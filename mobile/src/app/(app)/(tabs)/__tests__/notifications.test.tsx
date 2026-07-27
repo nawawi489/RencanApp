@@ -141,11 +141,14 @@ describe('NotificationsScreen', () => {
     expect(mockMarkAllRead).toHaveBeenCalled();
   });
 
-  it('tap row → markRead(id) + push ke action plan', async () => {
+  it('tap row → markRead(id) + push via resolver bersama (S3-7)', async () => {
     await render(<NotificationsScreen />, { wrapper: wrapper() });
     fireEvent.press(screen.getByText('Review diminta'));
     expect(mockMarkRead).toHaveBeenCalledWith('n1');
-    expect(mockPush).toHaveBeenCalledWith('/task/ap1');
+    // S3-7: notifications.tsx sekarang delegasi ke resolveNotificationRoute →
+    // rute lengkap dgn group prefix. Sebelumnya hard-code `/task/${id}` yg
+    // membuat 5+ tipe entity lain (goal/strategy/mention/dsb.) tak bisa di-tap.
+    expect(mockPush).toHaveBeenCalledWith('/(app)/task/ap1');
   });
 
   // ISSUE-005 — kartu resolved menampilkan label hasil (bukan pill tipe biasa)

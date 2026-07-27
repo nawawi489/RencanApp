@@ -178,6 +178,15 @@ export function unreadCount(items: Pick<Notification, 'is_read'>[]): number {
 
 // ---------------------------------------------------------------- queries
 
+/**
+ * Batas default halaman daftar notifikasi. Audit 2026-07-26 (S3-6): dulu
+ * `select *` tanpa limit dipanggil DUA kali (list + unread count) tiap kunjungan
+ * tab; membaca ratusan baris hanya untuk menghitung yang belum dibaca.
+ * Nilai 100 cukup untuk 99% pengguna dalam satu sesi; halaman berikutnya
+ * bisa ditambah kalau product analytics menunjukkan scroll melewati batas.
+ */
+export const NOTIFICATIONS_LIST_LIMIT = 100;
+
 /** Daftar notifikasi penerima saat ini, terbaru dulu. tab memfilter per tipe. */
 export async function listNotifications(tab?: NotificationTab): Promise<Notification[]> {
   const { data: auth } = await supabase.auth.getUser();
@@ -189,9 +198,29 @@ export async function listNotifications(tab?: NotificationTab): Promise<Notifica
   // Tab "Perlu Tindakan" hanya menampilkan yang masih actionable — notif yang RPC pemutus
   // sudah tandai `resolved_at` (ISSUE-005) tidak lagi menuntut aksi.
   if (tab === 'perlu_tindakan') q = q.is('resolved_at', null);
-  const { data, error } = await q.order('created_at', { ascending: false });
+  const { data, error } = await q
+    .order('created_at', { ascending: false })
+    .limit(NOTIFICATIONS_LIST_LIMIT);
   if (error) throw error;
   return (data ?? []) as unknown as Notification[];
+}
+
+/**
+ * S3-6: badge unread count — hanya HEAD request + `count: exact`, TIDAK menarik
+ * baris. Sebelumnya badge diambil lewat `listNotifications()` (select *) lalu
+ * filter di client — 100+ baris didownload hanya untuk menghasilkan 1 angka.
+ */
+export async function unreadNotificationsCount(): Promise<number> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return 0;
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { head: true, count: 'exact' })
+    .eq('recipient_id', uid)
+    .is('is_read', false);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 // ---------------------------------------------------------------- mutations (RPC)

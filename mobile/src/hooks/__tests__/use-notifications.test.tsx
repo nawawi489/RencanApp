@@ -5,6 +5,7 @@ import type { PropsWithChildren } from 'react';
 import { createElement } from 'react';
 
 const mockListNotifications = jest.fn();
+const mockUnreadCount = jest.fn();
 const mockMarkNotificationRead = jest.fn();
 const mockMarkAllNotificationsRead = jest.fn();
 
@@ -13,6 +14,7 @@ jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 jest.mock('@/lib/notifications', () => ({
   ...jest.requireActual('@/lib/notifications'),
   listNotifications: (...a: unknown[]) => mockListNotifications(...a),
+  unreadNotificationsCount: () => mockUnreadCount(),
   markNotificationRead: (...a: unknown[]) => mockMarkNotificationRead(...a),
   markAllNotificationsRead: (...a: unknown[]) => mockMarkAllNotificationsRead(...a),
 }));
@@ -35,9 +37,11 @@ const ITEMS = [
 
 beforeEach(() => {
   mockListNotifications.mockReset();
+  mockUnreadCount.mockReset();
   mockMarkNotificationRead.mockReset();
   mockMarkAllNotificationsRead.mockReset();
   mockListNotifications.mockResolvedValue(ITEMS);
+  mockUnreadCount.mockResolvedValue(2);
   mockMarkNotificationRead.mockResolvedValue(undefined);
   mockMarkAllNotificationsRead.mockResolvedValue(2);
 });
@@ -76,11 +80,12 @@ describe('useNotifications', () => {
 });
 
 describe('useUnreadCount', () => {
-  it('[5] menghitung jumlah belum dibaca dari listNotifications()', async () => {
+  it('[5] S3-6: memakai HEAD count endpoint terpisah (tidak lagi menarik list utuh)', async () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useUnreadCount(), { wrapper });
-    await waitFor(() => expect(result.current.count).toBe(2)); // n1 & n3 belum dibaca
-    expect(mockListNotifications).toHaveBeenCalledWith();
+    await waitFor(() => expect(result.current.count).toBe(2));
+    expect(mockUnreadCount).toHaveBeenCalled();
+    expect(mockListNotifications).not.toHaveBeenCalled();
   });
 });
 

@@ -6,7 +6,7 @@ import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-  unreadCount,
+  unreadNotificationsCount,
   type NotificationTab,
 } from '@/lib/notifications';
 
@@ -29,15 +29,19 @@ export function useNotifications(tab?: NotificationTab) {
  * Jumlah notifikasi belum dibaca lintas tab (untuk badge header / tab Perlu Tindakan).
  * Surface isLoading/isError supaya pemanggil bisa menyembunyikan badge saat error
  * — dulu fail-silent sebagai "0" yang menutupi notifikasi nyata.
+ *
+ * S3-6: query terpisah dgn HEAD + count:'exact' (tidak lagi meminjam data list).
+ * `staleTime: 30s` mengurangi refetch berulang ketika badge dipasang di tiap tab.
  */
 export function useUnreadCount() {
   const q = useQuery({
-    queryKey: ['notifications', 'unread'],
-    queryFn: () => listNotifications(),
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: unreadNotificationsCount,
+    staleTime: 30_000,
   });
 
   return {
-    count: unreadCount(q.data ?? []),
+    count: q.data ?? 0,
     isLoading: q.isLoading,
     isError: q.isError,
   };
