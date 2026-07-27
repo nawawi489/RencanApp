@@ -16,9 +16,9 @@ Do not assume APIs from memory — this project pins specific versions.
 
 ## Supabase env & secrets posture
 
-One posture, applied consistently — do **not** re-flag `eas.json` as inconsistent with the deploy workflow:
+One posture, applied consistently across all real environments:
 
-- **Real environments (staging + production): env-only.** The Supabase URL and anon key are **never committed**. They are injected at build/deploy time from CI env vars — CircleCI project env (`STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`; see `.circleci/config.yml` job `deploy-staging`) and, for the paused GitHub Actions fallback, `secrets.STAGING_SUPABASE_*`. The `preview` (staging) and `production` profiles in `eas.json` therefore carry no real key — `production` shows `REPLACE_PROD_ANON_KEY` placeholders on purpose.
+- **Real environments (staging + production): keys ABSENT from `eas.json`.** The Supabase URL and anon key are **never committed**. They are stored in the **EAS Dashboard** (Environment Variables scoped to `preview` and `production`) and injected at build time. In `mobile/eas.json`, both `build.preview.env` and `build.production.env` must **omit** `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` entirely — do not leave them as empty strings (EAS CLI rejects `""`), and do not leave `REPLACE…` placeholders (the P3-F guard in `src/lib/env.ts` hard-fails the build when it sees them, on purpose). A key present in `eas.json` with any value would **override** the dashboard value silently. See `docs/p3-production-provisioning-runbook.md` P3-D for the operator setup.
 - **Local development: the committed key is intentional and safe.** The `development` profile in `eas.json` hardcodes the **universal Supabase local-demo anon key** (`iss: supabase-demo`, `role: anon`) pointing at `http://localhost:54321`. That value is a public constant — identical for every `supabase start` install worldwide and published in Supabase docs — so it is not a secret, and committing it keeps local dev zero-config. Do **not** move it to env; that adds friction for zero security gain.
 
 `eas.json` is strict JSON and cannot hold comments, which is why this rule lives here. RLS — not anon-key secrecy — is what protects data; the anon key is public by design and ships inside the client bundle regardless.
