@@ -194,6 +194,43 @@ export async function listOrgProfiles(): Promise<NonNullable<PersonRef>[]> {
 }
 
 /**
+ * S4-4 / S4-5 — daftar untuk admin panel: INCLUDE inactive users + role +
+ * role_template_id (untuk picker). Tidak dipakai picker biasa (filter
+ * is_active supaya PIC/reviewer tak pernah landing di akun mati); pisah agar
+ * lokasi filter tetap eksplisit.
+ */
+export type OrgProfileAdminRow = NonNullable<PersonRef> & {
+  is_active: boolean;
+  role_template_id: string | null;
+  role_name: string | null;
+};
+
+export async function listOrgProfilesAdmin(): Promise<OrgProfileAdminRow[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, is_active, role_template_id, role_templates(name)')
+    .order('is_active', { ascending: false })
+    .order('full_name', { ascending: true });
+  if (error) throw error;
+  type Row = {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    is_active: boolean;
+    role_template_id: string | null;
+    role_templates: { name: string } | null;
+  };
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    id: r.id,
+    full_name: r.full_name,
+    email: r.email,
+    is_active: r.is_active,
+    role_template_id: r.role_template_id,
+    role_name: r.role_templates?.name ?? null,
+  }));
+}
+
+/**
  * UI-S-PP2 — anggota org dengan role/position (subhead People list).
  * Sibling listOrgProfiles agar tidak memecah callers picker yang hanya butuh id/name/email.
  */
@@ -349,6 +386,35 @@ export async function createActionPlan(input: NewActionPlan): Promise<ActionPlan
   return data as ActionPlan;
 }
 
+/**
+ * S4-2 — sunting Rencana Aksi. RPC menimpa; pemanggil WAJIB mengirim nilai
+ * saat ini untuk field yang tidak diubah. Periode & target terkunci pasca-
+ * aktivasi (dasar skor) — server MENOLAK perubahannya, bukan mengabaikan;
+ * kirim nilai apa adanya (termasuk `null`) supaya panggilan yang tidak
+ * menyentuh keduanya tidak ikut tertolak. Pola mirror `update_goal`.
+ */
+export type ActionPlanPatch = {
+  name: string;
+  description: string | null;
+  pic_id: string | null;
+  target_result: string | null;
+  period_start: string | null;
+  period_end: string | null;
+};
+
+export async function updateActionPlan(id: string, patch: ActionPlanPatch): Promise<void> {
+  const { error } = await supabase.rpc('update_action_plan', {
+    p_action_plan_id: id,
+    p_name: patch.name,
+    p_description: (patch.description ?? null) as unknown as string,
+    p_pic_id: (patch.pic_id ?? null) as unknown as string,
+    p_target_result: (patch.target_result ?? null) as unknown as string,
+    p_period_start: (patch.period_start ?? null) as unknown as string,
+    p_period_end: (patch.period_end ?? null) as unknown as string,
+  });
+  if (error) throw error;
+}
+
 export type NewTask = {
   action_plan_id: string;
   name: string;
@@ -390,6 +456,46 @@ export async function createTask(input: NewTask): Promise<Tugas> {
   });
   if (error) throw error;
   return data as Tugas;
+}
+
+/**
+ * S4-1 — sunting Tugas. `evidence_required`, `result_value_required`, dan
+ * `repeat_setting` TIDAK ada di patch: mengubah aturan submit setelah
+ * submission masuk = kontrak review berubah retroaktif; mengubah pola repeat
+ * mengganti bentuk data (instances) dan butuh alur terpisah (S4-8).
+ *
+ * Deadline TERKUNCI pasca-aktivasi — gunakan Ajukan Ubah Deadline (S3-4).
+ */
+export type TaskPatch = {
+  name: string;
+  description: string | null;
+  pic_id: string | null;
+  reviewer_id: string | null;
+  priority: string | null;
+  start_date: string | null;
+  deadline: string | null;
+  deadline_time: string | null;
+  expected_output: string | null;
+  definition_of_done: string | null;
+  evidence_description: string | null;
+};
+
+export async function updateTask(id: string, patch: TaskPatch): Promise<void> {
+  const { error } = await supabase.rpc('update_task', {
+    p_task_id: id,
+    p_name: patch.name,
+    p_description: (patch.description ?? null) as unknown as string,
+    p_pic_id: (patch.pic_id ?? null) as unknown as string,
+    p_reviewer_id: (patch.reviewer_id ?? null) as unknown as string,
+    p_priority: (patch.priority ?? null) as unknown as string,
+    p_start_date: (patch.start_date ?? null) as unknown as string,
+    p_deadline: (patch.deadline ?? null) as unknown as string,
+    p_deadline_time: (patch.deadline_time ?? null) as unknown as string,
+    p_expected_output: (patch.expected_output ?? null) as unknown as string,
+    p_definition_of_done: (patch.definition_of_done ?? null) as unknown as string,
+    p_evidence_description: (patch.evidence_description ?? null) as unknown as string,
+  });
+  if (error) throw error;
 }
 
 /**

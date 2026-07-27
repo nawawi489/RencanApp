@@ -25,8 +25,12 @@ import {
   listActionPlans,
   listActionPlansByProblemStatementIds,
   listStrategyResultValueSources,
+  updateActionPlan,
+  updateTask,
+  type ActionPlanPatch,
   type NewActionPlan,
   type NewTask,
+  type TaskPatch,
 } from '../cards';
 
 /** Builder thenable: metode chainable kembalikan builder; await resolve di titik mana pun. */
@@ -214,6 +218,79 @@ describe('createTask — passthrough via RPC idempoten (0103)', () => {
   it('[ID-2b] tanpa client_request_id → p_client_request_id undefined', async () => {
     await createTask(base);
     expect(rpcArgs().p_client_request_id).toBeUndefined();
+  });
+});
+
+// S4-1 — updateTask passthrough. RPC menimpa; pemanggil kirim nilai saat ini
+// untuk field yang tidak diubah. Null values dikirim as-is (bukan diubah jadi
+// undefined) supaya server bisa membedakan "kosong" vs "tak diset".
+describe('updateTask — passthrough via RPC update_task (S4-1)', () => {
+  const patch: TaskPatch = {
+    name: 'Tugas Diubah',
+    description: null,
+    pic_id: 'u2',
+    reviewer_id: null,
+    priority: 'high',
+    start_date: null,
+    deadline: '2026-08-01',
+    deadline_time: '23:00',
+    expected_output: 'Output',
+    definition_of_done: null,
+    evidence_description: null,
+  };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
+
+  beforeEach(() => mockRpc.mockResolvedValue({ error: null }));
+
+  it('[ID-S4-1a] memanggil update_task dgn p_task_id + patch fields', async () => {
+    await updateTask('t1', patch);
+    expect(mockRpc.mock.calls[0][0]).toBe('update_task');
+    expect(rpcArgs().p_task_id).toBe('t1');
+    expect(rpcArgs().p_name).toBe('Tugas Diubah');
+    expect(rpcArgs().p_pic_id).toBe('u2');
+    expect(rpcArgs().p_reviewer_id).toBeNull();
+    expect(rpcArgs().p_deadline).toBe('2026-08-01');
+    expect(rpcArgs().p_deadline_time).toBe('23:00');
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('[ID-S4-1b] propagasi error dari server (mis. "Deadline terkunci")', async () => {
+    mockRpc.mockResolvedValue({ error: { message: 'Deadline Tugas terkunci.' } });
+    await expect(updateTask('t1', patch)).rejects.toEqual({
+      message: 'Deadline Tugas terkunci.',
+    });
+  });
+});
+
+// S4-2a — updateActionPlan passthrough.
+describe('updateActionPlan — passthrough via RPC update_action_plan (S4-2)', () => {
+  const patch: ActionPlanPatch = {
+    name: 'AP Diubah',
+    description: null,
+    pic_id: null,
+    target_result: 'Target',
+    period_start: null,
+    period_end: null,
+  };
+  const rpcArgs = () => mockRpc.mock.calls[0][1] as Record<string, unknown>;
+
+  beforeEach(() => mockRpc.mockResolvedValue({ error: null }));
+
+  it('[ID-S4-2a] memanggil update_action_plan dgn p_action_plan_id + patch fields', async () => {
+    await updateActionPlan('ap1', patch);
+    expect(mockRpc.mock.calls[0][0]).toBe('update_action_plan');
+    expect(rpcArgs().p_action_plan_id).toBe('ap1');
+    expect(rpcArgs().p_name).toBe('AP Diubah');
+    expect(rpcArgs().p_target_result).toBe('Target');
+    expect(rpcArgs().p_pic_id).toBeNull();
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('[ID-S4-2b] propagasi error dari server', async () => {
+    mockRpc.mockResolvedValue({ error: { message: 'Periode terkunci.' } });
+    await expect(updateActionPlan('ap1', patch)).rejects.toEqual({
+      message: 'Periode terkunci.',
+    });
   });
 });
 

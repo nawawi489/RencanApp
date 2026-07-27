@@ -59,6 +59,31 @@ async function readFunctionErrorMessage(error: unknown): Promise<string | null> 
   }
 }
 
+/**
+ * S4-4 — nonaktifkan / aktifkan kembali pengguna di organisasi. Server (RPC
+ * `set_user_active`) menegakkan gate `manage_users_permissions`, anti self-
+ * deactivate, dan cakupan org. Klien hanya kirim intent.
+ */
+export async function setUserActive(targetUserId: string, active: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_user_active', {
+    p_target_user_id: targetUserId,
+    p_active: active,
+  });
+  if (error) throw error;
+}
+
+/**
+ * S4-5 — pindahkan pengguna ke role template lain (promosi/demosi). Server
+ * (RPC `update_user_role`) menegakkan gate + anti self-promote + cakupan org.
+ */
+export async function updateUserRole(targetUserId: string, roleTemplateId: string): Promise<void> {
+  const { error } = await supabase.rpc('update_user_role', {
+    p_target_user_id: targetUserId,
+    p_role_template_id: roleTemplateId,
+  });
+  if (error) throw error;
+}
+
 export async function createOrgUser(input: CreateOrgUserInput): Promise<CreatedOrgUser> {
   const { data, error } = await supabase.functions.invoke('create-user', {
     body: {

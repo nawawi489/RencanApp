@@ -105,6 +105,9 @@ export const ACTIVITY_LOG_ACTION_LABEL: Record<string, string> = {
   push_token_transferred: 'Token Push Dipindahkan',
   reporting_line_cleared: 'Atasan Dilepas',
   reporting_line_set: 'Atasan Ditetapkan',
+  // S4-4 / S4-5 — offboarding + penugasan ulang role via RPC set_user_active +
+  // update_user_role (migrasi 0113).
+  role_reassigned: 'Role Diubah',
   review_approve: 'Review Disetujui',
   review_instance_approve: 'Review Instance Disetujui',
   review_instance_reject: 'Review Instance Ditolak',
@@ -125,6 +128,8 @@ export const ACTIVITY_LOG_ACTION_LABEL: Record<string, string> = {
   team_member_assigned: 'Anggota Tim Ditambahkan',
   team_member_removed: 'Anggota Tim Dilepas',
   update: 'Diubah',
+  user_activated: 'Akun Diaktifkan',
+  user_deactivated: 'Akun Dinonaktifkan',
   user_permission_granted: 'Hak Akses Diberikan',
   user_permission_revoked: 'Hak Akses Dicabut',
   violation_resolved: 'Pelanggaran Diselesaikan',
