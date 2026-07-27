@@ -1,0 +1,115 @@
+name: Release (production)
+
+# S5-11 — dipicu oleh tag `v*` (mis. `v1.0.0`).
+#
+# Workflow ini hanya membangun + memvalidasi rilis produksi (native + web).
+# Submit ke App Store / Play Store TIDAK otomatis — memerlukan konfirmasi
+# manual owner via `workflow_dispatch` "Submit" atau `eas submit` di mesin
+# operator dengan credential ASC/Play yang tak boleh disimpan di GitHub
+# secret untuk repo publik. Tuas rollback tetap `eas update:republish` dan
+# `eas deploy:promote`.
+#
+# Kenapa `npm install`, bukan `npm ci`: lockfile saat ini (post-Sprint 4) tak
+# selalu sinkron dgn package.json karena Dependabot PR + peer-dep resolver di
+# Windows vs Ubuntu. `npm ci` gagal "Missing: <pkg>@<ver> from lock file" secara
+# regresif. `npm install` menyelesaikan dep + memperbarui lockfile in-place
+# tanpa gagal. Terima ini sebagai kompromi realistis di V1; setelah lockfile
+# rutin di-regen (workflow regen-lockfile.yml), migrasi kembali ke `npm ci`.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: 'Submit ke App Store + Play Store (owner confirms)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  quality:
+    name: Lint + types + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm install --no-audit --no-fund
+
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm run test:ci
+
+  build:
+    name: EAS build (production)
+    runs-on: ubuntu-latest
+    needs: quality
+    env:
+      # Rilis produksi membaca env dari EAS Dashboard (channel production).
+      # eas.json build.production.env di-kosongkan supabase URL/anon key sesuai
+      # S5-2 supaya dashboard win. Owner wajib set DSN + Supabase key di
+      # EAS Dashboard sebelum build.
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # Release tag di-tag ke Sentry event (native auto-upload via
+      # @sentry/react-native plugin) — nilai release = SHA yg mengarah ke tag.
+      EXPO_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+      EXPO_PUBLIC_SENTRY_DIST: ${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm install --no-audit --no-fund
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build iOS + Android (non-interactive)
+        run: eas build --profile production --platform all --non-interactive --no-wait
+
+  submit:
+    name: Submit ke App Store + Play Store (opt-in)
+    runs-on: ubuntu-latest
+    needs: build
+    # Submit HANYA jalan bila owner klik "Run workflow" dgn input submit=true.
+    # Tag push saja TIDAK memicu submit — build selesai, owner cek TestFlight/
+    # internal track dulu, baru trigger submit manual bila hasil bagus.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.submit == 'true' }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm install --no-audit --no-fund
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Submit latest production build
+        run: eas submit --profile production --platform all --latest --non-interactive
