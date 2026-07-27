@@ -1,0 +1,25 @@
+-- 0109-DB contract — Sprint 2, S2-5.
+-- Static assertion: no `public` function contains a null-unsafe `<>` guard on
+-- `reviewer_id` or `pic_id`. If a future migration reintroduces the pattern
+-- the CI job fails immediately.
+
+\set ON_ERROR_STOP on
+
+do $$
+declare
+  v_offenders text;
+begin
+  select string_agg(p.proname, ', ' order by p.proname)
+    into v_offenders
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and (pg_get_functiondef(p.oid) ~ 'reviewer_id\s*<>\s*auth\.uid\(\)'
+       or pg_get_functiondef(p.oid) ~ 'pic_id\s*<>\s*auth\.uid\(\)');
+
+  if v_offenders is not null then
+    raise exception '0109-DB-1 FAILED: functions still use null-unsafe `<> auth.uid()`: %', v_offenders;
+  end if;
+
+  raise notice '0109-DB-1 PASSED: no null-unsafe reviewer_id / pic_id `<>` guards in public schema';
+end $$;

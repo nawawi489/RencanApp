@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["APPLE_TEAM_ID.com.rencanapp.mobile"],
+        "components": [
+          {
+            "/": "/reset-password",
+            "comment": "Universal Link entry point for Supabase password recovery."
+          },
+          {
+            "/": "/reset-password*",
+            "comment": "Match query string / hash variants Supabase appends."
+          }
+        ]
+      }
+    ]
+  }
+}

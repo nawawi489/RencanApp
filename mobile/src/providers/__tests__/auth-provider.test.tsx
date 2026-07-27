@@ -32,8 +32,23 @@ jest.mock('expo-linking', () => ({
   addEventListener: (...a: unknown[]) => mockAddEventListener(...a),
 }));
 
+// env.supabaseUrl needs to match the `iss` in test JWTs so
+// isRecoveryTokenForProject accepts them.
+jest.mock('@/lib/env', () => ({ env: { supabaseUrl: 'https://abc.supabase.co', supabaseAnonKey: 'anon' } }));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the imports it mocks
 import { AuthProvider, useAuth } from '../auth-provider';
+
+// Build a JWT whose `iss` origin matches the mocked env.supabaseUrl. Signature
+// is ignored — the app only checks structural claims before calling setSession.
+function recoveryJwt(overrides: Record<string, unknown> = {}): string {
+  const enc = (obj: unknown) => {
+    const b64 = Buffer.from(JSON.stringify(obj), 'utf8').toString('base64');
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  const payload = { iss: 'https://abc.supabase.co/auth/v1', sub: 'u1', ...overrides };
+  return `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc(payload)}.sig`;
+}
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -123,17 +138,21 @@ describe('AuthProvider — PASSWORD_RECOVERY (forgot password)', () => {
 
 describe('AuthProvider — deep-link recovery URL', () => {
   it('[H-RESET-3] cold start dengan URL recovery → panggil supabase.auth.setSession dengan token', async () => {
+    const jwt = recoveryJwt();
     mockGetInitialURL.mockResolvedValueOnce(
-      'ems://reset-password#access_token=aaa.bbb.ccc&refresh_token=rrr&type=recovery',
+      `ems://reset-password#access_token=${jwt}&refresh_token=rrr&type=recovery`,
     );
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.initializing).toBe(false));
     await waitFor(() => expect(mockSetSession).toHaveBeenCalledTimes(1));
     expect(mockSetSession.mock.calls[0][0]).toEqual({
-      access_token: 'aaa.bbb.ccc',
+      access_token: jwt,
       refresh_token: 'rrr',
     });
+    // S2-6: isRecovering is raised BEFORE setSession so the SIGNED_IN event
+    // that follows does not redirect the user into (app).
+    expect(result.current.isRecovering).toBe(true);
   });
 
   it('[H-RESET-4] URL non-recovery (mis. ems://home) → setSession TIDAK dipanggil', async () => {
@@ -154,20 +173,62 @@ describe('AuthProvider — deep-link recovery URL', () => {
       if (event === 'url') urlListener = cb;
       return { remove: mockLinkingRemove };
     });
+    const jwt = recoveryJwt();
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.initializing).toBe(false));
 
     await act(async () => {
       urlListener?.({
-        url: 'ems://reset-password#access_token=xxx&refresh_token=yyy&type=recovery',
+        url: `ems://reset-password#access_token=${jwt}&refresh_token=yyy&type=recovery`,
       });
     });
     await waitFor(() => expect(mockSetSession).toHaveBeenCalledTimes(1));
     expect(mockSetSession.mock.calls[0][0]).toEqual({
-      access_token: 'xxx',
+      access_token: jwt,
       refresh_token: 'yyy',
     });
+  });
+
+  // S2-6 new coverage: cross-project token substitution attack rejected.
+  it('[H-RESET-7] token dengan iss project lain → TIDAK panggil setSession', async () => {
+    const foreignJwt = recoveryJwt({ iss: 'https://attacker.supabase.co/auth/v1' });
+    mockGetInitialURL.mockResolvedValueOnce(
+      `ems://reset-password#access_token=${foreignJwt}&refresh_token=rrr&type=recovery`,
+    );
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.initializing).toBe(false));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockSetSession).not.toHaveBeenCalled();
+    expect(result.current.isRecovering).toBe(false);
+  });
+
+  // S2-6 new coverage: replayed recovery link on an already-active session
+  // must force sign-out and NOT call setSession — the session-fixation vector.
+  it('[H-RESET-8] recovery link datang saat sesi aktif → signOut dipanggil, setSession tidak', async () => {
+    mockGetSession.mockResolvedValueOnce({ data: { session: { user: { id: 'u1' } } } });
+    let urlListener: ((e: { url: string }) => void) | null = null;
+    mockAddEventListener.mockImplementationOnce((event: string, cb: typeof urlListener) => {
+      if (event === 'url') urlListener = cb;
+      return { remove: mockLinkingRemove };
+    });
+    const jwt = recoveryJwt();
+    const { wrapper } = makeWrapper();
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.initializing).toBe(false));
+    await waitFor(() => expect(result.current.session).not.toBeNull());
+
+    await act(async () => {
+      urlListener?.({
+        url: `ems://reset-password#access_token=${jwt}&refresh_token=rrr&type=recovery`,
+      });
+    });
+
+    await waitFor(() => expect(mockSignOut).toHaveBeenCalled());
+    expect(mockSetSession).not.toHaveBeenCalled();
   });
 
   it('[H-RESET-6] unmount melepas subscription Linking (event listener remove dipanggil)', async () => {
