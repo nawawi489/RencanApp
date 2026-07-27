@@ -90,7 +90,7 @@ begin
   begin
     perform public.update_task(
       c.task_active_a, 'S4 Task active renamed', null, c.user_a, null, 'high',
-      c.task_active_a::text::date, -- garbage date to force mismatch
+      '2020-01-01'::date, -- start_date beda dari existing (now()) → guard tanggal-mulai trip
       (now() + interval '14 days')::date, null, null, null, null
     );
     raise exception '0113-DB-1 FAILED: update_task allowed deadline change on active task';
