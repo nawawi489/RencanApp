@@ -1,41 +1,47 @@
 -- 0106_hotfix_restore_authenticated_grants.sql — pulihkan EXECUTE untuk
--- `authenticated` yang secara tidak sengaja ikut tercabut oleh 0105.
+-- `authenticated` yang secara tidak sengaja ikut tercabut oleh 0105, tanpa
+-- membuka fungsi internal yang sengaja definer-only.
 --
--- WHY: 0105 me-REVOKE EXECUTE dari PUBLIC + anon untuk 44 fungsi. Asumsi
--- implisit: setiap fungsi yang harus tetap callable oleh end-user sudah punya
--- `GRANT EXECUTE ... TO authenticated` eksplisit dari migrasi historis. Asumsi
--- itu SALAH untuk >=11 fungsi (helper predikat spt goal_has_my_descendant +
--- beberapa RPC bisnis spt cancel_card/archive_card/create_comment) — mereka
--- bergantung pada PUBLIC sebagai satu-satunya jalur ke `authenticated`.
--- Akibatnya: setelah 0105, klien authenticated dapat "permission denied for
--- function <helper>" di jalur SECURITY INVOKER (mis. dari body fungsi
--- SECURITY INVOKER yang meng-`perform` helper SECDEF).
+-- WHY: 0105 me-REVOKE EXECUTE dari PUBLIC + anon untuk 44 fungsi dengan asumsi
+-- setiap fungsi yang harus tetap end-user-callable sudah punya
+-- `GRANT EXECUTE ... TO authenticated` eksplisit. Asumsi itu SALAH untuk >=11
+-- fungsi (helper predikat spt goal_has_my_descendant + RPC bisnis spt
+-- cancel_card/archive_card/create_comment) — mereka bergantung pada PUBLIC
+-- sebagai satu-satunya jalur ke authenticated. Akibatnya: klien authenticated
+-- mendapat "permission denied for function <X>" di jalur SECURITY INVOKER.
 --
--- BUKTI EMPIRIS (CI PR #209 + staging DB):
---   • 0059:276     permission denied for function can_access_task
---   • 0067-DB-4    permission denied for function archive_card
---   • 0073-DB-7    permission denied for function apply_goal_template
---   • 0077 TEST2   permission denied for function goal_has_my_descendant
---   • 0078-bypass-S2  permission denied for function goal_has_my_descendant
---   • 0085         permission denied for function search_cards
---   • 0103-DB-5    permission denied for function goal_has_my_descendant
---   • 0104-DB-2    permission denied for function i_am_action_plan_pic
---   • 0105-DB-2    authenticated grant hilang di RPC bisnis (7 fungsi)
---   • close_period permission denied for function is_supervisor_of
+-- FIX: grant EXECUTE ke `authenticated` untuk setiap fungsi public, KECUALI:
+--   • trigger functions (`tg_*` + `set_updated_at`) — dipanggil trigger system.
+--   • fungsi internal definer-only yang dijaga oleh kontrak lain
+--     (0043/0057/0066/0078/0081/0083/0090). Deny-list di bawah = sumber
+--     kebenaran; tambah entry baru bila ada kontrak baru yg assert
+--     "authenticated should NOT have EXECUTE on X".
 --
--- FIX: grant EXECUTE ke `authenticated` untuk SEMUA fungsi di skema public,
--- kecuali trigger functions (tg_* + set_updated_at) yang dipanggil oleh trigger
--- system tanpa peduli grant. Grant ke `authenticated` TIDAK menembus ke
--- PUBLIC/anon → invarian 0105 (0 callable oleh anon) TETAP.
+-- Grant ke `authenticated` TIDAK menembus ke PUBLIC/anon → invarian 0105 tetap.
 --
--- FUTURE-PROOF: migrasi berikutnya yang `CREATE OR REPLACE FUNCTION` di public
--- akan me-reset ACL ke default PUBLIC (memori [[anon-public-rpc-grant-gotcha]]).
--- Wajib re-run 0105+0106 (atau replikasi pola: revoke public/anon + grant
--- authenticated) di migrasi tersebut, dan contract 0105-DB-1 akan tripwire
--- kalau lupa.
+-- IDEMPOTENT: bila 0106 versi awal (blanket-grant tanpa deny-list) sudah pernah
+-- di-apply ke staging DB, tail REVOKE block di bawah menarik ulang grants yang
+-- salah masuk. REVOKE pada fungsi yg belum di-grant = no-op (WARNING, bukan
+-- error).
 
 do $$
-declare r record;
+declare
+  r record;
+  v_deny text[] := array[
+    'purge_old_activity_logs',       -- 0043 audit purge (service_role only)
+    'emit_chat_system_event',        -- 0057 trigger emitter
+    'emit_notification',             -- 0066 internal notification writer
+    'write_activity',                -- 0066 internal audit writer
+    'generate_action_plan_instances',-- 0066 cron worker
+    'mark_overdue_instances',        -- 0066 cron worker
+    'recompute_chat_room_members',   -- 0066 background reconciler
+    'emit_deadline_notifications',   -- 0066 cron worker
+    'enforce_card_completion_rule',  -- 0078 trigger enforcer
+    'emit_period_closing_reminders', -- 0081 cron worker
+    'handle_new_user',               -- 0083 auth trigger handler
+    'claim_push_deliveries',         -- 0090 push drainer (service_role only)
+    'bump_push_delivery_backoff'     -- 0090 push drainer (service_role only)
+  ];
 begin
   for r in
     select p.oid, p.proname, pg_get_function_identity_arguments(p.oid) as args
@@ -44,16 +50,37 @@ begin
     where n.nspname = 'public'
       and p.proname not like 'tg\_%' escape '\'
       and p.proname <> 'set_updated_at'
+      and not (p.proname = ANY(v_deny))
   loop
     execute format('grant execute on function public.%I(%s) to authenticated',
                    r.proname, r.args);
   end loop;
 end $$;
 
--- Re-assert invarian 0105 (0 fungsi public callable oleh PUBLIC/anon).
--- Grant di atas ke `authenticated` tidak menembus, tapi kita verify eksplisit
--- supaya kegagalan langsung terlihat kalau ada yang salah (mis. seseorang
--- menambah `to public` di grant di masa depan).
+-- Cleanup: bila 0106 versi awal (blanket-grant) sudah men-grant fungsi
+-- deny-list, tarik ulang. Idempoten — no-op kalau grant memang tidak ada.
+do $$
+declare r record;
+begin
+  for r in
+    select p.oid, p.proname, pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'purge_old_activity_logs','emit_chat_system_event','emit_notification',
+        'write_activity','generate_action_plan_instances','mark_overdue_instances',
+        'recompute_chat_room_members','emit_deadline_notifications',
+        'enforce_card_completion_rule','emit_period_closing_reminders',
+        'handle_new_user','claim_push_deliveries','bump_push_delivery_backoff'
+      )
+  loop
+    execute format('revoke execute on function public.%I(%s) from authenticated',
+                   r.proname, r.args);
+  end loop;
+end $$;
+
+-- Re-assert invarian 0105.
 do $$
 declare v_remaining integer;
 begin
