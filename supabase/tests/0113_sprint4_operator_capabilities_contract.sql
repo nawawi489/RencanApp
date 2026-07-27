@@ -53,16 +53,18 @@ insert into public.action_plans (id, organization_id, initiative_id, name, creat
 select ap_a, org_a, init_a, 'S4 AP A', user_a, user_a, 'active',
        'Target A', now()::date, (now() + interval '30 days')::date from _c;
 
--- Tugas aktif — deadline terkunci (must be rejected).
-insert into public.tasks (id, organization_id, action_plan_id, name, created_by, pic_id, reviewer_id,
+-- Tugas aktif — deadline terkunci (must be rejected). reviewer_id NULL supaya
+-- `action_plans_pic_ne_reviewer` (pic != reviewer, mengizinkan NULL) tak trip;
+-- fixture 0108 mengambil pola yang sama.
+insert into public.tasks (id, organization_id, action_plan_id, name, created_by, pic_id,
                           status, repeat_setting, start_date, deadline)
-select task_active_a, org_a, ap_a, 'S4 Task active', user_a, user_a, user_a, 'assigned', 'one_time',
+select task_active_a, org_a, ap_a, 'S4 Task active', user_a, user_a, 'assigned', 'one_time',
        now()::date, (now() + interval '7 days')::date from _c;
 
 -- Tugas draft — full-field edit boleh (must succeed).
-insert into public.tasks (id, organization_id, action_plan_id, name, created_by, pic_id, reviewer_id,
+insert into public.tasks (id, organization_id, action_plan_id, name, created_by, pic_id,
                           status, repeat_setting)
-select task_draft_a, org_a, ap_a, 'S4 Task draft', user_a, user_a, user_a, 'draft', 'one_time' from _c;
+select task_draft_a, org_a, ap_a, 'S4 Task draft', user_a, user_a, 'draft', 'one_time' from _c;
 
 -- Impersonate authenticated (sub=user_a, org=org_a). Sama dengan 0108.
 create or replace function pg_temp.act_as_a() returns void language plpgsql as $$
@@ -87,7 +89,7 @@ begin
   perform pg_temp.act_as_a();
   begin
     perform public.update_task(
-      c.task_active_a, 'S4 Task active renamed', null, c.user_a, c.user_a, 'high',
+      c.task_active_a, 'S4 Task active renamed', null, c.user_a, null, 'high',
       c.task_active_a::text::date, -- garbage date to force mismatch
       (now() + interval '14 days')::date, null, null, null, null
     );
@@ -110,7 +112,7 @@ begin
   select * into c from _c;
   perform pg_temp.act_as_a();
   perform public.update_task(
-    c.task_active_a, 'S4 Task renamed OK', 'desc baru', c.user_a, c.user_a, 'medium',
+    c.task_active_a, 'S4 Task renamed OK', 'desc baru', c.user_a, null, 'medium',
     (now())::date, (now() + interval '7 days')::date, null,
     'output baru', 'dod baru', 'bukti baru'
   );
