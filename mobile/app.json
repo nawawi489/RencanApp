@@ -3,6 +3,13 @@
     "name": "Rencanapp",
     "slug": "ems",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/198a4371-d0ca-4598-9628-619a24d97d43",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ems",
@@ -13,10 +20,18 @@
       "associatedDomains": [
         "applinks:staging.rencanapp.com",
         "applinks:rencanapp.com"
-      ]
+      ],
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Rencanapp membutuhkan akses foto untuk melampirkan bukti pelaksanaan Task, submission, dan lampiran chat.",
+        "NSCameraUsageDescription": "Rencanapp membutuhkan akses kamera untuk mengambil foto bukti pelaksanaan Task dan lampiran chat langsung dari kamera.",
+        "NSMicrophoneUsageDescription": "Rencanapp membutuhkan akses mikrofon untuk merekam video bukti pelaksanaan Task dan lampiran chat berupa video.",
+        "NSPhotoLibraryAddUsageDescription": "Rencanapp perlu menyimpan gambar yang Anda unduh dari chat atau lampiran Task ke galeri.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.rencanapp.mobile",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -42,6 +57,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-updates",
       [
         "expo-splash-screen",
         {
@@ -61,6 +77,15 @@
           "defaultChannel": "default"
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Rencanapp membutuhkan akses foto untuk melampirkan bukti pelaksanaan Task, submission, dan lampiran chat.",
+          "cameraPermission": "Rencanapp membutuhkan akses kamera untuk mengambil foto bukti pelaksanaan Task dan lampiran chat langsung dari kamera.",
+          "microphonePermission": "Rencanapp membutuhkan akses mikrofon untuk merekam video bukti pelaksanaan Task dan lampiran chat berupa video."
+        }
+      ],
+      "expo-document-picker",
       "@sentry/react-native"
     ],
     "experiments": {

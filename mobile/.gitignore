@@ -31,6 +31,13 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# App Store Connect API key + Play service account (S5-5 submit.production).
+# Anggota tim ambil dari password manager sebelum eas submit; jangan commit.
+/secrets
+# FCM (S5-4) — download dari Firebase Console, jangan commit ke repo publik.
+google-services.json
+GoogleService-Info.plist
+
 # local env files
 .env
 .env*.local
