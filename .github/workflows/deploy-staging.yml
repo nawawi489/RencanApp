@@ -28,19 +28,57 @@ defaults:
 # informasi baru. Deploy langsung dari commit yang sudah green.
 #
 # Risiko: kalau ada bypass merge (admin override, direct push tanpa PR), deploy
-# jalan tanpa gate CI. Untuk repo satu-orang dengan disiplin PR-only, risiko rendah.
+# jalan tanpa gate CI. Backstop = branch protection GitHub (aktif sejak
+# 2026-07-27 pasca repo publik; sprint S1-3): required checks Lint/types/tests
+# + DB contract + Rename guard, force-push diblokir.
 #
-# Backstop "Require status checks to pass before merging" TIDAK tersedia di plan
-# saat ini (dicek 2026-07-24): repo privat di GitHub Free → branch protection DAN
-# rulesets sama-sama balas HTTP 403 "Upgrade to GitHub Pro or make this repository
-# public". Untuk mengaktifkan gate merge, owner harus salah satu: (a) upgrade ke
-# GitHub Pro, atau (b) jadikan repo publik (aman untuk anon key — RLS yang
-# melindungi data, lihat mobile/AGENTS.md "Supabase env & secrets posture").
-# Sampai diputuskan, gate efektif = disiplin PR + CircleCI + hook pre-push lokal.
+# Pipeline (S1-2, 2026-07-27):
+#   1. db-push (env: staging-db, manual approval)  → apply migrasi
+#   2. deploy (needs: db-push)                     → export+eas deploy
+#   3. smoke  (needs: deploy)                      → verify bundle serves real host
+# Bila db-push gagal atau ditolak, deploy klien TIDAK jalan. Ini menutup akar
+# masalah S1-1: staging melayani klien yang memanggil RPC yang belum di-apply
+# ke DB.
 jobs:
+  db-push:
+    name: Apply Supabase migrations (staging)
+    runs-on: ubuntu-latest
+    # environment `staging-db` mengunci step ini di belakang manual approval +
+    # secret SUPABASE_ACCESS_TOKEN/SUPABASE_DB_PASSWORD/SUPABASE_PROJECT_REF.
+    # Konfigurasi di Settings → Environments → staging-db.
+    environment: staging-db
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        with:
+          version: 2.109.1
+
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Push migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        # --include-all mem-forward semua migrasi lokal yang belum di ledger.
+        # Ledger staging saat ini punya gap historis (0080, 0082, 0083, 0085-0088);
+        # tanpa flag ini push akan protes "found local migration files to be inserted
+        # before the last migration on remote database". Gap itu sengaja diterima —
+        # rekonsiliasi ledger dijadwalkan di S5-3.
+        run: supabase db push --include-all --linked
+
   deploy:
     name: Export & deploy to EAS Hosting
     runs-on: ubuntu-latest
+    needs: db-push
     env:
       EXPO_PUBLIC_APP_ENV: staging
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
@@ -66,3 +104,22 @@ jobs:
         run: eas deploy --alias staging --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  smoke:
+    name: Smoke check (staging serves real bundle)
+    runs-on: ubuntu-latest
+    needs: deploy
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Verify bundle carries real Supabase host
+        # scripts/ci/smoke-check-staging.sh menutup kelas kegagalan "eas deploy sukses
+        # tapi bundel putih" (deploy #402 era CircleCI). Menyambung ulang script yang
+        # sudah ada tapi tak dipanggil workflow mana pun sejak migrasi dari CircleCI
+        # (audit S1-8).
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+        run: bash scripts/ci/smoke-check-staging.sh

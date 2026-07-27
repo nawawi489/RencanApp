@@ -4,3 +4,25 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  # npm untuk aplikasi Expo di mobile/ (audit S1-7, 2026-07-27).
+  # `open-pull-requests-limit: 5` menahan banjir PR di project satu developer.
+  # Ignore Expo-family bump major sampai upgrade SDK dijalankan lewat skill
+  # upgrading-expo — Dependabot tidak paham interlock @expo/*/expo-router/RN.
+  - package-ecosystem: "npm"
+    directory: "/mobile"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    versioning-strategy: "increase-if-necessary"
+    ignore:
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-router"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "nativewind"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major"]
