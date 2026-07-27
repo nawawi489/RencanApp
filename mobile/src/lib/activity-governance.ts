@@ -75,6 +75,10 @@ export function governanceViolationTypeLabel(type: string | null | undefined): s
 export const ACTIVITY_LOG_ACTION_LABEL: Record<string, string> = {
   activate: 'Diaktifkan',
   activate_repeat: 'Repeat Diaktifkan',
+  // S5-8 — jalur PDP: user meminta anonimisasi (self-service) dan admin
+  // memproses (anonymize_account). Emit di migrasi 0115.
+  anonymize: 'Akun Dianonimkan',
+  request_deletion: 'Permintaan Hapus Akun',
   apply_template: 'Template Diterapkan',
   cancellation_requested: 'Pengajuan Pembatalan',
   card_archived: 'Diarsipkan',
