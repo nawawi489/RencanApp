@@ -157,8 +157,8 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     });
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Staff Default')).toBeTruthy();
-    expect(screen.getByText('Tugas Completion')).toBeTruthy();
-    expect(screen.getByText('Repeat Compliance')).toBeTruthy();
+    expect(screen.getByText('Penyelesaian Tugas')).toBeTruthy();
+    expect(screen.getByText('Kepatuhan Repeat')).toBeTruthy();
     expect(screen.getByText('60%')).toBeTruthy();
     expect(screen.getByText('40%')).toBeTruthy();
     expect(screen.getByText(/Total: 100%/)).toBeTruthy();
@@ -347,7 +347,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     const activateBtn = await screen.findByLabelText('Aktifkan v4');
     expect(activateBtn.props.accessibilityState?.disabled).toBe(false); // initial: clean + sum=100
     // Ubah bobot 60→70 (sum jadi 110 → invalid + dirty).
-    const apInput = screen.getByLabelText('Bobot Tugas Completion');
+    const apInput = screen.getByLabelText('Bobot Penyelesaian Tugas');
     await act(async () => {
       fireEvent.changeText(apInput, '70');
     });

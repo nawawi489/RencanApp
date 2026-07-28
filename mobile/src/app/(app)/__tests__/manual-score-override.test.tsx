@@ -70,7 +70,7 @@ describe('ManualScoreOverrideScreen', () => {
   it('[1] tanpa wewenang → pesan akses + form tidak muncul', async () => {
     mockCan.mockReturnValue(false);
     await render(<ManualScoreOverrideScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Anda tidak berwenang mengelola Score Formula.')).toBeTruthy();
+    expect(await screen.findByText('Anda tidak berwenang mengelola Rumus Skor.')).toBeTruthy();
     expect(screen.queryByLabelText('Skor manual (0–100) wajib')).toBeNull();
   });
 

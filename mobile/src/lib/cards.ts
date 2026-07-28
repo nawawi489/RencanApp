@@ -305,10 +305,12 @@ export async function getOrgProfileDetail(id: string): Promise<OrgProfileDetail 
   };
 }
 
-/** Action plan di mana user adalah Reviewer & status menunggu review (untuk Home). */
-export async function listPendingReviews(): Promise<TaskWithPeople[]> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
+/**
+ * Action plan di mana user adalah Reviewer & status menunggu review (untuk Home).
+ * `uid` diteruskan pemanggil (hook home punya `useAuth`) supaya kita tidak menambah
+ * `auth.getUser()` round-trip di setiap invocation. RLS tetap penegak akhir.
+ */
+export async function listPendingReviews(uid: string): Promise<TaskWithPeople[]> {
   if (!uid) return [];
   const { data, error } = await supabase
     .from('tasks')
@@ -335,10 +337,11 @@ export async function listTasksByPic(userId: string): Promise<TaskWithPeople[]> 
   return data as unknown as TaskWithPeople[];
 }
 
-/** Action plan di mana user adalah PIC & masih harus dikerjakan (untuk Home). */
-export async function listMyTasks(): Promise<TaskWithPeople[]> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
+/**
+ * Action plan di mana user adalah PIC & masih harus dikerjakan (untuk Home).
+ * `uid` diteruskan pemanggil — pola sama dgn {@link listPendingReviews}.
+ */
+export async function listMyTasks(uid: string): Promise<TaskWithPeople[]> {
   if (!uid) return [];
   const { data, error } = await supabase
     .from('tasks')

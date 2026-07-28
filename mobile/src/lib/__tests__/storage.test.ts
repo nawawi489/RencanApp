@@ -264,12 +264,27 @@ describe('cleanupOrphanChatUpload (step 12-13)', () => {
 });
 
 describe('getChatAttachmentSignedUrl (step 14-15)', () => {
-  it('calls createSignedUrl on chat-attachments bucket', async () => {
+  it('default TTL 600s (S8-2 dinaikkan dari 60s) — layar chat menahan bubble >60s tanpa refetch', async () => {
     mockCreateSignedUrl.mockResolvedValueOnce({ data: { signedUrl: 'https://x/signed' }, error: null });
     const url = await getChatAttachmentSignedUrl('o/r/uuid-x.jpg');
     expect(mockFrom).toHaveBeenCalledWith('chat-attachments');
-    expect(mockCreateSignedUrl).toHaveBeenCalledWith('o/r/uuid-x.jpg', 60);
+    expect(mockCreateSignedUrl).toHaveBeenCalledWith('o/r/uuid-x.jpg', 600);
     expect(url).toBe('https://x/signed');
+  });
+  it('opts.transform diteruskan ke createSignedUrl utk varian thumbnail', async () => {
+    mockCreateSignedUrl.mockResolvedValueOnce({ data: { signedUrl: 'https://x/thumb' }, error: null });
+    const url = await getChatAttachmentSignedUrl('o/r/uuid-x.jpg', {
+      transform: { width: 440, height: 330, resize: 'cover' },
+    });
+    expect(mockCreateSignedUrl).toHaveBeenCalledWith('o/r/uuid-x.jpg', 600, {
+      transform: { width: 440, height: 330, resize: 'cover' },
+    });
+    expect(url).toBe('https://x/thumb');
+  });
+  it('opts.ttlSec override menang atas default', async () => {
+    mockCreateSignedUrl.mockResolvedValueOnce({ data: { signedUrl: 'https://x/short' }, error: null });
+    await getChatAttachmentSignedUrl('p', { ttlSec: 30 });
+    expect(mockCreateSignedUrl).toHaveBeenCalledWith('p', 30);
   });
   it('error → throw', async () => {
     mockCreateSignedUrl.mockResolvedValueOnce({ data: null, error: { message: 'nope' } });

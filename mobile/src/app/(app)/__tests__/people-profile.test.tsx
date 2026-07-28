@@ -131,8 +131,8 @@ describe('PeopleProfileScreen', () => {
     });
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     expect(await screen.findByLabelText('Score 88 · On track')).toBeTruthy();
-    expect(screen.getByText('Tugas Completion')).toBeTruthy();
-    expect(screen.getByText('Governance Discipline')).toBeTruthy();
+    expect(screen.getByText('Penyelesaian Tugas')).toBeTruthy();
+    expect(screen.getByText('Disiplin Tata Kelola')).toBeTruthy();
   });
 
   it('[4] berwenang + non-self + periode aktif → tombol Override muncul', async () => {
@@ -191,8 +191,8 @@ describe('PeopleProfileScreen', () => {
     });
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     await screen.findByText('Rina Jaya');
-    expect(screen.queryByText('Achievement Score')).toBeNull();
-    expect(screen.queryByText('Breakdown Metrik')).toBeNull();
+    expect(screen.queryByText('Skor Pencapaian')).toBeNull();
+    expect(screen.queryByText('Rincian Metrik')).toBeNull();
   });
 
   it('[§33-2] staff viewing self → Achievement Score visible', async () => {
@@ -210,7 +210,7 @@ describe('PeopleProfileScreen', () => {
     });
     await render(<PeopleProfileScreen />, { wrapper: wrapper() });
     await screen.findByText('Aku');
-    expect(screen.getByText('Achievement Score')).toBeTruthy();
+    expect(screen.getByText('Skor Pencapaian')).toBeTruthy();
   });
 
   it('[§33-3] staff viewing others → Ranking ringan still visible (komponen 4)', async () => {

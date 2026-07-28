@@ -136,7 +136,7 @@ const PENGATURAN_ITEMS: MenuItem[] = [
 // Layar kedua tetap ada untuk saat sudah dijangkau dengan konteks yang benar.
 const ADMIN_ITEMS: MenuItem[] = [
   { label: 'Aturan Pecah Target', description: 'Aturan turunan', icon: 'git-branch-outline', tone: 'info', href: '/settings-mbr' as Href, permission: 'manage_minimum_breakdown_rule' },
-  { label: 'Score Formula', description: 'Rumus skor', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
+  { label: 'Rumus Skor', description: 'Formula penilaian', icon: 'stats-chart-outline', tone: 'violet', href: '/settings-score-formula' as Href, permission: 'manage_score_formula' },
   { label: 'Tata Kelola', description: 'Pelanggaran aturan', icon: 'warning-outline', tone: 'danger', href: '/settings-governance-violation' as Href, permission: 'view_governance_violation' },
   { label: 'Log Aktivitas', description: 'Riwayat sistem', icon: 'time-outline', tone: 'success', href: '/settings-activity-log' as Href, permission: 'view_activity_log' },
 ];
@@ -147,12 +147,12 @@ type ProfileRow = {
   role_templates: { name: string; level: string } | null;
 };
 
-async function fetchProfile(): Promise<ProfileRow | null> {
-  const { data: auth } = await supabase.auth.getUser();
+async function fetchProfile(uid: string): Promise<ProfileRow | null> {
+  if (!uid) return null;
   const { data, error } = await supabase
     .from('profiles')
     .select('full_name, email, role_templates(name, level)')
-    .eq('id', auth.user!.id)
+    .eq('id', uid)
     .single();
   if (error) throw error;
   return data as unknown as ProfileRow;
@@ -242,9 +242,11 @@ export default function MenuScreen() {
   const { can } = useProfile();
   // Ikon gear theme-aware (DESIGN §12): pill `dark:bg-neutral-800` butuh warna terang di dark.
   const gearColor = useThemePreference().effective === 'dark' ? '#cbd5e1' : '#26364f';
+  const uid = session?.user?.id ?? '';
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile', session?.user.id],
-    queryFn: fetchProfile,
+    queryKey: ['profile', uid],
+    queryFn: () => fetchProfile(uid),
+    enabled: !!uid,
   });
   const { score } = useMyScore();
   const scoreValue = effectiveScore(score ?? null);

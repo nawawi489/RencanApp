@@ -9,12 +9,16 @@ import {
   unreadNotificationsCount,
   type NotificationTab,
 } from '@/lib/notifications';
+import { useAuth } from '@/providers/auth-provider';
 
 /** Daftar notifikasi per tab (default tab "semua"/tanpa filter saat tak diberi). */
 export function useNotifications(tab?: NotificationTab) {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? '';
   const q = useQuery({
-    queryKey: ['notifications', tab],
-    queryFn: () => listNotifications(tab),
+    queryKey: ['notifications', uid, tab],
+    queryFn: () => listNotifications(uid, tab),
+    enabled: !!uid,
   });
 
   return {
@@ -34,10 +38,13 @@ export function useNotifications(tab?: NotificationTab) {
  * `staleTime: 30s` mengurangi refetch berulang ketika badge dipasang di tiap tab.
  */
 export function useUnreadCount() {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? '';
   const q = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: unreadNotificationsCount,
+    queryKey: ['notifications', 'unread-count', uid],
+    queryFn: () => unreadNotificationsCount(uid),
     staleTime: 30_000,
+    enabled: !!uid,
   });
 
   return {

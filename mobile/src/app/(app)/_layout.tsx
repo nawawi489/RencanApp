@@ -161,7 +161,7 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="settings-score-formula"
-        options={{ headerShown: true, title: 'Score Formula' }}
+        options={{ headerShown: true, title: 'Rumus Skor' }}
       />
       <Stack.Screen
         name="settings-permission-users"

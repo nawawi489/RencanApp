@@ -113,8 +113,16 @@ export function LivePeopleProfileScreen() {
   const { history: myHistory } = useMyScoreHistory(6);
   const { history: userHistory } = useUserScoreHistory(id ?? '', 6);
   const history = isSelf ? myHistory : userHistory;
+  // Pakai effectiveScore (?? bukan ||) supaya skor 0 nyata tidak fallback; lalu filter
+  // Number.isFinite supaya row tanpa skor (null / string non-numeric dari jsonb) tidak
+  // menjadi titik 0 palsu di sparkline — user yang belum di-scoring diplot sebagai gap,
+  // bukan seolah dapat 0.
   const sparkPoints = useMemo(
-    () => [...history].reverse().map((h) => Number(h.manual_adjusted_score ?? h.auto_calculated_score) || 0),
+    () =>
+      [...history]
+        .reverse()
+        .map((h) => effectiveScore(h))
+        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v)),
     [history],
   );
 
@@ -225,7 +233,7 @@ export function LivePeopleProfileScreen() {
         {/* Achievement Score — §33 komponen 9: hanya self atau admin/management. */}
         {canViewScore ? (
           <SectionCard>
-            <Text className="text-base font-semibold text-black dark:text-white">Achievement Score</Text>
+            <Text className="text-base font-semibold text-black dark:text-white">Skor Pencapaian</Text>
             {scoreLoading ? (
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">Memuat skor…</Text>
             ) : displayedScore != null ? (
@@ -241,7 +249,7 @@ export function LivePeopleProfileScreen() {
             ) : (
               <GuidanceNote
                 title="Skor menyusul"
-                body="Achievement Score muncul setelah perhitungan periode berjalan atau periode pertama ditutup."
+                body="Skor Pencapaian muncul setelah perhitungan periode berjalan atau periode pertama ditutup."
               />
             )}
           </SectionCard>
@@ -257,7 +265,7 @@ export function LivePeopleProfileScreen() {
         {/* Breakdown metrik — §33: gated bersama score detail. */}
         {canViewScore && breakdown.length ? (
           <SectionCard>
-            <Text className="text-base font-semibold text-black dark:text-white">Breakdown Metrik</Text>
+            <Text className="text-base font-semibold text-black dark:text-white">Rincian Metrik</Text>
             <ScoreBreakdown metrics={breakdown} />
           </SectionCard>
         ) : null}
@@ -265,7 +273,7 @@ export function LivePeopleProfileScreen() {
         {/* UI-S-PR4 — Detail People: ringkasan role/dept/position dari `detail`. */}
         {detail ? (
           <SectionCard>
-            <Text className="text-base font-semibold text-black dark:text-white">Detail People</Text>
+            <Text className="text-base font-semibold text-black dark:text-white">Detail Anggota</Text>
             <View className="gap-1.5">
               <View className="flex-row justify-between gap-2">
                 <Text className="text-sm text-neutral-500 dark:text-neutral-400">Status</Text>

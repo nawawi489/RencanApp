@@ -154,7 +154,7 @@ describe('getMyScore — period auto-detect + user_id=auth.uid()', () => {
       if (table === 'period_snapshots') return periodBuilder.builder;
       return ranking.builder;
     });
-    const row = await getMyScore('p1');
+    const row = await getMyScore('u1', 'p1');
     expect(row).toEqual(scoreRow);
     // assertion penting: TIDAK fetch period_snapshots
     expect(periodBuilder.builder.eq).not.toHaveBeenCalled();
@@ -171,7 +171,7 @@ describe('getMyScore — period auto-detect + user_id=auth.uid()', () => {
       if (table === 'user_score_results') return scoreBuilder.builder;
       throw new Error('unexpected ' + table);
     });
-    const row = await getMyScore();
+    const row = await getMyScore('u1');
     expect(row?.id).toBe('r2');
     expect((periodActive.builder.eq as jest.Mock).mock.calls).toEqual(
       expect.arrayContaining([['status', 'active']]),
@@ -189,13 +189,12 @@ describe('getMyScore — period auto-detect + user_id=auth.uid()', () => {
       }
       throw new Error('unexpected ' + table);
     });
-    expect(await getMyScore()).toBeNull();
+    expect(await getMyScore('u1')).toBeNull();
     expect(scoreFetched).toBe(false);
   });
 
-  it('[15] tanpa auth user → throw "Not authenticated"', async () => {
-    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
-    await expect(getMyScore('p1')).rejects.toThrow('Not authenticated');
+  it('[15] uid kosong → throw "Not authenticated" (hook wrap harus enabled=false, ini backstop)', async () => {
+    await expect(getMyScore('', 'p1')).rejects.toThrow('Not authenticated');
   });
 });
 
@@ -250,8 +249,8 @@ describe('listRanking', () => {
 // ============================================================ PEOPLE_TAB_COPY (PPL-02 constant lock)
 describe('PEOPLE_TAB_COPY — konstanta label tab People (PPL-02, V1.83 de-scored)', () => {
   it('[TC1] mengunci 3 label tab + placeholder quarterly (ranking removed V1.83)', () => {
-    expect(PEOPLE_TAB_COPY.monthly).toBe('Bulan ini');
-    expect(PEOPLE_TAB_COPY.quarterly).toBe('Quarter');
+    expect(PEOPLE_TAB_COPY.monthly).toBe('Bulan Ini');
+    expect(PEOPLE_TAB_COPY.quarterly).toBe('Kuartal');
     expect(PEOPLE_TAB_COPY.admin).toBe('Admin');
     expect(PEOPLE_TAB_COPY.quarterlyPlaceholder).toMatch(/quarter|kuartal/i);
   });
@@ -335,7 +334,7 @@ describe('listMyScoreHistory', () => {
       error: null,
     });
     mockFrom.mockReturnValue(builder);
-    const rows = await listMyScoreHistory(6);
+    const rows = await listMyScoreHistory('u1', 6);
     expect(mockFrom).toHaveBeenCalledWith('user_score_results');
     const eqCalls = (builder.eq as jest.Mock).mock.calls;
     expect(eqCalls).toEqual(expect.arrayContaining([['user_id', 'u1'], ['is_current', true]]));
@@ -343,9 +342,8 @@ describe('listMyScoreHistory', () => {
     // DESC by period_start → h2 (Mar) sebelum h1 (Jan)
     expect((rows as Array<{ id: string }>).map((r) => r.id)).toEqual(['h2', 'h1']);
   });
-  it('[H2] tanpa auth → throw Not authenticated', async () => {
-    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
-    await expect(listMyScoreHistory()).rejects.toThrow('Not authenticated');
+  it('[H2] uid kosong → throw Not authenticated (backstop; hook wrap enabled=false)', async () => {
+    await expect(listMyScoreHistory('')).rejects.toThrow('Not authenticated');
   });
 });
 

@@ -366,15 +366,27 @@ export async function listChatReadsForRoom(roomId: string): Promise<ChatRead[]> 
 
 /**
  * Berlangganan INSERT `chat_message_reads` (migrasi 0053 memasukkan tabel ke publication).
- * Filter server-side by room tak bisa (tabel tak punya kolom chat_room_id) → RLS + invalidate
- * pada setiap event; klien refetch daftar reads yang sudah tersaring per room.
+ * Tabel tak punya kolom `chat_room_id` sehingga tak bisa difilter per-room di server. Kita
+ * sempitkan lewat `reader_id=neq.<me>`: klien tidak perlu me-refetch pada bacaan sendiri
+ * (`markRead` sudah invalidate lokal), hanya pada bacaan orang lain — potongan trafik
+ * kurang lebih separuh untuk pengguna yang aktif di beberapa room sekaligus. RLS tetap
+ * penegak akhir (event hanya sampai ke anggota room).
  */
-export function subscribeChatReads(roomId: string, onChange: () => void): () => void {
+export function subscribeChatReads(
+  roomId: string,
+  myUid: string,
+  onChange: () => void,
+): () => void {
   const channel: RealtimeChannel = supabase
     .channel(`chat-reads-${roomId}`)
     .on(
       'postgres_changes' as never,
-      { event: 'INSERT', schema: 'public', table: 'chat_message_reads' } as never,
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_message_reads',
+        filter: `reader_id=neq.${myUid}`,
+      } as never,
       () => onChange(),
     )
     .subscribe();

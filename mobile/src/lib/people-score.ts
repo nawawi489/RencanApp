@@ -28,20 +28,24 @@ export const FORMULA_STATUS_LABEL: Record<string, string> = {
  * Admin: gate `manage_score_formula`, isi = entry-point ke layar admin eksisting.
  */
 export const PEOPLE_TAB_COPY = {
-  monthly: 'Bulan ini',
-  quarterly: 'Quarter',
+  monthly: 'Bulan Ini',
+  quarterly: 'Kuartal',
   admin: 'Admin',
-  quarterlyPlaceholder: 'Laporan Quarter menyusul setelah periode ditutup.',
+  quarterlyPlaceholder: 'Laporan kuartal menyusul setelah periode ditutup.',
 } as const;
 
-/** 6 metric Fase 7 V1 — D4: result_achievement keluar (no data source). */
+/**
+ * 6 metric Fase 7 V1 — D4: result_achievement keluar (no data source).
+ * S8-1: label diterjemahkan ke Bahasa Indonesia (sebelumnya bocor sbg "Repeat Compliance",
+ * "On-Time Rate", dst di layar People). Semantik key tetap English (nama kolom skema).
+ */
 export const METRIC_LABEL: Record<string, string> = {
-  task_completion: 'Tugas Completion',
-  repeat_compliance: 'Repeat Compliance',
-  on_time_rate: 'On-Time Rate',
-  review_pass_rate: 'Review Pass Rate',
-  development_contribution: 'Development Contribution',
-  governance_discipline: 'Governance Discipline',
+  task_completion: 'Penyelesaian Tugas',
+  repeat_compliance: 'Kepatuhan Repeat',
+  on_time_rate: 'Ketepatan Waktu',
+  review_pass_rate: 'Lolos Review',
+  development_contribution: 'Kontribusi Pengembangan',
+  governance_discipline: 'Disiplin Tata Kelola',
 };
 
 /** metric_breakdown JSONB (skala 0–100) → metrik berlabel untuk ScoreBreakdown. */
@@ -108,10 +112,9 @@ export async function getLatestClosedPeriod(): Promise<PeriodSnapshot | null> {
  * Skor saya untuk satu periode. periodId opsional — bila tak diberi, auto-fetch active period.
  * Mengembalikan null saat: belum ada periode aktif, ATAU belum ada baris current untuk user.
  * Filter: user_id = auth.uid() AND period_snapshot_id = id AND is_current = true.
+ * `uid` diteruskan pemanggil supaya tidak menambah `auth.getUser()` round-trip.
  */
-export async function getMyScore(periodId?: string): Promise<UserScoreResult | null> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
+export async function getMyScore(uid: string, periodId?: string): Promise<UserScoreResult | null> {
   if (!uid) throw new Error('Not authenticated');
 
   let pid = periodId;
@@ -167,10 +170,9 @@ export async function listRanking(periodId: string): Promise<RankingSnapshot[]> 
  * Histori skor saya (D6 Trend): user_score_results yang current=true, urut periode terbaru → terlama.
  * RLS otomatis menyaring ke user_id=auth.uid() (juga via supervisor/manage). Limit default 6.
  * Mengembalikan array kosong saat user belum punya histori (graceful sparkline).
+ * `uid` diteruskan pemanggil (hook punya `useAuth`).
  */
-export async function listMyScoreHistory(limit: number = 6): Promise<UserScoreResult[]> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
+export async function listMyScoreHistory(uid: string, limit: number = 6): Promise<UserScoreResult[]> {
   if (!uid) throw new Error('Not authenticated');
   // Order by period_start (not calculated_at) so recalculations don't break sparkline order.
   // Server-side ORDER + LIMIT memastikan ambil window terbaru, bukan arbitrary N rows lalu sort.

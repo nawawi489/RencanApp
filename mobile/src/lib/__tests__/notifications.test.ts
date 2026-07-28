@@ -192,16 +192,15 @@ describe('unreadCount', () => {
 });
 
 describe('listNotifications', () => {
-  it('[7] guard uid-null → kembalikan [] tanpa query', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
-    expect(await listNotifications()).toEqual([]);
+  it('[7] guard uid-kosong → kembalikan [] tanpa query (backstop; hook wrap enabled=false)', async () => {
+    expect(await listNotifications('')).toEqual([]);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('[8] tab semua: filter recipient + order created_at desc, TANPA .in(type)', async () => {
     const { builder, calls } = makeQueryThenable({ data: [{ id: 'n1' }], error: null });
     mockFrom.mockReturnValue(builder);
-    const rows = await listNotifications('semua');
+    const rows = await listNotifications('u1', 'semua');
     expect(mockFrom).toHaveBeenCalledWith('notifications');
     expect(calls.eq).toEqual(['recipient_id', 'u1']);
     expect(builder.in).not.toHaveBeenCalled();
@@ -212,7 +211,7 @@ describe('listNotifications', () => {
   it('[9] tab review: tambah .in(type, [review_request, approved, rejected, evidence_submitted])', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listNotifications('review');
+    await listNotifications('u1', 'review');
     // Daftar sengaja dikunci persis (bukan toContain): filter tab adalah kontrak query, dan
     // tipe yang diam-diam masuk/keluar mengubah apa yang user lihat tanpa jejak.
     expect(calls.in).toEqual([
@@ -224,21 +223,21 @@ describe('listNotifications', () => {
   it('[ISSUE-005-8a] tab perlu_tindakan menambah .is(resolved_at, null) supaya notif basi disembunyikan', async () => {
     const { builder, calls } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listNotifications('perlu_tindakan');
+    await listNotifications('u1', 'perlu_tindakan');
     expect(calls.is).toEqual(['resolved_at', null]);
   });
 
   it('[ISSUE-005-8b] tab non-perlu-tindakan TIDAK memfilter resolved_at (riwayat tetap tampak)', async () => {
     const { builder } = makeQueryThenable({ data: [], error: null });
     mockFrom.mockReturnValue(builder);
-    await listNotifications('review');
+    await listNotifications('u1', 'review');
     expect(builder.is).not.toHaveBeenCalled();
   });
 
   it('[10] error dari query dipropagasi', async () => {
     const { builder } = makeQueryThenable({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(builder);
-    await expect(listNotifications()).rejects.toEqual({ message: 'boom' });
+    await expect(listNotifications('u1')).rejects.toEqual({ message: 'boom' });
   });
 });
 

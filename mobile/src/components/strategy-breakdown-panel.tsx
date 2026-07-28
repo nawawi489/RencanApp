@@ -103,13 +103,13 @@ export function StrategyBreakdownPanel({
         </Text>
       ) : !hasAnyData ? (
         <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-          Belum ada pecahan target. {canEdit ? 'Tekan "Ubah" untuk mengatur kontribusi Quarter/Bulan.' : ''}
+          Belum ada pecahan target. {canEdit ? 'Tekan "Ubah" untuk mengatur kontribusi Kuartal/Bulan.' : ''}
         </Text>
       ) : (
         <View className="gap-3">
           <View className="gap-1.5">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Quarter</Text>
+              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Kuartal</Text>
               <Text
                 className={`text-xs font-semibold ${
                   Math.abs(quarterTotal - 100) <= 0.001
@@ -136,7 +136,7 @@ export function StrategyBreakdownPanel({
 
           {QUARTER_KEYS.some((qk) => Object.keys(monthMap[qk]).length > 0) ? (
             <View className="gap-2">
-              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Bulan per Quarter</Text>
+              <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Bulan per Kuartal</Text>
               {QUARTER_KEYS.map((qk) => {
                 const months = monthMap[qk];
                 const monthKeys = MONTH_KEYS.filter((m) => quarterOfMonthKey(m) === qk);
@@ -323,7 +323,7 @@ function BreakdownEditorModal({
 
           <TabBar<EditTab>
             tabs={[
-              { key: 'quarter', label: 'Quarter' },
+              { key: 'quarter', label: 'Kuartal' },
               { key: 'month', label: 'Bulan' },
             ]}
             active={tab}
@@ -334,7 +334,7 @@ function BreakdownEditorModal({
             {tab === 'quarter' ? (
               <View className="gap-3">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Total Quarter</Text>
+                  <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Total Kuartal</Text>
                   <Text
                     className={`text-sm font-semibold ${
                       quarterOk ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'

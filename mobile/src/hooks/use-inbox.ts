@@ -10,6 +10,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
 
+import { useAuth } from '@/providers/auth-provider';
 import {
   CHAT_PAGE_SIZE,
   getChatRoom,
@@ -134,13 +135,15 @@ export function useChatReads(roomId: string) {
 /** Berlangganan INSERT chat_message_reads dan invalidate ['chat-reads', roomId]. */
 export function useChatReadsRealtime(roomId: string) {
   const qc = useQueryClient();
+  const { session } = useAuth();
+  const myUid = session?.user?.id ?? '';
   useEffect(() => {
-    if (!roomId) return;
-    const unsubscribe = subscribeChatReads(roomId, () => {
+    if (!roomId || !myUid) return;
+    const unsubscribe = subscribeChatReads(roomId, myUid, () => {
       qc.invalidateQueries({ queryKey: ['chat-reads', roomId] });
     });
     return unsubscribe;
-  }, [roomId, qc]);
+  }, [roomId, myUid, qc]);
 }
 
 /**

@@ -131,13 +131,13 @@ describe('Menu §31 — Bantuan', () => {
 });
 
 describe('Menu §31 — Pengaturan', () => {
-  it('Score Formula TIDAK ada di Pengaturan (pindah ke Admin Lanjutan)', async () => {
+  it('Rumus Skor TIDAK ada di Pengaturan (pindah ke Admin Lanjutan)', async () => {
     mockCan.mockReturnValue(true);
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Pengaturan'));
     const items = await screen.findAllByText(/./);
     const pengaturanLabels = items.map((el) => el.props?.children).filter(Boolean);
-    expect(pengaturanLabels).not.toContain('Score Formula');
+    expect(pengaturanLabels).not.toContain('Rumus Skor');
     expect(pengaturanLabels).not.toContain('Aturan Pecah Target');
   });
 
@@ -164,11 +164,11 @@ describe('Menu §31 — Admin Lanjutan (permission-based)', () => {
     expect(mockPush).toHaveBeenCalledWith('/settings-governance-violation');
   });
 
-  it('Score Formula di Admin Lanjutan → push /settings-score-formula', async () => {
+  it('Rumus Skor di Admin Lanjutan → push /settings-score-formula', async () => {
     mockCan.mockImplementation((k: string) => k === 'manage_score_formula');
     await render(<MenuScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Admin Lanjutan'));
-    fireEvent.press(await screen.findByLabelText('Score Formula'));
+    fireEvent.press(await screen.findByLabelText('Rumus Skor'));
     expect(mockPush).toHaveBeenCalledWith('/settings-score-formula');
   });
 

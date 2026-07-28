@@ -216,7 +216,13 @@ function DraftEditor({
 
 function FormulaVersionCardReadOnly({ version }: { version: ScoreFormulaVersion }) {
   const cats = categoriesFromRaw(version.categories);
-  const sum = cats.reduce((acc, c) => acc + Number(c.weight || 0), 0);
+  // jsonb `weight` bisa berisi string, null, atau nilai non-numeric warisan seed;
+  // pakai pola sama dgn editor di baris 84 supaya NaN tak diam-diam ditampilkan
+  // sebagai "NaN%" atau ikut men-jumlah total ke NaN.
+  const sum = cats.reduce((acc, c) => {
+    const w = Number(c.weight);
+    return acc + (Number.isFinite(w) ? w : 0);
+  }, 0);
   const tone = version.status === 'active' ? 'success' : 'neutral';
   // Versioning/audit metadata (SF UI follow-up): effective_date + change_reason + tanggal aktivasi.
   // Field-field ini sudah ada di DB (migrasi 0020); di sini dirender supaya audit trail kelihatan.
@@ -533,9 +539,9 @@ export default function SettingsScoreFormulaScreen() {
   if (!can('manage_score_formula')) {
     return (
       <View className="flex-1 items-center justify-center p-6">
-        <Stack.Screen options={{ title: 'Score Formula' }} />
+        <Stack.Screen options={{ title: 'Rumus Skor' }} />
         <Text accessibilityRole="alert" className="text-base text-neutral-600 dark:text-neutral-300">
-          Anda tidak memiliki akses untuk mengelola Score Formula.
+          Anda tidak memiliki akses untuk mengelola Rumus Skor.
         </Text>
       </View>
     );
@@ -549,12 +555,12 @@ export default function SettingsScoreFormulaScreen() {
       <ScrollView
         className="flex-1 bg-neutral-50 dark:bg-black"
         keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ title: 'Score Formula' }} />
+      <Stack.Screen options={{ title: 'Rumus Skor' }} />
       <View className="gap-5 p-5">
         <View className="gap-1">
-          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Score Formula</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Rumus Skor</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
-            Rumus perhitungan Achievement Score.
+            Formula perhitungan Skor Pencapaian.
           </Text>
         </View>
         <ScoreLegend />

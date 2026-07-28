@@ -217,7 +217,7 @@ describe('[id].tsx — detail repeat', () => {
     mockListInstances.mockResolvedValue([makeInstance({ status: 'done' })]);
     await wrap(<TaskDetailScreen />);
     await waitFor(() => {
-      expect(screen.getByTestId('compliance-metric')).toHaveTextContent('On-time: 28/30 (93%)');
+      expect(screen.getByTestId('compliance-metric')).toHaveTextContent('Tepat waktu: 28/30 (93%)');
     });
   });
 
@@ -232,7 +232,7 @@ describe('[id].tsx — detail repeat', () => {
     });
     await wrap(<TaskDetailScreen />);
     const metric = await screen.findByTestId('compliance-metric');
-    expect(metric).toHaveTextContent('On-time: —');
+    expect(metric).toHaveTextContent('Tepat waktu: —');
     expect(metric).not.toHaveTextContent('0%');
   });
 
@@ -254,7 +254,7 @@ describe('[id].tsx — detail repeat', () => {
     // Kunci anti-regresi: JANGAN tampilkan empty-state menyesatkan saat sebenarnya gagal.
     expect(screen.queryByText(/Belum ada instance/)).toBeNull();
     // Compliance tetap terlihat → membuktikan kedua sumber independen.
-    expect(screen.getByTestId('compliance-metric')).toHaveTextContent('On-time: 28/30 (93%)');
+    expect(screen.getByTestId('compliance-metric')).toHaveTextContent('Tepat waktu: 28/30 (93%)');
   });
 
   it('[9] action plan one_time menyembunyikan bagian instance & compliance', async () => {

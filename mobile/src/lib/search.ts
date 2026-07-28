@@ -53,7 +53,7 @@ export const SEARCH_SCOPE_LABEL: Record<SearchScope, string> = {
   chat: 'Pesan',
   evidence: 'Bukti',
   activity_log: 'Log Aktivitas',
-  governance_violation: 'Governance Violation',
+  governance_violation: 'Pelanggaran Tata Kelola',
 };
 
 /** Tujuh scope yang merupakan card. Switch EKSPLISIT — bukan pencocokan daftar. */

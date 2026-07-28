@@ -51,10 +51,11 @@ export function listNearDeadline(): Promise<HomeItem[]> {
  * Instance Repeat yang menunggu review user (status 'submitted', reviewer = user).
  * Pelengkap listPendingReviews (cards.ts) yang hanya melihat one-time tasks —
  * tanpa ini kartu "Butuh Review" Home menampilkan 0 padahal ada submission instance.
+ *
+ * `uid` diteruskan pemanggil (hook home punya `useAuth`) supaya kita tidak
+ * menambah `auth.getUser()` round-trip di setiap invocation.
  */
-export async function listPendingInstanceReviews(): Promise<HomeItem[]> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
+export async function listPendingInstanceReviews(uid: string): Promise<HomeItem[]> {
   if (!uid) return [];
   const { data, error } = await supabase
     .from('task_instances')

@@ -13,8 +13,8 @@ export type PeopleTabKey = 'monthly' | 'quarterly' | 'admin';
 // gate `manage_score_formula`; tidak menambah surface admin baru.
 type AdminEntry = { key: string; label: string; route: Href };
 export const ADMIN_TAB_ENTRIES: AdminEntry[] = [
-  { key: 'score-formula', label: 'Score Formula', route: '/settings-score-formula' as Href },
-  { key: 'governance-violation', label: 'Governance Violation', route: '/settings-governance-violation' as Href },
+  { key: 'score-formula', label: 'Rumus Skor', route: '/settings-score-formula' as Href },
+  { key: 'governance-violation', label: 'Pelanggaran Tata Kelola', route: '/settings-governance-violation' as Href },
 ];
 
 export type PeopleTabsProps = {
@@ -90,7 +90,7 @@ export function PeopleQuarterlyTab({ tablist }: { tablist: ReactNode }) {
   return (
     <View className="flex-1 gap-4 bg-white p-5 dark:bg-black">
       {tablist}
-      <GuidanceNote title="Quarter" body={PEOPLE_TAB_COPY.quarterlyPlaceholder} />
+      <GuidanceNote title="Kuartal" body={PEOPLE_TAB_COPY.quarterlyPlaceholder} />
     </View>
   );
 }

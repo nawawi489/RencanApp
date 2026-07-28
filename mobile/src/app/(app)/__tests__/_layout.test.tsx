@@ -65,7 +65,7 @@ describe('AppLayout', () => {
       JSON.stringify({ headerShown: true, title: 'Aturan Pecah Target' }),
     );
     expect(String(screen.getByTestId('screen:settings-score-formula').props.children)).toContain(
-      JSON.stringify({ headerShown: true, title: 'Score Formula' }),
+      JSON.stringify({ headerShown: true, title: 'Rumus Skor' }),
     );
   });
 

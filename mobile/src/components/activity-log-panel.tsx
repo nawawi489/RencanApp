@@ -5,7 +5,9 @@ import { Pressable, Text, View } from 'react-native-css/components';
 
 import { SectionCard, SkeletonList } from '@/components/ui';
 import { useEntityActivityLog } from '@/hooks/use-activity-governance';
+import { useProfile } from '@/hooks/use-profile';
 import { personLabel } from '@/lib/cards';
+import { formatDateTimeIdMedium } from '@/lib/format-datetime';
 
 /** Label aksi human-readable (cocok dgn ENUM action di DB). */
 const ACTION_LABEL: Record<string, string> = {
@@ -26,12 +28,8 @@ const ACTION_LABEL: Record<string, string> = {
   target_breakdown_updated: 'Target Breakdown Diubah',
 };
 
-function formatTimestamp(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-}
+// S8-6: pakai timezone organisasi supaya seragam dgn submission-card & panel lain.
+// Sebelumnya jatuh ke tz perangkat → event yang sama tampil beda jam di layar berbeda.
 
 /**
  * Panel "Log Aktivitas" collapsible untuk satu entity card.
@@ -47,6 +45,8 @@ export function ActivityLogPanel({
 }) {
   const [expanded, setExpanded] = useState(false);
   const { logs, isLoading, isError } = useEntityActivityLog(entityType, entityId, expanded);
+  const { profile } = useProfile();
+  const tz = profile?.org_timezone ?? null;
 
   if (!entityId) return null;
   const shown = logs.slice(0, 10);
@@ -90,7 +90,7 @@ export function ActivityLogPanel({
                       {ACTION_LABEL[log.action] ?? log.action}
                     </Text>
                     <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                      {formatTimestamp(log.created_at)}
+                      {formatDateTimeIdMedium(log.created_at, tz)}
                     </Text>
                   </View>
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400">{actorLabel}</Text>
