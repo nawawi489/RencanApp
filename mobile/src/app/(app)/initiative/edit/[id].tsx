@@ -23,6 +23,7 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import {
   INITIATIVE_STATUS_LABEL,
   STATUS_TONE,
@@ -38,6 +39,7 @@ const PCT_RE = /^\d{1,3}(\.\d+)?$/;
 export function LiveEditInitiativeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const qc = useQueryClient();
 
   const iQ = useQuery({ queryKey: ['initiative', id], queryFn: () => getInitiative(id) });
@@ -125,7 +127,7 @@ export function LiveEditInitiativeScreen() {
         period_start: start,
         period_end: end,
       });
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Perubahan tidak tersimpan. Coba lagi.');
     }

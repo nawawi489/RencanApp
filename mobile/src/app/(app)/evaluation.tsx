@@ -4,10 +4,12 @@
 // BL-05: "Faktor berhasil" + "Faktor gagal" (PRD §26 field 3-4) — text[] diisi satu faktor per baris.
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, LabeledInput, SectionCard } from '@/components/ui';
 import { EVALUATION_TARGET_LABEL } from '@/lib/governance-admin';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useEvaluation, useEvaluationActions } from '@/hooks/use-governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 const TARGETS = ['ya', 'sebagian', 'tidak'] as const;
@@ -104,6 +106,23 @@ export function LiveEvaluationScreen() {
   const isSelf = !!picId && profile?.id === picId;
   const isDone = status === 'done' || status === 'active';
 
+  // S7-2 dirty guard: bandingkan tiap field dengan snapshot evaluasi tersimpan (atau default
+  // kosong bila belum ada) — form UPSERT jadi hanya perubahan nyata terhadap yang persist
+  // yang dianggap dirty. `submitted` mencegah dialog muncul setelah simpan sukses.
+  const [submitted, setSubmitted] = useState(false);
+  const initialTarget = (evaluation?.target_achieved as (typeof TARGETS)[number] | null) ?? null;
+  const isDirty =
+    !submitted &&
+    (target !== initialTarget ||
+      results !== (evaluation?.results ?? '') ||
+      successFactors !== fromFactorList(evaluation?.success_factors) ||
+      failureFactors !== fromFactorList(evaluation?.failure_factors) ||
+      lessons !== (evaluation?.lessons_learned ?? '') ||
+      shouldBecomeSop !== (evaluation?.should_become_sop ?? false) ||
+      rolloutNeeded !== (evaluation?.rollout_needed ?? false) ||
+      rolloutNotes !== (evaluation?.rollout_notes ?? ''));
+  useDirtyGuard(isDirty);
+
   async function handleSave() {
     setError(null);
     if (isSelf) {
@@ -121,6 +140,7 @@ export function LiveEvaluationScreen() {
       rolloutNeeded,
       rolloutNotes: rolloutNotes.trim(),
     });
+    setSubmitted(true);
   }
 
   if (!isDone) {
@@ -140,11 +160,17 @@ export function LiveEvaluationScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
-      <Stack.Screen options={{ title: 'Evaluasi' }} />
-      <View className="gap-4 p-5">
-        <SectionCard>
-          <Text className="text-sm text-neutral-600 dark:text-neutral-300">Pencapaian Target</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
+        <Stack.Screen options={{ title: 'Evaluasi' }} />
+        <View className="gap-4 p-5">
+          <SectionCard>
+            <Text className="text-sm text-neutral-600 dark:text-neutral-300">Pencapaian Target</Text>
           <View className="flex-row flex-wrap gap-2">
             {TARGETS.map((t) => {
               const active = t === target;
@@ -218,7 +244,8 @@ export function LiveEvaluationScreen() {
           <Button label="Simpan Evaluasi" onPress={handleSave} loading={isPending} disabled={isSelf} />
         </SectionCard>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

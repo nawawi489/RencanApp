@@ -12,7 +12,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { UserPicker } from '@/components/user-picker';
@@ -28,6 +27,7 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { useGoal, useGoalActions } from '@/hooks/use-workspace';
 import { getPersonRef, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
@@ -45,6 +45,7 @@ function yearOf(periodStart: string | null | undefined): string {
 export function LiveEditGoalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const goalQ = useGoal(id);
   const { update, updatePending } = useGoalActions();
   const goal = goalQ.goal;
@@ -64,6 +65,9 @@ export function LiveEditGoalScreen() {
   const [yearDraft, setYearDraft] = useState<string | undefined>();
   const [targetDraft, setTargetDraft] = useState<string | undefined>();
   const [picDraft, setPicDraft] = useState<Person | null | undefined>();
+  // S7-3: error inline per-field + banner form-level utk YearField (tak menerima prop `error`).
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const locked = !!goal && goal.status !== 'draft';
   const name = nameDraft ?? goal?.name ?? '';
@@ -75,10 +79,16 @@ export function LiveEditGoalScreen() {
   async function submit() {
     if (!goal) return;
     const trimmedName = name.trim();
+    const nextErrors: typeof fieldErrors = {};
     if (!trimmedName) {
-      Alert.alert('Belum lengkap', 'Nama Goal wajib diisi.');
+      nextErrors.name = 'Nama Goal wajib diisi.';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
       return;
     }
+    setFieldErrors({});
 
     // Saat terkunci, kirim nilai Goal APA ADANYA — termasuk null. Mengirim string kosong
     // untuk target yang memang null akan terbaca server sebagai perubahan dan panggilan
@@ -89,13 +99,14 @@ export function LiveEditGoalScreen() {
 
     if (!locked) {
       if (year && !YEAR_RE.test(year)) {
-        Alert.alert('Tahun tidak valid', 'Isi tahun Goal 4 digit (mis. 2026).');
+        setFormError('Isi tahun Goal 4 digit (mis. 2026).');
         return;
       }
       periodStart = year ? `${year}-01-01` : null;
       periodEnd = year ? `${year}-12-31` : null;
       targetValue = target.trim() || null;
     }
+    setFormError(null);
 
     try {
       await update(goal.id, {
@@ -106,7 +117,7 @@ export function LiveEditGoalScreen() {
         period_end: periodEnd,
         target_value: targetValue,
       });
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Perubahan tidak tersimpan. Coba lagi.');
     }
@@ -146,9 +157,13 @@ export function LiveEditGoalScreen() {
               <LabeledInput
                 label="Nama Goal"
                 value={name}
-                onChangeText={setNameDraft}
+                onChangeText={(t) => {
+                  setNameDraft(t);
+                  if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+                }}
                 required
                 placeholder="mis. Tumbuhkan pendapatan"
+                error={fieldErrors.name}
               />
 
               {locked ? (
@@ -180,6 +195,14 @@ export function LiveEditGoalScreen() {
               />
             </SectionCard>
 
+            {formError ? (
+              <Text
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                className="text-sm font-semibold text-red-700 dark:text-red-400">
+                {formError}
+              </Text>
+            ) : null}
             <Button label="Simpan perubahan" onPress={submit} loading={updatePending} />
           </>
         )}

@@ -9,6 +9,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -204,9 +205,14 @@ export default function SettingsPermissionUsersScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-white dark:bg-black"
+      keyboardVerticalOffset={0}>
       <Stack.Screen options={{ title: 'Pengguna & Hak Akses' }} />
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, gap: 20 }}
+        keyboardShouldPersistTaps="handled">
         {!selected ? (
           // ----- Daftar anggota
           <View className="gap-5">
@@ -547,6 +553,6 @@ export default function SettingsPermissionUsersScreen() {
           </View>
         </View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

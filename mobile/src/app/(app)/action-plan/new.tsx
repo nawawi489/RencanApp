@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { usePerson } from '@/hooks/use-workspace';
 import { createActionPlan, type NewActionPlan, type PersonRef } from '@/lib/cards';
 import { useIdempotencyKey } from '@/hooks/use-idempotency-key';
@@ -107,6 +107,23 @@ export function LiveNewActionPlanScreen() {
   const [pic, setPic] = useState<Person | null>(null);
   // UI-S-I01 — PRD §21 "Tim" wajib.
   const [teamId, setTeamId] = useState<string | null>(null);
+  // S7-3: error inline per-field + banner form-level utk error yang tidak terikat LabeledInput
+  // tunggal (mis. periode tanggal via DateRangeField).
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back saat form kotor.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (name.trim() !== '' ||
+      target.trim() !== '' ||
+      description.trim() !== '' ||
+      periodStart !== '' ||
+      periodEnd !== '' ||
+      pic != null ||
+      teamId != null);
+  useDirtyGuard(isDirty);
 
   const idk = useIdempotencyKey();
   const mutation = useMutation({
@@ -115,21 +132,29 @@ export function LiveNewActionPlanScreen() {
     onSuccess: (created) => {
       idk.reset();
       qc.invalidateQueries({ queryKey: ['action_plans'] });
+      setSubmitted(true);
       router.replace(`/action-plan/${created.id}`);
     },
     onError: (e) => alertFriendlyError('Gagal', e, 'Terjadi kesalahan.'),
   });
 
   function submit() {
+    const nextErrors: typeof fieldErrors = {};
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Rencana Aksi wajib diisi.');
+      nextErrors.name = 'Nama Rencana Aksi wajib diisi.';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
       return;
     }
+    setFieldErrors({});
     const dateErr = periodError(periodStart, periodEnd);
     if (dateErr) {
-      Alert.alert('Tanggal tidak valid', dateErr);
+      setFormError(dateErr);
       return;
     }
+    setFormError(null);
     mutation.mutate({
       name: name.trim(),
       target_result: target.trim() || null,
@@ -152,7 +177,17 @@ export function LiveNewActionPlanScreen() {
         />
 
         <SectionCard>
-          <LabeledInput label="Nama Rencana Aksi" value={name} onChangeText={setName} required placeholder="mis. Kampanye Konten Q3" />
+          <LabeledInput
+            label="Nama Rencana Aksi"
+            value={name}
+            onChangeText={(t) => {
+              setName(t);
+              if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+            }}
+            required
+            placeholder="mis. Kampanye Konten Q3"
+            error={fieldErrors.name}
+          />
           <LabeledInput
             label="Target Hasil"
             value={target}
@@ -171,6 +206,14 @@ export function LiveNewActionPlanScreen() {
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
         </SectionCard>
 
+        {formError ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {formError}
+          </Text>
+        ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={mutation.isPending} />
       </View>
     </ScrollView>

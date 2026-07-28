@@ -10,6 +10,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 import { AccessDenied } from '@/components/access-denied';
 import { OptionPicker } from '@/components/option-picker';
 import { Button, GuidanceNote, LabeledInput, SectionCard, SkeletonList } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { useRoleTemplates } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
 import { useCreateUserAdmin } from '@/hooks/use-users-admin';
@@ -31,6 +32,7 @@ const LEVEL_LABEL: Record<string, string> = {
 
 export default function SettingsUserNewScreen() {
   const router = useRouter();
+  const safeBack = useSafeBack();
   const { profile, isLoading: profileLoading, can } = useProfile();
   const { createUser, isPending } = useCreateUserAdmin();
 
@@ -40,6 +42,13 @@ export default function SettingsUserNewScreen() {
   const [roleLevel, setRoleLevel] = useState<RoleLevel>('staff');
   const [roleTemplateId, setRoleTemplateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // S7-3: error inline per-field menggantikan Alert.alert('Belum lengkap', …) yang tidak
+  // menunjuk field mana yang salah. Screen reader akan mengumumkan pesan lewat LabeledInput.
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    password?: string;
+  }>({});
   const { roleTemplates } = useRoleTemplates();
 
   if (profileLoading) {
@@ -63,19 +72,24 @@ export default function SettingsUserNewScreen() {
   const isCeo = profile?.role_level === 'ceo';
 
   async function submit() {
+    // S7-3: kumpulkan semua error field sekaligus supaya admin melihat SEMUA yang salah,
+    // bukan satu per satu (pola Alert lama exit di error pertama). Set-and-return kalau ada.
+    const nextErrors: typeof fieldErrors = {};
     if (!fullName.trim()) {
-      Alert.alert('Belum lengkap', 'Nama lengkap wajib diisi.');
-      return;
+      nextErrors.fullName = 'Nama lengkap wajib diisi.';
     }
     const normalizedEmail = email.trim().toLowerCase();
     if (!EMAIL_RE.test(normalizedEmail)) {
-      Alert.alert('Email tidak valid', 'Periksa kembali format alamat email.');
-      return;
+      nextErrors.email = 'Periksa kembali format alamat email.';
     }
     if (password.length < PASSWORD_MIN) {
-      Alert.alert('Password terlalu pendek', `Password sementara minimal ${PASSWORD_MIN} karakter.`);
+      nextErrors.password = `Password sementara minimal ${PASSWORD_MIN} karakter.`;
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       return;
     }
+    setFieldErrors({});
     setError(null);
     try {
       const created = await createUser({
@@ -101,7 +115,7 @@ export default function SettingsUserNewScreen() {
         'User dibuat',
         `Akun ${normalizedEmail} siap digunakan. Bagikan password sementara secara aman dan sarankan menggantinya lewat Reset Password setelah login pertama.`,
       );
-      router.back();
+      safeBack();
     } catch (e) {
       setError(surfaceServerError('Tambah User', e, 'Gagal membuat user. Coba lagi.'));
     }
@@ -120,26 +134,43 @@ export default function SettingsUserNewScreen() {
           <LabeledInput
             label="Nama lengkap"
             value={fullName}
-            onChangeText={setFullName}
+            onChangeText={(t) => {
+              setFullName(t);
+              if (fieldErrors.fullName) setFieldErrors((e) => ({ ...e, fullName: undefined }));
+            }}
             required
             placeholder="mis. Rina Jaya"
+            error={fieldErrors.fullName}
           />
           <LabeledInput
             label="Email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(t) => {
+              setEmail(t);
+              if (fieldErrors.email) setFieldErrors((e) => ({ ...e, email: undefined }));
+            }}
             required
             keyboardType="email-address"
             autoCapitalize="none"
+            autoComplete="email"
             placeholder="mis. rina@perusahaan.co.id"
+            error={fieldErrors.email}
           />
           <LabeledInput
             label="Password sementara"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(t) => {
+              setPassword(t);
+              if (fieldErrors.password) setFieldErrors((e) => ({ ...e, password: undefined }));
+            }}
             required
             autoCapitalize="none"
+            autoComplete="new-password"
+            /* S7-4: sembunyikan password sementara admin — terbaca siapa pun di dekat layar
+               sebelum ini. LabeledInput menambahkan tombol reveal built-in (§4.1 44px). */
+            secureTextEntry
             placeholder={`Minimal ${PASSWORD_MIN} karakter`}
+            error={fieldErrors.password}
           />
 
           <View className="gap-1.5">

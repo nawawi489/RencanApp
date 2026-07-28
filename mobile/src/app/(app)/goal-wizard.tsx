@@ -3,12 +3,12 @@
 // Meniru pola action_plan/new.tsx: onError → Alert, validasi tanggal DATE_RE.
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { DateRangeField } from '@/components/date-range-field';
 import { Button, ErrorState, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useGoalActions, useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
@@ -27,37 +27,55 @@ export default function GoalWizardScreen() {
   const [periodEnd, setPeriodEnd] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
   const [targets, setTargets] = useState<Record<string, string>>({});
+  // S7-3: banner form-level — semua validasi wizard ini tidak terikat LabeledInput tunggal
+  // (Goal Template = daftar tombol, PIC = UserPicker, periode = DateRangeField).
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back saat wizard sudah menyentuh pilihan apa pun.
+  // "step" tak menandai kotor — user bisa maju ke step 2 tanpa memilih apa-apa.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (templateId != null ||
+      periodStart !== '' ||
+      periodEnd !== '' ||
+      pic != null ||
+      Object.values(targets).some((v) => v.trim() !== ''));
+  useDirtyGuard(isDirty);
 
   const { items: kpiTemplates } = useStrategyTemplates(templateId ?? '');
 
   function next() {
     if (step === 0 && !templateId) {
-      Alert.alert('Belum lengkap', 'Pilih Goal Template terlebih dulu.');
+      setFormError('Pilih Goal Template terlebih dulu.');
       return;
     }
+    setFormError(null);
     setStep((s) => s + 1);
   }
 
   function back() {
+    setFormError(null);
     setStep((s) => Math.max(0, s - 1));
   }
 
   async function generate() {
     if (!templateId) {
-      Alert.alert('Belum lengkap', 'Pilih Goal Template terlebih dulu.');
+      setFormError('Pilih Goal Template terlebih dulu.');
       return;
     }
     if (!pic) {
       // PIC wajib (PRD §49 langkah 6): Strategi template mewarisi PIC ini; tanpa PIC tak bisa diaktifkan.
-      Alert.alert('Belum lengkap', 'Tentukan PIC / Owner Goal terlebih dulu.');
+      setFormError('Tentukan PIC / Owner Goal terlebih dulu.');
       return;
     }
     // Kedua tanggal wajib (requireBoth) + urutan benar; cegah CHECK *_period_order gagal di server.
     const dateErr = periodError(periodStart, periodEnd, true);
     if (dateErr) {
-      Alert.alert('Tanggal tidak valid', dateErr);
+      setFormError(dateErr);
       return;
     }
+    setFormError(null);
     try {
       const goalId = await applyTemplate({
         goalTemplateId: templateId,
@@ -66,6 +84,7 @@ export default function GoalWizardScreen() {
         periodEnd,
         targets,
       });
+      setSubmitted(true);
       router.replace(`/goal/${goalId}` as Href);
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
@@ -103,6 +122,14 @@ export default function GoalWizardScreen() {
                 />
               ))
             )}
+            {formError ? (
+              <Text
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                className="text-sm font-semibold text-red-700 dark:text-red-400">
+                {formError}
+              </Text>
+            ) : null}
             <Button label="Lanjut" onPress={next} />
             <Text className="text-center text-xs text-neutral-500 dark:text-neutral-400">atau</Text>
             <Button
@@ -167,6 +194,14 @@ export default function GoalWizardScreen() {
             <Text className="text-sm text-neutral-600 dark:text-neutral-300">
               Periode {periodStart || '—'} s/d {periodEnd || '—'}.
             </Text>
+            {formError ? (
+              <Text
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                className="text-sm font-semibold text-red-700 dark:text-red-400">
+                {formError}
+              </Text>
+            ) : null}
             <View className="flex-row gap-3">
               <Button label="Kembali" variant="secondary" onPress={back} />
               <Button label="Buat Goal" onPress={generate} loading={isPending} />

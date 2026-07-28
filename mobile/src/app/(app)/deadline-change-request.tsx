@@ -2,6 +2,7 @@
 // Anti-self UI gate: requestor = user → tombol review disembunyikan (server tetap penegak akhir).
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { DateField } from '@/components/date-field';
@@ -9,6 +10,7 @@ import { Badge, Button, LabeledInput, SectionCard, usePlaceholderColor } from '@
 import { DATE_RE } from '@/lib/date';
 import { reportError } from '@/lib/errors';
 import { DCR_STATUS_LABEL, type DeadlineChangeRequest } from '@/lib/governance-admin';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useDeadlineChangeActions, useDeadlineChangeRequests } from '@/hooks/use-governance-admin';
 import { useProfile } from '@/hooks/use-profile';
 
@@ -33,6 +35,13 @@ export default function DeadlineChangeRequestScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const canReview = can('review_deadline_changes');
+
+  // S7-2 dirty guard: form ini tidak berpindah layar setelah submit sukses (field di-reset
+  // ke '' oleh handleSubmit), jadi tidak butuh submittedRef — isDirty otomatis kembali false
+  // begitu field kosong lagi. Guard hanya menutup navigasi manual saat masih ada draft.
+  useDirtyGuard(
+    newDeadline.trim() !== '' || reason.trim() !== '' || impact.trim() !== '',
+  );
 
   async function handleSubmit() {
     if (isPending) return; // anti double-submit
@@ -66,7 +75,13 @@ export default function DeadlineChangeRequestScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Perubahan Deadline' }} />
       <View className="gap-4 p-5">
         <SectionCard>
@@ -106,7 +121,8 @@ export default function DeadlineChangeRequestScreen() {
           </View>
         ) : null}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -24,6 +24,7 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import {
   ACTION_PLAN_STATUS_LABEL,
   STATUS_TONE,
@@ -39,6 +40,7 @@ type Person = NonNullable<PersonRef>;
 export function LiveEditActionPlanScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const qc = useQueryClient();
 
   const apQ = useQuery({ queryKey: ['action-plan', id], queryFn: () => getActionPlan(id) });
@@ -102,7 +104,7 @@ export function LiveEditActionPlanScreen() {
         period_start: start,
         period_end: end,
       });
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Perubahan tidak tersimpan. Coba lagi.');
     }

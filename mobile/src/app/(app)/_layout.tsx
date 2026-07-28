@@ -66,6 +66,7 @@ export default function AppLayout() {
       />
       <Stack.Screen name="goal/new" options={{ headerShown: true, title: 'Goal Baru', presentation: 'modal' }} />
       <Stack.Screen name="goal/[id]" options={{ headerShown: true, title: 'Goal' }} />
+      <Stack.Screen name="goal/edit/[id]" options={{ headerShown: true, title: 'Ubah Goal' }} />
       <Stack.Screen
         name="strategy/new"
         options={{ headerShown: true, title: 'Strategi Baru', presentation: 'modal' }}
@@ -76,16 +77,26 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'Inisiatif Baru', presentation: 'modal' }}
       />
       <Stack.Screen name="initiative/[id]" options={{ headerShown: true, title: 'Inisiatif' }} />
+      <Stack.Screen name="initiative/edit/[id]" options={{ headerShown: true, title: 'Ubah Inisiatif' }} />
       <Stack.Screen
         name="action-plan/new"
         options={{ headerShown: true, title: 'Rencana Aksi Baru', presentation: 'modal' }}
       />
       <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Rencana Aksi' }} />
       <Stack.Screen
+        name="action-plan/edit/[id]"
+        options={{ headerShown: true, title: 'Ubah Rencana Aksi' }}
+      />
+      <Stack.Screen
         name="task/new"
         options={{ headerShown: true, title: 'Tugas Baru', presentation: 'modal' }}
       />
       <Stack.Screen name="task/[id]" options={{ headerShown: true, title: 'Tugas' }} />
+      <Stack.Screen name="task/edit/[id]" options={{ headerShown: true, title: 'Ubah Tugas' }} />
+      <Stack.Screen
+        name="task/repeat-edit/[id]"
+        options={{ headerShown: true, title: 'Ubah Jadwal Ulang' }}
+      />
       <Stack.Screen
         name="task/instance/[id]"
         options={{ headerShown: true, title: 'Instance' }}
@@ -105,12 +116,20 @@ export default function AppLayout() {
         options={{ headerShown: true, title: 'Development Area' }}
       />
       <Stack.Screen
+        name="development-area/edit/[id]"
+        options={{ headerShown: true, title: 'Ubah Development Area' }}
+      />
+      <Stack.Screen
         name="problem-statement/new"
         options={{ headerShown: true, title: 'Problem Statement Baru', presentation: 'modal' }}
       />
       <Stack.Screen
         name="problem-statement/[id]"
         options={{ headerShown: true, title: 'Problem Statement' }}
+      />
+      <Stack.Screen
+        name="problem-statement/edit/[id]"
+        options={{ headerShown: true, title: 'Ubah Problem Statement' }}
       />
 
       {/* BL-19c — Self-service profil/organisasi (butuh header + back seperti settings lain).
@@ -151,6 +170,13 @@ export default function AppLayout() {
       <Stack.Screen
         name="settings-user-new"
         options={{ headerShown: true, title: 'Tambah User' }}
+      />
+      {/* S7-5: settings-team/[id] sebelumnya mewarisi headerShown:false global — layar
+          menyisipkan `<Stack.Screen options={{ title: … }} />` inline, tapi tanpa header
+          bar tidak muncul jalan kembali sama sekali saat masuk lewat deep-link. */}
+      <Stack.Screen
+        name="settings-team/[id]"
+        options={{ headerShown: true, title: 'Anggota Tim' }}
       />
       <Stack.Screen
         name="settings-strategy-templates"

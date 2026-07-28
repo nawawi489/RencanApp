@@ -164,7 +164,7 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     expect(screen.getByText(/Total: 100%/)).toBeTruthy();
   });
 
-  it('[F-2] versi draft sum=100 + level staff → tombol Aktifkan enabled; klik → activate RPC dgn today', async () => {
+  it('[F-2] versi draft sum=100 + level staff → tombol Aktifkan enabled; konfirmasi AckCheckbox → activate RPC dgn today', async () => {
     mockCan.mockReturnValue(true);
     mockUseScoreFormulaTemplates.mockReturnValue({
       templates: [{ id: 't', name: 'Mgmt Default', level: 'management', is_default: true }],
@@ -188,13 +188,59 @@ describe('SettingsScoreFormulaScreen — guard + override surface', () => {
     await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
     const btn = await screen.findByLabelText('Aktifkan v2');
     expect(btn.props.accessibilityState?.disabled).toBe(false);
+    // S7-6: satu-tap sekarang membuka modal konfirmasi — belum memanggil RPC.
     await act(async () => {
       fireEvent.press(btn);
+    });
+    expect(mockActivate).not.toHaveBeenCalled();
+    // Centang AckCheckbox, tekan tombol "Aktifkan versi" di modal → baru RPC dipanggil.
+    await act(async () => {
+      fireEvent.press(
+        screen.getByLabelText(
+          'Saya paham bahwa ini akan mengubah AchievementScore semua pengguna di level ini.',
+        ),
+      );
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Aktifkan versi 2'));
     });
     expect(mockActivate).toHaveBeenCalledTimes(1);
     const [versionId, effectiveDate] = mockActivate.mock.calls[0];
     expect(versionId).toBe('v-draft');
     expect(effectiveDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('[F-2b] S7-6: aktifkan tanpa mencentang Ack → RPC TIDAK dipanggil (guard ireversibel)', async () => {
+    mockCan.mockReturnValue(true);
+    mockUseScoreFormulaTemplates.mockReturnValue({
+      templates: [{ id: 't', name: 'Mgmt Default', level: 'management', is_default: true }],
+      isLoading: false,
+      isError: false,
+    });
+    mockUseScoreFormulaVersions.mockReturnValue({
+      versions: [
+        {
+          id: 'v-draft',
+          version_number: 2,
+          status: 'draft',
+          level: 'management',
+          categories: [{ code: 'a', weight: 100, source_metric: 'a' }],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    await render(<SettingsScoreFormulaScreen />, { wrapper: wrapper() });
+    await act(async () => {
+      fireEvent.press(await screen.findByLabelText('Aktifkan v2'));
+    });
+    // Modal terbuka; tombol konfirmasi di dalam modal disabled sampai Ack.
+    const confirmBtn = screen.getByLabelText('Aktifkan versi 2');
+    expect(confirmBtn.props.accessibilityState?.disabled).toBe(true);
+    await act(async () => {
+      fireEvent.press(confirmBtn);
+    });
+    expect(mockActivate).not.toHaveBeenCalled();
   });
 
   it('[F-3] versi draft sum<100 → tombol Aktifkan DISABLED (accessibilityState explicit); RPC tidak dipanggil', async () => {

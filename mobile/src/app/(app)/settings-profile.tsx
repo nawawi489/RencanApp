@@ -8,10 +8,10 @@
 // entitas Positions sebagai sumber kebenarannya.
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, Field, GuidanceNote, LabeledInput, SectionCard, SkeletonList } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { useProfile, useUpdateOwnProfile } from '@/hooks/use-profile';
 import { alertFriendlyError } from '@/lib/errors';
 import { orgTimezoneLabel } from '@/lib/org-timezone';
@@ -19,28 +19,34 @@ import { MAX_FULL_NAME_LENGTH } from '@/lib/profile-self';
 
 export default function SettingsProfileScreen() {
   const router = useRouter();
+  const safeBack = useSafeBack();
   const { profile, isLoading } = useProfile();
   const { updateOwnProfile, isPending } = useUpdateOwnProfile();
 
   // `null` = belum disentuh → tampilkan nilai dari server. Tanpa penanda ini, form yang
   // sengaja dikosongkan user akan terisi ulang setiap kali query menyegarkan.
   const [draft, setDraft] = useState<string | null>(null);
+  // S7-3: error inline per-field menggantikan Alert.alert(...) di handler submit.
+  const [fieldErrors, setFieldErrors] = useState<{ fullName?: string }>({});
   const name = draft ?? profile?.full_name ?? '';
 
   async function submit() {
     const trimmed = name.trim();
+    const nextErrors: typeof fieldErrors = {};
     if (!trimmed) {
-      Alert.alert('Belum lengkap', 'Nama lengkap wajib diisi.');
+      nextErrors.fullName = 'Nama lengkap wajib diisi.';
+    } else if (trimmed.length > MAX_FULL_NAME_LENGTH) {
+      nextErrors.fullName = `Nama lengkap maksimal ${MAX_FULL_NAME_LENGTH} karakter.`;
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       return;
     }
-    if (trimmed.length > MAX_FULL_NAME_LENGTH) {
-      Alert.alert('Terlalu panjang', `Nama lengkap maksimal ${MAX_FULL_NAME_LENGTH} karakter.`);
-      return;
-    }
+    setFieldErrors({});
     try {
       await updateOwnProfile(trimmed);
       setDraft(null);
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Nama tidak tersimpan. Coba lagi.');
     }
@@ -65,9 +71,13 @@ export default function SettingsProfileScreen() {
               <LabeledInput
                 label="Nama lengkap"
                 value={name}
-                onChangeText={setDraft}
+                onChangeText={(t) => {
+                  setDraft(t);
+                  if (fieldErrors.fullName) setFieldErrors((e) => ({ ...e, fullName: undefined }));
+                }}
                 required
                 placeholder="mis. Siti Rahmawati"
+                error={fieldErrors.fullName}
               />
               <Button label="Simpan" onPress={submit} loading={isPending} />
             </SectionCard>

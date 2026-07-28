@@ -3,7 +3,7 @@
 // Gating: manage_teams (sama dengan tab Tim di /settings-org-structure).
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -62,7 +62,13 @@ export default function SettingsTeamMembersScreen() {
   const memberIds = new Set(members.map((m) => m.profile_id));
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: team?.name ?? 'Anggota Tim' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
@@ -141,6 +147,7 @@ export default function SettingsTeamMembersScreen() {
           </View>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

@@ -7,12 +7,12 @@
 // peringatannya di dekat field, bukan di dokumentasi.
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { OptionPicker } from '@/components/option-picker';
 import { Button, GuidanceNote, LabeledInput, SectionCard, SkeletonList } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { useOrganizationActions } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
 import { alertFriendlyError } from '@/lib/errors';
@@ -20,12 +20,15 @@ import { DEFAULT_ORG_TIMEZONE, orgTimezoneOptions } from '@/lib/org-timezone';
 
 export default function SettingsOrganizationScreen() {
   const router = useRouter();
+  const safeBack = useSafeBack();
   const { profile, isLoading, can } = useProfile();
   const { updateOrganization, isPending } = useOrganizationActions();
 
   // `null` = belum disentuh → ikut nilai server (pola sama dengan settings-profile).
   const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [tzDraft, setTzDraft] = useState<string | null>(null);
+  // S7-3: error inline per-field menggantikan Alert.alert('Belum lengkap', …).
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
 
   const allowed = can('manage_settings');
   const name = nameDraft ?? profile?.org_name ?? '';
@@ -34,15 +37,20 @@ export default function SettingsOrganizationScreen() {
 
   async function submit() {
     const trimmed = name.trim();
+    const nextErrors: typeof fieldErrors = {};
     if (!trimmed) {
-      Alert.alert('Belum lengkap', 'Nama Organisasi wajib diisi.');
+      nextErrors.name = 'Nama Organisasi wajib diisi.';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       return;
     }
+    setFieldErrors({});
     try {
       await updateOrganization({ name: trimmed, timezone });
       setNameDraft(null);
       setTzDraft(null);
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Perubahan tidak tersimpan. Coba lagi.');
     }
@@ -69,9 +77,13 @@ export default function SettingsOrganizationScreen() {
               <LabeledInput
                 label="Nama Organisasi"
                 value={name}
-                onChangeText={setNameDraft}
+                onChangeText={(t) => {
+                  setNameDraft(t);
+                  if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+                }}
                 required
                 placeholder="mis. PT Rencana Nusantara"
+                error={fieldErrors.name}
               />
               <OptionPicker
                 label="Zona waktu"

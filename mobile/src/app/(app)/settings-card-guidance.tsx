@@ -4,6 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -71,7 +72,13 @@ export default function SettingsCardGuidanceScreen() {
   });
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Keterangan Card' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
@@ -128,6 +135,7 @@ export default function SettingsCardGuidanceScreen() {
           </SectionCard>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

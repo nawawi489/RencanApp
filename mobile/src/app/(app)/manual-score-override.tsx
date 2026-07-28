@@ -4,13 +4,16 @@
 // Editor formula/override massal tetap ada di settings-score-formula; ini jalur per-orang.
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, ScoreBadge, SectionCard } from '@/components/ui';
 import { reportError } from '@/lib/errors';
 import { effectiveScore } from '@/lib/people-score';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useScoreOverride, useUserScore } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
+import { useSafeBack } from '@/hooks/use-safe-back';
 
 export default function ManualScoreOverrideScreen() {
   const { userId, userName, periodId } = useLocalSearchParams<{
@@ -19,6 +22,7 @@ export default function ManualScoreOverrideScreen() {
     periodId: string;
   }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const { profile, can } = useProfile();
   const { override, isPending } = useScoreOverride(periodId ?? '');
   const { score: current } = useUserScore(userId ?? '', periodId ?? '');
@@ -26,6 +30,13 @@ export default function ManualScoreOverrideScreen() {
   const [manualScore, setManualScore] = useState('');
   const [reason, setReason] = useState('');
   const [inlineError, setInlineError] = useState<string | null>(null);
+
+  // S7-2 dirty guard: form baru (bukan edit) — dirty saat salah satu field terisi.
+  // `submitted` mencegah dialog muncul saat safeBack() dipanggil setelah simpan sukses.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted && (manualScore.trim() !== '' || reason.trim() !== '');
+  useDirtyGuard(isDirty);
 
   const targetName = userName?.trim() || 'anggota ini';
   const currentEffective = effectiveScore(current ?? null);
@@ -85,14 +96,21 @@ export default function ManualScoreOverrideScreen() {
     try {
       await override({ userId: userId!, manualScore: scoreNum, reason: trimmedReason });
       Alert.alert('Berhasil', `Override skor untuk ${targetName} tersimpan.`);
-      router.back();
+      setSubmitted(true);
+      safeBack();
     } catch (e) {
       setInlineError(reportError('Simpan override', e, 'Gagal menyimpan override.'));
     }
   }
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-white dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Override Skor' }} />
       <View className="gap-5 p-5">
         <View className="gap-1">
@@ -148,6 +166,7 @@ export default function ManualScoreOverrideScreen() {
           />
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

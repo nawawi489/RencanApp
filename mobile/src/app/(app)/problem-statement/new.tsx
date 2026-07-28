@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useProblemStatementActions, usePerson } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
 import type { PersonRef } from '@/lib/cards';
@@ -84,21 +84,44 @@ export default function NewProblemStatementScreen() {
   // UI-S-PR1
   const [impact, setImpact] = useState<Impact | null>(null);
   const [initialEvidence, setInitialEvidence] = useState('');
+  // S7-3: error inline per-field + banner form-level utk Dampak (chip group) & periode.
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back saat form kotor.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (name.trim() !== '' ||
+      description.trim() !== '' ||
+      initialEvidence.trim() !== '' ||
+      periodStart !== '' ||
+      periodEnd !== '' ||
+      pic != null ||
+      impact != null);
+  useDirtyGuard(isDirty);
 
   async function submit() {
+    const nextErrors: typeof fieldErrors = {};
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Problem Statement wajib diisi.');
+      nextErrors.name = 'Nama Problem Statement wajib diisi.';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
       return;
     }
+    setFieldErrors({});
     if (!impact) {
-      Alert.alert('Belum lengkap', 'Dampak wajib dipilih (High/Medium/Low).');
+      setFormError('Dampak wajib dipilih (High/Medium/Low).');
       return;
     }
     const dateErr = periodError(periodStart, periodEnd);
     if (dateErr) {
-      Alert.alert('Tanggal tidak valid', dateErr);
+      setFormError(dateErr);
       return;
     }
+    setFormError(null);
     try {
       const created = await create({
         development_area_id: developmentAreaId,
@@ -110,6 +133,7 @@ export default function NewProblemStatementScreen() {
         impact,
         initial_evidence: initialEvidence.trim() || null,
       });
+      setSubmitted(true);
       router.replace(`/problem-statement/${created.id}` as Href);
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
@@ -142,9 +166,13 @@ export default function NewProblemStatementScreen() {
           <LabeledInput
             label="Nama Problem Statement"
             value={name}
-            onChangeText={setName}
+            onChangeText={(t) => {
+              setName(t);
+              if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+            }}
             required
             placeholder="mis. Kurangnya monitoring stok cabang"
+            error={fieldErrors.name}
           />
           <ImpactSelector value={impact} onChange={setImpact} />
           <LabeledInput
@@ -169,6 +197,14 @@ export default function NewProblemStatementScreen() {
           />
         </SectionCard>
 
+        {formError ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {formError}
+          </Text>
+        ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={isPending} />
       </View>
     </ScrollView>

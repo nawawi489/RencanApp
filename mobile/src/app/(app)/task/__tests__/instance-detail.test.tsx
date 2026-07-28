@@ -99,6 +99,16 @@ describe('TaskInstanceDetailScreen', () => {
     mockGetInstance.mockResolvedValue(baseInstance);
     await render(<TaskInstanceDetailScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Review submission terbaru')).toBeTruthy();
+    // S7-6: approve butuh dua langkah — tap Setujui membuka mode konfirmasi, centang
+    // AckCheckbox, tap Setujui kedua untuk memicu mutation. Guard aksi ireversibel.
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Setujui (Selesai)'));
+    });
+    await act(async () => {
+      fireEvent.press(
+        screen.getByLabelText('Saya paham, hasil ini akan diterapkan dan tidak dapat dibatalkan.'),
+      );
+    });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Setujui (Selesai)'));
     });

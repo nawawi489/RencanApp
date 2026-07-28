@@ -28,6 +28,7 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { getTask } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 import {
@@ -83,6 +84,7 @@ function ChipSelector({
 export function LiveEditRepeatRuleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const qc = useQueryClient();
 
   const taskQ = useQuery({ queryKey: ['action-plan', id], queryFn: () => getTask(id) });
@@ -157,7 +159,7 @@ export function LiveEditRepeatRuleScreen() {
 
     try {
       await mutation.mutateAsync(input);
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Perubahan tidak tersimpan. Coba lagi.');
     }

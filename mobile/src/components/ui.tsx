@@ -283,6 +283,17 @@ export function usePlaceholderColor(): string {
 
 // ---------------------------------------------------------------- LabeledInput (form)
 
+/**
+ * S7-3 (Sprint 7): prop `error` menampilkan pesan validasi inline PER-FIELD.
+ * Sebelum sprint 7, validasi form jatuh ke `Alert.alert(...)` di ~14 layar (form 18 field
+ * tak menunjuk field mana yang salah). Sekarang layar mengeset `error` string, dan komponen
+ * ini menandai border merah + `Text role='alert'` yang diumumkan pembaca layar. Border merah
+ * bukan satu-satunya sinyal — teks error DAN `aria-invalid` di TextInput bawa makna (§4 rule 2).
+ *
+ * S7-4 (Sprint 7): prop `secureTextEntry` + tombol reveal built-in (`secureRevealable`,
+ * default true saat secure aktif). Pola tombol reveal cermin preseden login/reset-password:
+ * ikon `eye/eye-off`, min-h/min-w 44 (§4.1 touch target), label a11y menyebut STATE eksplisit.
+ */
 export function LabeledInput({
   label,
   value,
@@ -292,6 +303,11 @@ export function LabeledInput({
   multiline,
   keyboardType,
   autoCapitalize,
+  error,
+  secureTextEntry,
+  secureRevealable = true,
+  autoComplete,
+  testID,
 }: {
   label: string;
   value: string;
@@ -301,27 +317,105 @@ export function LabeledInput({
   multiline?: boolean;
   keyboardType?: 'default' | 'numeric' | 'email-address';
   autoCapitalize?: 'none' | 'sentences';
+  error?: string | null;
+  secureTextEntry?: boolean;
+  /** Default true bila `secureTextEntry` aktif — kirim `false` untuk field password yang
+   * memang tidak boleh di-reveal (jarang; hampir selalu revealable membantu pengguna). */
+  secureRevealable?: boolean;
+  autoComplete?:
+    | 'off'
+    | 'email'
+    | 'current-password'
+    | 'new-password'
+    | 'one-time-code'
+    | 'name'
+    | 'tel'
+    | 'username';
+  testID?: string;
 }) {
   const placeholderColor = usePlaceholderColor();
+  const { effective } = useThemePreference();
+  // Ionicons tak menerima class NativeWind untuk `color`; pola brandIconColor (finalize modal, login).
+  const iconColor = effective === 'dark' ? '#9ca3af' : '#6b7280';
+  const [reveal, setReveal] = useState(false);
+  const secureActive = !!secureTextEntry && !reveal;
+  const showReveal = !!secureTextEntry && secureRevealable;
+  const hasError = !!error;
+  // Border merah saat error; jika normal pakai neutral. Border sendirian bukan satu-satunya
+  // sinyal — teks error di bawah + accessibilityLabel input yang membawa "error: <pesan>"
+  // adalah pembawa makna utama (§4 rule 2).
+  const borderClass = hasError
+    ? 'border-red-500 dark:border-red-400'
+    : 'border-neutral-300 dark:border-neutral-700';
+  // Screen reader membaca error saat field di-focus lewat accessibilityLabel; teks error
+  // sendiri role='alert' agar diumumkan live begitu muncul/berubah.
+  const inputA11yLabel = hasError
+    ? `${label}${required ? ' wajib' : ''}, error: ${error}`
+    : required
+      ? `${label} wajib`
+      : label;
+  const commonInputProps = {
+    accessibilityLabel: inputA11yLabel,
+    'aria-invalid': hasError,
+    placeholder,
+    placeholderTextColor: placeholderColor,
+    value,
+    onChangeText,
+    autoCapitalize,
+    autoComplete,
+    testID,
+  } as const;
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-semibold text-black dark:text-white">
         {label}
         {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
       </Text>
-      <TextInput
-        className={`rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white ${multiline ? 'h-24' : ''}`}
-        // A11y: `*` merah tak terdengar pembaca layar → sertakan " wajib" di label (WCAG 3.3.2).
-        accessibilityLabel={required ? `${label} wajib` : label}
-        placeholder={placeholder}
-        placeholderTextColor={placeholderColor}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        textAlignVertical={multiline ? 'top' : 'center'}
-      />
+      {showReveal ? (
+        // Pola preseden login.tsx: wrapper flex-row + TextInput flex-1 (tanpa border sendiri)
+        // + Pressable reveal min 44x44 (§4.1). Border pindah ke wrapper.
+        <View
+          className={`flex-row items-center rounded-xl border px-4 ${borderClass}`}>
+          <TextInput
+            {...commonInputProps}
+            className="flex-1 py-3 text-base text-black dark:text-white"
+            secureTextEntry={secureActive}
+            keyboardType={keyboardType}
+          />
+          <Pressable
+            className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-60"
+            onPress={() => setReveal((s) => !s)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={reveal ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+            accessibilityState={{ selected: reveal }}>
+            <Ionicons
+              name={reveal ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={iconColor}
+            />
+          </Pressable>
+        </View>
+      ) : (
+        <TextInput
+          {...commonInputProps}
+          className={`rounded-xl border px-4 py-3 text-base text-black dark:text-white ${borderClass} ${multiline ? 'h-24' : ''}`}
+          secureTextEntry={secureActive}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          textAlignVertical={multiline ? 'top' : 'center'}
+        />
+      )}
+      {hasError ? (
+        // role='alert' → pembaca layar mengumumkan begitu muncul/berubah tanpa perlu re-focus
+        // ke field. Teks merah AA (red-700 = 5.91:1 pada putih, §4).
+        <Text
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          className="text-sm font-semibold text-red-700 dark:text-red-400">
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -417,6 +511,75 @@ export function ErrorState({
         </View>
       ) : null}
     </View>
+  );
+}
+
+// ---------------------------------------------------------------- WarningCallout (in-dialog alert)
+
+/**
+ * DESIGN §7: kotak peringatan ber-ikon di body dialog untuk aksi ireversibel.
+ * Diekstrak dari `finalize-period-modal.tsx` (Sprint 4) supaya konfirmasi apply-KPI
+ * & activate-formula (S7-6) tidak menduplikasi pola. Ikon DEKORATIF
+ * (`accessibilityElementsHidden`) — teks tetap satu-satunya pembawa makna.
+ */
+export function WarningCallout({ message }: { message: string }) {
+  const { effective } = useThemePreference();
+  const iconColor = effective === 'dark' ? '#fbbf24' : '#b45309';
+  return (
+    <View
+      accessibilityRole="alert"
+      className="flex-row items-start gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950">
+      <Ionicons
+        name="warning"
+        size={18}
+        color={iconColor}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      />
+      <Text className="flex-1 text-sm font-semibold text-amber-900 dark:text-amber-200">
+        {message}
+      </Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- AckCheckbox (irreversible confirm)
+
+/**
+ * DESIGN §7 `AckCheckbox`: pernyataan-paham di body dialog destruktif, terpisah dari
+ * label tombol aksi. Preseden `finalize-period-modal.tsx` (Sprint 4), diekstrak di
+ * Sprint 7 supaya dipakai ulang oleh S7-6 (apply-KPI, activate-formula) tanpa duplikat.
+ *
+ * Tanpa bingkai/border kotak: dgn frame penuh terbaca sebagai "tombol ketiga" — bentuknya
+ * baris pilihan. Glyph ✓ / ○ adalah sinyal non-warna (§4 rule 2) — SATU-satunya penanda
+ * state karena bingkai dihapus, jadi tidak boleh diganti perbedaan warna saja.
+ *
+ * Kontrak pemakai: tombol aksi destruktif WAJIB `disabled` sampai `checked=true`. State
+ * di-reset saat dialog ditutup supaya tidak "lengket" saat dibuka ulang.
+ */
+export function AckCheckbox({
+  label,
+  checked,
+  onToggle,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={label}
+      onPress={onToggle}
+      className="min-h-[44px] flex-row items-start gap-3 py-2">
+      <Text className="text-base font-semibold text-brand-dark dark:text-blue-300">
+        {checked ? '✓' : '○'}
+      </Text>
+      <Text className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
