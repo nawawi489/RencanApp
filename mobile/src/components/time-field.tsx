@@ -162,7 +162,8 @@ export function TimeField({
           />
           <View
             className="bg-white p-4 dark:bg-neutral-900"
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+            accessibilityViewIsModal>
             <Picker
               value={current}
               mode="time"

@@ -65,7 +65,7 @@ export default function SettingsArchiveScreen() {
       <Stack.Screen options={{ title: 'Arsip' }} />
       <View className="gap-3 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Arsip</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Arsip</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Card yang telah diselesaikan atau dinonaktifkan.
           </Text>

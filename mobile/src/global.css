@@ -10,6 +10,11 @@
 @theme {
   --color-brand: #208aef;
   --color-brand-dark: #1564b3;
+  /* brand-light = biru muda untuk teks/ikon aksen di atas latar gelap.
+     `#93c5fd` di atas `#000` = 11.79:1 ✓ AAA (DESIGN §2/§4).
+     Sebelum token ini terdaftar, `dark:text-brand-light` diam-diam jatuh
+     ke `#1564b3` (fallback) di atas hitam = 3.51:1 (gagal AA). */
+  --color-brand-light: #93c5fd;
   --color-prototype-bg: #f3f5f8;
   --color-prototype-line: #dde3eb;
 }

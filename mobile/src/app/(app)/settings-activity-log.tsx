@@ -165,7 +165,7 @@ export default function SettingsActivityLogScreen() {
         ListHeaderComponent={
           <View className="gap-3 pb-2">
             <View className="gap-1">
-              <Text className="text-2xl font-bold text-black dark:text-white">Log Aktivitas</Text>
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Log Aktivitas</Text>
               <Text className="text-base text-neutral-500 dark:text-neutral-400">
                 Riwayat perubahan yang tercatat sistem.
               </Text>

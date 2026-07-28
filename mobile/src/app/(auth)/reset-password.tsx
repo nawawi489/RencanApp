@@ -74,7 +74,8 @@ export default function ResetPasswordScreen() {
   const gradient = isDark
     ? (['#000000', '#0b1220'] as const)
     : (['#ffffff', '#eef4fb'] as const);
-  const placeholder = isDark ? '#6b7280' : '#9ca3af';
+  // Terang `#6b7280` (4.83:1 pada putih), gelap `#9ca3af` (7.15:1 pada hitam) — DESIGN §2.
+  const placeholder = isDark ? '#9ca3af' : '#6b7280';
   const eyeColor = isDark ? '#94a3b8' : '#667085';
 
   return (
@@ -134,6 +135,7 @@ export default function ResetPasswordScreen() {
           <View className="flex-row items-center rounded-xl border border-neutral-300 px-4 dark:border-neutral-700">
             <TextInput
               className="flex-1 py-3 text-base text-black dark:text-white"
+              accessibilityLabel="Kata sandi baru"
               placeholder="Kata sandi baru"
               placeholderTextColor={placeholder}
               secureTextEntry={!show}
@@ -153,6 +155,7 @@ export default function ResetPasswordScreen() {
           </View>
           <TextInput
             className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+            accessibilityLabel="Ulangi kata sandi baru"
             placeholder="Ulangi kata sandi baru"
             placeholderTextColor={placeholder}
             secureTextEntry={!show}

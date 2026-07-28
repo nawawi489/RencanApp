@@ -51,7 +51,7 @@ export default function SettingsProfileScreen() {
       <Stack.Screen options={{ title: 'Profil Saya' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Profil Saya</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Profil Saya</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Nama yang tampil di seluruh Rencanapp — Card, komentar, dan daftar People.
           </Text>

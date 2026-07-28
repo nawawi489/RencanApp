@@ -103,7 +103,7 @@ export default function SettingsGoalTemplatesScreen() {
 
   const header = (
     <View className="gap-1 pb-3">
-      <Text className="text-2xl font-bold text-black dark:text-white">Goal Template Library</Text>
+      <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Goal Template Library</Text>
       <Text className="text-base text-neutral-500 dark:text-neutral-400">
         Blueprint Goal + Strategi siap pakai. {canCreate ? 'Pilih untuk membuat Goal lewat wizard.' : 'Hanya untuk referensi.'}
       </Text>

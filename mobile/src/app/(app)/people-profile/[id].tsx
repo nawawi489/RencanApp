@@ -162,7 +162,7 @@ export function LivePeopleProfileScreen() {
           <Avatar name={label} seed={id} size={88} />
           <View className="items-center gap-1.5">
             <View className="flex-row items-center gap-2">
-              <Text className="text-2xl font-bold text-black dark:text-white">{label}</Text>
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{label}</Text>
               {detail ? (
                 <Badge
                   label={detail.is_active ? 'Aktif' : 'Nonaktif'}

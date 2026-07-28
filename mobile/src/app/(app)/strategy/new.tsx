@@ -69,7 +69,10 @@ function StrategyTemplatePicker({
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <View className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[80%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900">
+          <View
+            className="max-h-[80%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900"
+            accessibilityViewIsModal
+            accessibilityLabel="Pemilih Strategi Template">
             <View className="flex-row items-center justify-between">
               <Text className="text-base font-semibold text-black dark:text-white">
                 Pilih Template Strategi

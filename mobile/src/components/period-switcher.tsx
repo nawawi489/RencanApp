@@ -110,6 +110,8 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
       </View>
       <Pressable
         style={{ height: 36, borderRadius: 999, backgroundColor: pillTheme.changeBg, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+        // Sprint 6 S6-5 — visual 36px, touch efektif 48px lewat hitSlop 6 (DESIGN §4).
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         className="active:opacity-70"
         accessibilityRole="button"
         accessibilityLabel="Ubah periode"
@@ -122,7 +124,8 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
         <View className="flex-1 justify-end bg-black/40">
           <View
             className="max-h-[75%] gap-4 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityLabel="Pilih periode fokus">
+            accessibilityLabel="Pilih periode fokus"
+            accessibilityViewIsModal>
             <View className="flex-row items-center justify-between">
               <Text className="text-xl font-bold text-black dark:text-white">Pilih Periode</Text>
               <Pressable

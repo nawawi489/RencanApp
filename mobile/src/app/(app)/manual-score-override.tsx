@@ -96,7 +96,7 @@ export default function ManualScoreOverrideScreen() {
       <Stack.Screen options={{ title: 'Override Skor' }} />
       <View className="gap-5 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Override Skor</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Override Skor</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Menyesuaikan Achievement Score {targetName} untuk periode berjalan.
           </Text>

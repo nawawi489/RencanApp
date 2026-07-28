@@ -37,6 +37,7 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 |---|---|---|---|
 | `brand` | `#208aef` | `--color-brand` | Aksen, ikon aktif, link, fill non-teks |
 | `brand-dark` | `#1564b3` | `--color-brand-dark` | **Fill tombol solid + teks putih** (lihat §4 a11y) |
+| `brand-light` | `#93c5fd` | `--color-brand-light` | Teks/ikon aksen di atas latar **gelap** (`dark:text-brand-light`). Wajib dipasangkan dengan `text-brand-dark` di terang. Sebelum Sprint 6, class ini terpakai tapi tokennya tidak terdaftar → jatuh diam-diam ke `#1564b3` (3.51:1 pada hitam, gagal AA). |
 | `brand-soft` | `#e8f2ff` | — | Latar chip/badge info |
 
 > Catatan rekonsiliasi: prototype memakai biru `#1877f2`; kode `mobile/` memakai `#208aef`. **Kanonik = `#208aef`** (sudah shipping di `global.css`) agar tanpa churn. Konfirmasi bila tim desain mau persis `#1877f2`.
@@ -50,7 +51,7 @@ Render referensi: [`ui/ux/`](ui/ux/) (47 layar) + pola "10/10" di [`ui/ux/improv
 | `danger` | `#b91c1c` | `#fef2f2` | `text-red-700` / `bg-red-50` | Kritis, revisi, gagal |
 | `neutral` | `#667085` | `#f1f5f9` | `text-neutral-600` / `bg-neutral-100` | Default |
 
-> Pasangan chip kanonik memakai shade **`-700` di atas `-100`** (semua lulus AA, lihat §4). Pasangan lembut prototype (mis. hijau `#14845c` di `#e7f7ef` = 4.23) **gagal AA** — jangan dipakai untuk teks.
+> Pasangan chip kanonik memakai shade **`-700` di atas `-100`** (semua lulus AA, lihat §4). Pasangan lembut prototype (mis. hijau `#14845c` di `#e7f7ef` = 4.23) **gagal AA untuk teks kecil** — hindari, atau gunakan varian gelapnya `#0f6b46` (6.02:1) sebagaimana dipakai pill Action Plan V1.8.3 (§ Workspace category).
 
 Implementasi: `Badge` & `STATUS_TONE` di [`cards.ts`](mobile/src/lib/cards.ts), `ui.tsx`.
 
@@ -65,12 +66,14 @@ Per **RWT-03 (default B) — DECIDED 2026-07-11**: palet warna **terikat POSISI 
 | 0 | Goal | `G` | `#145ebc` | `#e8f2ff` | `#cce2ff` | `#1877f2` |
 | 1 | **Strategy** (dulu KPI Area) | **`S`** | `#b76b00` | `#fff3d7` | `#ffe1a1` | `#b76b00` |
 | 2 | **Initiative** (dulu Strategy) | **`I`** | `#6941c6` | `#f1ebff` | `#dfd1ff` | `#6941c6` |
-| 3 | **Action Plan** (dulu Initiative) | **`AP`** | `#14845c` | `#e7f7ef` | `#c9ebda` | `#14845c` (font 8px) |
+| 3 | **Action Plan** (dulu Initiative) | **`AP`** | `#0f6b46` | `#e7f7ef` | `#c9ebda` | `#0f6b46` (font 8px) |
 | 4 | **Task** (dulu Action Plan) | **`T`** | `#145ebc` | `#eef6ff` | `#cce2ff` | `#145ebc` |
 | — | Development Area | `D` | `#0f766e` | `#e6fffb` | `#99f6e4` | `#0f766e` |
 | — | Problem Statement | `P` | `#c2410c` | `#fff7ed` | `#fed7aa` | `#c2410c` |
 
-Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line border `#d9e2ec`. Connector L-shape `#cfd8e5`.
+Progress orb tree (§10): good `#0f6b46`, risk `#b76b00`, bad `#c93434`, line border `#d9e2ec`. Connector L-shape `#cfd8e5`.
+
+> **Perubahan Sprint 6 (2026-07-28)**: hex teks & border-kiri card Action Plan bergeser `#14845c` → `#0f6b46` agar lulus AA pada pill kecil (`text-xs` / `fontSize:11`). `#14845c` pada `#e7f7ef` = 4.23:1 — gagal AA untuk teks di bawah 18px; `#0f6b46` pada `#e7f7ef` = 6.02:1 ✓. Ring SVG progress orb "good" **tetap** `#14845c` — komponen non-teks WCAG hanya butuh 3:1 (kontras vs latar kartu `bg-white`: 4.63:1 ✓).
 
 #### Rekonsiliasi a11y Workspace (owner 2026-07-03)
 
@@ -110,6 +113,12 @@ Progress orb tree (§10): good `#14845c`, risk `#b76b00`, bad `#c93434`, line bo
 | `muted` `#667085` / `bg` `#f3f5f8` | 4.55 | ✓ (tipis) |
 | putih / `brand` `#208aef` | **3.53** | ✗ |
 | putih / `brand-dark` `#1564b3` | 5.99 | ✓ |
+| `brand-dark` `#1564b3` / putih | 5.99 | ✓ (chevron/ikon terang) |
+| `brand-light` `#93c5fd` / hitam | 11.79 | ✓ AAA (chevron/ikon gelap) |
+| placeholder `#6b7280` / putih | 4.83 | ✓ (Sprint 6: diperketat dari `#9ca3af` yg 2.85:1) |
+| placeholder `#9ca3af` / hitam | 7.15 | ✓ |
+| putih / `bg-black/25` pada gradient brand | ≥7:1 | ✓ (pill tanggal hero, Sprint 6) |
+| Action Plan `#0f6b46` / `#e7f7ef` | 6.02 | ✓ (pill category, Sprint 6) |
 | green-700 / green-100 | 4.57 | ✓ |
 | amber-700 / amber-100 | 4.51 | ✓ |
 | red-700 / red-50 | 5.91 | ✓ |

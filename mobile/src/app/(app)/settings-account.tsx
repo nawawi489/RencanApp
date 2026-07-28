@@ -75,7 +75,7 @@ export default function SettingsAccountScreen() {
       <Stack.Screen options={{ title: 'Kelola Akun' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Kelola Akun</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Kelola Akun</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Ekspor data pribadi Anda atau ajukan penghapusan akun. Sesuai UU 27/2022 tentang Pelindungan Data Pribadi.
           </Text>

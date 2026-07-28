@@ -130,7 +130,7 @@ export function LiveEditActionPlanScreen() {
                 label={ACTION_PLAN_STATUS_LABEL[ap.status] ?? ap.status}
                 tone={STATUS_TONE[ap.status]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
                 Ubah Rencana Aksi
               </Text>
             </View>

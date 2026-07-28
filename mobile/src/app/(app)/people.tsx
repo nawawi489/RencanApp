@@ -200,7 +200,7 @@ export function LivePeopleScreen() {
     <View className="gap-5 pb-3">
       {tablist}
       <View className="gap-1">
-        <Text className="text-2xl font-bold text-black dark:text-white">Anggota</Text>
+        <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Anggota</Text>
         <Text className="text-base text-neutral-500 dark:text-neutral-400">
           Anggota organisasi.
         </Text>

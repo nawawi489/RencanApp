@@ -440,7 +440,10 @@ function ReadsModal({
           accessibilityRole="button"
           onPress={onClose}
         />
-        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
+        <View
+          className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+          accessibilityViewIsModal
+          accessibilityLabel="Daftar pembaca">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Dilihat oleh ({reads.length})
@@ -495,7 +498,10 @@ function MembersModal({
           accessibilityRole="button"
           onPress={onClose}
         />
-        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
+        <View
+          className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+          accessibilityViewIsModal
+          accessibilityLabel="Daftar anggota">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Anggota ({members.length})
@@ -648,7 +654,10 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}>
+        <View
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}
+          accessibilityViewIsModal
+          accessibilityLabel="Pratinjau gambar lampiran">
           {/* Backdrop: full-area tap-to-close, no button role → no nested <button> on web */}
           <Pressable
             onPress={() => setPreviewOpen(false)}

@@ -95,7 +95,7 @@ export default function SettingsCardCompletionRuleScreen() {
       <Stack.Screen options={{ title: 'Aturan Penyelesaian Card' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Aturan Penyelesaian Card</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Aturan Penyelesaian Card</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Field wajib per jenis card sebelum bisa diaktifkan.
           </Text>
