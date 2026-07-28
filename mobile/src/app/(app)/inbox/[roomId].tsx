@@ -432,7 +432,7 @@ function ReadsModal({
   const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 justify-end">
+      <View className="flex-1 justify-end" accessibilityViewIsModal>
         {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
         <Pressable
           className="absolute inset-0 bg-black/40"
@@ -440,10 +440,7 @@ function ReadsModal({
           accessibilityRole="button"
           onPress={onClose}
         />
-        <View
-          className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-          accessibilityViewIsModal
-          accessibilityLabel="Daftar pembaca">
+        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Dilihat oleh ({reads.length})
@@ -490,7 +487,7 @@ function MembersModal({
   const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 justify-end">
+      <View className="flex-1 justify-end" accessibilityViewIsModal>
         {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
         <Pressable
           className="absolute inset-0 bg-black/40"
@@ -498,10 +495,7 @@ function MembersModal({
           accessibilityRole="button"
           onPress={onClose}
         />
-        <View
-          className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-          accessibilityViewIsModal
-          accessibilityLabel="Daftar anggota">
+        <View className="max-h-[70%] rounded-t-3xl bg-white p-5 dark:bg-neutral-900">
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">
               Anggota ({members.length})
@@ -654,10 +648,7 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewOpen(false)}>
-        <View
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}
-          accessibilityViewIsModal
-          accessibilityLabel="Pratinjau gambar lampiran">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }} accessibilityViewIsModal>
           {/* Backdrop: full-area tap-to-close, no button role → no nested <button> on web */}
           <Pressable
             onPress={() => setPreviewOpen(false)}
