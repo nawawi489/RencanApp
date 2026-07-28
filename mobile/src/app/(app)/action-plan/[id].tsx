@@ -268,7 +268,7 @@ export function LiveActionPlanDetailScreen() {
                     label={INITIATIVE_STATUS_LABEL[action_plan.status] ?? action_plan.status}
                     tone={STATUS_TONE[action_plan.status]}
                   />
-                  <Text className="text-2xl font-bold text-black dark:text-white">{action_plan.name}</Text>
+                  <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{action_plan.name}</Text>
                 </View>
                 <ProgressOrb
                   size={72}

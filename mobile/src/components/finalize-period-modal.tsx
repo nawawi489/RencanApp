@@ -198,6 +198,7 @@ export function FinalizePeriodModal({
           accessible
           accessibilityRole="alert"
           accessibilityLabel={`Finalisasi periode ${period.period_name}`}
+          accessibilityViewIsModal
           className="gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900">
           {state.kind === 'loading-preview' && (
             <>

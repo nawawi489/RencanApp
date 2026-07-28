@@ -220,7 +220,7 @@ export function LiveEditTaskScreen() {
                 label={ACTION_PLAN_STATUS_LABEL[task.status] ?? task.status}
                 tone={STATUS_TONE[task.status]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">Ubah Tugas</Text>
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Ubah Tugas</Text>
             </View>
 
             {locked ? (

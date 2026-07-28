@@ -432,7 +432,7 @@ function ReadsModal({
   const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 justify-end">
+      <View className="flex-1 justify-end" accessibilityViewIsModal>
         {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
         <Pressable
           className="absolute inset-0 bg-black/40"
@@ -487,7 +487,7 @@ function MembersModal({
   const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 justify-end">
+      <View className="flex-1 justify-end" accessibilityViewIsModal>
         {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
         <Pressable
           className="absolute inset-0 bg-black/40"
@@ -648,7 +648,7 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }} accessibilityViewIsModal>
           {/* Backdrop: full-area tap-to-close, no button role → no nested <button> on web */}
           <Pressable
             onPress={() => setPreviewOpen(false)}

@@ -271,12 +271,14 @@ export function Field({ label, value }: { label: string; value: ReactNode }) {
 
 /**
  * Warna `placeholderTextColor` TextInput — RN tak menerima class Tailwind untuk prop ini,
- * jadi hex eksplisit per tema (DESIGN §2): terang `#9ca3af`, gelap `#6b7280`. Semua layar
- * bertema wajib memakai hook ini alih-alih hardcode `#9ca3af`.
+ * jadi hex eksplisit per tema (DESIGN §2): terang `#6b7280` (4.83:1 pada putih),
+ * gelap `#9ca3af` (7.15:1 pada hitam). Sebelum ini terang `#9ca3af` (2.85:1) dan gelap
+ * `#6b7280` (5.07:1) — pasangan terang gagal AA (DESIGN §4). Semua layar bertema wajib
+ * memakai hook ini alih-alih hardcode.
  */
 export function usePlaceholderColor(): string {
   const { effective } = useThemePreference();
-  return effective === 'dark' ? '#6b7280' : '#9ca3af';
+  return effective === 'dark' ? '#9ca3af' : '#6b7280';
 }
 
 // ---------------------------------------------------------------- LabeledInput (form)
@@ -848,6 +850,9 @@ export function TreeProgressOrb({
 
 /** Grid 2 kolom metadata (PIC/Reviewer/Deadline/Mode) untuk layar detail. */
 export function MetaGrid({ items }: { items: { label: string; value: string }[] }) {
+  // Sprint 6 S6-7 — sebelumnya `numberOfLines={1}` memotong "Revisi Diperlukan" saat font
+  // sistem diperbesar (Dynamic Type). Beri 2 baris + ellipsis: cukup untuk label status
+  // terpanjang dalam bahasa Indonesia, tanpa membiarkan sel meledak menampilkan paragraf.
   return (
     <View className="flex-row flex-wrap gap-3">
       {items.map((it, i) => (
@@ -855,7 +860,9 @@ export function MetaGrid({ items }: { items: { label: string; value: string }[] 
           key={i}
           className="min-w-[45%] flex-1 gap-0.5 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
           <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{it.label}</Text>
-          <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={1}>
+          <Text
+            className="text-base font-semibold text-black dark:text-white"
+            numberOfLines={2}>
             {it.value}
           </Text>
         </View>

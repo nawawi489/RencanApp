@@ -1408,6 +1408,9 @@ function PaneSectionHeader({
           }
           accessibilityState={{ disabled: !!pastLocked }}
           onPress={pastLocked ? () => showPastPeriodAlert() : onPrimary}
+          // Sprint 6 S6-5 — visual tinggi 32 tetap (compact prototype §6.3), tapi hitSlop 6
+          // menaikkan touch area efektif ke 44px (DESIGN §4 rule 1). Pola sama = card-help-trigger.
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           style={{
             height: 32,
             borderRadius: 12,

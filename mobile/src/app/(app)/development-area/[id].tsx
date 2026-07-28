@@ -149,7 +149,7 @@ export function LiveDevelopmentAreaDetailScreen() {
                   label={PLANNING_STATUS_LABEL[devArea.status] ?? devArea.status}
                   tone={STATUS_TONE[devArea.status]}
                 />
-                <Text className="text-2xl font-bold text-black dark:text-white">{devArea.name}</Text>
+                <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{devArea.name}</Text>
               </View>
               <MetaGrid
                 items={[

@@ -196,7 +196,7 @@ export function LiveEditRepeatRuleScreen() {
           <>
             <View className="gap-1">
               <Badge label={locked ? 'Terkunci' : 'Bisa diubah'} tone={locked ? 'warn' : 'info'} />
-              <Text className="text-2xl font-bold text-black dark:text-white">
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
                 Ubah Jadwal Repeat
               </Text>
               <Text className="text-sm text-neutral-500 dark:text-neutral-400" numberOfLines={2}>

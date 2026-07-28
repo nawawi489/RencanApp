@@ -132,7 +132,7 @@ export function LiveEditGoalScreen() {
                 label={PLANNING_STATUS_LABEL[goal.status] ?? goal.status}
                 tone={STATUS_TONE[goal.status]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">Ubah Goal</Text>
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Ubah Goal</Text>
             </View>
 
             {locked ? (

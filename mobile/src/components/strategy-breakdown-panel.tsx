@@ -308,7 +308,8 @@ function BreakdownEditorModal({
       <View className="flex-1 justify-end bg-black/40">
         <View
           className="max-h-[88%] gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-          accessibilityLabel="Editor Pecahan Target">
+          accessibilityLabel="Editor Pecahan Target"
+          accessibilityViewIsModal>
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">Ubah Pecahan Target</Text>
             <Pressable

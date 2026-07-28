@@ -102,6 +102,7 @@ export function OpenPeriodModal({
           accessible
           accessibilityRole="alert"
           accessibilityLabel="Buka periode skoring baru"
+          accessibilityViewIsModal
           className="gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900">
           {phase.kind === 'form' && (
             <>

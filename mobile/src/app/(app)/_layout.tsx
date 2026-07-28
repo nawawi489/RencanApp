@@ -4,11 +4,15 @@ import { Pressable } from 'react-native';
 
 import { usePushHandler } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/providers/auth-provider';
+import { useThemedIcon } from '@/providers/theme-provider';
 
 // RN Web quirk: default Stack header omits back button when navigated via direct URL.
 // Force render sebuah custom back Pressable yang panggil router.back() jika bisa,
 // atau router.replace('/') sebagai fallback. Ukuran 44×44 patuh DESIGN.md §4 touch target.
 function HeaderBack() {
+  // Chevron: brand-dark di terang (5.99:1 pada putih), brand-light di gelap (11.79:1 pada hitam).
+  // Hardcoded `#1564b3` sebelum ini gagal AA di dark mode (3.51:1 pada latar hitam header).
+  const chevronColor = useThemedIcon('#1564b3', '#93c5fd');
   return (
     <Pressable
       onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
@@ -23,7 +27,7 @@ function HeaderBack() {
         opacity: pressed ? 0.6 : 1,
       })}
     >
-      <Ionicons name="chevron-back" size={26} color="#1564b3" />
+      <Ionicons name="chevron-back" size={26} color={chevronColor} />
     </Pressable>
   );
 }

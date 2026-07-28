@@ -275,6 +275,8 @@ export default function MenuScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Pengaturan organisasi"
+              // Sprint 6 S6-5 — visual 36px (h-9 w-9), touch 44px via hitSlop 4 (DESIGN §4).
+              hitSlop={4}
               className="h-9 w-9 items-center justify-center rounded-full bg-[#eef2f7] active:opacity-70 dark:bg-neutral-800"
               onPress={() => router.push('/settings-org-structure' as Href)}>
               <Ionicons name="settings-outline" size={19} color={gearColor} />

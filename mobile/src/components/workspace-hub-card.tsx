@@ -131,7 +131,7 @@ export function WorkspaceHubCard({
         accessibilityRole="button"
         accessibilityLabel={`${a11yEnter}: ${stats.parentCount} ${parentStatLabel}, ${stats.childCount} ${childStatLabel}`}
         onPress={onEnter}
-        style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, height: 44, borderRadius: 999, backgroundColor: identity.cta, paddingHorizontal: 16 }}
+        style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: 999, backgroundColor: identity.cta, paddingHorizontal: 16, paddingVertical: 8 }}
         className="active:opacity-70">
         <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '900' }}>{enterLabel}</Text>
         <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '900' }}>›</Text>

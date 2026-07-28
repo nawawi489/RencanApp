@@ -153,7 +153,7 @@ export function LiveEditInitiativeScreen() {
                 label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
                 tone={STATUS_TONE[initiative.status]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
                 Ubah Inisiatif
               </Text>
             </View>

@@ -67,7 +67,7 @@ export default function SettingsGovernanceViolationScreen() {
       <Stack.Screen options={{ title: 'Pelanggaran Tata Kelola' }} />
       <View className="gap-3 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Pelanggaran Tata Kelola</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Pelanggaran Tata Kelola</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Pelanggaran guard-rail sistem yang tercatat.
           </Text>
@@ -160,7 +160,8 @@ export default function SettingsGovernanceViolationScreen() {
         <View className="flex-1 justify-end bg-black/40">
           <View
             className="gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityLabel="Modal selesaikan pelanggaran">
+            accessibilityLabel="Modal selesaikan pelanggaran"
+            accessibilityViewIsModal>
             <Text className="text-lg font-bold text-black dark:text-white">Selesaikan Pelanggaran</Text>
             <Text className="text-xs text-neutral-500 dark:text-neutral-400">
               Tulis catatan penyelesaian (≥ 8 karakter). Aksi ini tercatat di Activity Log.

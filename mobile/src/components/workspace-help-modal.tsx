@@ -25,7 +25,8 @@ export function WorkspaceHelpModal({
       <View className="flex-1 justify-center bg-black/40 p-6">
         <View
           className="gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
-          accessibilityLabel={`Bantuan ${content.kind}`}>
+          accessibilityLabel={`Bantuan ${content.kind}`}
+          accessibilityViewIsModal>
           <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
             {content.kind}
           </Text>

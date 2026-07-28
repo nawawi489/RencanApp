@@ -211,7 +211,7 @@ export default function SettingsPermissionUsersScreen() {
           // ----- Daftar anggota
           <View className="gap-5">
             <View className="gap-1">
-              <Text className="text-2xl font-bold text-black dark:text-white">Pengguna & Hak Akses</Text>
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Pengguna & Hak Akses</Text>
               <Text className="text-base text-neutral-500 dark:text-neutral-400">
                 Pilih anggota untuk mengatur hak akses. Perubahan tercatat di Activity Log.
               </Text>

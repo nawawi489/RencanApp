@@ -256,7 +256,7 @@ export function LiveStrategyDetailScreen() {
                     label={PLANNING_STATUS_LABEL[strategy.status] ?? strategy.status}
                     tone={STATUS_TONE[strategy.status]}
                   />
-                  <Text className="text-2xl font-bold text-black dark:text-white">{strategy.name}</Text>
+                  <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{strategy.name}</Text>
                 </View>
                 <ProgressOrb
                   size={72}

@@ -36,7 +36,7 @@ export default function SettingsNotificationsRuleScreen() {
       <Stack.Screen options={{ title: 'Aturan Notifikasi' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Aturan Notifikasi</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Aturan Notifikasi</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Aturan pengiriman notifikasi.
           </Text>

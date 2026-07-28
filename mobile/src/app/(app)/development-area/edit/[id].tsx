@@ -121,7 +121,7 @@ export function LiveEditDevelopmentAreaScreen() {
                 label={PLANNING_STATUS_LABEL[da.status] ?? da.status}
                 tone={STATUS_TONE[da.status]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
                 Ubah Development Area
               </Text>
             </View>

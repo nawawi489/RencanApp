@@ -176,7 +176,7 @@ export function LiveEditProblemStatementScreen() {
                 label={PLANNING_STATUS_LABEL[ps.status] ?? ps.status}
                 tone={STATUS_TONE[ps.status]}
               />
-              <Text className="text-2xl font-bold text-black dark:text-white">
+              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
                 Ubah Problem Statement
               </Text>
             </View>

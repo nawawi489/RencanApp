@@ -195,7 +195,7 @@ export default function SettingsStrategyTemplatesScreen() {
       <Stack.Screen options={{ title: 'Strategi Template' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Strategi Template</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Strategi Template</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Library Strategi siap pakai. Admin dapat membuat, mengedit, dan menonaktifkan template.
           </Text>
@@ -261,7 +261,8 @@ export default function SettingsStrategyTemplatesScreen() {
         <View className="flex-1 justify-end bg-black/40">
           <View
             className="gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityLabel={editing ? 'Modal edit template' : 'Modal buat template'}>
+            accessibilityLabel={editing ? 'Modal edit template' : 'Modal buat template'}
+            accessibilityViewIsModal>
             <Text className="text-lg font-bold text-black dark:text-white">
               {editing ? 'Edit Strategy Template' : 'Buat Strategy Template'}
             </Text>

@@ -22,7 +22,9 @@ export function GreetingHero({
       <View className="gap-2">
         {dateLabel ? (
           // UI-S-H05: pill tanggal (bukan caption uppercase) — match prototype.
-          <View className="self-start rounded-full bg-white/20 px-3 py-1">
+          // `bg-black/25` menggelapkan gradient di belakang pill; teks putih ≥7:1
+          // AA. Sebelum ini `bg-white/20` = 3.51:1 (gagal AA — DESIGN §4).
+          <View className="self-start rounded-full bg-black/25 px-3 py-1">
             <Text className="text-xs font-semibold text-white">{dateLabel}</Text>
           </View>
         ) : null}

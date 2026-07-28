@@ -421,7 +421,7 @@ export function LiveTaskDetailScreen() {
                     label={ACTION_PLAN_STATUS_LABEL[ap.status] ?? ap.status}
                     tone={STATUS_TONE[ap.status]}
                   />
-                  <Text className="text-2xl font-bold text-black dark:text-white">{ap.name}</Text>
+                  <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">{ap.name}</Text>
                 </View>
                 <ProgressOrb
                   size={72}

@@ -31,7 +31,8 @@ export function RowActionsMenu({
       <View className="flex-1 justify-end bg-black/40">
         <View
           className="gap-2 rounded-t-3xl bg-white p-4 dark:bg-neutral-900"
-          accessibilityLabel={title ? `Aksi: ${title}` : 'Aksi card'}>
+          accessibilityLabel={title ? `Aksi: ${title}` : 'Aksi card'}
+          accessibilityViewIsModal>
           {title ? (
             <Text
               className="px-2 pb-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400"

@@ -11,7 +11,7 @@ export const WORKSPACE_KIND_BORDER: Record<
   goal: '#1877f2',
   strategy: '#b76b00',
   initiative: '#6941c6',
-  action_plan: '#14845c',
+  action_plan: '#0f6b46',
   task: '#145ebc',
   development_area: '#0f766e',
   problem_statement: '#c2410c',
@@ -64,7 +64,9 @@ export const WORKSPACE_KIND: Record<WorkspaceKind, KindStyle> = {
   goal: { letter: 'G', label: 'Goal', text: '#145ebc', bg: '#e8f2ff', border: '#cce2ff', circleBg: '#1877f2', circleFontSize: 10 },
   strategy: { letter: 'S', label: 'Strategi', text: '#b76b00', bg: '#fff3d7', border: '#ffe1a1', circleBg: '#b76b00', circleFontSize: 10 },
   initiative: { letter: 'I', label: 'Inisiatif', text: '#6941c6', bg: '#f1ebff', border: '#dfd1ff', circleBg: '#6941c6', circleFontSize: 10 },
-  action_plan: { letter: 'AP', label: 'Rencana Aksi', text: '#14845c', bg: '#e7f7ef', border: '#c9ebda', circleBg: '#14845c', circleFontSize: 8 },
+  // Sprint 6 (S6-2): #14845c pada #e7f7ef = 4.23:1 (gagal AA teks < 18px; pill di sini font 11).
+  // #0f6b46 pada #e7f7ef = 6.02:1 ✓ — DESIGN §2 Workspace category.
+  action_plan: { letter: 'AP', label: 'Rencana Aksi', text: '#0f6b46', bg: '#e7f7ef', border: '#c9ebda', circleBg: '#0f6b46', circleFontSize: 8 },
   task: { letter: 'T', label: 'Tugas', text: '#145ebc', bg: '#eef6ff', border: '#cce2ff', circleBg: '#145ebc', circleFontSize: 10 },
   development_area: { letter: 'D', label: 'Development Area', text: '#0f766e', bg: '#e6fffb', border: '#99f6e4', circleBg: '#0f766e', circleFontSize: 10 },
   problem_statement: { letter: 'P', label: 'Problem Statement', text: '#c2410c', bg: '#fff7ed', border: '#fed7aa', circleBg: '#c2410c', circleFontSize: 10 },

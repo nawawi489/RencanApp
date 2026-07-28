@@ -58,7 +58,7 @@ export default function SettingsOrgStructureScreen() {
       <Stack.Screen options={{ title: 'Organisasi' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
-          <Text className="text-2xl font-bold text-black dark:text-white">Organisasi</Text>
+          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Organisasi</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
             Departemen, posisi, tim, dan role template.
           </Text>
