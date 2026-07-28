@@ -25,7 +25,7 @@ import {
   type WorkspaceSpace,
 } from '@/lib/period-focus';
 
-const MODE_LABEL: Record<PeriodMode, string> = { month: 'Bulan', quarter: 'Quarter' };
+const MODE_LABEL: Record<PeriodMode, string> = { month: 'Bulan', quarter: 'Kuartal' };
 
 // WS-2 (BUG-02 / WS-04) — label panel mengikut status periode fokus, bukan hardcoded.
 // Memberi sinyal bahwa aksi turunan terkunci saat fokus arsip/masa depan.

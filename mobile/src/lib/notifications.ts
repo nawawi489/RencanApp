@@ -187,10 +187,11 @@ export function unreadCount(items: Pick<Notification, 'is_read'>[]): number {
  */
 export const NOTIFICATIONS_LIST_LIMIT = 100;
 
-/** Daftar notifikasi penerima saat ini, terbaru dulu. tab memfilter per tipe. */
-export async function listNotifications(tab?: NotificationTab): Promise<Notification[]> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
+/**
+ * Daftar notifikasi penerima saat ini, terbaru dulu. tab memfilter per tipe.
+ * `uid` diteruskan pemanggil (hook punya `useAuth`) — RLS tetap penegak akhir.
+ */
+export async function listNotifications(uid: string, tab?: NotificationTab): Promise<Notification[]> {
   if (!uid) return [];
   const types = notificationTypesForTab(tab);
   let q = supabase.from('notifications').select('*').eq('recipient_id', uid);
@@ -209,10 +210,9 @@ export async function listNotifications(tab?: NotificationTab): Promise<Notifica
  * S3-6: badge unread count — hanya HEAD request + `count: exact`, TIDAK menarik
  * baris. Sebelumnya badge diambil lewat `listNotifications()` (select *) lalu
  * filter di client — 100+ baris didownload hanya untuk menghasilkan 1 angka.
+ * `uid` diteruskan pemanggil.
  */
-export async function unreadNotificationsCount(): Promise<number> {
-  const { data: auth } = await supabase.auth.getUser();
-  const uid = auth.user?.id;
+export async function unreadNotificationsCount(uid: string): Promise<number> {
   if (!uid) return 0;
   const { count, error } = await supabase
     .from('notifications')

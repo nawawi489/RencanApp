@@ -345,23 +345,23 @@ describe('PeopleScreen — PPL-02 tab structure (V1.83)', () => {
       can: (k: string) => k === 'manage_score_formula',
     });
     await render(<PeopleScreen />, { wrapper: wrapper() });
-    expect(await screen.findByLabelText('Bulan ini')).toBeTruthy();
-    expect(screen.getByLabelText('Quarter')).toBeTruthy();
+    expect(await screen.findByLabelText('Bulan Ini')).toBeTruthy();
+    expect(screen.getByLabelText('Kuartal')).toBeTruthy();
     expect(screen.getByLabelText('Admin')).toBeTruthy();
     expect(screen.queryByLabelText('Ranking')).toBeNull();
   });
 
   it('[PPL-02-3] Admin tab HIDDEN saat can("manage_score_formula")=false', async () => {
     await render(<PeopleScreen />, { wrapper: wrapper() });
-    expect(await screen.findByLabelText('Bulan ini')).toBeTruthy();
-    expect(screen.getByLabelText('Quarter')).toBeTruthy();
+    expect(await screen.findByLabelText('Bulan Ini')).toBeTruthy();
+    expect(screen.getByLabelText('Kuartal')).toBeTruthy();
     expect(screen.queryByLabelText('Admin')).toBeNull();
   });
 
   it('[PPL-02-4] press Quarter → placeholder tampil; roster + search HILANG', async () => {
     await render(<PeopleScreen />, { wrapper: wrapper() });
     expect(await screen.findByText('Rina Jaya')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Quarter'));
+    fireEvent.press(screen.getByLabelText('Kuartal'));
     expect(await screen.findByText(/quarter|kuartal/i)).toBeTruthy();
     expect(screen.queryByText('Rina Jaya')).toBeNull();
     expect(screen.queryByLabelText('Cari anggota')).toBeNull();
@@ -369,14 +369,14 @@ describe('PeopleScreen — PPL-02 tab structure (V1.83)', () => {
 
   it('[PPL-02-7] tab selected state berubah setelah press', async () => {
     await render(<PeopleScreen />, { wrapper: wrapper() });
-    const monthly = await screen.findByLabelText('Bulan ini');
-    const quarter = screen.getByLabelText('Quarter');
+    const monthly = await screen.findByLabelText('Bulan Ini');
+    const quarter = screen.getByLabelText('Kuartal');
     expect(monthly.props.accessibilityState?.selected).toBe(true);
     expect(quarter.props.accessibilityState?.selected).toBe(false);
     fireEvent.press(quarter);
     await screen.findByText(/quarter|kuartal/i);
-    expect(screen.getByLabelText('Bulan ini').props.accessibilityState?.selected).toBe(false);
-    expect(screen.getByLabelText('Quarter').props.accessibilityState?.selected).toBe(true);
+    expect(screen.getByLabelText('Bulan Ini').props.accessibilityState?.selected).toBe(false);
+    expect(screen.getByLabelText('Kuartal').props.accessibilityState?.selected).toBe(true);
   });
 
   it('[PPL-02-8] Admin tab render min 1 entry Pressable ke rute admin saat gate lolos', async () => {
@@ -387,7 +387,7 @@ describe('PeopleScreen — PPL-02 tab structure (V1.83)', () => {
     });
     await render(<PeopleScreen />, { wrapper: wrapper() });
     fireEvent.press(await screen.findByLabelText('Admin'));
-    const entry = await screen.findByLabelText('Buka Score Formula');
+    const entry = await screen.findByLabelText('Buka Rumus Skor');
     fireEvent.press(entry);
     expect(mockPush).toHaveBeenCalledWith('/settings-score-formula');
   });

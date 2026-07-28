@@ -43,6 +43,10 @@ jest.mock('@/hooks/use-profile', () => ({
   }),
 }));
 
+jest.mock('@/providers/auth-provider', () => ({
+  useAuth: () => ({ session: { user: { id: 'u3' } } }),
+}));
+
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),

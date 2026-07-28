@@ -41,16 +41,18 @@ export function getProfileAgeInDays(createdAt: string | null | undefined): numbe
   return (Date.now() - created) / 86_400_000;
 }
 
-async function fetchCurrentProfile(): Promise<CurrentProfile> {
+async function fetchCurrentProfile(uid: string): Promise<CurrentProfile> {
   // RLS profiles mengizinkan lihat seluruh anggota org, jadi WAJIB filter ke diri sendiri
   // sebelum .single() — tanpa ini PostgREST balas 406 (rows != 1).
-  const { data: auth } = await supabase.auth.getUser();
+  // `uid` diteruskan pemanggil (`useProfile` sudah punya session dari useAuth) supaya
+  // tidak menambah `auth.getUser()` round-trip.
+  if (!uid) throw new Error('Not authenticated');
   const { data, error } = await supabase
     .from('profiles')
     .select(
       'id, full_name, email, organization_id, created_at, role_templates(name, level), organizations(name, timezone), user_permissions(granted, permissions(key))',
     )
-    .eq('id', auth.user!.id)
+    .eq('id', uid)
     .single();
   if (error) throw error;
   const row = data as unknown as ProfileRow;
@@ -80,10 +82,11 @@ const ROLE_DEFAULTS: Record<string, string[]> = {
 
 export function useProfile() {
   const { session } = useAuth();
+  const uid = session?.user?.id ?? '';
   const query = useQuery({
-    queryKey: ['current-profile', session?.user.id],
-    queryFn: fetchCurrentProfile,
-    enabled: !!session,
+    queryKey: ['current-profile', uid],
+    queryFn: () => fetchCurrentProfile(uid),
+    enabled: !!uid,
   });
 
   const profile = query.data;

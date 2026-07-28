@@ -79,7 +79,7 @@ export default function SettingsGovernanceViolationScreen() {
           </Text>
         </View>
         {!allowed ? (
-          <AccessDenied message="Pelanggaran Tata Kelola hanya untuk pemegang izin Lihat Governance Violation." />
+          <AccessDenied message="Pelanggaran Tata Kelola hanya untuk pemegang izin Lihat Pelanggaran Tata Kelola." />
         ) : isLoading ? (
           <SkeletonList count={5} />
         ) : isError ? (

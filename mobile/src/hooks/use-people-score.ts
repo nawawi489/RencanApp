@@ -7,6 +7,7 @@
 // Mutasi meng-invalidate key terkait; mutateAsync melempar agar error propagate.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useAuth } from '@/providers/auth-provider';
 import {
   activateScoreFormulaVersion,
   calculatePeriodScores,
@@ -70,9 +71,12 @@ export function useLatestClosedPeriod() {
 
 /** Histori skor saya (D6 Trend). N periode terbaru, urut DESC. */
 export function useMyScoreHistory(limit: number = 6) {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? '';
   const q = useQuery({
-    queryKey: ['my_score_history', limit],
-    queryFn: () => listMyScoreHistory(limit),
+    queryKey: ['my_score_history', uid, limit],
+    queryFn: () => listMyScoreHistory(uid, limit),
+    enabled: !!uid,
   });
   return {
     history: (q.data ?? []) as UserScoreResult[],
@@ -100,9 +104,12 @@ export function useUserScoreHistory(userId: string, limit: number = 6) {
 }
 
 export function useMyScore(periodId?: string) {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? '';
   const q = useQuery({
-    queryKey: ['my_score', periodId ?? 'active'],
-    queryFn: () => getMyScore(periodId),
+    queryKey: ['my_score', uid, periodId ?? 'active'],
+    queryFn: () => getMyScore(uid, periodId),
+    enabled: !!uid,
   });
   return {
     score: q.data as UserScoreResult | null | undefined,

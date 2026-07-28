@@ -47,7 +47,7 @@ export default function ManualScoreOverrideScreen() {
       <View className="flex-1 items-center justify-center bg-white p-6 dark:bg-black">
         <Stack.Screen options={{ title: 'Override Skor' }} />
         <Text accessibilityRole="alert" className="text-center text-base text-neutral-600 dark:text-neutral-300">
-          Anda tidak berwenang mengelola Score Formula.
+          Anda tidak berwenang mengelola Rumus Skor.
         </Text>
       </View>
     );
@@ -116,7 +116,7 @@ export default function ManualScoreOverrideScreen() {
         <View className="gap-1">
           <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Override Skor</Text>
           <Text className="text-base text-neutral-500 dark:text-neutral-400">
-            Menyesuaikan Achievement Score {targetName} untuk periode berjalan.
+            Menyesuaikan Skor Pencapaian {targetName} untuk periode berjalan.
           </Text>
         </View>
 

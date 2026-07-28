@@ -84,14 +84,14 @@ describe('ScoreBreakdown (Fase 7)', () => {
     await render(
       <ScoreBreakdown
         metrics={[
-          { label: 'Tugas Completion', value: 80 },
-          { label: 'Repeat Compliance', value: 65 },
+          { label: 'Penyelesaian Tugas', value: 80 },
+          { label: 'Kepatuhan Repeat', value: 65 },
         ]}
       />,
     );
-    expect(screen.getByText('Tugas Completion')).toBeTruthy();
+    expect(screen.getByText('Penyelesaian Tugas')).toBeTruthy();
     expect(screen.getByText('80%')).toBeTruthy();
-    expect(screen.getByText('Repeat Compliance')).toBeTruthy();
+    expect(screen.getByText('Kepatuhan Repeat')).toBeTruthy();
     expect(screen.getByText('65%')).toBeTruthy();
   });
 

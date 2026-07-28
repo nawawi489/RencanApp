@@ -37,8 +37,12 @@ import { createLogger } from '@/lib/logger';
 import { parseMentions } from '@/lib/mention-parse';
 import { applyMention, collectMentionIds, matchMentionQuery, type MentionPick } from '@/lib/mentions';
 import type { LocalFile } from '@/lib/storage';
-import { CHAT_MAX_ATTACHMENTS, getChatAttachmentSignedUrl } from '@/lib/storage';
-import { useQuery } from '@tanstack/react-query';
+import {
+  CHAT_MAX_ATTACHMENTS,
+  CHAT_SIGNED_URL_TTL_SEC,
+  getChatAttachmentSignedUrl,
+} from '@/lib/storage';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/providers/auth-provider';
 import { useThemedIcon } from '@/providers/theme-provider';
@@ -619,17 +623,39 @@ function AttachmentPreviewRow({
   );
 }
 
+// Thumbnail 220 CSS px @2× DPR = 440×330 fisik. Storage transform mengembalikan JPEG
+// re-encoded jauh lebih kecil dari gambar asli (5 MB → ~50 KB); menghemat kuota + waktu
+// decoding di UI list yang mendekode lusinan bubble sekaligus.
+const CHAT_THUMB_TRANSFORM = { width: 440, height: 330, resize: 'cover' as const };
+// Cache signed URL sedikit lebih pendek dari TTL supaya refetch mendarat sebelum server
+// menolak URL kedaluwarsa (403); onError di `<Image>` masih ada sebagai backstop.
+const CHAT_URL_STALE_MS = (CHAT_SIGNED_URL_TTL_SEC - 30) * 1000;
+const CHAT_URL_GC_MS = CHAT_SIGNED_URL_TTL_SEC * 1000;
+
 function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment }) {
-  // Signed URL berlaku 60 detik (lihat getChatAttachmentSignedUrl); refetch sebelum expired.
-  const { data: signedUrl } = useQuery({
-    queryKey: ['chat-attachment-signed-url', attachment.path],
-    queryFn: () => getChatAttachmentSignedUrl(attachment.path),
-    staleTime: 50 * 1000,
-    gcTime: 55 * 1000,
+  const queryClient = useQueryClient();
+  const thumbKey = ['chat-attachment-signed-url', attachment.path, 'thumb'] as const;
+  const fullKey = ['chat-attachment-signed-url', attachment.path, 'full'] as const;
+  const { data: thumbUrl } = useQuery({
+    queryKey: thumbKey,
+    queryFn: () => getChatAttachmentSignedUrl(attachment.path, { transform: CHAT_THUMB_TRANSFORM }),
+    staleTime: CHAT_URL_STALE_MS,
+    gcTime: CHAT_URL_GC_MS,
     refetchOnWindowFocus: false,
   });
   const [previewOpen, setPreviewOpen] = useState(false);
-  const uri = signedUrl ?? `placeholder://${attachment.path}`;
+  const { data: fullUrl } = useQuery({
+    queryKey: fullKey,
+    queryFn: () => getChatAttachmentSignedUrl(attachment.path),
+    // Modal preview jarang dibuka; fetch hanya saat previewOpen supaya list tak menghabiskan
+    // kuota transform + full untuk setiap bubble.
+    enabled: previewOpen,
+    staleTime: CHAT_URL_STALE_MS,
+    gcTime: CHAT_URL_GC_MS,
+    refetchOnWindowFocus: false,
+  });
+  const thumbUri = thumbUrl ?? `placeholder://${attachment.path}`;
+  const fullUri = fullUrl ?? thumbUrl ?? `placeholder://${attachment.path}`;
   return (
     <>
       <Pressable
@@ -638,9 +664,12 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
         accessibilityLabel={`Lampiran ${attachment.name}`}
         className="mt-1 overflow-hidden rounded-lg">
         <Image
-          source={{ uri }}
+          source={{ uri: thumbUri }}
           style={{ width: 220, aspectRatio: 4 / 3, borderRadius: 8 }}
           resizeMode="cover"
+          // URL kedaluwarsa (403) atau transform gagal → invalidate satu kali untuk minta
+          // signed URL baru; tanpa ini render kotak kosong diam tak-recoverable.
+          onError={() => queryClient.invalidateQueries({ queryKey: thumbKey })}
         />
       </Pressable>
       <Modal
@@ -657,9 +686,10 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
           />
           <View pointerEvents="none" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <Image
-              source={{ uri }}
+              source={{ uri: fullUri }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="contain"
+              onError={() => queryClient.invalidateQueries({ queryKey: fullKey })}
             />
           </View>
           <Pressable
@@ -766,13 +796,15 @@ export default function ChatRoomScreen() {
 
   useEffect(() => {
     // Guard: roomId undefined / kosong → JANGAN panggil markRead.
-    if (roomId) markRead();
+    // markRead mengembalikan Promise (mutateAsync); tanpa .catch, kegagalan (mis. jaringan)
+    // masuk ke unhandledRejection → Sentry noise setiap kali room dibuka offline.
+    if (roomId) markRead().catch((e: unknown) => reportError('markRead', e, 'Gagal menandai terbaca.'));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- jalankan sekali saat room dibuka
   }, [roomId]);
 
   // Realtime: pesan anggota lain muncul live; tandai terbaca ulang saat pesan tiba (layar terbuka).
   useChatRealtime(safeRoomId, () => {
-    if (roomId) markRead();
+    if (roomId) markRead().catch((e: unknown) => reportError('markRead', e, 'Gagal menandai terbaca.'));
   });
 
   // Kronologis-menaik: hook desc (terbaru→lama) → balik agar oldest di atas, newest di bawah.

@@ -101,7 +101,7 @@ function inlineAction(item: Notification): { label: string; href: Href | null } 
   // termasuk cabang `resolved_at` di bawah. Ini alasan tipe baru dibuat, bukan
   // reuse `deadline_reminder` (lihat migrasi 0080 §1).
   if (et === 'period_snapshot') {
-    return { label: 'Buka Score Formula', href: '/settings-score-formula' as Href };
+    return { label: 'Buka Rumus Skor', href: '/settings-score-formula' as Href };
   }
   if (item.resolved_at) return { label: 'Lihat Detail', href: detail };
   if (et === 'task_instance') {

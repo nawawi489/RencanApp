@@ -104,7 +104,7 @@ describe('PeriodSwitcher — modal expand', () => {
     });
     expect(screen.getByLabelText('Mode periode')).toBeTruthy();
     expect(screen.getByLabelText('Bulan')).toBeTruthy();
-    expect(screen.getByLabelText('Quarter')).toBeTruthy();
+    expect(screen.getByLabelText('Kuartal')).toBeTruthy();
     // Juni anchor = current, Januari = past, Desember = future
     expect(screen.getByLabelText('Juni 2026 — Aktif')).toBeTruthy();
     expect(screen.getByLabelText('Januari 2026 — Arsip')).toBeTruthy();
@@ -146,7 +146,7 @@ describe('PeriodSwitcher — modal expand', () => {
       fireEvent.press(screen.getByLabelText('Ubah periode'));
     });
     await act(async () => {
-      fireEvent.press(screen.getByLabelText('Quarter'));
+      fireEvent.press(screen.getByLabelText('Kuartal'));
     });
     expect(screen.getByLabelText('Q1 2026 — Arsip')).toBeTruthy();
     expect(screen.getByLabelText('Q2 2026 — Aktif')).toBeTruthy();

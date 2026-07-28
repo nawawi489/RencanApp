@@ -1,5 +1,5 @@
 // Home (§27 V1.83) — "Pusat kendali hari ini." Compact layout: Fokus Hari Ini card,
-// Prioritas, Task Hari Ini (merged), Butuh Review, Update Terbaru.
+// Prioritas, Tugas Hari Ini (merged), Butuh Review, Pembaruan Terbaru.
 // Tanggal diklasifikasi SERVER (lib/home); test memock data layer, TIDAK memock Date global.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
@@ -37,6 +37,10 @@ const profileMock = { profile: { full_name: 'Rina Jaya', id: 'u1', created_at: '
 jest.mock('@/hooks/use-profile', () => ({
   ...jest.requireActual('@/hooks/use-profile'),
   useProfile: () => ({ ...profileMock, isLoading: false, can: () => false }),
+}));
+
+jest.mock('@/providers/auth-provider', () => ({
+  useAuth: () => ({ session: { user: { id: 'u1' } } }),
 }));
 
 const mockPush = jest.fn();
@@ -100,7 +104,7 @@ describe('HomeScreen — §27 compact layout', () => {
     expect(screen.getAllByLabelText('Memuat…').length).toBeGreaterThan(0);
   });
 
-  it('data → greeting + Fokus Hari Ini + Prioritas + Task Hari Ini + Update Terbaru', async () => {
+  it('data → greeting + Fokus Hari Ini + Prioritas + Tugas Hari Ini + Pembaruan Terbaru', async () => {
     mockMine.mockResolvedValue([
       { id: 'ap1', name: 'Upload 5 konten', status: 'in_progress', deadline: '2026-06-30', pic: { full_name: 'Rina' } },
     ]);
@@ -125,14 +129,14 @@ describe('HomeScreen — §27 compact layout', () => {
     expect(screen.getByText('2 item lewat deadline.')).toBeTruthy();
     expect(screen.getByText('1 KPI perlu dipantau.')).toBeTruthy();
     expect(screen.getByText('Fokus Hari Ini')).toBeTruthy();
-    expect(screen.getByText('Task Hari Ini')).toBeTruthy();
-    expect(screen.getByText('Update Terbaru')).toBeTruthy();
+    expect(screen.getByText('Tugas Hari Ini')).toBeTruthy();
+    expect(screen.getByText('Pembaruan Terbaru')).toBeTruthy();
   });
 
-  it('kosong → empty states for Task Hari Ini, Review, Update Terbaru', async () => {
+  it('kosong → empty states for Tugas Hari Ini, Review, Pembaruan Terbaru', async () => {
     primeEmpty();
     await render(<HomeScreen />, { wrapper: wrapper() });
-    expect(await screen.findByText('Tidak ada task hari ini')).toBeTruthy();
+    expect(await screen.findByText('Tidak ada tugas hari ini')).toBeTruthy();
     expect(screen.getByText('Tidak ada yang telat.')).toBeTruthy();
     expect(screen.getByText('Semua KPI sesuai target.')).toBeTruthy();
     expect(screen.getByText('Tidak ada yang menunggu review')).toBeTruthy();
@@ -189,7 +193,7 @@ describe('HomeScreen — §27 compact layout', () => {
     expect(await screen.findByLabelText(/Fokus: Revisi laporan/)).toBeTruthy();
   });
 
-  it('Fokus item tidak terduplikasi di Task Hari Ini', async () => {
+  it('Fokus item tidak terduplikasi di Tugas Hari Ini', async () => {
     primeEmpty();
     mockMine.mockResolvedValue([
       { id: 'ap1', name: 'Satu-satunya task', status: 'in_progress', deadline: null, pic: null },
@@ -221,7 +225,7 @@ describe('HomeScreen — §27 compact layout', () => {
       expect(mockPush).not.toHaveBeenCalledWith('/task/ap9');
     });
 
-    it('Overdue: instance → instance route; task → parent AP (Update Terbaru)', async () => {
+    it('Overdue: instance → instance route; task → parent AP (Pembaruan Terbaru)', async () => {
       primeEmpty();
       mockOverdue.mockResolvedValue([
         { kind: 'instance', id: 'i2', task_id: 'ap8', name: 'Lapor harian', due: '2026-06-23', status: 'missed' },
@@ -239,7 +243,7 @@ describe('HomeScreen — §27 compact layout', () => {
       expect(mockPush).not.toHaveBeenCalledWith('/task/ap8');
     });
 
-    it('Near deadline (instance) → push /task/instance/{id} (Update Terbaru)', async () => {
+    it('Near deadline (instance) → push /task/instance/{id} (Pembaruan Terbaru)', async () => {
       primeEmpty();
       mockNear.mockResolvedValue([
         { kind: 'instance', id: 'i3', task_id: 'ap7', name: 'Closing malam', due: '2026-06-26', status: 'assigned' },
@@ -267,7 +271,7 @@ describe('HomeScreen — §27 compact layout', () => {
 
     profileMock.profile = { full_name: 'Lama', id: 'u3', created_at: '2020-01-01T00:00:00Z' };
     await render(<HomeScreen />, { wrapper: wrapper() });
-    await screen.findByText('Tidak ada task hari ini');
+    await screen.findByText('Tidak ada tugas hari ini');
     expect(screen.queryByText('Selamat datang di Rencanapp')).toBeNull();
   });
 });

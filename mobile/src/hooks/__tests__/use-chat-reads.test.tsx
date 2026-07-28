@@ -13,6 +13,10 @@ jest.mock('@/lib/inbox', () => ({
   subscribeChatReads: (...a: unknown[]) => mockSubscribeChatReads(...a),
 }));
 
+jest.mock('@/providers/auth-provider', () => ({
+  useAuth: () => ({ session: { user: { id: 'u1' } } }),
+}));
+
 // eslint-disable-next-line import/first -- jest.mock must precede the import it mocks
 import { useChatReads, useChatReadsRealtime } from '../use-inbox';
 
@@ -61,14 +65,16 @@ function ReadsRealtimeProbe({ roomId }: { roomId: string }) {
 describe('useChatReadsRealtime', () => {
   it('[SEEN3] subscribe saat mount; event → invalidate chat-reads', async () => {
     let captured: (() => void) | null = null;
-    mockSubscribeChatReads.mockImplementation((_room: string, cb: () => void) => {
+    mockSubscribeChatReads.mockImplementation((_room: string, _myUid: string, cb: () => void) => {
       captured = cb;
       return () => {};
     });
     const { qc, wrapper } = makeWrapper();
     const spy = jest.spyOn(qc, 'invalidateQueries');
     await render(createElement(ReadsRealtimeProbe, { roomId: 'r1' }), { wrapper });
-    await waitFor(() => expect(mockSubscribeChatReads).toHaveBeenCalledWith('r1', expect.any(Function)));
+    await waitFor(() =>
+      expect(mockSubscribeChatReads).toHaveBeenCalledWith('r1', 'u1', expect.any(Function)),
+    );
     act(() => captured?.());
     const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
     expect(keys.some((k) => k.includes('chat-reads'))).toBe(true);

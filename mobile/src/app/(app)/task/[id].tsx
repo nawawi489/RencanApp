@@ -291,18 +291,18 @@ function RepeatSection({
   });
   const complianceText =
     compliancePercent === null || !compliance
-      ? 'On-time: —'
-      : `On-time: ${compliance.on_time_count}/${compliance.expected_count} (${compliancePercent}%)`;
+      ? 'Tepat waktu: —'
+      : `Tepat waktu: ${compliance.on_time_count}/${compliance.expected_count} (${compliancePercent}%)`;
 
   return (
     <View className="gap-3">
       <SectionCard>
-        <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Repeat Compliance</Text>
+        <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Kepatuhan Repeat</Text>
         <Text testID="compliance-metric" className="text-lg font-bold text-black dark:text-white">
           {complianceText}
         </Text>
         <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-          Compliance = instance selesai tepat waktu ÷ total seharusnya. Berbeda dari Progress & Capaian.
+          Kepatuhan = instance selesai tepat waktu ÷ total seharusnya. Berbeda dari Progres & Capaian.
         </Text>
       </SectionCard>
 

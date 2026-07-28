@@ -11,10 +11,14 @@ const mockMarkAllNotificationsRead = jest.fn();
 
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
+jest.mock('@/providers/auth-provider', () => ({
+  useAuth: () => ({ session: { user: { id: 'u1' } } }),
+}));
+
 jest.mock('@/lib/notifications', () => ({
   ...jest.requireActual('@/lib/notifications'),
   listNotifications: (...a: unknown[]) => mockListNotifications(...a),
-  unreadNotificationsCount: () => mockUnreadCount(),
+  unreadNotificationsCount: (...a: unknown[]) => mockUnreadCount(...a),
   markNotificationRead: (...a: unknown[]) => mockMarkNotificationRead(...a),
   markAllNotificationsRead: (...a: unknown[]) => mockMarkAllNotificationsRead(...a),
 }));
@@ -51,7 +55,7 @@ describe('useNotifications', () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useNotifications('semua'), { wrapper });
     await waitFor(() => expect(result.current.notifications).toHaveLength(3));
-    expect(mockListNotifications).toHaveBeenCalledWith('semua');
+    expect(mockListNotifications).toHaveBeenCalledWith('u1', 'semua');
     expect(result.current.isError).toBe(false);
   });
 
@@ -59,7 +63,7 @@ describe('useNotifications', () => {
     const { wrapper } = makeWrapper();
     const { result } = await renderHook(() => useNotifications('review'), { wrapper });
     await waitFor(() => expect(result.current.notifications).toHaveLength(3));
-    expect(mockListNotifications).toHaveBeenCalledWith('review');
+    expect(mockListNotifications).toHaveBeenCalledWith('u1', 'review');
   });
 
   it('[3] isError true saat fetch gagal', async () => {

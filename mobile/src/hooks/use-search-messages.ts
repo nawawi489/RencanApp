@@ -41,16 +41,22 @@ export function useSearchMessages(rawQuery: string, opts: Options = {}) {
 
   // Realtime: DELETE chat_room_members untuk user aktif → invalidate cache messages_search.
   // Mencegah hasil menampilkan pesan room yang user sudah tidak lagi jadi anggota (FR-22).
+  // Server-side filter `member_id=eq.<uid>` supaya Realtime tak menyiarkan DELETE dari room
+  // orang lain; guard client-side dipertahankan sebagai belt-and-suspenders (payload lolos
+  // bila filter tak dikenali server versi lama).
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
       .channel(`search_messages_membership:${userId}`)
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'chat_room_members' },
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_room_members',
+          filter: `member_id=eq.${userId}`,
+        },
         (payload: { eventType?: string; old?: { member_id?: string } }) => {
-          // Skema chat_room_members: (chat_room_id, member_id) — column pivotnya `member_id`
-          // (bukan user_id). Realtime payload OLD row echo kolom yg sama.
           if (payload.old?.member_id !== userId) return;
           queryClient.invalidateQueries({ queryKey: ['messages_search'] });
         },

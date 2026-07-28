@@ -20,7 +20,12 @@ export function createQueryClient(): QueryClient {
       },
     }),
     defaultOptions: {
-      queries: { retry: shouldRetry },
+      // staleTime 30 detik: layar seperti Home mount 8 useQuery dan sebelumnya
+      // memicu refetch 7 query tiap kali di-focus. useFocusEffect di layar Home
+      // sudah menyaring `stale: true`, jadi ambang stale global memangkas biaya
+      // fokus tanpa memaksa perubahan di setiap query. Query yang memang butuh
+      // fresh boleh opt-out dengan `staleTime: 0` per-call.
+      queries: { retry: shouldRetry, staleTime: 30_000 },
       // Writes tidak boleh di-retry global: INSERT non-idempoten (createGoal/createTask/
       // sendChatMessage, dll. tanpa idempotency key) bisa duplikat saat ACK hilang tapi
       // commit sudah terjadi di server. Ini juga default React Query (retry: 0). Bila ada

@@ -68,7 +68,7 @@ describe('taksonomi scope', () => {
       chat: 'Pesan',
       evidence: 'Bukti',
       activity_log: 'Log Aktivitas',
-      governance_violation: 'Governance Violation',
+      governance_violation: 'Pelanggaran Tata Kelola',
     });
     // peta dan urutan tidak boleh menyimpang diam-diam
     expect(Object.keys(SEARCH_SCOPE_LABEL).sort()).toEqual([...SEARCH_SCOPE_ORDER].sort());

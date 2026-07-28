@@ -5,33 +5,11 @@ import { Text, View } from 'react-native-css/components';
 import { SectionCard, Badge } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import { EVIDENCE_KIND_LABEL, RESULT_VALUE_TYPE_LABEL, personLabel, type EvidenceFile, type ResultValue, type SubmissionDetail } from '@/lib/cards';
-
-/**
- * Format timestamptz ke "YYYY-MM-DD HH:mm" pada timezone organisasi (ISSUE-003).
- * Tanpa timeZone, string ISO UTC dari PostgREST dulunya di-slice mentah sehingga jam
- * tampil dalam UTC (mis. deadline 17:00 WIB tampil 10:00). Fallback ke slice lama bila
- * tanggal tak valid / tz tak dikenal.
- */
-export function formatDateTime(iso: string, timeZone?: string | null): string {
-  const fallback = iso.replace('T', ' ').slice(0, 16);
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return fallback;
-  try {
-    // Locale sv-SE menghasilkan "YYYY-MM-DD HH:mm" stabil lintas platform.
-    return new Intl.DateTimeFormat('sv-SE', {
-      timeZone: timeZone ?? undefined,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-      .format(d)
-      .replace(',', '');
-  } catch {
-    return fallback;
-  }
-}
+// Re-export dari sumber tunggal (S8-6) supaya pemanggil eksisting yang mengimpor
+// `formatDateTime` dari komponen ini tak perlu diubah, tapi implementasinya konsisten
+// dgn activity-log-panel dan panel lain.
+export { formatDateTime } from '@/lib/format-datetime';
+import { formatDateTime } from '@/lib/format-datetime';
 
 export const REVIEW_STATUS: Record<string, { label: string; tone: 'warn' | 'success' | 'danger' }> = {
   pending: { label: 'Menunggu Review', tone: 'warn' },

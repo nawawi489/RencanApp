@@ -185,7 +185,11 @@ function periodStateOf(
 }
 
 export function LiveNewStrategyScreen() {
-  const { goalId } = useLocalSearchParams<{ goalId: string }>();
+  // Expo Router bisa memberi `string | string[]` bila URL deep-link punya key ganda; ambil
+  // elemen pertama supaya `goalId` tetap string (jika sampai array, `"a,b"` yang terkirim
+  // ke DB akan miss FK secara diam-diam).
+  const rawGoalId = useLocalSearchParams<{ goalId?: string | string[] }>().goalId;
+  const goalId = Array.isArray(rawGoalId) ? rawGoalId[0] ?? '' : rawGoalId ?? '';
   const router = useRouter();
   const { create, isPending } = useStrategyActions(goalId);
   // Default PIC turunan (PRD §52): picker di-prefill PIC Goal induk (terlihat & bisa diubah/dikosongkan).

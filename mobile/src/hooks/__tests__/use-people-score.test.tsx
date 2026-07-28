@@ -23,6 +23,10 @@ const mockOpenPeriodSnapshot = jest.fn();
 
 const mockListMyScoreHistory = jest.fn();
 const mockListUserScoreHistory = jest.fn();
+jest.mock('@/providers/auth-provider', () => ({
+  useAuth: () => ({ session: { user: { id: 'u1' } } }),
+}));
+
 jest.mock('@/lib/people-score', () => ({
   calculatePeriodScores: (...a: unknown[]) => mockCalculatePeriodScores(...a),
   previewFinalization: (...a: unknown[]) => mockPreviewFinalization(...a),
@@ -114,8 +118,8 @@ describe('useMyScoreHistory', () => {
     const { qc, wrapper } = makeWrapper();
     const { result } = await renderHook(() => useMyScoreHistory(6), { wrapper });
     await waitFor(() => expect(result.current.history.length).toBe(1));
-    expect(mockListMyScoreHistory).toHaveBeenCalledWith(6);
-    expect(qc.getQueryData(['my_score_history', 6])).toBeTruthy();
+    expect(mockListMyScoreHistory).toHaveBeenCalledWith('u1', 6);
+    expect(qc.getQueryData(['my_score_history', 'u1', 6])).toBeTruthy();
   });
 });
 
@@ -159,16 +163,16 @@ describe('useMyScore', () => {
     const { qc, wrapper } = makeWrapper();
     const { result } = await renderHook(() => useMyScore(), { wrapper });
     await waitFor(() => expect(result.current.score?.id).toBe('r1'));
-    expect(mockGetMyScore).toHaveBeenCalledWith(undefined);
-    expect(qc.getQueryData(['my_score', 'active'])).toBeTruthy();
+    expect(mockGetMyScore).toHaveBeenCalledWith('u1', undefined);
+    expect(qc.getQueryData(['my_score', 'u1', 'active'])).toBeTruthy();
   });
 
   it('[3] periodId eksplisit — queryKey [my_score, periodId]', async () => {
     const { qc, wrapper } = makeWrapper();
     const { result } = await renderHook(() => useMyScore('p1'), { wrapper });
     await waitFor(() => expect(result.current.score?.id).toBe('r1'));
-    expect(mockGetMyScore).toHaveBeenCalledWith('p1');
-    expect(qc.getQueryData(['my_score', 'p1'])).toBeTruthy();
+    expect(mockGetMyScore).toHaveBeenCalledWith('u1', 'p1');
+    expect(qc.getQueryData(['my_score', 'u1', 'p1'])).toBeTruthy();
   });
 });
 

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui';
 import { computeTaskProgress } from '@/lib/progress';
 import { getProfileAgeInDays, useProfile } from '@/hooks/use-profile';
+import { useAuth } from '@/providers/auth-provider';
 import {
   ACTION_PLAN_STATUS_LABEL,
   STATUS_TONE,
@@ -248,6 +249,8 @@ function FokusCard({ fokus, onPress }: { fokus: FokusItem; onPress: () => void }
 export default function LiveHomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? '';
   const openTask = (id: string) => router.push(`/task/${id}` as Href);
   const openHomeItem = (item: HomeItem) =>
     router.push(
@@ -259,12 +262,23 @@ export default function LiveHomeScreen() {
   const queryClient = useQueryClient();
 
   const todayQ = useQuery({ queryKey: ['org-today'], queryFn: getOrgToday, staleTime: Infinity });
-  const mineQ = useQuery({ queryKey: ['home-my-plans'], queryFn: listMyTasks, staleTime: HOME_STALE_MS });
-  const reviewQ = useQuery({ queryKey: ['home-reviews'], queryFn: listPendingReviews, staleTime: HOME_STALE_MS });
-  const reviewInstQ = useQuery({
-    queryKey: ['home-review-instances'],
-    queryFn: listPendingInstanceReviews,
+  const mineQ = useQuery({
+    queryKey: ['home-my-plans', uid],
+    queryFn: () => listMyTasks(uid),
     staleTime: HOME_STALE_MS,
+    enabled: !!uid,
+  });
+  const reviewQ = useQuery({
+    queryKey: ['home-reviews', uid],
+    queryFn: () => listPendingReviews(uid),
+    staleTime: HOME_STALE_MS,
+    enabled: !!uid,
+  });
+  const reviewInstQ = useQuery({
+    queryKey: ['home-review-instances', uid],
+    queryFn: () => listPendingInstanceReviews(uid),
+    staleTime: HOME_STALE_MS,
+    enabled: !!uid,
   });
   const todayRepeatQ = useQuery({
     queryKey: ['home-today-repeat'],
@@ -435,7 +449,7 @@ export default function LiveHomeScreen() {
         </View>
 
         <Section
-          title="Task Hari Ini"
+          title="Tugas Hari Ini"
           isLoading={taskLoading}
           isError={taskAllError}
           onRetry={() => {
@@ -443,8 +457,8 @@ export default function LiveHomeScreen() {
             todayRepeatQ.refetch();
           }}
           isEmpty={taskNodes.length === 0 && !fokus}
-          emptyTitle="Tidak ada task hari ini"
-          emptyDesc="Task yang perlu dikerjakan hari ini akan muncul di sini.">
+          emptyTitle="Tidak ada tugas hari ini"
+          emptyDesc="Tugas yang perlu dikerjakan hari ini akan muncul di sini.">
           {taskNodes}
         </Section>
 
@@ -463,7 +477,7 @@ export default function LiveHomeScreen() {
         </Section>
 
         <Section
-          title="Update Terbaru"
+          title="Pembaruan Terbaru"
           isLoading={updateLoading}
           isError={updateAllError}
           onRetry={() => {
