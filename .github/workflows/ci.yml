@@ -79,7 +79,10 @@ jobs:
           # migrasi saat runtime, jadi PR migrasi-only harus tetap menjalankan tes
           # jest — else drift tetap lolos (audit 2026-07-26).
           if echo "$FILES" | grep -qE '^(mobile/|\.github/|supabase/migrations/)'; then MOBILE=true; else MOBILE=false; fi
-          if echo "$FILES" | grep -qE '^(supabase/|scripts/ci/|\.github/)'; then DB=true; else DB=false; fi
+          # S9-3: mobile/src/lib/database.types.ts juga memicu db-contract agar
+          # step drift check bisa menangkap PR yang mengedit types tapi tidak
+          # menyentuh migrasi (skenario "types file dipreset manual").
+          if echo "$FILES" | grep -qE '^(supabase/|scripts/ci/|\.github/|mobile/src/lib/database\.types\.ts$)'; then DB=true; else DB=false; fi
 
           echo "mobile=$MOBILE" >> "$GITHUB_OUTPUT"
           echo "db=$DB" >> "$GITHUB_OUTPUT"
@@ -126,10 +129,13 @@ jobs:
       # node_modules Expo (ratusan MB) berpotensi lebih lama dari itu. Biaya job ini
       # ada di step Test, bukan di install.
       - name: Install dependencies
-        # npm install (bukan npm ci): proyek Expo/RN punya optional dep wasm (@emnapi/*,
-        # lightningcss) yang resolusinya berbeda antar-OS, sehingga lock yang digenerate di
-        # Windows tidak lolos `npm ci` strict di runner linux. `npm install` toleran & tetap deterministik via lock.
-        run: npm install --no-audit --no-fund
+        # Menggunakan `npm ci` untuk instalasi deterministik dari `package-lock.json`.
+        # Prasyarat (S9-7): lockfile HARUS di-regen di runner Linux via workflow
+        # `Regenerate lockfile (Linux)` (`regen-lockfile.yml`, workflow_dispatch)
+        # setiap kali dependency berubah dari dev Windows — jika tidak, `npm ci` akan
+        # gagal dengan "Missing: @emnapi/core@... from lock file" karena optional dep
+        # wasm (@emnapi/*, lightningcss-*) beda resolusi antar-OS.
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
@@ -183,6 +189,24 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci/plpgsql-check.sql
+
+      - name: database.types.ts drift check (S9-3)
+        # Regen `mobile/src/lib/database.types.ts` dari skema live (migrasi baru
+        # saja di-apply oleh supabase start). Bila hasil generate berbeda dari
+        # file committed, ada schema drift yang tidak tercermin di TypeScript
+        # bindings. Sebelum sprint 9, drift ini hanya terdeteksi saat layar
+        # nyata gagal memuat di produksi (mock test tetap hijau karena
+        # mengembalikan bentuk lama). `diff` exit code non-zero gagalkan job.
+        working-directory: mobile
+        run: |
+          supabase gen types typescript --local > /tmp/database.types.ts.new
+          if ! diff -u src/lib/database.types.ts /tmp/database.types.ts.new; then
+            echo ""
+            echo "::error::database.types.ts drift terdeteksi. Regenerate lokal:"
+            echo "::error::  cd mobile && npm run gen:types"
+            echo "::error::(butuh `supabase start` lokal aktif)"
+            exit 1
+          fi
 
       - name: Stop Supabase stack
         if: always()

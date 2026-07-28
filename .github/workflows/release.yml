@@ -9,12 +9,12 @@ name: Release (production)
 # secret untuk repo publik. Tuas rollback tetap `eas update:republish` dan
 # `eas deploy:promote`.
 #
-# Kenapa `npm install`, bukan `npm ci`: lockfile saat ini (post-Sprint 4) tak
-# selalu sinkron dgn package.json karena Dependabot PR + peer-dep resolver di
-# Windows vs Ubuntu. `npm ci` gagal "Missing: <pkg>@<ver> from lock file" secara
-# regresif. `npm install` menyelesaikan dep + memperbarui lockfile in-place
-# tanpa gagal. Terima ini sebagai kompromi realistis di V1; setelah lockfile
-# rutin di-regen (workflow regen-lockfile.yml), migrasi kembali ke `npm ci`.
+# S9-7 (2026-07-28): install pakai `npm ci` untuk determinism. Prasyarat:
+# lockfile HARUS di-regen di runner Linux via `regen-lockfile.yml`
+# (workflow_dispatch) setiap kali dependency berubah dari dev Windows.
+# Ini mencegah "Missing: <pkg>@<ver> from lock file" dari resolusi optional
+# wasm dep yang berbeda antar-OS (@emnapi/*, lightningcss-*).
+# `eas-cli` dipin ke rentang major di step "Install EAS CLI".
 
 on:
   push:
@@ -50,7 +50,7 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       - run: npm run lint
       - run: npm run type-check
@@ -79,10 +79,11 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli
+        # S9-7: eas-cli dipin ke rentang major agar rilis reproducible.
+        run: npm install -g eas-cli@^16
 
       - name: Build iOS + Android (non-interactive)
         run: eas build --profile production --platform all --non-interactive --no-wait
@@ -106,10 +107,11 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli
+        # S9-7: eas-cli dipin ke rentang major agar rilis reproducible.
+        run: npm install -g eas-cli@^16
 
       - name: Submit latest production build
         run: eas submit --profile production --platform all --latest --non-interactive

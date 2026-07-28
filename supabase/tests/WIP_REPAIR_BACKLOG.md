@@ -12,21 +12,23 @@ None of them pass against the current schema.
 gates on it. The canonical fixtures in `_fixtures.sql` seed the org/CEO/roles the
 pre-0045 tests hardcode.
 
-| File | Rot class | Root cause |
-|---|---|---|
-| `0018_inbox_preview_contract` | schema | `initiatives` now requires `strategy_id` (goal→strategy→initiative rename); test attaches an initiative with no strategy parent |
-| `0019_ap5_ap6_contract` | dropped object | tests the dropped `kpi_areas` table + renamed `kpi_area_current_values` view (V1.8.3) |
-| `0038_dcr05_minta_revisi_contract` | runner-incompatible | uses `raise 'ROLLBACK_OK'` as its **pass** signal (needs block-by-block exec); rewrite to `begin … rollback` + raise-only-on-FAIL |
-| `0040_notification_resolution_contract` | schema | `initiatives.strategy_id` NOT NULL |
-| `0055_chat_message_reactions_contract` | schema | `chat_messages.chat_room_id` NOT NULL; test inserts a message with no room |
-| `0074_goal_attainment_contract` | behaviour | attainment rollup computed 0 vs expected 70 (fixture/behaviour drift) |
-| `fase3_per_user_contract` | schema + stale UUID | hardcoded permission UUID (use lookup by key) **and** `initiatives.strategy_id` NOT NULL |
-| `fase4_performance_workspace_contract` | dropped object | tests the dropped `kpi_areas` table throughout (V1.8.3 rename to `strategies`) |
-| `fase5_minimum_breakdown_rules_contract` | behaviour | `minimum_breakdown_rules` goal→kpi unlock assertion drifted |
-| `fase6_development_workspace_contract` | schema | expected `initiatives` problem-statement column / single-parent check no longer present |
-| `fase7_people_score_contract` | scenario | score not computed for the period (needs close/calculate fixture) |
-| `fase8_governance_admin_contract` | schema + runner-incompatible | `evaluations.initiative_id` removed; also `raise 'ROLLBACK_OK'` sentinel style |
-| `ws3b_notif_instance_entity_contract` | schema | `initiatives.strategy_id` NOT NULL |
+**Ownership (Sprint 9 S9-1, 2026-07-28):** setiap file di bawah punya pemilik + target sprint eksplisit. Pemilik = pengalihkan tunggal, target = sprint di mana file harus lolos dan di-un-quarantine (atau dinyatakan mati dan dihapus). Target di luar V1.0 GA (Sprint 5) berarti dijadwalkan pasca-rilis; tidak boleh dijadikan alasan tambahan menahan rilis.
+
+| File | Rot class | Root cause | Pemilik | Target |
+|---|---|---|---|---|
+| `0018_inbox_preview_contract` | schema | `initiatives` now requires `strategy_id` (goal→strategy→initiative rename); test attaches an initiative with no strategy parent | @nawawi489 | Sprint 10 (cluster A batch) |
+| `0019_ap5_ap6_contract` | dropped object | tests the dropped `kpi_areas` table + renamed `kpi_area_current_values` view (V1.8.3) | @nawawi489 | Sprint 10 (cluster B batch) |
+| `0038_dcr05_minta_revisi_contract` | runner-incompatible | uses `raise 'ROLLBACK_OK'` as its **pass** signal (needs block-by-block exec); rewrite to `begin … rollback` + raise-only-on-FAIL | @nawawi489 | Sprint 10 (cluster C batch) |
+| `0040_notification_resolution_contract` | schema | `initiatives.strategy_id` NOT NULL | @nawawi489 | Sprint 10 (cluster A batch) |
+| `0055_chat_message_reactions_contract` | schema | `chat_messages.chat_room_id` NOT NULL; test inserts a message with no room | @nawawi489 | Sprint 11 |
+| `0074_goal_attainment_contract` | behaviour | attainment rollup computed 0 vs expected 70 (fixture/behaviour drift) | @nawawi489 | Sprint 10 (bersama goal-attainment-rollup spec) |
+| `fase3_per_user_contract` | schema + stale UUID | hardcoded permission UUID (use lookup by key) **and** `initiatives.strategy_id` NOT NULL | @nawawi489 | Sprint 10 (cluster A batch) |
+| `fase4_performance_workspace_contract` | dropped object | tests the dropped `kpi_areas` table throughout (V1.8.3 rename to `strategies`) | @nawawi489 | Sprint 10 (cluster B batch) |
+| `fase5_minimum_breakdown_rules_contract` | behaviour | `minimum_breakdown_rules` goal→kpi unlock assertion drifted | @nawawi489 | Sprint 11 |
+| `fase6_development_workspace_contract` | schema | expected `initiatives` problem-statement column / single-parent check no longer present | @nawawi489 | Sprint 11 |
+| `fase7_people_score_contract` | scenario | score not computed for the period (needs close/calculate fixture) | @nawawi489 | Sprint 11 (bersama goal-attainment-rollup) |
+| `fase8_governance_admin_contract` | schema + runner-incompatible | `evaluations.initiative_id` removed; also `raise 'ROLLBACK_OK'` sentinel style | @nawawi489 | Sprint 10 (cluster C batch) |
+| `ws3b_notif_instance_entity_contract` | schema | `initiatives.strategy_id` NOT NULL | @nawawi489 | Sprint 10 (cluster A batch) |
 
 ## Highest-priority follow-ups
 
@@ -35,6 +37,29 @@ pre-0045 tests hardcode.
    `goal→strategy→initiative→action_plan` end-to-end assertion here.
 2. The `initiatives.strategy_id` cluster (`0018`, `0040`, `ws3b`, `fase3`) shares
    one fix: build a valid `goal→strategy→initiative` chain in each scenario.
+
+## Sprint 9 S9-1 — status (2026-07-28)
+
+**AC:** "tak ada file `.wip.sql` tersisa, atau yang tersisa punya pemilik dan
+tanggal eksplisit." Ownership + target per file kini tercatat di tabel di atas —
+setiap baris punya `@nawawi489` dan target sprint pasca-rilis (Sprint 10-11).
+
+**Rencana batch untuk Sprint 10:**
+
+- **Cluster A** — `0018`, `0040`, `fase3`, `ws3b` — semua satu akar: bangun
+  `goal→strategy→initiative` chain valid (v_goal → v_strategy → v_initiative)
+  di seed masing-masing skenario. Satu template repair sekali, terapkan ke 4
+  file. Perkiraan 4-5j gabungan.
+- **Cluster B** — `0019`, `fase4` — swap `kpi_areas` → `strategies`. Karena
+  renamer 0045 sudah menuntaskan alias, cara paling murah: `sed -i
+  's/kpi_areas/strategies/g'` per file lalu perbaiki manual test/assertion yang
+  reference kolom-kolom renamed. 2-3j.
+- **Cluster C** — `0038`, `fase8` — pola runner-incompatible `raise 'ROLLBACK_OK'`.
+  Refactor ke pola `begin; do $$ … $$; rollback;` per blok, `raise notice 'PASS'`
+  di happy path, `raise exception 'FAIL: …'` di regresi. 2j.
+
+Cluster A dulu — root cause paling umum + template siap-pakai dari `0073` yang
+sudah repaired.
 
 ## Un-quarantined (2026-07-23) — PR #168, migration 0090
 

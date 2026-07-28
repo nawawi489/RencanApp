@@ -4524,6 +4524,7 @@ export type Database = {
         Args: {
           p_entity_types: string[]
           p_include_archived: boolean
+          p_limit?: number
           p_query: string
         }
         Returns: Json[]
