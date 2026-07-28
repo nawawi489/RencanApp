@@ -122,7 +122,7 @@ Catatan penting:
 
 - gunakan **publishable/anon key**, bukan `service_role`,
 - nilai `EXPO_PUBLIC_*` akan dibundel ke klien,
-- repo sudah menyediakan template `mobile/.env.example` (serta `.env.staging.example` dan `.env.production.example` untuk environment lain) — tinggal disalin dan diisi.
+- repo sudah menyediakan template `mobile/.env.example` (serta `.env.staging.example` dan `.env.production.example` untuk referensi lokal) — tinggal disalin dan diisi untuk dev lokal. Untuk build **staging**/**production**, env di-injeksi dari **EAS Dashboard** dan bukan dari file `.env.*` (lihat `mobile/AGENTS.md`).
 
 ## Panduan Instalasi Langkah-demi-Langkah
 
@@ -419,7 +419,7 @@ Status deployment yang dapat disimpulkan dari repository:
 - profil build/submit native sudah dikonfigurasi di [`mobile/eas.json`](./mobile/eas.json) (EAS Build/Submit),
 - environment `staging` sudah live di `staging.rencanapp.com` lewat Cloudflare Worker proxy ([`workers/staging-proxy/`](./workers/staging-proxy/)) yang meneruskan ke EAS Hosting,
 - error tracking terpasang lewat `@sentry/react-native` di sisi mobile,
-- pipeline CI aktif di [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — menjalankan rename guard, lint, `tsc`, dan `npm run test:ci` di setiap PR ke `main`/`staging`; deploy staging di [`.github/workflows/deploy-staging.yml`](./.github/workflows/deploy-staging.yml) di-gate oleh job `quality` yang sama.
+- pipeline CI aktif di [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — menjalankan rename guard, lint, `tsc`, `npm run test:ci`, dan DB contract tests di setiap PR ke `main`/`staging`; deploy staging di [`.github/workflows/deploy-staging.yml`](./.github/workflows/deploy-staging.yml) berjalan langsung pada push ke `staging` (job `quality` sudah tidak di-run ulang di sana — gate CI dilakukan sebagai required check PR + branch protection).
 
 ### Langkah Deployment yang Saat Ini Realistis
 
@@ -431,8 +431,8 @@ Status deployment yang dapat disimpulkan dari repository:
 
 #### Aplikasi Mobile
 
-1. pastikan environment produksi telah disiapkan (`.env.production` dari `mobile/.env.production.example`),
-2. pastikan kredensial Supabase produksi benar,
+1. konfigurasikan environment variable produksi di **EAS Dashboard** (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, dan variabel `EXPO_PUBLIC_*` lain) — kunci-kunci ini **tidak boleh ada di `eas.json`** karena akan menimpa nilai dashboard secara diam-diam (lihat `mobile/AGENTS.md` dan `docs/p3-production-provisioning-runbook.md` P3-D),
+2. pastikan kredensial Supabase produksi benar dan project prod sudah menerima seluruh migrasi,
 3. jalankan build/submit lewat EAS sesuai profil di `mobile/eas.json` (`eas build`, `eas submit`).
 
 #### Aplikasi Web

@@ -52,6 +52,15 @@ begin
   end if;
 
   -- T4-T6: can_access_* reference confidential_access_rules
+  --
+  -- CATATAN Sprint 9 S9-4 (2026-07-28): tes structural di bawah (T4-T6) memakai
+  -- `pg_get_functiondef ... like '%confidential_access_rules%'`. Cek ini bisa lolos
+  -- meski implementasinya salah (menyebut tabel di komentar / cabang mati / gerbang
+  -- terbalik). Perilaku sebenarnya kini dijaga oleh
+  -- `0117_sprint9_confidential_access_behavior_contract.sql` yang benar-benar
+  -- memanggil `can_access_*` dan memverifikasi baris hasil. T4-T6 dipertahankan
+  -- di sini sebagai jaring pengaman kedua sampai 0117 terbukti stabil beberapa
+  -- sprint, lalu boleh dilucuti.
   select pg_get_functiondef(p.oid) like '%confidential_access_rules%' into v_conf_goal
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'can_access_goal';

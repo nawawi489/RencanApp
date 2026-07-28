@@ -99,10 +99,15 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - run: npm install --no-audit --no-fund
+      # S9-7: pakai `npm ci` untuk lock-strict install. Prasyarat: lockfile
+      # sudah di-regen di runner Linux via `regen-lockfile.yml` (workflow_dispatch)
+      # setiap dependency change dari dev Windows.
+      - run: npm ci --no-audit --no-fund
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli
+        # S9-7: eas-cli dipin ke rentang major agar deploy staging reproducible.
+        # Bump minor/patch dilakukan sadar via commit yang mengubah versi ini.
+        run: npm install -g eas-cli@^16
 
       - name: Export web bundle
         # Sourcemap wajib ada di dist/ agar upload di step berikut punya

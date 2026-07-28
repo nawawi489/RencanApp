@@ -54,8 +54,9 @@ Hook aktif saat ini:
 - `pre-push` — jalankan type-check + lint + `jest --onlyChanged` kalau ada
   perubahan di `mobile/`. Skip otomatis kalau push hanya docs/wiki/CI.
 
-Emergency bypass: `git push --no-verify` (skip hook lokal saja; CircleCI post-merge
-tetap gate).
+Emergency bypass: `git push --no-verify` (skip hook lokal saja; GitHub Actions
+`ci.yml` post-merge dan required PR checks — Lint/types/tests, DB contract, Rename
+guard — tetap gate).
 
 Verifikasi manual: `git config --get core.hooksPath` harus keluarin `.githooks`.
 Kalau kosong, jalankan `git config core.hooksPath .githooks` sekali.

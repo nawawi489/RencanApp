@@ -67,6 +67,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --ci --runInBand --forceExit",
+    "gen:types": "supabase gen types typescript --local > src/lib/database.types.ts",
     "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "jest": {
