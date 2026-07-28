@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Modal, TextInput } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, TextInput } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -63,7 +63,13 @@ export default function SettingsGovernanceViolationScreen() {
   }, [violations, statusChip]);
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Pelanggaran Tata Kelola' }} />
       <View className="gap-3 p-5">
         <View className="gap-1">
@@ -203,6 +209,7 @@ export default function SettingsGovernanceViolationScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

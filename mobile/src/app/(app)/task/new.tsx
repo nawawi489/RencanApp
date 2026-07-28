@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Switch } from 'react-native';
+import { Switch } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { DateField } from '@/components/date-field';
 import { DateMultiField } from '@/components/date-multi-field';
 import { DateRangeField } from '@/components/date-range-field';
@@ -144,6 +146,7 @@ function TimezoneNote({ timezone }: { timezone: string }) {
 export function LiveNewTaskScreen() {
   const { actionPlanId } = useLocalSearchParams<{ actionPlanId: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const qc = useQueryClient();
   // UI-S-AP4 context-bar — tampilkan parent Rencana Aksi supaya PIC tahu "AP ini di bawah apa".
   const parentActionPlanQ = useQuery({
@@ -183,6 +186,40 @@ export function LiveNewTaskScreen() {
   const orgTimezone = orgTimezoneQ.data ?? DEFAULT_ORG_TIMEZONE;
   const [missedRule, setMissedRule] = useState<string>('strict');
   const [gracePeriod, setGracePeriod] = useState('');
+  // S7-3: error inline per-field + banner form-level utk multi-field / non-LabeledInput
+  // (PIC/Reviewer, tanggal, periode repeat, chip mingguan/bulanan, TimeField).
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    gracePeriod?: string;
+  }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back saat form kotor. Field default (priority='medium',
+  // evidenceRequired=true, frequency='daily', missedRule='strict', repeat=false) TIDAK
+  // menandai dirty — hanya perubahan aktif dari user yang dihitung.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (name.trim() !== '' ||
+      output.trim() !== '' ||
+      dod.trim() !== '' ||
+      evidenceDescription.trim() !== '' ||
+      startDate !== '' ||
+      deadline !== '' ||
+      deadlineTime !== '' ||
+      pic != null ||
+      reviewer != null ||
+      priority !== 'medium' ||
+      !evidenceRequired ||
+      resultRequired ||
+      repeat ||
+      weekdays.length > 0 ||
+      monthDays.length > 0 ||
+      customDates.length > 0 ||
+      repeatStart !== '' ||
+      repeatEnd !== '' ||
+      gracePeriod.trim() !== '');
+  useDirtyGuard(isDirty);
 
   function toggleWeekday(d: number) {
     setWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -232,47 +269,54 @@ export function LiveNewTaskScreen() {
       qc.invalidateQueries({ queryKey: ['action-plans', actionPlanId] });
       // Tugas baru muncul di Home ("Task Hari Ini" / mendekati deadline) → segarkan.
       invalidateHomeQueries(qc);
-      router.back();
+      setSubmitted(true);
+      safeBack();
     },
     onError: (e) => alertFriendlyError('Gagal', e, 'Terjadi kesalahan.'),
   });
 
   function submit() {
+    const nextErrors: typeof fieldErrors = {};
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Tugas wajib diisi.');
+      nextErrors.name = 'Nama Tugas wajib diisi.';
+    }
+    if (repeat && missedRule === 'grace_period' && !(parseInt(gracePeriod, 10) > 0)) {
+      nextErrors.gracePeriod = 'Masa tenggang (menit) wajib diisi > 0.';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
       return;
     }
+    setFieldErrors({});
     if (pic && reviewer && pic.id === reviewer.id) {
-      Alert.alert('Tidak valid', 'PIC dan Reviewer tidak boleh orang yang sama.');
+      setFormError('PIC dan Reviewer tidak boleh orang yang sama.');
       return;
     }
     if ((startDate && !DATE_RE.test(startDate)) || (deadline && !DATE_RE.test(deadline))) {
-      Alert.alert('Tanggal tidak valid', DATE_HINT);
+      setFormError(DATE_HINT);
       return;
     }
     // PRD §22.9 — Jam Deadline wajib semua AP.
     if (!TIME_RE.test(deadlineTime)) {
-      Alert.alert('Jam Deadline tidak valid', 'Format jam: HH:MM (mis. 23:00).');
+      setFormError('Jam Deadline tidak valid. Format jam: HH:MM (mis. 23:00).');
       return;
     }
     if (repeat) {
       if (!DATE_RE.test(repeatStart) || !DATE_RE.test(repeatEnd)) {
-        Alert.alert('Periode repeat tidak valid', `Tanggal mulai & selesai wajib. ${DATE_HINT}`);
+        setFormError(`Periode repeat tidak valid. Tanggal mulai & selesai wajib. ${DATE_HINT}`);
         return;
       }
       if (frequency === 'weekly' && weekdays.length === 0) {
-        Alert.alert('Belum lengkap', 'Pilih minimal satu hari untuk repeat mingguan.');
+        setFormError('Pilih minimal satu hari untuk repeat mingguan.');
         return;
       }
       if (frequency === 'monthly' && monthDays.length === 0) {
-        Alert.alert('Belum lengkap', 'Pilih minimal satu tanggal untuk repeat bulanan.');
-        return;
-      }
-      if (missedRule === 'grace_period' && !(parseInt(gracePeriod, 10) > 0)) {
-        Alert.alert('Belum lengkap', 'Masa tenggang (menit) wajib diisi > 0.');
+        setFormError('Pilih minimal satu tanggal untuk repeat bulanan.');
         return;
       }
     }
+    setFormError(null);
     mutation.mutate();
   }
 
@@ -305,7 +349,17 @@ export function LiveNewTaskScreen() {
           <Text accessibilityRole="header" className="text-sm font-bold text-black dark:text-white">
             Detail Tugas
           </Text>
-          <LabeledInput label="Nama Tugas" value={name} onChangeText={setName} required placeholder="mis. Buat 20 Konten Iklan" />
+          <LabeledInput
+            label="Nama Tugas"
+            value={name}
+            onChangeText={(t) => {
+              setName(t);
+              if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+            }}
+            required
+            placeholder="mis. Buat 20 Konten Iklan"
+            error={fieldErrors.name}
+          />
           <UserPicker label="PIC (eksekutor)" required value={pic} onChange={setPic} excludeId={reviewer?.id} />
           <UserPicker label="Reviewer" required value={reviewer} onChange={setReviewer} excludeId={pic?.id} />
           <DateField label="Tanggal Mulai" value={startDate} onChange={setStartDate} />
@@ -426,10 +480,15 @@ export function LiveNewTaskScreen() {
                   <LabeledInput
                     label="Masa Tenggang (menit)"
                     value={gracePeriod}
-                    onChangeText={setGracePeriod}
+                    onChangeText={(t) => {
+                      setGracePeriod(t);
+                      if (fieldErrors.gracePeriod)
+                        setFieldErrors((e) => ({ ...e, gracePeriod: undefined }));
+                    }}
                     required
                     placeholder="mis. 30"
                     keyboardType="numeric"
+                    error={fieldErrors.gracePeriod}
                   />
                 </View>
               ) : null}
@@ -437,6 +496,14 @@ export function LiveNewTaskScreen() {
           ) : null}
         </View>
 
+        {formError ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {formError}
+          </Text>
+        ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={mutation.isPending} />
       </View>
     </ScrollView>

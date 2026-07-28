@@ -9,6 +9,19 @@ jest.mock('@react-native-community/netinfo', () =>
   require('@react-native-community/netinfo/jest/netinfo-mock'),
 );
 
+// S7-2: `useDirtyGuard` memakai `usePreventRemove` + `useNavigation` dari re-export
+// `expo-router/react-navigation`. Kedua hook resmi butuh NavigationContainer di parent
+// tree; test kolokasi kita me-render layar tanpa Stack Navigator (mocking `expo-router`
+// per-file). Tanpa mock global, tiap layar form (12 modal S7-2) melempar
+// "Couldn't find a navigation object..." saat render — memblokir ~50 test yang mencoba
+// smoke-render form baru. Test yang perlu menguji perilaku guard sesungguhnya dapat
+// meng-override mock ini secara per-file.
+jest.mock('expo-router/react-navigation', () => ({
+  __esModule: true,
+  useNavigation: () => ({ dispatch: jest.fn() }),
+  usePreventRemove: () => {},
+}));
+
 // env.ts throws at import time if EXPO_PUBLIC_SUPABASE_URL / _ANON_KEY are
 // not set. Historically most tests mocked `@/lib/supabase` so env was never
 // loaded transitively. Sprint 2 wired `@/lib/env` into auth-provider directly

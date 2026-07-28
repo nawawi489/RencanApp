@@ -1,11 +1,11 @@
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
-import { ScrollView, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useDevelopmentAreaActions } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
 import { alertFriendlyError } from '@/lib/errors';
@@ -22,17 +22,39 @@ export default function NewDevelopmentAreaScreen() {
   const [periodEnd, setPeriodEnd] = useState('');
   const [description, setDescription] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
+  // S7-3: error inline per-field + banner form-level utk error yang tidak terikat LabeledInput
+  // tunggal (mis. periode tanggal via DateRangeField).
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back saat form kotor.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (name.trim() !== '' ||
+      description.trim() !== '' ||
+      periodStart !== '' ||
+      periodEnd !== '' ||
+      pic != null);
+  useDirtyGuard(isDirty);
 
   async function submit() {
+    const nextErrors: typeof fieldErrors = {};
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Development Area wajib diisi.');
+      nextErrors.name = 'Nama Development Area wajib diisi.';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
       return;
     }
+    setFieldErrors({});
     const dateErr = periodError(periodStart, periodEnd);
     if (dateErr) {
-      Alert.alert('Tanggal tidak valid', dateErr);
+      setFormError(dateErr);
       return;
     }
+    setFormError(null);
     try {
       const created = await create({
         name: name.trim(),
@@ -41,11 +63,23 @@ export default function NewDevelopmentAreaScreen() {
         period_start: periodStart || null,
         period_end: periodEnd || null,
       });
+      setSubmitted(true);
       router.replace(`/development-area/${created.id}` as Href);
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
     }
   }
+
+  // S7-3: banner form-level (ditaruh di atas tombol Simpan). Terpisah dari fieldErrors supaya
+  // semantiknya tidak tumpang tindih; screen reader mengumumkan lewat live region.
+  const formErrorBanner = formError ? (
+    <Text
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      className="text-sm font-semibold text-red-700 dark:text-red-400">
+      {formError}
+    </Text>
+  ) : null;
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
@@ -59,9 +93,13 @@ export default function NewDevelopmentAreaScreen() {
           <LabeledInput
             label="Nama Development Area"
             value={name}
-            onChangeText={setName}
+            onChangeText={(t) => {
+              setName(t);
+              if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+            }}
             required
             placeholder="mis. System Development"
+            error={fieldErrors.name}
           />
           <UserPicker label="PIC / Owner" value={pic} onChange={setPic} />
           <DateRangeField
@@ -78,6 +116,7 @@ export default function NewDevelopmentAreaScreen() {
           />
         </SectionCard>
 
+        {formErrorBanner}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={isPending} />
       </View>
     </ScrollView>

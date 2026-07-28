@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
-import { ScrollView, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useInitiativeActions, usePerson } from '@/hooks/use-workspace';
 import { periodError } from '@/lib/date';
 import type { PersonRef } from '@/lib/cards';
@@ -33,26 +33,54 @@ export function LiveNewInitiativeScreen() {
   const [pic, setPic] = useState<Person | null>(null);
   // UI-S-S01 — Kontribusi Q% (PRD §20). Free decimal, 0–100; NULL diizinkan saat Draft.
   const [contributionPct, setContributionPct] = useState('');
+  // S7-3: error inline per-field + banner form-level utk periode via DateRangeField.
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    contributionPct?: string;
+  }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back saat form kotor.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (name.trim() !== '' ||
+      reason.trim() !== '' ||
+      mainRisk.trim() !== '' ||
+      alternative.trim() !== '' ||
+      description.trim() !== '' ||
+      contributionPct.trim() !== '' ||
+      periodStart !== '' ||
+      periodEnd !== '' ||
+      pic != null);
+  useDirtyGuard(isDirty);
 
   async function submit() {
+    const nextErrors: typeof fieldErrors = {};
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Inisiatif wajib diisi.');
-      return;
-    }
-    const dateErr = periodError(periodStart, periodEnd);
-    if (dateErr) {
-      Alert.alert('Tanggal tidak valid', dateErr);
-      return;
+      nextErrors.name = 'Nama Inisiatif wajib diisi.';
     }
     let contribution: number | null = null;
     if (contributionPct.trim()) {
       const parsed = Number(contributionPct.replace(',', '.'));
       if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
-        Alert.alert('Kontribusi tidak valid', 'Isi 0–100 (persen, mis. 25 atau 12.5).');
-        return;
+        nextErrors.contributionPct = 'Isi 0–100 (persen, mis. 25 atau 12.5).';
+      } else {
+        contribution = Math.round(parsed * 1000) / 1000; // selaras numeric(6,3)
       }
-      contribution = Math.round(parsed * 1000) / 1000; // selaras numeric(6,3)
     }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
+      return;
+    }
+    setFieldErrors({});
+    const dateErr = periodError(periodStart, periodEnd);
+    if (dateErr) {
+      setFormError(dateErr);
+      return;
+    }
+    setFormError(null);
     try {
       const created = await create({
         strategy_id: strategyId,
@@ -66,6 +94,7 @@ export function LiveNewInitiativeScreen() {
         period_end: periodEnd || null,
         contribution_pct: contribution,
       });
+      setSubmitted(true);
       router.replace(`/initiative/${created.id}` as Href);
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
@@ -84,9 +113,13 @@ export function LiveNewInitiativeScreen() {
           <LabeledInput
             label="Nama Inisiatif"
             value={name}
-            onChangeText={setName}
+            onChangeText={(t) => {
+              setName(t);
+              if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+            }}
             required
             placeholder="mis. Ekspansi kanal digital"
+            error={fieldErrors.name}
           />
           <LabeledInput
             label="Alasan"
@@ -113,9 +146,14 @@ export function LiveNewInitiativeScreen() {
           <LabeledInput
             label="Kontribusi Quarter (%)"
             value={contributionPct}
-            onChangeText={setContributionPct}
+            onChangeText={(t) => {
+              setContributionPct(t);
+              if (fieldErrors.contributionPct)
+                setFieldErrors((e) => ({ ...e, contributionPct: undefined }));
+            }}
             keyboardType="numeric"
             placeholder="mis. 25 (Σ siblings = 100%, divalidasi saat aktivasi)"
+            error={fieldErrors.contributionPct}
           />
           <DateRangeField
             startValue={periodStart}
@@ -126,6 +164,14 @@ export function LiveNewInitiativeScreen() {
           <LabeledInput label="Deskripsi (opsional)" value={description} onChangeText={setDescription} multiline />
         </SectionCard>
 
+        {formError ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {formError}
+          </Text>
+        ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={isPending} />
       </View>
     </ScrollView>

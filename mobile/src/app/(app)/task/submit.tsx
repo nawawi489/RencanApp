@@ -4,7 +4,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert } from 'react-native';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import {
@@ -19,6 +18,8 @@ import {
   usePlaceholderColor,
   type UploadState,
 } from '@/components/ui';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { useKpiCandidates, useKpiCurrentValue, useSubmissionFlow } from '@/hooks/use-submission';
 import {
   EVIDENCE_KIND_LABEL,
@@ -165,6 +166,7 @@ function KpiResultRow({
 export function LiveTaskSubmitScreen() {
   const { id, instanceId } = useLocalSearchParams<{ id?: string; instanceId?: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const qc = useQueryClient();
 
   const instanceQ = useQuery({
@@ -190,6 +192,26 @@ export function LiveTaskSubmitScreen() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [uploadStates, setUploadStates] = useState<Record<string, UploadState>>({});
+  // S7-3: "Bukti wajib" tak terikat LabeledInput tunggal (bukti = kombinasi file + row teks/link)
+  // → banner form-level di atas tombol submit.
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back — kehilangan berkas yang sudah dipilih di sini paling mahal.
+  // "evidence" default = satu row kosong `{ kind: 'text_note', content: '' }`; hitung dirty dari
+  // row yang punya content, bukan dari panjang array.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (note.trim() !== '' ||
+      pendingFiles.length > 0 ||
+      results.length > 0 ||
+      evidence.some((e) => e.content.trim() !== ''));
+  useDirtyGuard(isDirty, {
+    title: 'Buang submission?',
+    message: 'Bukti dan catatan yang sudah dipilih akan hilang. Yakin ingin keluar?',
+    discardLabel: 'Buang',
+    keepLabel: 'Tetap di sini',
+  });
 
   const placeholderColor = usePlaceholderColor();
   const submissionFlow = useSubmissionFlow(id);
@@ -230,7 +252,8 @@ export function LiveTaskSubmitScreen() {
       qc.invalidateQueries({ queryKey: ['instance', instanceId] });
       // Submit instance mengubah "hari ini"/terlewat + antrean review instance → segarkan Home.
       invalidateHomeQueries(qc);
-      router.back();
+      setSubmitted(true);
+      safeBack();
     },
     onError: (e) => alertFriendlyError('Gagal submit', e, 'Terjadi kesalahan.'),
   });
@@ -264,9 +287,10 @@ export function LiveTaskSubmitScreen() {
     const { evidence: staticEvidence, resultValues, note: noteVal } = buildPayload();
 
     if (ap.evidence_required && staticEvidence.length === 0 && pendingFiles.length === 0) {
-      Alert.alert('Bukti wajib', 'Lampirkan minimal satu bukti sebelum submit.');
+      setFormError('Bukti wajib. Lampirkan minimal satu bukti sebelum submit.');
       return;
     }
+    setFormError(null);
 
     // Set semua upload ke 'uploading' (UX state machine).
     setUploadStates((prev) => {
@@ -289,7 +313,8 @@ export function LiveTaskSubmitScreen() {
         pendingFiles.forEach((f) => (next[f.uri] = 'ok'));
         return next;
       });
-      router.back();
+      setSubmitted(true);
+      safeBack();
     } catch (e) {
       setUploadStates((prev) => {
         const next: Record<string, UploadState> = { ...prev };
@@ -438,6 +463,14 @@ export function LiveTaskSubmitScreen() {
           </View>
         ) : null}
 
+        {formError ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {formError}
+          </Text>
+        ) : null}
         <Button
           label="Submit untuk Review"
           onPress={instanceId ? () => instanceMutation.mutate() : submitTaskFlow}

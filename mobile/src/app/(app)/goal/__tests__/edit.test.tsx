@@ -131,14 +131,17 @@ describe('Ubah Goal', () => {
   });
 
   it('[D-04] nama kosong tidak dikirim ke server', async () => {
+    // S7-3: validasi pindah ke error inline `LabeledInput` (bukan `Alert.alert`).
+    // Spy dipertahankan sbg regresi — Alert no-op di web membuat kegagalan senyap.
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<EditGoalRoute />, { wrapper: wrapper() });
 
     fireEvent.changeText(await screen.findByLabelText('Nama Goal wajib'), '   ');
     fireEvent.press(await screen.findByLabelText('Simpan perubahan'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText('Nama Goal wajib diisi.')).toBeTruthy());
     expect(mockUpdate).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 

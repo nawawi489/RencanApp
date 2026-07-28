@@ -85,6 +85,8 @@ describe('Profil Saya', () => {
   });
 
   it('[C-02] nama kosong tidak dikirim ke server', async () => {
+    // S7-3: validasi pindah ke error inline `LabeledInput`, bukan `Alert.alert`.
+    // Spy dipertahankan sbg regresi — Alert muncul lagi = pesan hilang di web (Alert no-op).
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<SettingsProfileScreen />, { wrapper: wrapper() });
 
@@ -93,8 +95,9 @@ describe('Profil Saya', () => {
     fireEvent.changeText(await screen.findByLabelText('Nama lengkap wajib'), '   ');
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText('Nama lengkap wajib diisi.')).toBeTruthy());
     expect(mockUpdateOwnProfile).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 
@@ -105,8 +108,11 @@ describe('Profil Saya', () => {
     fireEvent.changeText(await screen.findByLabelText('Nama lengkap wajib'), 'x'.repeat(121));
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText('Nama lengkap maksimal 120 karakter.')).toBeTruthy(),
+    );
     expect(mockUpdateOwnProfile).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 
@@ -165,14 +171,16 @@ describe('Profil Organisasi', () => {
   });
 
   it('[C-08] nama Organisasi kosong tidak dikirim ke server', async () => {
+    // S7-3: validasi pindah ke error inline `LabeledInput`. Spy dipertahankan sbg regresi.
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<SettingsOrganizationScreen />, { wrapper: wrapper() });
 
     fireEvent.changeText(await screen.findByLabelText('Nama Organisasi wajib'), '  ');
     fireEvent.press(await screen.findByLabelText('Simpan'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText('Nama Organisasi wajib diisi.')).toBeTruthy());
     expect(mockUpdateOrganization).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 });

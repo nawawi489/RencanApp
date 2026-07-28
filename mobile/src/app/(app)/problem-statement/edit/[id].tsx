@@ -18,6 +18,7 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { getPersonRef, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 import {
@@ -80,6 +81,7 @@ function ImpactChip({
 export function LiveEditProblemStatementScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const qc = useQueryClient();
 
   const psQ = useQuery({
@@ -148,7 +150,7 @@ export function LiveEditProblemStatementScreen() {
         period_start: start,
         period_end: end,
       });
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Perubahan tidak tersimpan. Coba lagi.');
     }

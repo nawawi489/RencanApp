@@ -77,7 +77,9 @@ describe('ReviewSubmissionPanel — 3 aksi PRD §24.3', () => {
     expect(input.props.value).toBe('catatan panjang');
   });
 
-  it('[UI-6] catatan kosong → Alert, tanpa memanggil onNote', async () => {
+  it('[UI-6] catatan kosong → error inline, tanpa memanggil onNote', async () => {
+    // S7-3: validasi pindah dari Alert.alert ke error inline per-field supaya pesan
+    // menempel di field, bukan hilang saat dismiss.
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const user = userEvent.setup();
     const { onNote } = await setup();
@@ -85,7 +87,8 @@ describe('ReviewSubmissionPanel — 3 aksi PRD §24.3', () => {
     await user.press(screen.getByText('Catatan'));
     await user.press(screen.getByText('Kirim Catatan'));
 
-    expect(alertSpy).toHaveBeenCalledWith('Catatan kosong', 'Tulis catatan terlebih dahulu.');
+    expect(screen.getByText('Tulis catatan terlebih dahulu.')).toBeTruthy();
+    expect(alertSpy).not.toHaveBeenCalledWith('Catatan kosong', expect.any(String));
     expect(onNote).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
@@ -102,16 +105,42 @@ describe('ReviewSubmissionPanel — 3 aksi PRD §24.3', () => {
     expect(onDecide).not.toHaveBeenCalled();
   });
 
-  it('[UI-8] regresi: aksi terminal lama tetap berfungsi', async () => {
+  it('[UI-8] regresi: aksi terminal — approve butuh Ack (S7-6), reject tetap dgn alasan', async () => {
     const user = userEvent.setup();
     const { onDecide } = await setup();
 
+    // S7-6: "Setujui (Selesai)" pertama membuka mode konfirmasi, BUKAN memanggil onDecide.
+    await user.press(screen.getByText('Setujui (Selesai)'));
+    expect(onDecide).not.toHaveBeenCalled();
+    // Tombol konfirmasi kedua masih disabled sampai AckCheckbox dicentang.
+    await user.press(
+      screen.getByLabelText('Saya paham, hasil ini akan diterapkan dan tidak dapat dibatalkan.'),
+    );
+    // Setelah Ack, tombol Setujui (Selesai) berikutnya benar-benar memanggil onDecide.
     await user.press(screen.getByText('Setujui (Selesai)'));
     expect(onDecide).toHaveBeenCalledWith({ decision: 'approve', reason: null });
+
+    // Kembali ke state awal untuk uji jalur reject.
+    // (mode konfirmasi approve menyisakan tombol Batal; lewat Batal supaya tombol Tolak muncul.)
+    await user.press(screen.getByText('Batal'));
 
     await user.press(screen.getByText('Tolak (Minta Revisi)'));
     await user.type(screen.getByPlaceholderText('Alasan penolakan (wajib)'), 'kurang bukti');
     await user.press(screen.getByText('Kirim Penolakan'));
     expect(onDecide).toHaveBeenCalledWith({ decision: 'reject', reason: 'kurang bukti' });
+  });
+
+  it('[UI-9] S7-6: setujui tanpa mencentang Ack → onDecide TIDAK dipanggil', async () => {
+    const user = userEvent.setup();
+    const { onDecide } = await setup();
+
+    await user.press(screen.getByText('Setujui (Selesai)'));
+    // Sebelum Ack: warning + checkbox tampil, tombol Setujui disabled.
+    expect(
+      screen.getByText(/Nilai KPI langsung diterapkan/),
+    ).toBeTruthy();
+    // Menekan tombol Setujui yang disabled — onDecide tidak boleh terpanggil.
+    await user.press(screen.getByText('Setujui (Selesai)'));
+    expect(onDecide).not.toHaveBeenCalled();
   });
 });

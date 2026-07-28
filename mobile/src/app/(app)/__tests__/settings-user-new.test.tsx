@@ -65,16 +65,19 @@ describe('SettingsUserNewScreen', () => {
     expect(await screen.findByText('Anda tidak memiliki akses')).toBeTruthy();
   });
 
-  it('[U-UI-02] nama kosong → alert, createUser tak dipanggil', async () => {
+  // S7-3: validasi field pindah dari Alert.alert(...) ke error inline per-field —
+  // Alert lama tidak menunjuk field mana yang salah, dan pesannya hilang saat ditutup.
+  it('[U-UI-02] nama kosong → error inline "Nama lengkap wajib diisi.", createUser tak dipanggil', async () => {
     await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Buat User'));
     });
-    expect(alertSpy).toHaveBeenCalledWith('Belum lengkap', 'Nama lengkap wajib diisi.');
+    expect(screen.getByText('Nama lengkap wajib diisi.')).toBeTruthy();
+    expect(alertSpy).not.toHaveBeenCalledWith('Belum lengkap', expect.any(String));
     expect(mockCreateUser).not.toHaveBeenCalled();
   });
 
-  it('[U-UI-03] email tidak valid → alert, createUser tak dipanggil', async () => {
+  it('[U-UI-03] email tidak valid → error inline "Periksa kembali format alamat email."', async () => {
     await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
     await act(async () => {
       fireEvent.changeText(screen.getByLabelText('Nama lengkap wajib'),'Rina');
@@ -83,11 +86,12 @@ describe('SettingsUserNewScreen', () => {
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Buat User'));
     });
-    expect(alertSpy).toHaveBeenCalledWith('Email tidak valid', expect.any(String));
+    expect(screen.getByText('Periksa kembali format alamat email.')).toBeTruthy();
+    expect(alertSpy).not.toHaveBeenCalledWith('Email tidak valid', expect.any(String));
     expect(mockCreateUser).not.toHaveBeenCalled();
   });
 
-  it('[U-UI-04] password < 8 karakter → alert, createUser tak dipanggil', async () => {
+  it('[U-UI-04] password < 8 karakter → error inline "Password sementara minimal 8 karakter."', async () => {
     await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
     await act(async () => {
       fireEvent.changeText(screen.getByLabelText('Nama lengkap wajib'),'Rina');
@@ -97,8 +101,36 @@ describe('SettingsUserNewScreen', () => {
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Buat User'));
     });
-    expect(alertSpy).toHaveBeenCalledWith('Password terlalu pendek', expect.any(String));
+    expect(screen.getByText('Password sementara minimal 8 karakter.')).toBeTruthy();
+    expect(alertSpy).not.toHaveBeenCalledWith('Password terlalu pendek', expect.any(String));
     expect(mockCreateUser).not.toHaveBeenCalled();
+  });
+
+  // S7-3: submit dengan tiga field kosong menampilkan TIGA error sekaligus, bukan satu-per-satu
+  // (pola Alert lama exit di error pertama). Admin melihat semua yang salah sekaligus.
+  it('[U-UI-02b] tiga field kosong → tiga pesan error inline sekaligus', async () => {
+    await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Buat User'));
+    });
+    expect(screen.getByText('Nama lengkap wajib diisi.')).toBeTruthy();
+    expect(screen.getByText('Periksa kembali format alamat email.')).toBeTruthy();
+    expect(screen.getByText('Password sementara minimal 8 karakter.')).toBeTruthy();
+  });
+
+  // S7-4: "Password sementara" ter-render sebagai teks biasa sebelum sprint 7 — terbaca
+  // siapa pun di dekat layar admin. Sekarang secureTextEntry aktif; toggle reveal built-in
+  // dari LabeledInput (label a11y sesuai state).
+  it('[U-UI-04b] password sementara di-mask (secureTextEntry) + tombol reveal a11y', async () => {
+    await render(<SettingsUserNewScreen />, { wrapper: wrapper() });
+    const passwordInput = screen.getByLabelText('Password sementara wajib');
+    expect(passwordInput.props.secureTextEntry).toBe(true);
+    // Reveal tersedia dan mengumumkan state; menekan sekali harus mengubah label a11y.
+    const revealBtn = screen.getByLabelText('Tampilkan kata sandi');
+    await act(async () => {
+      fireEvent.press(revealBtn);
+    });
+    expect(screen.getByLabelText('Sembunyikan kata sandi')).toBeTruthy();
   });
 
   it('[U-UI-05] non-CEO: pill C-Level terkunci (disabled)', async () => {

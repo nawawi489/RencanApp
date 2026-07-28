@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Alert } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -54,7 +54,13 @@ export default function SettingsOrgStructureScreen() {
   // Setiap tab punya akses level masing-masing; jika tidak allowed → AccessDenied per-tab.
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Organisasi' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
@@ -90,7 +96,8 @@ export default function SettingsOrgStructureScreen() {
           <RoleTab />
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

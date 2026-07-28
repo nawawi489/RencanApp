@@ -4,7 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Modal } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -191,7 +191,13 @@ export default function SettingsStrategyTemplatesScreen() {
   const isPending = createM.isPending || updateM.isPending;
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Strategi Template' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
@@ -333,7 +339,8 @@ export default function SettingsStrategyTemplatesScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -5,15 +5,18 @@
 // Permission gate: manage_score_formula. Defense-in-depth (gate juga di RPC server).
 import { Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform } from 'react-native';
 import { ScrollView, Text, TextInput, View, Pressable } from 'react-native-css/components';
 
 import {
+  AckCheckbox,
   Badge,
   Button,
   GuidanceNote,
   ScoreLegend,
   SectionCard,
   SkeletonCard,
+  WarningCallout,
   usePlaceholderColor,
 } from '@/components/ui';
 import { FinalizePeriodModal } from '@/components/finalize-period-modal';
@@ -59,10 +62,15 @@ function DraftEditor({
   version,
   templateId,
   onActivate,
+  isActivating,
 }: {
   version: ScoreFormulaVersion;
   templateId: string;
   onActivate: (versionId: string) => void;
+  /** S7-6: parent me-manage state activate; DraftEditor perlu tahu supaya tombol
+   * Aktifkan disable saat mutasi in-flight (mencegah double-submit yang bisa memicu
+   * dua transisi status berturut-turut). */
+  isActivating: boolean;
 }) {
   // initial dihitung sekali (komponen di-key oleh parent saat version berubah → fresh state).
   // Tidak pakai useEffect+setState anti-pattern (react-hooks/set-state-in-effect).
@@ -95,7 +103,8 @@ function DraftEditor({
 
   const totalValid = total === 100;
   const canSave = dirty && reasonValid && !isUpdatingWeights;
-  const canActivate = !dirty && totalValid && !isUpdatingWeights;
+  // S7-6: sertakan `!isActivating` supaya tombol tidak bisa ditekan dua kali beruntun.
+  const canActivate = !dirty && totalValid && !isUpdatingWeights && !isActivating;
 
   return (
     <View className="gap-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
@@ -316,19 +325,45 @@ function FormulaTemplateSection({
   );
   const [error, setError] = useState<string | null>(null);
   const [createReason, setCreateReason] = useState('');
+  // S7-6: konfirmasi ireversibel. Mengaktifkan formula mengubah AchievementScore semua
+  // pengguna di level ini — satu tap tanpa peringatan sebelum sprint 7. Simpan versionId
+  // yang menunggu konfirmasi + Ack; keduanya di-reset saat modal ditutup supaya tidak
+  // "lengket" saat dibuka ulang.
+  const [pendingActivateId, setPendingActivateId] = useState<string | null>(null);
+  const [activateAck, setActivateAck] = useState(false);
   const placeholderColor = usePlaceholderColor();
   const today = new Date().toISOString().slice(0, 10);
 
   const levelVersions = versions.filter((v) => v.level === activeLevel);
   const draftVersion = levelVersions.find((v) => v.status === 'draft');
   const otherVersions = levelVersions.filter((v) => v.status !== 'draft');
+  const pendingActivateVersion = pendingActivateId
+    ? levelVersions.find((v) => v.id === pendingActivateId)
+    : null;
 
-  async function handleActivate(versionId: string) {
+  function requestActivate(versionId: string) {
+    setPendingActivateId(versionId);
+    setActivateAck(false);
     setError(null);
+  }
+
+  function dismissActivateConfirm() {
+    if (isPending) return; // jangan izinkan close mid-flight
+    setPendingActivateId(null);
+    setActivateAck(false);
+  }
+
+  async function confirmActivate() {
+    if (!pendingActivateId) return;
     try {
-      await activate(versionId, today);
+      await activate(pendingActivateId, today);
+      setPendingActivateId(null);
+      setActivateAck(false);
     } catch (e) {
       setError(reportError('Aktifkan versi', e, 'Gagal mengaktifkan versi.'));
+      // Modal ditutup sekalian supaya user melihat pesan error di layar utama.
+      setPendingActivateId(null);
+      setActivateAck(false);
     }
   }
 
@@ -369,7 +404,8 @@ function FormulaTemplateSection({
               key={`${draftVersion.id}:${JSON.stringify(draftVersion.categories)}`}
               version={draftVersion}
               templateId={templateId}
-              onActivate={handleActivate}
+              onActivate={requestActivate}
+              isActivating={isPending}
             />
           ) : (
             <View className="gap-2 rounded-xl border border-dashed border-neutral-300 p-3 dark:border-neutral-700">
@@ -423,6 +459,57 @@ function FormulaTemplateSection({
       {isPending && !isCreatingDraft ? (
         <Text className="text-xs text-neutral-400">Menyimpan…</Text>
       ) : null}
+
+      {/* S7-6: konfirmasi ireversibel untuk aktivasi formula. Meniru pola
+          finalize-period-modal — WarningCallout + AckCheckbox + tombol destruktif yang
+          terkunci sampai centang. onRequestClose ditahan saat isPending supaya user tidak
+          menutup modal di tengah mutasi (menghindari race antara close & finish). */}
+      {pendingActivateVersion ? (
+        <Modal
+          transparent
+          visible
+          animationType="fade"
+          onRequestClose={dismissActivateConfirm}>
+          <View className="flex-1 justify-center bg-black/40 p-6">
+            <View
+              accessible
+              accessibilityRole="alert"
+              accessibilityLabel={`Aktifkan formula v${pendingActivateVersion.version_number}?`}
+              accessibilityViewIsModal
+              className="gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900">
+              <Text accessibilityRole="header" className="text-lg font-bold text-black dark:text-white">
+                Aktifkan formula v{pendingActivateVersion.version_number}?
+              </Text>
+              <Text className="text-sm text-neutral-600 dark:text-neutral-300">
+                {templateName} · Level {activeLevel}
+              </Text>
+              <WarningCallout
+                message={
+                  'Setelah diaktifkan, versi ini akan menggantikan rumus perhitungan skor untuk semua pengguna di level ini pada periode berjalan. Perubahan tidak dapat dibatalkan; hanya bisa disusul oleh versi berikutnya.'
+                }
+              />
+              <AckCheckbox
+                label={'Saya paham bahwa ini akan mengubah AchievementScore semua pengguna di level ini.'}
+                checked={activateAck}
+                onToggle={() => setActivateAck((v) => !v)}
+              />
+              <Button
+                label="Aktifkan versi"
+                accessibilityLabel={`Aktifkan versi ${pendingActivateVersion.version_number}`}
+                onPress={confirmActivate}
+                disabled={!activateAck || isPending}
+                loading={isPending}
+              />
+              <Button
+                label="Batal"
+                variant="secondary"
+                accessibilityLabel="Batal aktivasi versi"
+                onPress={dismissActivateConfirm}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : null}
     </SectionCard>
   );
 }
@@ -455,7 +542,13 @@ export default function SettingsScoreFormulaScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Score Formula' }} />
       <View className="gap-5 p-5">
         <View className="gap-1">
@@ -549,6 +642,7 @@ export default function SettingsScoreFormulaScreen() {
           </View>
         ) : null}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

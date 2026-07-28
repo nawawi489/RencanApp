@@ -114,12 +114,15 @@ describe('NewStrategyScreen — periode mengikuti Goal (BL-02 / AC-11)', () => {
   });
 
   it('[BL02-3] Goal tanpa periode → simpan diblokir, tidak mengirim NULL diam-diam', async () => {
+    // S7-3: pesan pindah ke banner `formError` di layar (bukan `Alert.alert`).
+    // Format banner: `${blockTitle}: ${blockBody}` — kunci substring judul yang unik.
     mockGetGoal.mockResolvedValue({ ...GOAL, period_start: null, period_end: null });
     await renderAndFill('Goal induk belum punya periode');
     fireEvent.press(screen.getByLabelText('Simpan sebagai Draft'));
 
-    await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith('Periode Goal belum diisi', expect.any(String)));
+    await waitFor(() => expect(screen.getByText(/Periode Goal belum diisi/)).toBeTruthy());
     expect(mockCreate).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   // BL02-4/5 memisahkan dua sebab blokir yang sebelumnya berbagi satu kalimat. Keduanya
@@ -127,6 +130,8 @@ describe('NewStrategyScreen — periode mengikuti Goal (BL-02 / AC-11)', () => {
   // soal akses/rute. Ditemukan saat menjalankan layar ini di app lokal — Goal seed berada
   // di org lain sehingga RLS memulangkan null, dan copy-nya menuduh "belum punya periode".
   it('[BL02-4] Goal tak terbaca (RLS/dihapus) → copy "tidak ditemukan", BUKAN "belum punya periode"', async () => {
+    // S7-3: pesan pindah ke banner `formError`. Substring "Periode Strategi diturunkan" hanya
+    // muncul di badan banner (bukan di hint Field), jadi cocok utk mengunci copy yg spesifik.
     mockGetGoal.mockResolvedValue(null); // getGoal maybeSingle → null saat RLS menyaring habis
     await renderAndFill('Goal induk tidak ditemukan');
 
@@ -134,12 +139,17 @@ describe('NewStrategyScreen — periode mengikuti Goal (BL-02 / AC-11)', () => {
     fireEvent.press(screen.getByLabelText('Simpan sebagai Draft'));
 
     await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Goal induk tidak ditemukan', expect.stringContaining('di luar akses')),
+      expect(
+        screen.getByText(/Periode Strategi diturunkan dari Goal induk, tetapi Goal itu tidak ditemukan/),
+      ).toBeTruthy(),
     );
     expect(mockCreate).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   it('[BL02-5] query Goal gagal → copy "gagal dimuat", tidak menuduh data Goal kosong', async () => {
+    // S7-3: pesan pindah ke banner `formError`. Label Field-nya "Gagal memuat Goal induk"
+    // (urutan kata beda), jadi "Goal induk gagal dimuat" hanya muncul di banner — unik.
     mockGetGoal.mockRejectedValue(new Error('network'));
     await renderAndFill('Gagal memuat Goal induk');
 
@@ -147,7 +157,8 @@ describe('NewStrategyScreen — periode mengikuti Goal (BL-02 / AC-11)', () => {
     expect(screen.queryByText('Goal induk tidak ditemukan')).toBeNull();
     fireEvent.press(screen.getByLabelText('Simpan sebagai Draft'));
 
-    await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith('Goal induk gagal dimuat', expect.any(String)));
+    await waitFor(() => expect(screen.getByText(/Goal induk gagal dimuat/)).toBeTruthy());
     expect(mockCreate).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });

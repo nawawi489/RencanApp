@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { BRAND_TAGLINE, BrandLogo } from '@/components/brand-logo';
@@ -125,7 +126,13 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient colors={gradient} style={{ flex: 1 }}>
-      <ScrollView contentContainerClassName="grow justify-center px-6 py-12">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+        keyboardVerticalOffset={0}>
+        <ScrollView
+          contentContainerClassName="grow justify-center px-6 py-12"
+          keyboardShouldPersistTaps="handled">
         <View className="items-center gap-3" accessibilityLabel="Rencanapp">
           <View className="rounded-3xl bg-white p-4 shadow-sm dark:bg-neutral-900">
             <BrandLogo size={56} />
@@ -234,7 +241,8 @@ export default function LoginScreen() {
             <Text className="text-xs font-semibold text-brand-dark underline dark:text-brand">Ketentuan Layanan</Text>
           </Pressable>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }

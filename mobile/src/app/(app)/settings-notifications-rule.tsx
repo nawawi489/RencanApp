@@ -2,6 +2,7 @@
 // Submit via upsertSettings key whitelist 'notification_rule_*'; key invalid → pesan error inline.
 import { Stack } from 'expo-router';
 import { useState } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -32,7 +33,13 @@ export default function SettingsNotificationsRuleScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      keyboardVerticalOffset={0}>
+      <ScrollView
+        className="flex-1 bg-neutral-50 dark:bg-black"
+        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Aturan Notifikasi' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
@@ -60,6 +67,7 @@ export default function SettingsNotificationsRuleScreen() {
           </SectionCard>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

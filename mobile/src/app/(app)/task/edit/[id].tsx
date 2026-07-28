@@ -34,6 +34,7 @@ import {
   SectionCard,
   SkeletonList,
 } from '@/components/ui';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import {
   ACTION_PLAN_STATUS_LABEL,
   PRIORITY_LABEL,
@@ -89,6 +90,7 @@ function PrioritySelector({
 export function LiveEditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const safeBack = useSafeBack();
   const qc = useQueryClient();
 
   const taskQ = useQuery({ queryKey: ['action-plan', id], queryFn: () => getTask(id) });
@@ -192,7 +194,7 @@ export function LiveEditTaskScreen() {
         definition_of_done: dod.trim() || null,
         evidence_description: evidDesc.trim() || null,
       });
-      router.back();
+      safeBack();
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Perubahan tidak tersimpan. Coba lagi.');
     }

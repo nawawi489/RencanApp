@@ -214,17 +214,23 @@ describe('SubmitScreen — submit flow', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
   });
 
-  it('[U10] evidence_required=true tapi tidak ada bukti → Alert + tidak panggil runSubmission', async () => {
+  it('[U10] evidence_required=true tapi tidak ada bukti → banner form-level + tidak panggil runSubmission', async () => {
+    // S7-3: pesan pindah dari `Alert.alert` ke banner `formError` di atas tombol Submit.
+    // Alert tetap di-spy sbg regresi (Alert no-op di web → pesan lenyap kalau kambuh).
     const apReq = { ...baseAp, evidence_required: true };
     mockGetTask.mockResolvedValueOnce(apReq);
-    // Spy Alert.alert
     const Alert = jest.requireActual('react-native').Alert;
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<SubmitScreen />, { wrapper: wrapper() });
     await screen.findByLabelText('Pilih file bukti');
     fireEvent.press(screen.getByText('Submit untuk Review'));
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(
+        screen.getByText('Bukti wajib. Lampirkan minimal satu bukti sebelum submit.'),
+      ).toBeTruthy(),
+    );
     expect(mockRunSubmission).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 });

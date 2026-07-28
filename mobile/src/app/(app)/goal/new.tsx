@@ -1,11 +1,11 @@
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
-import { ScrollView, View } from 'react-native-css/components';
+import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { YearField } from '@/components/year-field';
+import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useGoalActions } from '@/hooks/use-workspace';
 import { alertFriendlyError } from '@/lib/errors';
 import { type PersonRef } from '@/lib/goals';
@@ -23,16 +23,38 @@ export function LiveNewGoalScreen() {
   const [goalYear, setGoalYear] = useState(String(CURRENT_YEAR));
   const [targetValue, setTargetValue] = useState('');
   const [pic, setPic] = useState<Person | null>(null);
+  // S7-3: error inline per-field + banner form-level utk YearField (tak menerima prop `error`).
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // S7-2: guard swipe-down / back saat form kotor.
+  // goalYear default = tahun berjalan; hitung dirty relatif ke default itu.
+  const [submitted, setSubmitted] = useState(false);
+  const isDirty =
+    !submitted &&
+    (name.trim() !== '' ||
+      description.trim() !== '' ||
+      targetValue.trim() !== '' ||
+      goalYear !== String(CURRENT_YEAR) ||
+      pic != null);
+  useDirtyGuard(isDirty);
 
   async function submit() {
+    const nextErrors: typeof fieldErrors = {};
     if (!name.trim()) {
-      Alert.alert('Belum lengkap', 'Nama Goal wajib diisi.');
+      nextErrors.name = 'Nama Goal wajib diisi.';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError(null);
       return;
     }
+    setFieldErrors({});
     if (!YEAR_RE.test(goalYear)) {
-      Alert.alert('Tahun tidak valid', 'Isi tahun Goal 4 digit (mis. 2026).');
+      setFormError('Isi tahun Goal 4 digit (mis. 2026).');
       return;
     }
+    setFormError(null);
     const periodStart = `${goalYear}-01-01`;
     const periodEnd = `${goalYear}-12-31`;
     try {
@@ -44,6 +66,7 @@ export function LiveNewGoalScreen() {
         period_end: periodEnd,
         target_value: targetValue.trim() || null,
       });
+      setSubmitted(true);
       router.replace(`/goal/${created.id}` as Href);
     } catch (e) {
       alertFriendlyError('Gagal', e, 'Terjadi kesalahan.');
@@ -62,9 +85,13 @@ export function LiveNewGoalScreen() {
           <LabeledInput
             label="Nama Goal"
             value={name}
-            onChangeText={setName}
+            onChangeText={(t) => {
+              setName(t);
+              if (fieldErrors.name) setFieldErrors((e) => ({ ...e, name: undefined }));
+            }}
             required
             placeholder="mis. Tumbuhkan pendapatan"
+            error={fieldErrors.name}
           />
           <YearField label="Tahun Goal" value={goalYear} onChange={setGoalYear} required />
           <LabeledInput
@@ -82,6 +109,14 @@ export function LiveNewGoalScreen() {
           />
         </SectionCard>
 
+        {formError ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {formError}
+          </Text>
+        ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={isPending} />
       </View>
     </ScrollView>
