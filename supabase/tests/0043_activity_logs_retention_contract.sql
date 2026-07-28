@@ -61,12 +61,12 @@ declare fails text := '';
 begin
   -- Bila authenticated bisa memanggil purge, user API mana pun bisa menghapus
   -- audit trail lewat rpc.call — melanggar prinsip DEFINER-only mutation.
-  if has_function_privilege('authenticated', 'public.purge_old_activity_logs(int, int, date)', 'EXECUTE') then
+  if has_function_privilege('authenticated', 'public.purge_old_activity_logs(int, int, date, int)', 'EXECUTE') then
     fails := fails || 'authenticated_has_execute; ';
   end if;
 
   -- service_role WAJIB punya execute (dipanggil pg_cron sebagai role ini).
-  if not has_function_privilege('service_role', 'public.purge_old_activity_logs(int, int, date)', 'EXECUTE') then
+  if not has_function_privilege('service_role', 'public.purge_old_activity_logs(int, int, date, int)', 'EXECUTE') then
     fails := fails || 'service_role_missing_execute; ';
   end if;
 

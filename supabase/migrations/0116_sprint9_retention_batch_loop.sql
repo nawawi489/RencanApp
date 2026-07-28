@@ -37,6 +37,12 @@
 select cron.unschedule('purge-activity-logs')
 where exists (select 1 from cron.job where jobname = 'purge-activity-logs');
 
+-- Drop tanda tangan lama (3-arg) supaya penambahan `p_max_batches` tidak jadi
+-- overload — `create or replace` di PostgreSQL TIDAK menggantikan lintas
+-- signature, ia membuat overload baru. Overload akan bikin caller 3-arg
+-- lama (0043 contract test) mendapat "function is not unique".
+drop function if exists public.purge_old_activity_logs(int, int, date);
+
 create or replace function public.purge_old_activity_logs(
   p_retention_months int default 12,
   p_batch_size int default 10000,

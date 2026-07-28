@@ -42,6 +42,15 @@ begin
       set organization_id = excluded.organization_id,
           role_template_id = excluded.role_template_id;
 
+  -- Beri v_staff permission `view_all_workspace` supaya BASE clause `can_access_goal`
+  -- lolos (pic!=me, creator!=me, tak punya descendant). Tanpa ini, hasilnya selalu
+  -- false — tidak diskriminatif untuk klausa confidential yang ingin kita uji.
+  insert into public.user_permissions (user_id, permission_id, granted)
+    select v_staff, p.id, true
+    from public.permissions p
+    where p.key = 'view_all_workspace'
+    on conflict (user_id, permission_id) do update set granted = true;
+
   -- Goal confidential — pic bukan v_staff.
   insert into public.goals
     (organization_id, name, status, pic_id, created_by)
@@ -125,6 +134,12 @@ begin
       set organization_id = excluded.organization_id,
           role_template_id = excluded.role_template_id;
 
+  insert into public.user_permissions (user_id, permission_id, granted)
+    select v_staff, p.id, true
+    from public.permissions p
+    where p.key = 'view_all_workspace'
+    on conflict (user_id, permission_id) do update set granted = true;
+
   insert into public.goals
     (organization_id, name, status, pic_id, created_by)
     values (v_org, 'T9-4-2 goal parent', 'active', v_ceo, v_ceo)
@@ -193,6 +208,12 @@ begin
     on conflict (id) do update
       set organization_id = excluded.organization_id,
           role_template_id = excluded.role_template_id;
+
+  insert into public.user_permissions (user_id, permission_id, granted)
+    select v_staff, p.id, true
+    from public.permissions p
+    where p.key = 'view_all_workspace'
+    on conflict (user_id, permission_id) do update set granted = true;
 
   insert into public.goals (organization_id, name, status, pic_id, created_by)
     values (v_org, 'T9-4-3 goal', 'active', v_ceo, v_ceo)
