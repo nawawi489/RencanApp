@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-07-23
+updated: 2026-07-29
 ---
 
 # Rencanapp Wiki — Index
@@ -46,6 +46,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[tech-stack]] — Expo + Supabase + RLS; alasan tiap pilihan diturunkan dari PRD
 - [[ui-prototype-gap]] — Backlog UI ber-ID dari perbandingan `design.html` (46 layar) vs implementasi `mobile/`. Spec turunan pertama: `specs/inbox-chat-ui.md` (UI-S-IN1/IN2, dari sdd-plan 2026-06-26)
 - [[workspace-card-progress]] — Server rollup `workspace_card_progress` (orb capaian): evolusi 0037→0074 attainment→**0102 push-down**; gotcha view agregat tanpa filter meng-scan seluruh approved set tiap referensi; resep verifikasi ekuivalensi 0-mismatch
+- [[workspace-hub-orb]] — Hub-card lobby ganti orb % (ambigu vs capaian tree) → chip "N/M {parent} aktif"; empty state "Belum ada …"
 - [[workspace-lock-audit]] — Audit `mobile/` vs prototype final Workspace (spec lock V1.82 kini dihapus): 20 PASS · 7 PARTIAL · 8 FAIL dari 35 AC; temuan ber-ID WSA-01..20
 - [[workspace-lock-sprint-plan]] — Lima sprint eksekusi perbaikan temuan WSA: copy lock → guard/permission → anatomi tree card → overview/header/switcher → route & tree lengkap
 - [[write-idempotency-keys]] — IMPLEMENTED (migrasi 0103 + client layer, branch `feat/write-idempotency-keys`): client_request_id + partial unique index + 5 RPC `create_*_idempotent` (ON CONFLICT DO NOTHING) agar retry-manual user tak menduplikasi INSERT non-idempoten (goals/action_plans/tasks/initiatives/problem_statements + send_chat_message)

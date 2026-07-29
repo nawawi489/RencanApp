@@ -1,9 +1,11 @@
 // UI-N-002 Stage 2 — Hub-card lobby di tab Workspace. 2 instance (Performance + Development).
-// Komposisi: `?` help + orb % + 3-stat row + "Masuk →" button. Tap card area ATAU button → onEnter().
+// Komposisi: `?` help + chip status aktif + 3-stat row + "Masuk →" button. Tap card area ATAU
+// button → onEnter(). Lobby TIDAK menampilkan capaian numerik — chip cuma menghitung distribusi
+// Goal/Area berstatus `active`. Capaian nyata live di orb per-card di tree pane (RPC
+// `workspace_card_progress`). Lihat wiki/concepts/workspace-hub-orb.md.
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native-css/components';
 
-import { ProgressOrb } from '@/components/ui';
 import { useThemePreference } from '@/providers/theme-provider';
 import { WorkspaceHelpModal, type WorkspaceHelpContent } from '@/components/workspace-help-modal';
 import type { HubStats } from '@/lib/workspace-hub-stats';
@@ -47,8 +49,8 @@ export function WorkspaceHubCard({
   //   Performance biru #1877f2 / bg #f8fbff; Development teal #0f766e / bg #f7fffd.
   // Border-kiri kategori dipertahankan di kedua tema. Surface + border netral wajib
   // theme-aware: bg light terkunci spec HANYA berlaku di light mode; di dark mode surface
-  // ikut gelap agar teks `dark:` anak (judul/orb/stat) kontras AA (DESIGN.md §4 mengikat).
-  // `border`/`kickerBg` = fill non-teks (border kiri, progress line, chip) → boleh hue penuh.
+  // ikut gelap agar teks `dark:` anak (judul/stat) kontras AA (DESIGN.md §4 mengikat).
+  // `border`/`kickerBg` = fill non-teks (border kiri, chip status) → boleh hue penuh.
   // `cta` = fill tombol solid + teks putih → WAJIB lulus AA (DESIGN §4 rule 3): Performance
   // #1877f2 (3.6:1) diganti brand-dark #1564b3 (5.99:1); Development #0f766e sudah 4.8:1.
   const identity =
@@ -57,9 +59,17 @@ export function WorkspaceHubCard({
       : { border: '#0f766e', cta: '#0f766e', bg: '#f7fffd', kickerBg: '#e6fffb', kickerText: '#0f766e' };
   const surfaceBg = isDark ? '#0a0a0a' : identity.bg;
   const neutralBorder = isDark ? '#262626' : '#e5e7eb';
-  // Orb null (belum ada data) → tampilkan "—" tanpa angka misleading.
-  // orbPercent sudah 0–100 (workspace-hub-stats), ProgressOrb juga 0–100 — jangan dibagi lagi.
-  const orbValue = stats.orbPercent;
+  // Chip status: tampilkan berapa induk (Goal/Area) berstatus aktif dari total, BUKAN persen
+  // capaian. Konvensi orb bulat = progress dipakai untuk orb per-card tree (RPC benar-benar
+  // capaian). Chip di sini menghindari user salah baca angka besar sbg capaian.
+  const chipText =
+    stats.parentCount === 0
+      ? `Belum ada ${parentStatLabel}`
+      : `${stats.activeCount}/${stats.parentCount} ${parentStatLabel} aktif`;
+  const chipA11y =
+    stats.parentCount === 0
+      ? `Belum ada ${parentStatLabel}`
+      : `${stats.activeCount} dari ${stats.parentCount} ${parentStatLabel} aktif`;
 
   return (
     // Kartu = View (bukan Pressable) agar `?` dan `Masuk` tidak jadi button-di-dalam-button
@@ -106,13 +116,14 @@ export function WorkspaceHubCard({
             {meta}
           </Text>
         </View>
-        {orbValue == null ? (
-          <View className="h-[72px] w-[72px] items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800">
-            <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">—</Text>
-          </View>
-        ) : (
-          <ProgressOrb size={72} value={orbValue} sublabel="aktif" />
-        )}
+        <View
+          accessibilityRole="text"
+          accessibilityLabel={chipA11y}
+          style={{ alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: identity.kickerBg }}>
+          <Text style={{ color: identity.kickerText, fontSize: 12, fontWeight: '800' }}>
+            {chipText}
+          </Text>
+        </View>
       </View>
 
       <View className="flex-row gap-2">
@@ -121,12 +132,6 @@ export function WorkspaceHubCard({
         <HubStat label={activeStatLabel} value={String(stats.activeCount)} />
       </View>
 
-      {/* Progress line bawah + tombol Masuk nyata (spec §4.2 no.14 / §4.3 no.13).
-          Track theme-aware: tint terang kickerBg tepat di light (kontras dgn isian border),
-          tapi jadi garis "menyala" di card gelap → pakai neutral-800 di dark (DESIGN §12). */}
-      <View style={{ height: 3, borderRadius: 999, backgroundColor: isDark ? '#1f2937' : identity.kickerBg, marginTop: 4 }}>
-        <View style={{ height: 3, borderRadius: 999, width: `${Math.max(6, orbValue ?? 0)}%`, backgroundColor: identity.border }} />
-      </View>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${a11yEnter}: ${stats.parentCount} ${parentStatLabel}, ${stats.childCount} ${childStatLabel}`}
