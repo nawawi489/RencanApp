@@ -2732,3 +2732,17 @@ Sprint 9 pasca-rilis dari [audit produksi 2026-07-26](https://claude.ai/code/art
 **Pages updated**: `wiki/log.md` (entry ini). Wiki concepts/entities tak diubah — perubahan Sprint 9 adalah housekeeping test/retention/index, semantik model tetap.
 
 **Pelajaran durable**: (1) **Fixture single-metric menyembunyikan seluruh kelas bug** — bug rename 0099 (development_contribution) hanya muncul bila formula MEMUAT metrik itu, dan tak ada tes yang melakukannya. Setiap fungsi metrik butuh coverage minimal via formula multi-metrik + assert `metric_breakdown` values (bukan sekadar tidak throw). (2) **`gen:types` drift check di CI** menutup titik-buta "types berubah manual tapi migrasi tak berubah" (skenario yang sebelumnya hanya terdeteksi saat layar produksi menampilkan data putih). Step ini murni tambahan di job yang sudah `supabase start` — biaya nol tambahan. (3) **Regex atas `pg_get_functiondef` lolos untuk implementasi salah** — mention substring di komentar, cabang mati, atau gerbang terbalik semuanya match. Pola pengganti = panggil fungsi + assert baris hasil dari 2-3 aktor berbeda (positive + negative). (4) **Single-batch nightly purge tak pernah mengejar arrival rate** — loop internal `until batch < size` adalah bedah minimal yang menghilangkan seluruh kelas "backlog retention numpuk diam-diam". Cap `max_batches` menjaga statement timeout. (5) **Indeks trigram GIN case-sensitive lewat opclass** — `lower(col) LIKE` dan `col ILIKE` menghasilkan hasil identik tetapi planner memilih indeks berbeda; opclass `gin_trgm_ops` cocok dengan ILIKE, bukan `lower()`. (6) **RTL v14 `render()` mengembalikan Promise** — `screen.getByTestId` throw "render function has not been called" bila render tidak di-await, karena screen singleton hanya bind setelah promise resolve.
+
+## [2026-07-29] update | Hub-card orb → chip aktif
+
+- **Masalah**: `mobile/src/components/workspace-hub-card.tsx` menampilkan `ProgressOrb size={72}` yang nilainya `round(activeCount / parentCount × 100)` — persen "kepadatan aktivitas", bukan capaian target. Orb per-card di dalam tree memakai RPC `workspace_card_progress` yang benar-benar capaian. Dua orb visual identik + semantik beda di layar yang sama → user salah baca (kejadian nyata: orb hub 100 padahal semua Goal 0% capaian).
+- **Keputusan (Opsi 1, sesi sebelumnya)**: ganti simbol, bukan patch label, bukan samakan semantik ke RPC. Lobby tidak butuh capaian granular; distribusi status cukup untuk memutuskan "masuk ruang mana".
+- **Perubahan kode**:
+  - `mobile/src/components/workspace-hub-card.tsx`: hapus `ProgressOrb` + fallback "—" + progress line 3px. Ganti chip `{activeCount}/{parentCount} {parentStatLabel} aktif` (fallback `Belum ada {parent}` bila `parentCount === 0`) memakai `identity.kickerBg`/`identity.kickerText` (token existing, tidak buat token baru). `accessibilityRole="text"` + label natural "N dari M {parent} aktif".
+  - `mobile/src/lib/workspace-hub-stats.ts`: retire `ratioActive()` + field `HubStats.orbPercent`. Field lain (`parentCount`, `childCount`, `activeCount`) dipertahankan.
+- **Tes**:
+  - `mobile/src/components/__tests__/workspace-hub-card.test.tsx` ditulis ulang: 4 chip regresi (Performance/Development, empty state, no-orb-a11y). 4/4 pass.
+  - `mobile/src/app/(app)/(tabs)/__tests__/workspace.test.tsx` `[UI-N-002·6]` update: assert chip "Belum ada Goal"/"Belum ada Area" alih-alih dashes.
+  - `npm run type-check` bersih; `npm run lint` 0 errors (warnings pre-existing).
+- **Pages created**: `[[workspace-hub-orb]]`
+- **Pages updated**: `[[index]]`, `[[log]]`

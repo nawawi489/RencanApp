@@ -1416,11 +1416,11 @@ describe('WorkspaceScreen', () => {
       ).toBeTruthy();
     });
 
-    it('[UI-N-002·6] hub-card empty (0 Goal, 0 DevArea) → orb "—" + stats 0/0/0', async () => {
+    it('[UI-N-002·6] hub-card empty (0 Goal, 0 DevArea) → chip "Belum ada …" di ke-2 hub', async () => {
       await renderHub();
-      // Orb fallback "—" tampak di ke-2 hub.
-      const dashes = await screen.findAllByText('—');
-      expect(dashes.length).toBeGreaterThanOrEqual(2);
+      // 2026-07-29: orb % ditarik dari lobby (chip status ganti orb ambigu).
+      expect(await screen.findByText('Belum ada Goal')).toBeTruthy();
+      expect(screen.getByText('Belum ada Area')).toBeTruthy();
     });
 
     // WSA-05 — Help modal `?` di hub card: buka konten spec §5; TIDAK menavigasi (onEnter).
