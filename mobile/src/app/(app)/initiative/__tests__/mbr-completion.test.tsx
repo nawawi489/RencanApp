@@ -20,6 +20,7 @@ jest.mock('@/lib/initiatives', () => ({
 }));
 
 const mockRefetchInit = jest.fn();
+const mockProgressOf = jest.fn<number | null, [string]>(() => null);
 jest.mock('@/hooks/use-workspace', () => ({
   __esModule: true,
   useInitiativeActionPlans: () => ({
@@ -27,6 +28,12 @@ jest.mock('@/hooks/use-workspace', () => ({
     isLoading: false,
     isError: false,
     refetch: mockRefetchInit,
+  }),
+  useCardProgress: () => ({
+    progressOf: (id: string) => mockProgressOf(id),
+    measuredOf: () => false,
+    isLoading: false,
+    isError: false,
   }),
 }));
 
@@ -81,6 +88,8 @@ beforeEach(() => {
   mockRefetchInit.mockReset();
   mockGetInitiative.mockResolvedValue(DRAFT_STRATEGY);
   mockActivateInitiative.mockResolvedValue(undefined);
+  mockProgressOf.mockReset();
+  mockProgressOf.mockReturnValue(null);
   jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 });
 afterEach(() => {
@@ -125,6 +134,15 @@ describe('InitiativeDetailScreen — MBR', () => {
       expect(calls[0]?.[0]).toBe('Tidak Dapat Melanjutkan');
     });
     expect(mockActivateInitiative).not.toHaveBeenCalled();
+  });
+
+  it('[4] orb capaian pakai rollup rekursif server (Progress) bukan %-selesai klien', async () => {
+    // action_plans kosong → heuristik %-selesai = 0; RPC mengembalikan 67 (rata-rata rekursif).
+    // Orb harus tampilkan 67 dengan label "Progress" (sinkron tree), membuktikan wiring RPC.
+    mockUseMbrCompliance.mockReturnValue({ compliance: null, isLoading: false, isCompliant: true });
+    mockProgressOf.mockReturnValue(67);
+    await render(<InitiativeDetailScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText(/^Progress 67 persen/)).toBeTruthy();
   });
 
   it('[3] compliant → Aktifkan memanggil activateInitiative("s1")', async () => {

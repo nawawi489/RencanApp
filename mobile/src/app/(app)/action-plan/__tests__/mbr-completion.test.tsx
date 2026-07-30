@@ -36,6 +36,18 @@ jest.mock('@/hooks/use-mbr', () => ({
   useMbrCompliance: (...a: unknown[]) => mockUseMbrCompliance(...a),
 }));
 
+// Detail orb kini menarik rollup rekursif via useCardProgress; mock null → fallback heuristik.
+const mockProgressOf = jest.fn<number | null, [string]>(() => null);
+jest.mock('@/hooks/use-workspace', () => ({
+  __esModule: true,
+  useCardProgress: () => ({
+    progressOf: (id: string) => mockProgressOf(id),
+    measuredOf: () => false,
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -75,6 +87,8 @@ beforeEach(() => {
   mockGetActionPlan.mockResolvedValue(DRAFT_INITIATIVE);
   mockActivateActionPlan.mockResolvedValue(undefined);
   mockListTasks.mockResolvedValue([]);
+  mockProgressOf.mockReset();
+  mockProgressOf.mockReturnValue(null);
   jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 });
 afterEach(() => {
@@ -98,6 +112,14 @@ describe('ActionPlanDetailScreen — MBR', () => {
     await waitFor(() => expect(mockUseMbrCompliance).toHaveBeenCalledWith('action_plan', 'i1'));
     expect(await screen.findByLabelText('Kelengkapan Perencanaan')).toBeTruthy();
     expect(screen.getByText('1/3')).toBeTruthy();
+  });
+
+  it('[4] orb capaian pakai rollup rekursif server (Progress) bukan %-selesai klien', async () => {
+    // Tugas kosong → heuristik %-selesai = 0; RPC mengembalikan 67 (rata-rata rekursif Tugas).
+    mockUseMbrCompliance.mockReturnValue({ compliance: null, isLoading: false, isCompliant: true });
+    mockProgressOf.mockReturnValue(67);
+    await render(<ActionPlanDetailScreen />, { wrapper: wrapper() });
+    expect(await screen.findByLabelText(/^Progress 67 persen/)).toBeTruthy();
   });
 
   it('[2] blokir_aktivasi + non-compliant → popup & activate TIDAK dipanggil', async () => {

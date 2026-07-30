@@ -8,8 +8,9 @@ import { ActivityLogPanel } from '@/components/activity-log-panel';
 import { StatTile } from '@/components/stat-tile';
 import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionCard, SectionHeading, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
+import { useCardProgress } from '@/hooks/use-workspace';
 import { alertFriendlyError } from '@/lib/errors';
-import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
+import { childrenSublabel, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
   INITIATIVE_STATUS_LABEL,
@@ -207,6 +208,10 @@ export function LiveActionPlanDetailScreen() {
   // UI-S-I01 display: nama tim — query teams sekali, resolve via team_id.
   const teamsQ = useQuery({ queryKey: ['teams', { activeOnly: false }], queryFn: () => listTeams() });
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('action_plan', id);
+  // WSA-15 / Opsi B — orb capaian sinkron dengan tree Workspace: pakai rollup rekursif
+  // server (workspace_card_progress) = rata-rata progress Tugas anak, bukan heuristik
+  // %-selesai klien. Selama RPC belum termuat (null), fall back ke `ratioDoneOfChildren`.
+  const { progressOf } = useCardProgress([id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -272,8 +277,9 @@ export function LiveActionPlanDetailScreen() {
                 </View>
                 <ProgressOrb
                   size={72}
-                  value={ratioDoneOfChildren(plansQ.data ?? [])}
+                  value={progressOf(id) ?? ratioDoneOfChildren(plansQ.data ?? [])}
                   sublabel={childrenSublabel(plansQ.data ?? [])}
+                  label={treeOrbLabel('action_plan')}
                 />
               </View>
               <MetaGrid
