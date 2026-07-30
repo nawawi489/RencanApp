@@ -25,6 +25,7 @@ import {
   SectionCard,
   SkeletonList,
   TreeProgressOrb,
+  type Tone,
 } from '@/components/ui';
 import { PeriodSwitcher } from '@/components/period-switcher';
 import {
@@ -53,6 +54,7 @@ import { PLANNING_STATUS_LABEL, kpiCountOf, type GoalWithKpiCount } from '@/lib/
 import {
   ACTION_PLAN_STATUS_LABEL,
   INITIATIVE_STATUS_LABEL,
+  STATUS_TONE,
   type TaskWithPeople,
   type ActionPlan,
 } from '@/lib/cards';
@@ -263,19 +265,47 @@ function TreeCardBody({
   );
 }
 
+/**
+ * Baris pill header untuk kartu tree: [jenis card] [periode] (+ [status] bila non-Aktif).
+ * Status card ("Draft", "Selesai", "Diarsipkan", dst.) dirender sbg badge ketiga agar terlihat
+ * jelas di scan visual dan tidak bentrok makna dgn kata "Aktif"/periode di baris meta.
+ * "Aktif" implisit — tak dirender sbg badge (mengurangi noise; default paling umum).
+ */
 function CompactHeaderPills({
   kind,
   periodLabel,
+  statusLabel,
+  statusTone,
+  cardLabel,
 }: {
   kind: WorkspaceKind;
   periodLabel: string;
+  /** Label status siklus-hidup (mis. "Draft", "Selesai", "Diarsipkan"). Kosongkan bila status = 'active'. */
+  statusLabel?: string;
+  statusTone?: Tone;
+  /** Nama kartu — dipakai utk a11y label badge status agar screen reader menyebut konteksnya. */
+  cardLabel?: string;
 }) {
   return (
     <View className="flex-row flex-wrap items-center gap-1.5">
       <WorkspaceKindPill kind={kind} />
       <Badge label={periodLabel} tone="neutral" />
+      {statusLabel ? (
+        <View
+          accessibilityRole="text"
+          accessibilityLabel={cardLabel ? `Status ${cardLabel}: ${statusLabel}` : `Status: ${statusLabel}`}>
+          <Badge label={statusLabel} tone={statusTone ?? 'neutral'} />
+        </View>
+      ) : null}
     </View>
   );
+}
+
+/** Bantu render badge status hanya utk status non-Aktif (active implisit → tak render badge). */
+function statusPillProps(status: string): { statusLabel?: string; statusTone?: Tone } {
+  if (!status || status === 'active') return {};
+  const label = TREE_STATUS_LABEL[status] ?? status;
+  return { statusLabel: label, statusTone: STATUS_TONE[status] ?? 'neutral' };
 }
 
 function TreeToggleButton({
@@ -528,10 +558,10 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
   const periodLabel = treePeriodPillLabel(initiative, focus);
   const metaLines = WS_TREE_COMPACT_COPY.initiativeMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[initiative.status] ?? initiative.status,
     contribution: initiative.contribution_pct == null ? null : `${initiative.contribution_pct}%`,
     risk: initiative.main_risk,
   });
+  const initiativeStatusPill = statusPillProps(initiative.status);
   // WSA-04 — guard MBR: fail-open saat data belum ada (undefined); hanya mode blokir_akses_turunan
   // yang menahan tombol (BL-04 — sebelumnya mode apa pun ikut menahan asal non-compliant).
   const mbrGuarded = isMbrCascadeBlocked(parentCompliance);
@@ -573,7 +603,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.initiative }}>
           <TreeCardBody cardLabel={initiative.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
-              <CompactHeaderPills kind="initiative" periodLabel={periodLabel} />
+              <CompactHeaderPills kind="initiative" periodLabel={periodLabel} cardLabel={initiative.name} {...initiativeStatusPill} />
               <Text
                 className="text-sm font-medium text-black dark:text-white"
                 numberOfLines={2}
@@ -674,10 +704,10 @@ const StrategySubRow = memo(function StrategySubRow({
   const periodLabel = treePeriodPillLabel(kpi, focus);
   const metaLines = WS_TREE_COMPACT_COPY.kpiMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[kpi.status] ?? kpi.status,
     target: kpi.target,
     outcome: kpi.expected_outcome,
   });
+  const kpiStatusPill = statusPillProps(kpi.status);
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -717,7 +747,7 @@ const StrategySubRow = memo(function StrategySubRow({
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.strategy }}>
           <TreeCardBody cardLabel={kpi.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
-              <CompactHeaderPills kind="strategy" periodLabel={periodLabel} />
+              <CompactHeaderPills kind="strategy" periodLabel={periodLabel} cardLabel={kpi.name} {...kpiStatusPill} />
               <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>
                 {kpi.name}
               </Text>
@@ -810,11 +840,11 @@ const GoalRow = memo(function GoalRow({
   const periodLabel = treePeriodPillLabel(goal, focus);
   const metaLines = WS_TREE_COMPACT_COPY.goalMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[goal.status] ?? goal.status,
     // Kolom tabel `goals` bernama `target_value` (bukan `target_result` — itu milik `action_plans`).
     // Referensi lama menghasilkan `undefined` → target Goal tak pernah tampil di tree meta.
     target: goal.target_value,
   });
+  const goalStatusPill = statusPillProps(goal.status);
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -837,7 +867,7 @@ const GoalRow = memo(function GoalRow({
           <SectionCard>
             <TreeCardBody cardLabel={goal.name} onPress={openDetail} overlayRightInset={52}>
               <View className="flex-1 gap-1.5">
-                <CompactHeaderPills kind="goal" periodLabel={periodLabel} />
+                <CompactHeaderPills kind="goal" periodLabel={periodLabel} cardLabel={goal.name} {...goalStatusPill} />
                 <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>{goal.name}</Text>
                 <CompactMeta lines={metaLines} />
               </View>
@@ -925,10 +955,10 @@ const TaskSubRow = memo(function TaskSubRow({
   const periodLabel = treePeriodPillLabel(item, focus);
   const metaLines = WS_TREE_COMPACT_COPY.taskMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[item.status] ?? item.status,
     deadline: compactDate(item.deadline ?? item.start_date),
     reviewer: item.reviewer?.full_name,
   });
+  const taskStatusPill = statusPillProps(item.status);
   // WSA-15 — orb AP leaf dihitung KLIEN (bukan RPC): status-based (one_time) via progress.ts.
   // Repeat AP butuh Repeat Compliance yg tak ter-fetch di baris ini → null → '—' (bukan 0% palsu).
   const orbValue = taskTreeProgress({ status: item.status, repeatSetting: item.repeat_setting });
@@ -946,7 +976,7 @@ const TaskSubRow = memo(function TaskSubRow({
         style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.task, marginLeft: TREE_LEVEL_INDENT[level] }}>
         <TreeCardBody cardLabel={item.name} onPress={openDetail}>
           <View className="flex-1 gap-1.5">
-            <CompactHeaderPills kind="task" periodLabel={periodLabel} />
+            <CompactHeaderPills kind="task" periodLabel={periodLabel} cardLabel={item.name} {...taskStatusPill} />
             <Text
               className="text-sm font-medium text-black dark:text-white"
               numberOfLines={2}
@@ -1005,9 +1035,9 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
   const periodLabel = treePeriodPillLabel(item, focus);
   const metaLines = WS_TREE_COMPACT_COPY.actionPlanMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[item.status] ?? item.status,
     target: item.target_result,
   });
+  const actionPlanStatusPill = statusPillProps(item.status);
   const childLevel = (level + 1) as 4 | 5;
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
@@ -1048,7 +1078,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.action_plan }}>
           <TreeCardBody cardLabel={item.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
-              <CompactHeaderPills kind="action_plan" periodLabel={periodLabel} />
+              <CompactHeaderPills kind="action_plan" periodLabel={periodLabel} cardLabel={item.name} {...actionPlanStatusPill} />
               <Text
                 className="text-sm font-medium text-black dark:text-white"
                 numberOfLines={2}
@@ -1140,10 +1170,10 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
   const periodLabel = treePeriodPillLabel(ps, focus);
   const metaLines = WS_TREE_COMPACT_COPY.problemStatementMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[ps.status] ?? ps.status,
     impact: ps.impact,
     evidence: ps.initial_evidence,
   });
+  const psStatusPill = statusPillProps(ps.status);
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -1183,7 +1213,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
           style={{ borderLeftWidth: 5, borderLeftColor: WORKSPACE_KIND_BORDER.problem_statement }}>
           <TreeCardBody cardLabel={ps.name} onPress={openDetail} overlayRightInset={52}>
             <View className="flex-1 gap-1.5">
-              <CompactHeaderPills kind="problem_statement" periodLabel={periodLabel} />
+              <CompactHeaderPills kind="problem_statement" periodLabel={periodLabel} cardLabel={ps.name} {...psStatusPill} />
               <Text className="text-sm font-medium text-black dark:text-white" numberOfLines={2}>{ps.name}</Text>
               <CompactMeta lines={metaLines} />
             </View>
@@ -1280,8 +1310,8 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
   const periodLabel = treePeriodPillLabel(devArea, focus);
   const metaLines = WS_TREE_COMPACT_COPY.developmentAreaMeta({
     past,
-    statusLabel: TREE_STATUS_LABEL[devArea.status] ?? devArea.status,
   });
+  const devAreaStatusPill = statusPillProps(devArea.status);
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -1305,7 +1335,7 @@ const DevelopmentAreaRow = memo(function DevelopmentAreaRow({
           <SectionCard>
             <TreeCardBody cardLabel={devArea.name} onPress={openDetail} overlayRightInset={52}>
               <View className="flex-1 gap-1.5">
-                <CompactHeaderPills kind="development_area" periodLabel={periodLabel} />
+                <CompactHeaderPills kind="development_area" periodLabel={periodLabel} cardLabel={devArea.name} {...devAreaStatusPill} />
                 <Text className="text-base font-semibold text-black dark:text-white" numberOfLines={2}>
                   {devArea.name}
                 </Text>

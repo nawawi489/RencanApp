@@ -2746,3 +2746,14 @@ Sprint 9 pasca-rilis dari [audit produksi 2026-07-26](https://claude.ai/code/art
   - `npm run type-check` bersih; `npm run lint` 0 errors (warnings pre-existing).
 - **Pages created**: `[[workspace-hub-orb]]`
 - **Pages updated**: `[[index]]`, `[[log]]`
+
+## [2026-07-30] update | Status card tree Workspace jadi badge eksplisit
+
+- **Bug**: Goal berstatus DB `draft` menampilkan "Aktif · Target …" di baris meta tree Workspace. Kata "Aktif" itu output `WS_TREE_COMPACT_COPY.periodState(past)` (`mobile/src/lib/workspace-copy.ts:30`) — artinya "periode belum lewat", BUKAN status siklus-hidup card. Pola bentrok makna yang sama dengan bug orb hub-card yang ditutup PR #226 (lihat [[workspace-hub-orb]]).
+- **Cakupan**: seluruh 7 meta function (`goalMeta`/`kpiMeta`/`initiativeMeta`/`actionPlanMeta`/`taskMeta`/`developmentAreaMeta`/`problemStatementMeta`) menerima `statusLabel` dari caller tapi tidak satupun yang menampilkannya — parameter mati sejak awal. Caller di `mobile/src/screens/workspace-screen.tsx` menghitung `TREE_STATUS_LABEL[card.status]` benar tapi drop di terima.
+- **Fix**: (1) `CompactHeaderPills` (`workspace-screen.tsx`) diperluas dengan prop opsional `statusLabel` + `statusTone` — merender badge status ketiga jajar dengan pill jenis card + badge periode. `active` → tak render (implisit, mengurangi noise); non-`active` selalu tampil dengan tone dari `STATUS_TONE` (`mobile/src/lib/cards.ts`). Helper `statusPillProps(status)` dipakai 7 caller. Badge dibungkus `<View accessibilityRole="text" accessibilityLabel="Status <nama>: <label>">` — screen reader menyebut konteks card.
+- **Rename**: `WS_TREE_COMPACT_COPY.periodState(false)` diubah dari `'Aktif'` → `'Periode berjalan'`. Menutup akar kebingungan sekalipun status pindah ke pill row — pembaca yang cuma memindai meta line tak salah lagi.
+- **Cleanup**: parameter `statusLabel` dihapus dari signature 7 meta function; JSDoc di `periodState` menjelaskan alasan rename.
+- **Verifikasi**: `npm run type-check` exit 0; `npm run lint` 0 error (76 warning baseline pra-sprint); jest kolokasi `workspace.test|workspace-copy` 132/132 hijau — test `[S1-2]`/`[S1-3]`/`[W08·*]` yang mengunci `/Periode lewat/` tetap lulus (bukan `/Aktif/`).
+- **Pages updated**: [[card-model]] (sub-bagian baru "Status card di tree Workspace"), `[[log]]` (entry ini).
+- **Pelajaran durable**: parameter yang diterima tapi tak dirender di UI = kontrak diam-diam bocor; grep TOKEN telanjang (`statusLabel:`) menemukan 7 call site dalam sekali sapu. Rename `'Aktif'` → `'Periode berjalan'` di *sumber* label (bukan sekadar tambah badge) memutus akar bentrok makna, meski cost-nya menyentuh test yang mengunci literal — untungnya assertion tes memakai regex `/Periode lewat/` (bukan `/Aktif/`), jadi selamat.

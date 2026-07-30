@@ -1,7 +1,7 @@
 ---
 type: entity
 tags: [card, hierarchy, core]
-updated: 2026-06-22
+updated: 2026-07-30
 sources: 2
 ---
 
@@ -43,5 +43,17 @@ Card turunan **selalu dibuat dari dalam induknya**, bukan memilih induk dari dro
 ## Guardrail
 
 **Tidak ada bobot pada planning card.** Status card: Draft, Aktif, Selesai, Diarsipkan. Diarsipkan ≠ dihapus.
+
+## Status card di tree Workspace
+
+Di baris pill kartu tree Workspace, status siklus-hidup card dirender sebagai badge terpisah — jajar dengan pill jenis card (Goal/Strategi/…) dan badge periode. Aturan render:
+
+- **Aktif → implisit** (tak ada badge). Default paling umum; mengurangi noise visual.
+- **Draft / Selesai / Diarsipkan** → badge eksplisit dengan warna semantik (`STATUS_TONE`): Draft netral (abu), Selesai `success` (hijau), Diarsipkan netral.
+- **Task** (status Ditugaskan/Dikerjakan/Menunggu Review/Revisi Diperlukan/Selesai/Diarsipkan) → selalu ditampilkan; enum tidak mengandung "Aktif" sehingga semua nilai membawa informasi.
+
+Ini menutup makna ganda antara status card ("Aktif" siklus-hidup) dan periode berjalan. Label meta-row `periodState` juga diganti dari "Aktif" → "Periode berjalan" agar pembaca yang hanya membaca meta tak salah paham. Pola yang sama dipakai fix orb hub-card lobby (chip status ganti angka % ambigu — lihat [[workspace-hub-orb]] / PR #226).
+
+Implementasi: `mobile/src/screens/workspace-screen.tsx` `CompactHeaderPills` (`statusLabel` + `statusTone` prop), `mobile/src/lib/workspace-copy.ts` `WS_TREE_COMPACT_COPY.periodState`.
 
 Berkaitan dengan: [[workspace]], [[action-plan]], [[execution-loop]], [[minimum-breakdown-rule]], [[permission-model]].
