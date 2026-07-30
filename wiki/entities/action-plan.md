@@ -47,6 +47,7 @@ Task Repeat menghasilkan **Task Instance** terjadwal (dulu "Action Plan Instance
 - **Progress** = seberapa jauh berjalan (One Time ikut status; Repeat = instance selesai / total, mis. 15/30).
 - **Capaian** = apakah hasil tercapai. EMS **wajib membedakan** Progress vs Capaian (bisa selesai tapi belum tercapai).
 - **Repeat Compliance** = instance selesai tepat waktu ÷ total seharusnya. Dipakai di [[surfaces#People|People]] & [[score-formula]].
+- **Progress kartu (orb) Rencana Aksi & Inisiatif** = sejak migrasi 0118 (Opsi B) = **rata-rata tak berbobot** progress anak (AP = rata-rata Tugas; Inisiatif = rata-rata AP), bukan `%-anak-done`. Repeat Compliance di sini all-time tanpa gerbang `submitted_late`. Detail rollup + isolasi level di [[workspace-card-progress]].
 
 Berkaitan dengan: [[card-model]], [[execution-loop]], [[score-formula]].
 

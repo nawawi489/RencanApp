@@ -9,9 +9,9 @@ import { DetailChildRow } from '@/components/detail-child-row';
 import { DetailField } from '@/components/detail-field';
 import { Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, SectionHeading, SkeletonList } from '@/components/ui';
 import { useMbrCompliance } from '@/hooks/use-mbr';
-import { useInitiativeActionPlans } from '@/hooks/use-workspace';
+import { useCardProgress, useInitiativeActionPlans } from '@/hooks/use-workspace';
 import { INITIATIVE_STATUS_LABEL } from '@/lib/cards';
-import { childrenSublabel, ratioDoneOfChildren } from '@/lib/progress';
+import { childrenSublabel, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
 import { PLANNING_STATUS_LABEL, STATUS_TONE, activateInitiative, getInitiative } from '@/lib/initiatives';
 import { guardActivationFields } from '@/lib/activation-check';
 import { alertFriendlyError } from '@/lib/errors';
@@ -31,6 +31,11 @@ export function LiveInitiativeDetailScreen() {
     refetch: refetchActionPlans,
   } = useInitiativeActionPlans(id);
   const { compliance, refetch: refetchCompliance } = useMbrCompliance('initiative', id);
+  // WSA-15 / Opsi B — orb capaian sinkron dengan tree Workspace: pakai rollup rekursif
+  // server (workspace_card_progress) = rata-rata progress Rencana Aksi anak, bukan
+  // heuristik %-selesai klien. Selama RPC belum termuat (null), fall back ke
+  // `ratioDoneOfChildren` agar orb tetap render angka wajar (bukan '—').
+  const { progressOf } = useCardProgress([id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,8 +97,9 @@ export function LiveInitiativeDetailScreen() {
                 </View>
                 <ProgressOrb
                   size={72}
-                  value={ratioDoneOfChildren(action_plans)}
+                  value={progressOf(id) ?? ratioDoneOfChildren(action_plans)}
                   sublabel={childrenSublabel(action_plans)}
+                  label={treeOrbLabel('initiative')}
                 />
               </View>
               <MetaGrid

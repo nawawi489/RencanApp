@@ -1,7 +1,7 @@
 ---
 type: concept
-tags: [database, performance, workspace, progress, attainment, rpc, migration-0102]
-updated: 2026-07-25
+tags: [database, performance, workspace, progress, attainment, rpc, migration-0102, migration-0118, recursive-rollup]
+updated: 2026-07-30
 sources: 0
 ---
 
@@ -14,6 +14,7 @@ sources: 0
 - **0037** (WSA-15, V1.82): rollup awal `% anak langsung berstatus done`.
 - **0070 / 0074** (attainment-aware v2): tambah kolom `is_measured`. Cabang **Goal** = rata-rata `clamp(0..100)` capaian per Strategy terukur (status `active`/`done`, `target_numeric > 0`); cabang **Strategy** = capaian sendiri vs target; fallback ke status-rollup saat tak ada sinyal terukur (`is_measured=false`).
 - **0102** (push-down perf, [PR #192](https://github.com/nawawi489/RencanApp/pull/192)): filter `strategy_id` didorong ke agregat current-values. **Nol perubahan output.**
+- **0118** (rollup rekursif Initiative & Action Plan / "Opsi B", [PR #228](https://github.com/nawawi489/RencanApp/pull/228)): level **Action Plan** dan **Initiative** beralih dari `%-anak-done` ke **rata-rata tak berbobot progress anak**. Level lain (Goal/Strategy attainment, Problem Statement, Development Area) tak berubah.
 
 ## Masalah perf (pra-0102)
 
@@ -39,6 +40,23 @@ strategies WHERE id = ANY(p_card_ids) OR goal_id = ANY(p_card_ids)
 Set ini adalah **superset persis** dari `strategy_id` yang bisa dicocokkan `scv.strategy_id = st.id` (cabang Strategy: `st.id ∈ ids`; cabang Goal: `st.goal_id ∈ ids`). Menyaring input agregat by `strategy_id` tidak mengubah `sum` strategi mana pun yang dipertahankan, dan setiap strategi yang di-join dipertahankan → output byte-for-byte identik. Scan terbatas dilayani indeks parsial `idx_task_result_values_strategy` (`btree(strategy_id) WHERE strategy_id IS NOT NULL`).
 
 View `strategy_current_values` **tidak diubah** (caller lain bergantung padanya) — push-down hanya hidup di dalam fungsi. `CREATE OR REPLACE` (tanpa `DROP`) → ACL & return shape terjaga; grant di-reassert eksplisit (`authenticated`).
+
+## Rollup rekursif Initiative & Action Plan (Opsi B, 0118)
+
+Sebelum 0118, Action Plan (AP) dan Initiative dirollup lewat cabang status (`round(100 * anak_done / total_anak)`) — menjawab "berapa anak selesai", bukan "seberapa jauh pekerjaan berjalan". Sebuah AP dengan Tugas 50%/80% tetap terbaca 0% sampai tiap Tugas jadi `done`. Opsi B mengganti kedua level itu dengan **rata-rata tak berbobot progress anak**, mencerminkan heuristik klien di `mobile/src/lib/progress.ts` (satu sumber kebenaran mapping status→progress — RPC harus meniru, bukan menyimpang):
+
+- **Leaf Tugas** (`task_progress`): `one_time` → mapping status (`draft`/`archived`/`cancelled`/tak dikenal `0`, `assigned 10`, `revision 30`, `in_progress 50`, `submitted 80`, `done 100`); `repeat` → **Repeat Compliance** = `round(100 * done / total)` atas **task_instances non-archived** (all-time; **tanpa** gerbang `submitted_late`, **tanpa** period-scoping — beda dari ekspresi skor 0100). Tanpa instance → `0`.
+- **Action Plan** (`ap_progress`) = `avg(coalesce(task,0))` atas Tugas non-archived; AP tanpa Tugas → `0`.
+- **Initiative** (`initiative_progress`) = `avg(ap_progress)` atas AP non-archived; Initiative tanpa AP → `0`.
+- **Presisi (OQ-3)**: progress dibawa `numeric` presisi penuh antar level; `round()` **hanya** di batas output (`round(coalesce(m, ip, app, sr, 0))::int`). Rata-rata tak berbobot, **bukan** `sum(done)/sum(all)`.
+
+**Isolasi (kritis).** Hanya pid Initiative/AP yang beralih ke rata-rata rekursif. Node type `action_plans` dirollup **berbeda tergantung induk**: saat **Initiative** bertanya → rata-rata rekursif; saat **Problem Statement** bertanya → tetap `%-AP-done` (count-done). Development Area (→ Problem Statement) dan Goal/Strategy attainment juga tak tersentuh. `is_measured` tetap `true` **hanya** untuk attainment — progress rekursif AP/Initiative `is_measured=false`.
+
+**Confidential aman (SECURITY INVOKER).** Fungsi tetap invoker: RLS `task_instances`/`task_submissions` (gerbang `can_access_task`) berlaku per pemanggil, jadi instance rahasia yang tak boleh dilihat **tak bocor** ke rata-rata — dua pemanggil beda visibilitas melihat agregat parsial berbeda (bukan angka penuh). `tasks_select` sendiri workspace-wide, jadi kebocoran hanya mungkin di level instance (Tugas repeat) — itulah yang diuji.
+
+`CREATE OR REPLACE` (tanpa `DROP`), **return shape & signature tak berubah** → `database.types.ts` byte-identik (gate drift CI hijau), ACL di-reassert (`authenticated`; `PUBLIC`/`anon` revoke). Cabang attainment (Goal/Strategy) + `scv`/`relevant_strategies`/`status_rollup` disalin **byte-for-byte** dari 0102. Kontrak: `supabase/tests/0118_recursive_rollup_contract.sql` (14 blok, termasuk attainment byte-for-byte & kebocoran confidential level-instance).
+
+Klien: header detail **Inisiatif** & **Rencana Aksi** (`initiative/[id].tsx`, `action-plan/[id].tsx`) kini menarik angka orb dari RPC ini via `useCardProgress` agar sinkron dengan orb tree — bukan lagi heuristik `ratioDoneOfChildren` klien.
 
 ## Gotcha durable
 
