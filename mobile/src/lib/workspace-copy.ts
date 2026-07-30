@@ -27,7 +27,10 @@ function compactJoin(parts: Array<string | null | undefined>) {
 }
 
 export const WS_TREE_COMPACT_COPY = {
-  periodState: (past: boolean) => (past ? 'Periode lewat' : 'Aktif'),
+  // "Aktif" dulu ambigu dgn status siklus-hidup card (draft/active/done/archived) — pembaca meta
+  // membacanya sbg "status card = Aktif" padahal ini soal PERIODE. Status card pindah ke badge di
+  // baris pill (lihat workspace-screen.tsx CompactHeaderPills), meta-row cukup soal periode.
+  periodState: (past: boolean) => (past ? 'Periode lewat' : 'Periode berjalan'),
   target: (value: string | null | undefined) => `Target ${compactValue(value)}`,
   outcome: (value: string | null | undefined) => `Hasil ${compactValue(value)}`,
   risk: (value: string | null | undefined) => `Risiko ${compactValue(value)}`,
@@ -40,23 +43,19 @@ export const WS_TREE_COMPACT_COPY = {
     count == null ? `${label} belum dihitung` : count === 0 ? `Butuh 1 ${label}` : `${count} ${label}`,
   goalMeta: ({
     past,
-    statusLabel,
     target,
   }: {
     past: boolean;
-    statusLabel?: string | null | undefined;
     target?: string | null | undefined;
   }) => [
     compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.target(target)]),
   ],
   kpiMeta: ({
     past,
-    statusLabel,
     target,
     outcome,
   }: {
     past: boolean;
-    statusLabel?: string | null | undefined;
     target?: string | null | undefined;
     outcome?: string | null | undefined;
   }) => [
@@ -65,12 +64,10 @@ export const WS_TREE_COMPACT_COPY = {
   ],
   initiativeMeta: ({
     past,
-    statusLabel,
     contribution,
     risk,
   }: {
     past: boolean;
-    statusLabel?: string | null | undefined;
     contribution?: string | null | undefined;
     risk?: string | null | undefined;
   }) => [
@@ -82,11 +79,9 @@ export const WS_TREE_COMPACT_COPY = {
   ],
   actionPlanMeta: ({
     past,
-    statusLabel,
     target,
   }: {
     past: boolean;
-    statusLabel?: string | null | undefined;
     target?: string | null | undefined;
   }) => [
     compactJoin([WS_TREE_COMPACT_COPY.periodState(past), WS_TREE_COMPACT_COPY.target(target)]),
@@ -94,12 +89,10 @@ export const WS_TREE_COMPACT_COPY = {
   ],
   taskMeta: ({
     past,
-    statusLabel,
     deadline,
     reviewer,
   }: {
     past: boolean;
-    statusLabel?: string | null | undefined;
     deadline?: string | null | undefined;
     reviewer?: string | null | undefined;
   }) => [
@@ -108,21 +101,17 @@ export const WS_TREE_COMPACT_COPY = {
   ],
   developmentAreaMeta: ({
     past,
-    statusLabel,
   }: {
     past: boolean;
-    statusLabel?: string | null | undefined;
   }) => [
     WS_TREE_COMPACT_COPY.periodState(past),
   ],
   problemStatementMeta: ({
     past,
-    statusLabel,
     impact,
     evidence,
   }: {
     past: boolean;
-    statusLabel?: string | null | undefined;
     impact?: string | null | undefined;
     evidence?: string | null | undefined;
   }) => [
