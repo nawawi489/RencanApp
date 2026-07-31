@@ -1,7 +1,7 @@
 ---
 type: concept
-tags: [database, performance, workspace, progress, attainment, rpc, migration-0102, migration-0118, recursive-rollup]
-updated: 2026-07-30
+tags: [database, performance, workspace, progress, attainment, rpc, migration-0102, migration-0118, recursive-rollup, benchmark]
+updated: 2026-07-31
 sources: 0
 ---
 
@@ -57,6 +57,33 @@ Sebelum 0118, Action Plan (AP) dan Initiative dirollup lewat cabang status (`rou
 `CREATE OR REPLACE` (tanpa `DROP`), **return shape & signature tak berubah** → `database.types.ts` byte-identik (gate drift CI hijau), ACL di-reassert (`authenticated`; `PUBLIC`/`anon` revoke). Cabang attainment (Goal/Strategy) + `scv`/`relevant_strategies`/`status_rollup` disalin **byte-for-byte** dari 0102. Kontrak: `supabase/tests/0118_recursive_rollup_contract.sql` (14 blok, termasuk attainment byte-for-byte & kebocoran confidential level-instance).
 
 Klien: header detail **Inisiatif** & **Rencana Aksi** (`initiative/[id].tsx`, `action-plan/[id].tsx`) kini menarik angka orb dari RPC ini via `useCardProgress` agar sinkron dengan orb tree — bukan lagi heuristik `ratioDoneOfChildren` klien.
+
+### Benchmark (0118 vs 0102)
+
+`scripts/ops/benchmark-workspace-card-progress-0118.sql` — seed org disposable (~210 initiative, ~1.6K AP, ~12K task, ~48K instance), timing kedua badan fungsi (0118 rekursif vs 0102 count-done) pada data IDENTIK, batch size digrounding dari pemanggilan nyata `use-workspace.ts` (Initiative/AP selalu "anak satu parent expanded" — kecil; hanya Goal/Development-Area yang fetch flat org-wide, level itu tak tersentuh 0118).
+
+**Hasil ringkas (5 iterasi, median dari 4 sampel non-warm-up per skenario):**
+
+| Skenario | batch | 0118 (median) | 0102 (median) | Rasio |
+|---|---|---|---|---|
+| 1 initiative / 1 AP tipikal | 1 | ~640 ms | ~280 ms | 2.3x |
+| initiative 1 Strategy | 30 | ~470 ms | ~440 ms | 1.1x |
+| AP 1 initiative | 50 | ~600 ms | ~600 ms | 1.0x |
+| **semua initiative org (stress)** | 210 | 2.1 s | 2.2 s | 0.95x |
+| **semua AP org (stress)** | 1573 | **~100 s** | **~14 s** | **~7x** |
+
+**Interpretasi jujur — bacaan mixed:**
+
+- Semua skenario "batch UI nyata" (single card, satu Strategy expanded, satu Initiative expanded) berada di rentang wajar untuk rollup server (600 ms atau lebih baik). Detail-page dan tree yang di-batching per parent expanded tidak terpengaruh regresi.
+- Stress case "semua AP org sekaligus" (1573 AP dalam satu call) **sekitar 7x lebih lambat** di bawah 0118 dibanding 0102 dan tidak stabil (variance tinggi antar-run pada data identik). `EXPLAIN` internal (via `WITH … AS MATERIALIZED` probe atas badan CTE langsung) menunjukkan 97% runtime dihabiskan `Index Scan using idx_task_instances_task on task_instances` dengan filter `can_access_task(task_id)` — RLS SECURITY DEFINER dipanggil per baris instance (45K+ evaluasi). 0102 tak pernah menyentuh `task_instances`, jadi tak membayar biaya ini.
+- **Pemanggilan klien saat ini tidak pernah mengirim batch sebesar ini** — `useCardProgress` di `mobile/src/hooks/use-workspace.ts` selalu "children of one expanded parent" (single/low-double-digit). Jadi regresi stress-case bukan degradasi UX yang teramati, tapi **latent risk** kalau UI di masa depan pernah mem-batch flat org-wide untuk Initiative/AP.
+- Percobaan mitigasi (`WITH … AS MATERIALIZED` pada `relevant_ap`/`task_progress`/`ap_progress`/`initiative_progress`) **tidak menurunkan waktu stress case** — implying planner sudah memilih materialization, atau `can_access_task` per-instance memang bottleneck yang materialization tak sembunyikan. Optimasi lebih dalam (misal: guard visibility di level AP dulu, atau ambil `task_id` set ter-authorize dalam satu pass) memerlukan investigasi terpisah — bukan blocker rilis, di-defer.
+
+> [!warning] Timing tepat setelah bulk-seed tanpa `ANALYZE` bisa memberi hasil SANGAT berbeda (bukan sekadar noise)
+> Sebuah run intermediate benchmark ini (tanpa `ANALYZE` eksplisit sebelum timing) melaporkan angka SANGAT lebih rendah dari yang direplikasi berulang setelahnya — sempat memicu kesimpulan sementara "tidak ada regresi". Bila di-`ANALYZE` sebelum timing DAN diulang beberapa run, angka konsisten dengan tabel di atas. Pelajaran: (a) `ANALYZE` sebelum timing tepat pasca bulk-insert non-negotiable, (b) satu run hijau ≠ tidak ada regresi — reproduksi wajib.
+
+> [!warning] Kejutan **hand-typed function body** di ops script
+> Fungsi `LANGUAGE SQL` menyimpan komentar sebagai bagian `prosrc` (bukan cuma didokumentasi). Hand-copied "restore body" yang menghilangkan komentar akan hash BEDA dari file migrasi walau logic-nya identik. Ops script `scripts/ops/benchmark-workspace-card-progress-0118.sql` restore lewat body byte-exact dari migrasi + integrity check `raise exception` bila hash tak cocok — kalau gagal, restore dari file migrasi otoritatif (`supabase/migrations/0118_….sql`), jangan diedit tangan.
 
 ## Gotcha durable
 
