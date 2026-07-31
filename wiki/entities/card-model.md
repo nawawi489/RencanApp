@@ -1,7 +1,7 @@
 ---
 type: entity
 tags: [card, hierarchy, core]
-updated: 2026-07-30
+updated: 2026-07-31
 sources: 2
 ---
 
@@ -56,4 +56,14 @@ Ini menutup makna ganda antara status card ("Aktif" siklus-hidup) dan periode be
 
 Implementasi: `mobile/src/screens/workspace-screen.tsx` `CompactHeaderPills` (`statusLabel` + `statusTone` prop), `mobile/src/lib/workspace-copy.ts` `WS_TREE_COMPACT_COPY.periodState`.
 
-Berkaitan dengan: [[workspace]], [[action-plan]], [[execution-loop]], [[minimum-breakdown-rule]], [[permission-model]].
+## Progress card (orb)
+
+Angka `%` orb tiap card berasal dari satu server rollup `workspace_card_progress` (SECURITY INVOKER) — bukan derivasi per-surface. Semantik rollup **beda per level** (lihat [[workspace-card-progress]] untuk rumus lengkap + benchmark):
+
+- **Initiative & Action Plan** → **rata-rata rekursif progress anak** (leaf Tugas → AP → Initiative), sejak migrasi **0118** (Opsi B). Menggantikan `%-anak-langsung-done` lama agar AP dengan Tugas 50%/80% tak terbaca 0% sampai tiap Tugas `done`.
+- **Goal / Strategy** → **attainment** vs target terukur (`is_measured=true`, label "Capaian").
+- **Problem Statement / Development Area** → tetap **`%-anak-done`** (count-done).
+
+Header detail Initiative & Action Plan menarik angka orb dari RPC ini via `useCardProgress` (sinkron dengan orb tree Workspace); `ratioDoneOfChildren` klien hanya fallback saat RPC belum termuat. Node `action_plans` dirollup **berbeda tergantung induk**: di bawah Initiative → rekursif; di bawah Problem Statement → count-done.
+
+Berkaitan dengan: [[workspace]], [[action-plan]], [[execution-loop]], [[minimum-breakdown-rule]], [[permission-model]], [[workspace-card-progress]].

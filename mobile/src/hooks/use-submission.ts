@@ -117,6 +117,10 @@ export function useSubmissionFlow(taskId: string | undefined) {
       qc.invalidateQueries({ queryKey: ['action-plan-submissions', taskId] });
       qc.invalidateQueries({ queryKey: ['kpi_candidates', taskId] });
       qc.invalidateQueries({ queryKey: ['kpi_current_value'] });
+      // Opsi B (0118): submit menggeser leaf task_progress → mengubah rata-rata rekursif AP &
+      // Inisiatif. Bare-prefix (panjang 1) prefix-match SEMUA batch ['workspace_card_progress', ids]
+      // sehingga orb tree & header detail AP/Inisiatif ikut segar, bukan cuma satu card.
+      qc.invalidateQueries({ queryKey: ['workspace_card_progress'] });
       // Submit memindah Tugas keluar dari "todo" & masuk antrean reviewer → segarkan Home.
       invalidateHomeQueries(qc);
     },

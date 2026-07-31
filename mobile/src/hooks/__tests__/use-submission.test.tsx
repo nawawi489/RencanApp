@@ -192,4 +192,35 @@ describe('useSubmissionFlow — 2-phase commit', () => {
     expect(mockUpload).not.toHaveBeenCalled();
     expect(mockFinalize).toHaveBeenCalled();
   });
+
+  it('[H14] sukses → invalidate ["workspace_card_progress"] (Opsi B: submit ubah leaf→rollup rekursif AP/Initiative)', async () => {
+    // Submit Tugas menggeser leaf task_progress (mis. assigned 10 → submitted 80), yang
+    // ikut mengubah rata-rata rekursif AP & Initiative dari 0118. Tanpa invalidasi ini,
+    // orb tree/detail Rencana Aksi & Inisiatif tetap menampilkan angka lama sampai refetch lain.
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useSubmissionFlow('ap-1'), { wrapper });
+    await result.current.runSubmission(baseInput);
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+    expect(keys).toContain(JSON.stringify(['workspace_card_progress']));
+  });
+
+  it('[H15] invalidasi progress = BARE-PREFIX (panjang 1) → segarkan semua batch card, bukan ["workspace_card_progress", taskId]', async () => {
+    // useCardProgress mem-key ['workspace_card_progress', normalizedIds] (per-batch). Submit
+    // memengaruhi orb Tugas + AP induk + Initiative kakek, yang tersebar di banyak batch key.
+    // Hanya bare-prefix (length 1) yang prefix-match SEMUA batch itu; kunci ber-taskId cuma
+    // menyegarkan satu card dan meninggalkan orb induk basi.
+    const { qc, wrapper } = makeWrapper();
+    const spy = jest.spyOn(qc, 'invalidateQueries');
+    const { result } = await renderHook(() => useSubmissionFlow('ap-1'), { wrapper });
+    await result.current.runSubmission(baseInput);
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const progressCalls = spy.mock.calls
+      .map((c) => (c[0] as { queryKey: unknown[] }).queryKey)
+      .filter((k) => Array.isArray(k) && k[0] === 'workspace_card_progress');
+    expect(progressCalls.length).toBeGreaterThan(0);
+    for (const k of progressCalls) expect(k).toHaveLength(1);
+    expect(progressCalls).not.toContainEqual(['workspace_card_progress', 'ap-1']);
+  });
 });

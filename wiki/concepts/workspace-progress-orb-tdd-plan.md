@@ -1,11 +1,14 @@
 ---
 type: concept
-tags: [workspace, ui, tdd, orb, progress, wsa-15, ac-22, v1.82]
-updated: 2026-07-03
+tags: [workspace, ui, tdd, orb, progress, wsa-15, ac-22, v1.82, superseded]
+updated: 2026-07-31
 sources: 1
 ---
 
 # Workspace Progress Orb — TDD Plan (WSA-15 / AC 22)
+
+> [!warning] SEBAGIAN SUPERSEDED oleh 0118 (Opsi B) — lihat [[workspace-card-progress]]
+> **Keputusan owner (2026-07-03) poin 1** — "rumus induk = `% anak LANGSUNG berstatus done`, **non-rekursif**" — **tidak lagi berlaku untuk level Initiative & Action Plan** sejak migrasi **0118** (2026-07-30, [PR #228](https://github.com/nawawi489/RencanApp/pull/228)). Kedua level itu kini dirollup sebagai **rata-rata tak berbobot progress anak secara REKURSIF** (leaf Tugas → Action Plan → Initiative), bukan `%-anak-langsung-done`. Alasan gap lama justru yang disebut di §"Keputusan terbuka" poin 1 (Initiative bisa tampil 0% padahal satu-satunya AP anak 80%) — 0118 menutupnya. Level lain (Goal/Strategy attainment, Problem Statement, Development Area) **tetap** memakai keputusan 2026-07-03. Detail rumus, isolasi per-level, benchmark, dan kontrak SQL: [[workspace-card-progress]] §"Rollup rekursif". Halaman ini disimpan sebagai artefak historis.
 
 > [!done] Status: **IMPLEMENTED 2026-07-03** — migration 0037 (lokal), `useCardProgress`, `TreeOrbCell` di 7 row. 91 suite/843 tes pass, verified live. Lihat `wiki/log.md`.
 
@@ -45,7 +48,7 @@ Setiap card tree menampilkan orb 50px: angka `%` + label bawah (**"Capaian"** un
 
 ## ✅ Keputusan owner (2026-07-03) — dikunci
 
-1. **Rumus induk = `% anak LANGSUNG berstatus done`** (`ratioDoneOfChildren`, identik header detail; non-rekursif). Leaf Action Plan tetap `computeActionPlanProgress`. Label "Capaian" (Goal/KPI) & "Progress" (lain) berbagi rumus %done; "Progress" induk ≠ heuristik AP (didokumentasikan).
+1. ~~**Rumus induk = `% anak LANGSUNG berstatus done`** (`ratioDoneOfChildren`, identik header detail; non-rekursif). Leaf Action Plan tetap `computeActionPlanProgress`. Label "Capaian" (Goal/KPI) & "Progress" (lain) berbagi rumus %done; "Progress" induk ≠ heuristik AP (didokumentasikan).~~ **⚠️ SUPERSEDED untuk Initiative & Action Plan oleh 0118** (Opsi B, rata-rata rekursif progress anak) — lihat callout atas & [[workspace-card-progress]]. Masih berlaku untuk Goal/Strategy/Problem Statement/Development Area. `ratioDoneOfChildren` kini hanya fallback klien saat RPC null (loading/error) di header detail Initiative/AP.
 2. **SECURITY INVOKER** — capaian = fungsi anak yang **terlihat** oleh pemanggil (terima variasi antar-peran demi aman lintas-org).
 3. **Induk tanpa anak → `0%`** (bukan `—`), konsisten header detail. `—` hanya saat query error/undefined.
 4. AP repeat: fetch compliance atau fallback `—` (jangan 0%). Invalidasi progress di semua mutation status (activate/submit/approve/archive). Migration `0037+`. Agregasi anak langsung saja.
