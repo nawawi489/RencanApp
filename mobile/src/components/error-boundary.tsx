@@ -4,7 +4,7 @@
 // meski provider yang crash. Karena itu fallback default sengaja MANDIRI (primitives + inline
 // style, tanpa context tema/NativeWind yang mungkin ikut tumbang).
 import { Component, type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 import { createLogger } from '@/lib/logger';
 

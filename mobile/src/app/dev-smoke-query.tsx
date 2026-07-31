@@ -3,7 +3,7 @@
 // Guard produksi: konten tak dirender jika EXPO_PUBLIC_APP_ENV === 'production'.
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 function isProduction(): boolean {
   return process.env.EXPO_PUBLIC_APP_ENV === 'production';
