@@ -763,4 +763,154 @@ begin
 end $$;
 rollback;
 
+-- ============================================================ GUARD-1: result-value: qualitative types excluded from attainment
+-- Strategy target_numeric=100 with ONE approved submission carrying four result
+-- values: number(40) + text(999) + link(7) + boolean(5). Only 'number/currency/
+-- percentage' feed numeric_total, so attainment = round(100*40/100) = 40 — the
+-- deliberately large qualitative value_numeric (999) proves it is ignored, NOT summed.
+begin;
+do $$
+declare
+  v_org uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';
+  v_ceo uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
+  v_goal uuid; v_strat uuid; v_init uuid; v_ap uuid; v_task uuid; v_sub uuid;
+  v_p_strat int; v_m_strat boolean;
+  fails text := '';
+begin
+  insert into public.goals (organization_id, name, status, pic_id, created_by)
+    values (v_org, 'GUARD1 goal', 'active', v_ceo, v_ceo) returning id into v_goal;
+  insert into public.strategies (organization_id, goal_id, name, status, target_numeric, pic_id, created_by)
+    values (v_org, v_goal, 'GUARD1 strat', 'active', 100, v_ceo, v_ceo) returning id into v_strat;
+  insert into public.initiatives (organization_id, strategy_id, name, status, pic_id, created_by)
+    values (v_org, v_strat, 'GUARD1 init', 'active', v_ceo, v_ceo) returning id into v_init;
+  insert into public.action_plans (organization_id, name, status, initiative_id, pic_id, created_by)
+    values (v_org, 'GUARD1 ap', 'active', v_init, v_ceo, v_ceo) returning id into v_ap;
+  insert into public.tasks (organization_id, action_plan_id, name, repeat_setting,
+      evidence_required, result_value_required, review_required, status, pic_id, created_by)
+    values (v_org, v_ap, 'GUARD1 task', 'one_time', false,false,false, 'done', v_ceo, v_ceo)
+    returning id into v_task;
+  insert into public.task_submissions (task_id, version_number, submitted_by, submitted_at, review_status, status)
+    values (v_task, 1, v_ceo, now(), 'approved', 'submitted') returning id into v_sub;
+  -- one numeric (counted) + three qualitative (ignored), all under the same approved submission
+  insert into public.task_result_values (submission_id, label, value_type, value_numeric, value_text, strategy_id)
+    values (v_sub, 'num',  'number',  40,  null,      v_strat),
+           (v_sub, 'note', 'text',    999, 'catatan', v_strat),
+           (v_sub, 'url',  'link',    7,   'http://x',v_strat),
+           (v_sub, 'flag', 'boolean', 5,   null,      v_strat);
+
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_ceo, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select w.progress, w.is_measured into v_p_strat, v_m_strat
+    from public.workspace_card_progress(array[v_strat]) w where w.card_id = v_strat;
+  execute 'reset role';
+
+  if v_p_strat is distinct from 40   then fails := fails || 'qualitative_not_summed:got=' || coalesce(v_p_strat::text,'null') || ' want=40; '; end if;
+  if v_m_strat is distinct from true then fails := fails || 'strategy_not_measured; '; end if;
+
+  if fails <> '' then raise exception 'GUARD-1 FAIL: %', fails; end if;
+  raise notice 'GUARD-1 qualitative result-value types excluded from attainment PASS';
+end $$;
+rollback;
+
+-- ============================================================ GUARD-2: result-value: multiple approved numerics accumulate (sum, not pick-one)
+-- Strategy target_numeric=100 with ONE approved submission carrying two numeric
+-- result values (30 + 25). numeric_total = 55 -> attainment = round(100*55/100) = 55.
+-- Proves the view SUMs approved values rather than taking a single (max/first) one.
+begin;
+do $$
+declare
+  v_org uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';
+  v_ceo uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
+  v_goal uuid; v_strat uuid; v_init uuid; v_ap uuid; v_task uuid; v_sub uuid;
+  v_p_strat int; v_m_strat boolean;
+  fails text := '';
+begin
+  insert into public.goals (organization_id, name, status, pic_id, created_by)
+    values (v_org, 'GUARD2 goal', 'active', v_ceo, v_ceo) returning id into v_goal;
+  insert into public.strategies (organization_id, goal_id, name, status, target_numeric, pic_id, created_by)
+    values (v_org, v_goal, 'GUARD2 strat', 'active', 100, v_ceo, v_ceo) returning id into v_strat;
+  insert into public.initiatives (organization_id, strategy_id, name, status, pic_id, created_by)
+    values (v_org, v_strat, 'GUARD2 init', 'active', v_ceo, v_ceo) returning id into v_init;
+  insert into public.action_plans (organization_id, name, status, initiative_id, pic_id, created_by)
+    values (v_org, 'GUARD2 ap', 'active', v_init, v_ceo, v_ceo) returning id into v_ap;
+  insert into public.tasks (organization_id, action_plan_id, name, repeat_setting,
+      evidence_required, result_value_required, review_required, status, pic_id, created_by)
+    values (v_org, v_ap, 'GUARD2 task', 'one_time', false,false,false, 'done', v_ceo, v_ceo)
+    returning id into v_task;
+  insert into public.task_submissions (task_id, version_number, submitted_by, submitted_at, review_status, status)
+    values (v_task, 1, v_ceo, now(), 'approved', 'submitted') returning id into v_sub;
+  insert into public.task_result_values (submission_id, label, value_type, value_numeric, strategy_id)
+    values (v_sub, 'm1', 'number', 30, v_strat),
+           (v_sub, 'm2', 'number', 25, v_strat);
+
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_ceo, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select w.progress, w.is_measured into v_p_strat, v_m_strat
+    from public.workspace_card_progress(array[v_strat]) w where w.card_id = v_strat;
+  execute 'reset role';
+
+  if v_p_strat is distinct from 55   then fails := fails || 'approved_values_summed:got=' || coalesce(v_p_strat::text,'null') || ' want=55; '; end if;
+  if v_m_strat is distinct from true then fails := fails || 'strategy_not_measured; '; end if;
+
+  if fails <> '' then raise exception 'GUARD-2 FAIL: %', fails; end if;
+  raise notice 'GUARD-2 multiple approved numerics accumulate PASS';
+end $$;
+rollback;
+
+-- ============================================================ GUARD-3: result-value: approved-only gate (pending/rejected excluded)
+-- Strategy target_numeric=100 with three submissions on one task, each a numeric
+-- result value: approved(50) + pending(30) + rejected(20). The view filters
+-- review_status='approved', so numeric_total = 50 -> attainment = round(100*50/100)
+-- = 50. Proves pending and rejected values never leak into attainment.
+begin;
+do $$
+declare
+  v_org uuid := '4b07a19f-550d-4952-b0d8-44f38f651d89';
+  v_ceo uuid := 'ca8c1471-b870-4f09-a149-25e5eae99d6f';
+  v_goal uuid; v_strat uuid; v_init uuid; v_ap uuid; v_task uuid;
+  v_sub_ok uuid; v_sub_pend uuid; v_sub_rej uuid;
+  v_p_strat int; v_m_strat boolean;
+  fails text := '';
+begin
+  insert into public.goals (organization_id, name, status, pic_id, created_by)
+    values (v_org, 'GUARD3 goal', 'active', v_ceo, v_ceo) returning id into v_goal;
+  insert into public.strategies (organization_id, goal_id, name, status, target_numeric, pic_id, created_by)
+    values (v_org, v_goal, 'GUARD3 strat', 'active', 100, v_ceo, v_ceo) returning id into v_strat;
+  insert into public.initiatives (organization_id, strategy_id, name, status, pic_id, created_by)
+    values (v_org, v_strat, 'GUARD3 init', 'active', v_ceo, v_ceo) returning id into v_init;
+  insert into public.action_plans (organization_id, name, status, initiative_id, pic_id, created_by)
+    values (v_org, 'GUARD3 ap', 'active', v_init, v_ceo, v_ceo) returning id into v_ap;
+  insert into public.tasks (organization_id, action_plan_id, name, repeat_setting,
+      evidence_required, result_value_required, review_required, status, pic_id, created_by)
+    values (v_org, v_ap, 'GUARD3 task', 'one_time', false,false,false, 'done', v_ceo, v_ceo)
+    returning id into v_task;
+  -- distinct version_number per submission (uq_submission_version_onetime); one numeric each
+  insert into public.task_submissions (task_id, version_number, submitted_by, submitted_at, review_status, status)
+    values (v_task, 1, v_ceo, now(), 'approved', 'submitted') returning id into v_sub_ok;
+  insert into public.task_submissions (task_id, version_number, submitted_by, submitted_at, review_status, status)
+    values (v_task, 2, v_ceo, now(), 'pending',  'submitted') returning id into v_sub_pend;
+  insert into public.task_submissions (task_id, version_number, submitted_by, submitted_at, review_status, status)
+    values (v_task, 3, v_ceo, now(), 'rejected', 'submitted') returning id into v_sub_rej;
+  insert into public.task_result_values (submission_id, label, value_type, value_numeric, strategy_id)
+    values (v_sub_ok,   'ok',   'number', 50, v_strat),
+           (v_sub_pend, 'pend', 'number', 30, v_strat),
+           (v_sub_rej,  'rej',  'number', 20, v_strat);
+
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_ceo, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select w.progress, w.is_measured into v_p_strat, v_m_strat
+    from public.workspace_card_progress(array[v_strat]) w where w.card_id = v_strat;
+  execute 'reset role';
+
+  if v_p_strat is distinct from 50   then fails := fails || 'approved_only_gate:got=' || coalesce(v_p_strat::text,'null') || ' want=50; '; end if;
+  if v_m_strat is distinct from true then fails := fails || 'strategy_not_measured; '; end if;
+
+  if fails <> '' then raise exception 'GUARD-3 FAIL: %', fails; end if;
+  raise notice 'GUARD-3 approved-only gate (pending/rejected excluded) PASS';
+end $$;
+rollback;
+
 \echo '0118_recursive_rollup_contract: all blocks evaluated'
