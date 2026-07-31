@@ -13,8 +13,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, ScrollView } from 'react-native';
-import { Pressable, Text, TextInput, View } from 'react-native-css/components';
+import { FlatList, KeyboardAvoidingView, Modal, Platform } from 'react-native';
+import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatAttachmentFlow } from '@/hooks/use-chat-attachment-flow';

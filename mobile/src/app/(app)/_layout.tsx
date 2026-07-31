@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Stack, router } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable } from 'react-native-css/components';
 
 import { usePushHandler } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/providers/auth-provider';

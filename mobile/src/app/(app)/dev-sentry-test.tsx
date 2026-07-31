@@ -6,7 +6,7 @@
 //   1. Build preview via `eas build --profile preview` → install di device
 //   2. Buka via deep-link `ems://dev-sentry-test` atau navigate manual
 //   3. Tekan salah satu tombol → cek dashboard Sentry `rencanapp-staging` (< 1 menit)
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 import { createLogger } from '@/lib/logger';
 
