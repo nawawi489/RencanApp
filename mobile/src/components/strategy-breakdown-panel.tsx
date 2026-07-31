@@ -10,8 +10,8 @@
 //   - Field "Alasan perubahan" wajib ≥ 8 char.
 //   - Save disabled bila Σ tidak valid atau reason kurang.
 import { useMemo, useState } from 'react';
-import { Modal, TextInput } from 'react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { Modal } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { Button, ProgressBar, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useStrategyBreakdown, useStrategyBreakdownActions } from '@/hooks/use-workspace';
