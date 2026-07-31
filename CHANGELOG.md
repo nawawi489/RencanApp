@@ -8,6 +8,12 @@ Entri baru DITULIS DI ATAS (newest-first). Setelah tag rilis, seluruh isi
 
 ## [Unreleased]
 
+### Changed
+- **Rollup progress rekursif Initiative & Action Plan (Opsi B, migrasi 0118)** — orb capaian Inisiatif & Rencana Aksi kini rata-rata **rekursif** progress anak (leaf Tugas → Rencana Aksi → Inisiatif), bukan lagi `%-anak-langsung-done`. Rencana Aksi dengan Tugas 50%/80% tak lagi terbaca 0% sampai tiap Tugas `done`. Header detail Inisiatif & Rencana Aksi sinkron dengan orb tree via `useCardProgress` (fallback ke count-done klien hanya saat RPC belum termuat). Level lain (Goal/Strategy attainment, Problem Statement, Development Area) tak berubah. Read-only, `SECURITY INVOKER` (RLS instance confidential tetap berlaku per pemanggil). Kontrak: `supabase/tests/0118_recursive_rollup_contract.sql` (14 blok).
+
+### Fixed
+- Submit Tugas kini menyegarkan orb progress Inisiatif & Rencana Aksi — `useSubmissionFlow.onSuccess` meng-invalidasi `['workspace_card_progress']` (bare-prefix, segarkan semua batch). Sebelumnya angka rollup rekursif basi sampai refetch lain.
+
 ### Added
 - **Sprint 5 – Prasyarat rilis** — 11 tiket menuju produksi (audit 2026-07-26).
   - S5-2 Env Supabase pindah ke EAS Dashboard; `eas.json` production tak lagi menyimpan `EXPO_PUBLIC_SUPABASE_*` placeholder.
