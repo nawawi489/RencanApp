@@ -70,6 +70,7 @@ import {
   focusPeriodStatus,
   formatPeriodLabel,
   isAddLocked,
+  overlapsFocusYear,
   quarterOfMonth,
   showPastPeriodAlert,
 } from '@/lib/period-focus';
@@ -1634,14 +1635,29 @@ function WorkspacePane<T extends { id: string }>(config: PaneConfig<T>) {
   );
 }
 
+// WS-05 (Opsi A / PRD §11.1) — Goal & Development Area bersifat TAHUNAN: di-scope ke TAHUN fokus,
+// bukan bulan/quarter. Mencegah kebocoran lintas-tahun (Goal 2025 bocor saat fokus 2026) tanpa
+// menyempitkan ke sub-periode (goal tahunan tetap tampil di semua bulan dalam tahunnya). Hub lobby
+// (HubView) sengaja TIDAK di-scope — ia memakai useGoals/useDevelopmentAreas langsung untuk ringkasan
+// lintas-waktu, jadi hitungan hub-card tetap total (tak pecah oleh scoping pane ini).
 function usePerformanceItems() {
   const q = useGoals();
-  return { items: q.goals, isLoading: q.isLoading, isError: q.isError, refetch: q.refetch };
+  const { focus } = usePeriodFocus();
+  const items = useMemo(
+    () => q.goals.filter((g) => overlapsFocusYear(g, focus.year)),
+    [q.goals, focus.year],
+  );
+  return { items, isLoading: q.isLoading, isError: q.isError, refetch: q.refetch };
 }
 function useDevelopmentItems() {
   const q = useDevelopmentAreas();
+  const { focus } = usePeriodFocus();
+  const items = useMemo(
+    () => q.developmentAreas.filter((d) => overlapsFocusYear(d, focus.year)),
+    [q.developmentAreas, focus.year],
+  );
   return {
-    items: q.developmentAreas,
+    items,
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: q.refetch,

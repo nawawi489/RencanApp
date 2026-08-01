@@ -66,3 +66,4 @@ Backend hardening **wajib** di-open kembali bila:
 - Helper murni: `mobile/src/lib/period-focus.ts` (`focusPeriodStatus`).
 - Related: [[audit-governance]] — pola violation logging append-only yang ADA untuk area lain (score override, dsb.) tapi belum menutupi archive-period create.
 - Related: [[permission-model]] — permission `create_*` yang jadi satu-satunya server check saat ini.
+- Related: [[ws-05-period-focus-year-scoping]] — dimensi TAHUN dari period focus (scoping Goal ke tahun); gating archive di sini adalah dimensi bulan/quarter yang komplementer.

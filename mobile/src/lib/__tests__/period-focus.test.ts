@@ -9,6 +9,7 @@ import {
   formatPeriodLabel,
   isAddLocked,
   isSameFocus,
+  overlapsFocusYear,
   parseFocusJson,
   periodBreadcrumb,
   periodWindow,
@@ -225,6 +226,49 @@ describe('isAddLocked (WS-2 / BUG-02)', () => {
   it('quarter: Goal tahunan + fokus Q1 arsip → TERKUNCI', () => {
     const focusQ1: PeriodFocus = { mode: 'quarter', year: 2026, quarter: 1 };
     expect(isAddLocked(yearlyGoal, focusQ1, now)).toBe(true);
+  });
+});
+
+// WS-05 (Opsi A / PRD §11.1) — Goal bersifat TAHUNAN & di-scope ke TAHUN fokus, bukan
+// bulan/quarter. Kebocoran lintas-tahun: Goal 2025 tak boleh tampil saat fokus 2026.
+// Di dalam tahunnya, Goal selalu tampil di SEMUA bulan/quarter (konteks tahunan).
+describe('overlapsFocusYear (WS-05 year-scoping)', () => {
+  const goal2026 = { period_start: '2026-01-01', period_end: '2026-12-31' };
+  const goal2025 = { period_start: '2025-01-01', period_end: '2025-12-31' };
+
+  it('Goal 2026 beririsan dgn tahun fokus 2026 → tampil', () => {
+    expect(overlapsFocusYear(goal2026, 2026)).toBe(true);
+  });
+
+  it('Goal 2025 TIDAK beririsan dgn tahun fokus 2026 → sembunyi (inti kebocoran lintas-tahun)', () => {
+    expect(overlapsFocusYear(goal2025, 2026)).toBe(false);
+  });
+
+  it('Goal 2026 saat fokus 2025 → sembunyi (arah sebaliknya)', () => {
+    expect(overlapsFocusYear(goal2026, 2025)).toBe(false);
+  });
+
+  it('Goal tanpa periode (null start & end) → SELALU tampil (konsisten cardPeriodStatus → current)', () => {
+    expect(overlapsFocusYear({}, 2026)).toBe(true);
+    expect(overlapsFocusYear({ period_start: null, period_end: null }, 2026)).toBe(true);
+  });
+
+  it('Goal multi-tahun (2025–2027) beririsan dgn 2026 → tampil', () => {
+    expect(overlapsFocusYear({ period_start: '2025-06-01', period_end: '2027-06-30' }, 2026)).toBe(true);
+  });
+
+  it('scope HANYA tahun: tahun fokus 2026 tak bergantung bulan (goal tahunan tampil sepanjang tahun)', () => {
+    // Fungsi menerima TAHUN (bukan focus month/quarter) → tak ada penyempitan bulan/quarter.
+    expect(overlapsFocusYear(goal2026, 2026)).toBe(true);
+  });
+
+  it('hanya salah satu batas null → dinilai dari batas yang ada', () => {
+    // start null, end 2025 → berakhir sebelum 2026 → sembunyi.
+    expect(overlapsFocusYear({ period_start: null, period_end: '2025-12-31' }, 2026)).toBe(false);
+    // start 2027, end null → mulai setelah 2026 → sembunyi.
+    expect(overlapsFocusYear({ period_start: '2027-01-01', period_end: null }, 2026)).toBe(false);
+    // start null, end 2026 → tampil.
+    expect(overlapsFocusYear({ period_start: null, period_end: '2026-03-31' }, 2026)).toBe(true);
   });
 });
 
