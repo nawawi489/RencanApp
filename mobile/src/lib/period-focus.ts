@@ -134,6 +134,30 @@ function parseDateOnly(s: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
 }
 
+/**
+ * WS-05 (Opsi A / PRD §11.1) — apakah kartu berperiode TAHUNAN beririsan dgn TAHUN fokus.
+ *
+ * Goal bersifat tahunan dan selalu tampil sebagai konteks di seluruh sub-periode tahunnya;
+ * period switcher (bulan/quarter) men-scope TURUNAN, bukan Goal. Yang di-scope di sini HANYA
+ * dimensi TAHUN: Goal 2025 tidak boleh bocor saat fokus 2026. Kartu tanpa periode (null start
+ * & end) SELALU tampil — konsisten dgn `cardPeriodStatus` yang memperlakukan null sbg 'current'.
+ *
+ * Beririsan bila: period_start <= 31 Des tahun-fokus AND period_end >= 1 Jan tahun-fokus.
+ * Batas `null` diperlakukan sbg tak-terbatas pada sisinya (start null = "sejak selamanya",
+ * end null = "sampai selamanya"). Tanggal date-only "YYYY-MM-DD" → perbandingan leksikografik
+ * setara kronologis, jadi tak perlu parse Date.
+ */
+export function overlapsFocusYear(card: CardDates, year: number): boolean {
+  const startStr = card.period_start ?? card.start_date ?? null;
+  const endStr = card.period_end ?? card.deadline ?? null;
+  if (!startStr && !endStr) return true;
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const startsBeforeYearEnds = !startStr || startStr.slice(0, 10) <= yearEnd;
+  const endsAfterYearStarts = !endStr || endStr.slice(0, 10) >= yearStart;
+  return startsBeforeYearEnds && endsAfterYearStarts;
+}
+
 export function isSameFocus(a: PeriodFocus, b: PeriodFocus): boolean {
   if (a.mode !== b.mode || a.year !== b.year) return false;
   if (a.mode === 'month' && b.mode === 'month') return a.month === b.month;

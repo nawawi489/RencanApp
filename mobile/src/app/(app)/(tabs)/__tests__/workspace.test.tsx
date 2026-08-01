@@ -263,7 +263,8 @@ describe('WorkspaceScreen', () => {
   it('[2b] can(create_goal) false → tombol sembunyi + EmptyState saat goals kosong', async () => {
     mockCan.mockReturnValue(false);
     await renderScreen();
-    expect(await screen.findByText('Belum ada Goal aktif di periode ini.')).toBeTruthy();
+    // WS-05 — copy jujur: Goal di-scope per TAHUN (bukan periode bulan).
+    expect(await screen.findByText('Belum ada Goal di tahun ini.')).toBeTruthy();
     expect(screen.queryByText('+ Goal')).toBeNull();
   });
 
@@ -590,23 +591,59 @@ describe('WorkspaceScreen', () => {
     expect(screen.getAllByText('Juni 2026').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('[S1-2] Goal dgn period_end < Jun 2026 → label berakhiran "Periode lewat"', async () => {
+  // WS-05 (Opsi A / PRD §11.1) — Goal bersifat TAHUNAN & di-scope ke TAHUN fokus. Goal tahun
+  // lain (2025) TIDAK boleh bocor saat fokus 2026 (dulu tampil dgn badge "Periode lewat" — itu
+  // kebocoran lintas-tahun yang diperbaiki). Anchor NOW=Juni 2026 → focus.year=2026.
+  it('[S1-2/WS-05] Goal tahun lain (2025) TIDAK dirender saat fokus 2026; Goal 2026 tampil', async () => {
     mockUseGoals.mockReturnValue(
       goalsResult({
         goals: [
           {
-            id: 'g-past',
-            name: 'Goal Lewat',
+            id: 'g-2025',
+            name: 'Goal Tahun Lalu',
             status: 'active',
             period_start: '2025-01-01',
             period_end: '2025-12-31',
+          },
+          {
+            id: 'g-2026',
+            name: 'Goal Tahun Ini',
+            status: 'active',
+            period_start: '2026-01-01',
+            period_end: '2026-12-31',
           },
         ],
       }),
     );
     await renderScreen();
-    expect(await screen.findByText('Goal Lewat')).toBeTruthy();
-    expect(screen.getByText(/Periode lewat/)).toBeTruthy();
+    expect(await screen.findByText('Goal Tahun Ini')).toBeTruthy();
+    // Kebocoran lintas-tahun tertutup: Goal 2025 tak ada di tree saat fokus 2026.
+    expect(screen.queryByText('Goal Tahun Lalu')).toBeNull();
+  });
+
+  // WS-05 — Goal tanpa periode (null) SELALU tampil (konsisten cardPeriodStatus → 'current').
+  it('[WS-05·null] Goal tanpa periode tetap tampil saat fokus 2026', async () => {
+    mockUseGoals.mockReturnValue(
+      goalsResult({ goals: [{ id: 'g-null', name: 'Goal Tanpa Periode', status: 'active' }] }),
+    );
+    await renderScreen();
+    expect(await screen.findByText('Goal Tanpa Periode')).toBeTruthy();
+  });
+
+  // WS-05 — hanya Goal tahun lain (2025) yang ada → semua ter-scope keluar → EmptyState tampil
+  // dengan copy jujur "…di tahun ini." (menghubungkan Celah #1 scoping ↔ Celah #2 copy).
+  it('[WS-05·empty] hanya Goal 2025 → EmptyState "Belum ada Goal di tahun ini." saat fokus 2026', async () => {
+    mockCan.mockReturnValue(true);
+    mockUseGoals.mockReturnValue(
+      goalsResult({
+        goals: [
+          { id: 'g-2025', name: 'Goal Tahun Lalu', status: 'active', period_start: '2025-01-01', period_end: '2025-12-31' },
+        ],
+      }),
+    );
+    await renderScreen();
+    expect(await screen.findByText('Belum ada Goal di tahun ini.')).toBeTruthy();
+    expect(screen.queryByText('Goal Tahun Lalu')).toBeNull();
   });
 
   it('[S1-3] Goal aktif (period overlap Jun 2026) → label tanpa "Periode lewat"', async () => {
@@ -720,24 +757,31 @@ describe('WorkspaceScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/strategy/new?goalId=g-cur');
   });
 
-  it('[S3-3] tombol "+" past period → showPastPeriodAlert dipanggil, push TIDAK', async () => {
+  // WS-05 — Goal bersifat tahunan: card-nya tak pernah 'past' via periodenya sendiri di dalam
+  // tahun fokus. Lock "+" pada Goal berasal dari FOKUS arsip (isAddLocked → focusPeriodStatus).
+  // Fokus di-seed ke Januari 2026 (arsip relatif NOW=Juni 2026); Goal tetap tahun 2026 (tampil).
+  it('[S3-3] tombol "+" saat fokus arsip → showPastPeriodAlert dipanggil, push TIDAK', async () => {
+    await AsyncStorage.setItem(
+      'rencanaapp:period-focus',
+      JSON.stringify({ mode: 'month', year: 2026, month: 1 }),
+    );
     mockCan.mockReturnValue(true);
     mockUseGoals.mockReturnValue(
       goalsResult({
         goals: [
           {
-            id: 'g-past',
-            name: 'Goal Past',
+            id: 'g-arc',
+            name: 'Goal Arsip Fokus',
             status: 'active',
-            period_start: '2025-01-01',
-            period_end: '2025-12-31',
+            period_start: '2026-01-01',
+            period_end: '2026-12-31',
           },
         ],
       }),
     );
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await renderScreen();
-    fireEvent.press(await screen.findByLabelText('Tambah Strategi ke Goal Past'));
+    fireEvent.press(await screen.findByLabelText('Tambah Strategi ke Goal Arsip Fokus'));
     expect(alertSpy).toHaveBeenCalledWith(
       'Periode ini sudah menjadi Archive',
       'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
@@ -1510,24 +1554,31 @@ describe('WorkspaceScreen', () => {
     const PAST_PERIOD = { period_start: '2025-01-01', period_end: '2025-12-31' };
     const NOW_PERIOD = { period_start: '2026-01-01', period_end: '2026-12-31' };
 
-    it('[W08·1] Goal+KPI+Inisiatif semuanya past → tanpa opacity dim, badge tetap 3×', async () => {
+    // WS-05 — Goal tahunan tak pernah 'past' via periodenya sendiri di dalam tahun fokus, jadi
+    // "melihat periode lewat" (§11.3) dipicu lewat FOKUS arsip. Seed fokus Januari 2026 (arsip
+    // relatif NOW=Juni 2026); semua card tetap tahun 2026 (tampil) namun ber-badge "Periode lewat".
+    it('[W08·1] fokus arsip → Goal+KPI+Inisiatif badge "Periode lewat" 3×, tanpa opacity dim', async () => {
+      await AsyncStorage.setItem(
+        'rencanaapp:period-focus',
+        JSON.stringify({ mode: 'month', year: 2026, month: 1 }),
+      );
       mockCan.mockReturnValue(true);
       mockUseGoals.mockReturnValue(
-        goalsResult({ goals: [{ id: 'g', name: 'Goal Past', status: 'active', ...PAST_PERIOD }] }),
+        goalsResult({ goals: [{ id: 'g', name: 'Goal Arsip', status: 'active', ...NOW_PERIOD }] }),
       );
       mockUseStrategies.mockReturnValue(
-        kpiResult({ strategies: [{ id: 'k', name: 'KPI Past', status: 'active', ...PAST_PERIOD }] }),
+        kpiResult({ strategies: [{ id: 'k', name: 'KPI Arsip', status: 'active', ...NOW_PERIOD }] }),
       );
       mockUseInitiatives.mockReturnValue(
         initiativesResult({
-          initiatives: [{ id: 's', name: 'Inisiatif Past', status: 'active', ...PAST_PERIOD }],
+          initiatives: [{ id: 's', name: 'Inisiatif Arsip', status: 'active', ...NOW_PERIOD }],
         }),
       );
       await renderScreen();
-      fireEvent.press(await screen.findByLabelText('Toggle Strategi Goal Past'));
-      await screen.findByText('KPI Past');
-      fireEvent.press(screen.getByLabelText('Toggle Inisiatif KPI Past'));
-      await screen.findByText('Inisiatif Past');
+      fireEvent.press(await screen.findByLabelText('Toggle Strategi Goal Arsip'));
+      await screen.findByText('KPI Arsip');
+      fireEvent.press(screen.getByLabelText('Toggle Inisiatif KPI Arsip'));
+      await screen.findByText('Inisiatif Arsip');
       expect(countOpacityHalf(screen.toJSON())).toBe(0);
       expect(screen.getAllByText(/Periode lewat/).length).toBe(3);
     });

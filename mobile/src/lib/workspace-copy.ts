@@ -8,8 +8,9 @@ export const WS_COPY = {
   sectionStrategis: 'Hierarki Strategis',
   // WSA-12 — CTA terkunci spec §6.3: "+ Goal" (bukan "+ Goal Baru").
   btnGoalBaru: '+ Goal',
-  // WSA-12 — empty state terkunci spec §17.
-  emptyGoalTitle: 'Belum ada Goal aktif di periode ini.',
+  // WSA-12 — empty state terkunci spec §17. WS-05: Goal di-scope per TAHUN (Opsi A / PRD §11.1),
+  // bukan per periode bulan/quarter — copy menyebut "tahun ini" agar jujur dgn perilaku tahunan.
+  emptyGoalTitle: 'Belum ada Goal di tahun ini.',
   emptyGoalDescCan: 'Buat Goal pertama lewat Wizard, lalu pecah jadi Strategi, Inisiatif, dan Rencana Aksi.',
   emptyGoalDescView: 'Anda akan melihat Goal di sini begitu menjadi PIC atau Reviewer sebuah card.',
   // WSA-12 — toast periode-lewat terkunci spec §12.4 (satu kalimat, dipecah title/message untuk Alert).
@@ -179,8 +180,9 @@ export const WS_DEV_COPY = {
   btnDevAreaBaru: '+ Development Area',
   /** Indikator count-only (PS per DA). */
   problemCount: (n: number) => `Problem Statement: ${n}`,
-  // WSA-12 — empty state terkunci spec §17.
-  emptyDevAreaTitle: 'Belum ada Development Area aktif di periode ini.',
+  // WSA-12 — empty state terkunci spec §17. WS-05: Development Area di-scope per TAHUN fokus
+  // (mirror Goal) — copy menyebut "tahun ini" agar jujur dgn perilaku tahunan.
+  emptyDevAreaTitle: 'Belum ada Development Area di tahun ini.',
   emptyDevAreaDescCan:
     'Buat Development Area pertama, lalu pecah jadi Problem Statement, Rencana Aksi, dan Tugas.',
   emptyDevAreaDescView:
