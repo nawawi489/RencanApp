@@ -5,6 +5,7 @@ import { AppState, Platform } from 'react-native';
 
 import type { Database } from './database.types';
 import { env } from './env';
+import { createLogger, generateRequestId, withRequestId } from './logger';
 import { secureStorage } from './secure-storage';
 import { resolveSupabaseUrl } from './supabase-url';
 
@@ -19,11 +20,45 @@ const supabaseUrl = resolveSupabaseUrl(Platform.OS, env.supabaseUrl);
 // friendlyErrorMessage (errors.ts) alih-alih spinner tak berujung.
 const REQUEST_TIMEOUT_MS = 20_000;
 
-// Bungkus fetch dengan AbortController. Tetap hormati signal caller (mis. Supabase
-// membatalkan refresh token) dengan meneruskan abort-nya, dan selalu bersihkan timer.
+const netLog = createLogger('Network');
+
+// Hanya pathname yang di-log — query string Supabase bisa memuat filter ber-PII
+// (mis. `?email=eq.a@b.com`). Sanitize logger menyensor email, tapi membuang query
+// lebih awal lebih murah + tak bergantung pada pola regex.
+function safePath(input: RequestInfo | URL): string {
+  try {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    return new URL(url).pathname;
+  } catch {
+    return '[unparseable-url]';
+  }
+}
+
+// Fetch seam = titik masuk (entry point) korelasi request end-to-end.
+//
+// Tiap request keluar mendapat requestId segar. Di NATIVE id dikirim sebagai header
+// `X-Request-Id`, jadi log server (PostgREST/GoTrue/Storage) bisa dijoin dengan log
+// klien. Di WEB header SENGAJA tidak ditambahkan: header kustom cross-origin memicu
+// preflight CORS yang gateway Supabase belum tentu izinkan — menambahnya berisiko
+// mematikan SELURUH request di web (build staging jalan di web). Korelasi sisi-klien
+// tetap ada via log kegagalan di bawah, apa pun platformnya.
+//
+// requestId TIDAK dipropagasi ke layer di atas via variabel global: `currentRequestId`
+// adalah satu global modul dan Hermes tak punya AsyncLocalStorage, jadi menahannya
+// lintas `await` bakal saling menimpa antar request konkuren (Home saja mount 8 query
+// paralel). Karena itu kegagalan GENUINE (timeout kita / error transport) di-log tepat
+// di sini di dalam `withRequestId(requestId, …)` — blok sinkron, bebas race — sehingga
+// `entry.requestId` == id yang dikirim ke server. Abort yang DIMINTA caller (refresh
+// token dibatalkan, React Query membatalkan query saat unmount) = pembatalan normal,
+// bukan kegagalan → tidak di-log.
 function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const requestId = generateRequestId();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
 
   const callerSignal = init?.signal;
   if (callerSignal) {
@@ -31,7 +66,20 @@ function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise
     else callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
   }
 
-  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+  const headers = new Headers(init?.headers ?? undefined);
+  if (Platform.OS !== 'web') headers.set('X-Request-Id', requestId);
+
+  return fetch(input, { ...init, headers, signal: controller.signal })
+    .catch((error: unknown) => {
+      const callerAborted = !timedOut && Boolean(callerSignal?.aborted);
+      if (!callerAborted) {
+        withRequestId(requestId, () => {
+          netLog.warn({ event: 'supabase_request_failed', timedOut, path: safePath(input) });
+        });
+      }
+      throw error;
+    })
+    .finally(() => clearTimeout(timeoutId));
 }
 
 export const supabase = createClient<Database>(supabaseUrl, env.supabaseAnonKey, {

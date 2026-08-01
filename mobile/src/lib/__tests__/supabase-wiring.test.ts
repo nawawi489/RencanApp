@@ -123,6 +123,120 @@ describe('supabase wiring (AC-CFG01-1..2 integrasi)', () => {
     }
   });
 
+  it('[5] native → fetch keluar membawa header X-Request-Id, dan kegagalan transport ter-log dgn requestId sama', async () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+
+    const underlyingFetch = jest.fn().mockRejectedValue(new TypeError('Network request failed'));
+    const originalFetch = global.fetch;
+    (global as { fetch: unknown }).fetch = underlyingFetch;
+
+    const entries: { requestId: string; data?: unknown[] }[] = [];
+    try {
+      jest.isolateModules(() => {
+        jest.doMock('react-native', () => ({
+          AppState: { addEventListener: jest.fn() },
+          Platform: { OS: 'ios' },
+        }));
+        const logger = require('../logger');
+        logger.addTransport({ name: 'capture', write: (e: { requestId: string }) => entries.push(e) });
+        require('../supabase');
+      });
+
+      const options = mockCreateClient.mock.calls[0][2] as { global?: { fetch?: typeof fetch } };
+      const wrappedFetch = options!.global!.fetch!;
+
+      // Query string sengaja ada untuk membuktikan hanya pathname yang di-log.
+      await expect(
+        wrappedFetch('http://127.0.0.1:54321/rest/v1/goals?email=eq.a@b.com'),
+      ).rejects.toBeInstanceOf(TypeError);
+
+      // Header dikirim ke server (korelasi sisi-server).
+      const passedInit = underlyingFetch.mock.calls[0][1] as RequestInit;
+      const headers = passedInit.headers as Headers;
+      const headerId = headers.get('X-Request-Id');
+      expect(headerId).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+
+      // Log klien membawa requestId yang sama → dua sisi bisa dijoin.
+      const failLog = entries.find(
+        (e) => (e.data?.[0] as { event?: string } | undefined)?.event === 'supabase_request_failed',
+      );
+      expect(failLog).toBeTruthy();
+      expect(failLog!.requestId).toBe(headerId);
+      expect((failLog!.data![0] as { path: string }).path).toBe('/rest/v1/goals');
+    } finally {
+      (global as { fetch: unknown }).fetch = originalFetch;
+    }
+  });
+
+  it('[6] web → TIDAK menambah header X-Request-Id (hindari preflight CORS)', async () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+
+    const underlyingFetch = jest.fn().mockResolvedValue({ ok: true });
+    const originalFetch = global.fetch;
+    (global as { fetch: unknown }).fetch = underlyingFetch;
+
+    try {
+      // doMock web eksplisit: case [5] men-doMock 'react-native' → ios, dan doMock
+      // bertahan melewati resetModules (yang hanya mereset module registry, bukan mock
+      // registry). Set eksplisit agar case ini tidak bergantung pada urutan eksekusi.
+      jest.isolateModules(() => {
+        jest.doMock('react-native', () => ({
+          AppState: { addEventListener: jest.fn() },
+          Platform: { OS: 'web' },
+        }));
+        require('../supabase');
+      });
+      const options = mockCreateClient.mock.calls[0][2] as { global?: { fetch?: typeof fetch } };
+      const wrappedFetch = options!.global!.fetch!;
+
+      await wrappedFetch('http://localhost:54321/rest/v1/x');
+
+      const passedInit = underlyingFetch.mock.calls[0][1] as RequestInit;
+      const headers = passedInit.headers as Headers;
+      expect(headers.get('X-Request-Id')).toBeNull();
+    } finally {
+      (global as { fetch: unknown }).fetch = originalFetch;
+    }
+  });
+
+  it('[7] abort dari signal caller (bukan timeout) TIDAK di-log sbg kegagalan', async () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
+
+    const ac = new AbortController();
+    ac.abort();
+    const underlyingFetch = jest
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+    const originalFetch = global.fetch;
+    (global as { fetch: unknown }).fetch = underlyingFetch;
+
+    const entries: { data?: unknown[] }[] = [];
+    try {
+      jest.isolateModules(() => {
+        const logger = require('../logger');
+        logger.addTransport({ name: 'capture', write: (e: unknown) => entries.push(e as { data?: unknown[] }) });
+        require('../supabase');
+      });
+      const options = mockCreateClient.mock.calls[0][2] as { global?: { fetch?: typeof fetch } };
+      const wrappedFetch = options!.global!.fetch!;
+
+      await expect(
+        wrappedFetch('http://localhost:54321/rest/v1/x', { signal: ac.signal }),
+      ).rejects.toMatchObject({ name: 'AbortError' });
+
+      expect(
+        entries.find(
+          (e) => (e.data?.[0] as { event?: string } | undefined)?.event === 'supabase_request_failed',
+        ),
+      ).toBeUndefined();
+    } finally {
+      (global as { fetch: unknown }).fetch = originalFetch;
+    }
+  });
+
   it('[2] Platform native (ios) → storage adalah secureStorage (SecureStore), bukan AsyncStorage langsung', () => {
     process.env.EXPO_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
