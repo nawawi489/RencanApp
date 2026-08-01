@@ -1,7 +1,7 @@
 ---
 type: entity
 tags: [workspace, structure, core]
-updated: 2026-07-11
+updated: 2026-08-01
 sources: 1
 ---
 
@@ -34,4 +34,8 @@ Rename bottom-up bergeser satu tingkat per [`specs/rename-workspace-terminology.
 
 Workflow user hanya menampilkan card yang relevan dengannya (PIC / Reviewer / turunan miliknya) — lihat [[permission-model]]. Staff tidak melihat card divisi lain by default.
 
-Berkaitan dengan: [[card-model]], [[permission-model]], [[surfaces]].
+## Period focus
+
+Tree di-scope oleh Period Focus Engine. **Goal bersifat tahunan**: di-scope ke TAHUN fokus (goal tahun lain tidak bocor), sementara switcher bulan/quarter men-scope konteks turunan — lihat [[ws-05-period-focus-year-scoping]]. Gating tambah-turunan saat periode arsip masih UI-only ([[ws-04-governance-debt]]).
+
+Berkaitan dengan: [[card-model]], [[permission-model]], [[surfaces]], [[ws-05-period-focus-year-scoping]].

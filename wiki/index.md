@@ -52,6 +52,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[write-idempotency-keys]] — IMPLEMENTED (migrasi 0103 + client layer, branch `feat/write-idempotency-keys`): client_request_id + partial unique index + 5 RPC `create_*_idempotent` (ON CONFLICT DO NOTHING) agar retry-manual user tak menduplikasi INSERT non-idempoten (goals/action_plans/tasks/initiatives/problem_statements + send_chat_message)
 - [[write-idempotency-keys-tdd-plan]] — Rencana TDD red→green→refactor untuk [[write-idempotency-keys]]: DB(0103)→types(hand-edit)→data→hooks→UI; gate keputusan OQ-1 (RPC helper vs catch-23505); fix critic (author_id≠sender_id, index polos bukan CONCURRENTLY)
 - [[ws-04-governance-debt]] — WS-04 archive-period gating UI-only (2026-07-05 OQ-1 Opsi A); `.insert()` langsung ber-RLS tanpa cek periode; kondisi kapan wajib re-open backend hardening
+- [[ws-05-period-focus-year-scoping]] — Opsi A (PRD §11.1/§7.6): Goal tahunan di-scope ke TAHUN fokus (`overlapsFocusYear`), bukan bulan/quarter; menutup kebocoran lintas-tahun (goal 2025 bocor saat fokus 2026); copy empty-state "…di tahun ini."; #3 turunan periode-lewat TETAP tampil per §11.3 (bukan bug); badge "Periode lewat" pada Goal hanya via fokus arsip
 
 ## Sources
 
