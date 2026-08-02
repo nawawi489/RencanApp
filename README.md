@@ -26,7 +26,7 @@ Rencanapp dirancang untuk menggantikan pola follow-up manual yang tersebar di ch
 - **Aturan penamaan:** pakai `Rencanapp` untuk nama produk pada UI, dokumen produk, dan desain; pakai `RencanApp` hanya saat merujuk repo, path, atau identifier teknis yang sudah baku.
 - **Versi produk acuan:** `V1.83`
 - **Versi paket aplikasi mobile saat ini:** `1.0.0` (`mobile/package.json`)
-- **Status pengembangan:** `Aktif`. Implementasi sudah melewati fase fondasi — card execution engine (Goal/KPI Area/Strategy/Initiative/Action Plan, one time & repeat), People & Score, chat/Inbox (realtime, reaksi, lampiran), dan push notification sudah berjalan. Rujuk [`BUILD-PLAN.md`](./BUILD-PLAN.md) untuk definisi tiap fase dan [`supabase/migrations/`](./supabase/migrations/) untuk migrasi terbaru sebagai penanda progres paling akurat.
+- **Status pengembangan:** `Aktif`. Implementasi sudah melewati fase fondasi — card execution engine (Goal/KPI Area/Strategy/Initiative/Action Plan, one time & repeat), People & Score, chat/Inbox (realtime, reaksi, lampiran), dan push notification sudah berjalan. Rujuk [`wiki/log.md`](./wiki/log.md) untuk timeline sprint dan [`supabase/migrations/`](./supabase/migrations/) untuk migrasi terbaru sebagai penanda progres paling akurat.
 
 ### Tujuan Utama
 
@@ -274,12 +274,11 @@ Struktur utama repository:
 RencanApp/
 ├── mobile/                 # Aplikasi mobile Expo / React Native
 ├── supabase/               # SQL migrations untuk database dan security hardening
-├── prd/                    # PRD yang sudah dipecah per topik
 ├── docs/                   # Catatan spec/TDD/testing per topik
 ├── wiki/                   # Knowledge base proyek berbasis Markdown/Obsidian
+├── archive/                # Dokumen V1.82 yang sudah digantikan (bukan referensi aktif)
 ├── scripts/                # Script operasional (mis. apply migrasi ke staging)
 ├── workers/                # Cloudflare Worker (proxy staging)
-├── BUILD-PLAN.md           # Rencana build terfase
 ├── DESIGN.md               # Sumber kebenaran token desain (binding untuk mobile/src)
 ├── PRD.md                  # PRD utama produk Rencanapp V1.83
 └── CLAUDE.md               # Aturan pemeliharaan wiki proyek
@@ -326,7 +325,7 @@ Kontribusi sangat dianjurkan selama mengikuti pola kerja repository ini.
 - jangan hardcode secret, token, atau credential,
 - pertahankan Bahasa Indonesia sebagai bahasa utama UI,
 - ikuti pola stack yang sudah dipakai: Expo Router, TypeScript, Supabase, dan NativeWind,
-- hindari scope creep yang bertentangan dengan `PRD.md` dan `BUILD-PLAN.md`.
+- hindari scope creep yang bertentangan dengan `PRD.md`.
 
 ### Langkah Kontribusi yang Disarankan
 
@@ -377,10 +376,9 @@ Catatan:
 ### Sumber Dokumentasi Internal
 
 - PRD utama: [`PRD.md`](./PRD.md)
-- Build plan: [`BUILD-PLAN.md`](./BUILD-PLAN.md)
-- PRD terpecah: [`prd/`](./prd/)
 - Dokumentasi aplikasi mobile saat ini: [`mobile/README.md`](./mobile/README.md)
 - Knowledge base proyek: [`wiki/`](./wiki/)
+- Dokumen V1.82 superseded (PRD terpecah, build plan lama, menu lock spec): [`archive/`](./archive/)
 
 Jika Anda membutuhkan bantuan teknis, gunakan issue tracker untuk bug, permintaan perbaikan, atau klarifikasi implementasi.
 
@@ -419,7 +417,8 @@ Status deployment yang dapat disimpulkan dari repository:
 - profil build/submit native sudah dikonfigurasi di [`mobile/eas.json`](./mobile/eas.json) (EAS Build/Submit),
 - environment `staging` sudah live di `staging.rencanapp.com` lewat Cloudflare Worker proxy ([`workers/staging-proxy/`](./workers/staging-proxy/)) yang meneruskan ke EAS Hosting,
 - error tracking terpasang lewat `@sentry/react-native` di sisi mobile,
-- pipeline CI aktif di [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — menjalankan rename guard, lint, `tsc`, `npm run test:ci`, dan DB contract tests di setiap PR ke `main`/`staging`; deploy staging di [`.github/workflows/deploy-staging.yml`](./.github/workflows/deploy-staging.yml) berjalan langsung pada push ke `staging` (job `quality` sudah tidak di-run ulang di sana — gate CI dilakukan sebagai required check PR + branch protection).
+- pipeline CI aktif di [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — menjalankan rename guard, lint, `tsc`, `npm run test:ci`, dan DB contract tests di setiap PR ke `main`/`staging`; deploy staging di [`.github/workflows/deploy-staging.yml`](./.github/workflows/deploy-staging.yml) dikonfigurasi berjalan langsung pada push ke `staging` (job `quality` sudah tidak di-run ulang di sana — gate CI dilakukan sebagai required check PR + branch protection),
+- **diketahui (2026-08-02):** pipeline deploy staging sempat macet — run untuk beberapa push berturut-turut berstatus `cancelled` (concurrency group `deploy-staging` membatalkan run sebelumnya begitu push baru masuk) dan satu run tersangkut `waiting` 27+ jam, sehingga `staging.rencanapp.com` sempat menyajikan bundle web yang ketinggalan beberapa commit dari `origin/staging`. Cek `gh run list --workflow=deploy-staging.yml` untuk status terkini sebelum mengasumsikan staging selalu mencerminkan branch `staging` terbaru.
 
 ### Langkah Deployment yang Saat Ini Realistis
 
@@ -445,13 +444,10 @@ Status deployment yang dapat disimpulkan dari repository:
 Dokumen berikut direferensikan langsung di README ini dan telah diverifikasi keberadaannya di repository:
 
 - [`PRD.md`](./PRD.md)
-- [`BUILD-PLAN.md`](./BUILD-PLAN.md)
 - [`DESIGN.md`](./DESIGN.md) — sumber kebenaran token desain, binding untuk `mobile/src`
-- [`prd/01-konsep-dan-fondasi.md`](./prd/01-konsep-dan-fondasi.md)
-- [`prd/02-spesifikasi-card-dan-eksekusi.md`](./prd/02-spesifikasi-card-dan-eksekusi.md)
-- [`prd/03-sistem-permission-data-governance.md`](./prd/03-sistem-permission-data-governance.md)
 - [`mobile/README.md`](./mobile/README.md)
 - [`supabase/migrations/`](./supabase/migrations/)
+- [`archive/`](./archive/) — PRD V1.82 terpecah, build plan lama, menu lock spec (superseded)
 - [`wiki/overview.md`](./wiki/overview.md)
 
 README ini sengaja menuliskan kondisi repository apa adanya agar pengembang lain dan pengguna akhir memahami mana yang sudah tersedia, mana yang masih bertahap, dan area mana yang masih memerlukan keputusan maintainer.
