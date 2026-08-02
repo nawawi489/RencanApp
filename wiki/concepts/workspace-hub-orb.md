@@ -1,46 +1,81 @@
 ---
 type: concept
-tags: [workspace, ui, hub-card, lobby]
-updated: 2026-07-29
+tags: [workspace, ui, hub-card, lobby, attainment, rollup]
+updated: 2026-08-02
 sources: 0
 ---
 
-# Hub-card lobby: chip status, bukan orb capaian
+# Hub-card lobby: orb ruang (satu bentuk, label yang membedakan)
 
-Lobby tab Workspace ([[surfaces]]) menampilkan dua **hub-card** (Performance & Development). Setiap hub-card di lobby **TIDAK menampilkan capaian numerik**. Alih-alih orb progress bulat, hub-card memakai **chip status ringkas** yang menghitung distribusi Goal/Area berstatus `active`.
+Lobby tab Workspace ([[surfaces]]) menampilkan dua **hub-card** (Performance & Development). Keduanya memakai **orb yang sama** (`ProgressOrb` 72px); yang membedakan makna adalah **label**, persis pola `treeOrbLabel` di tree.
 
-## Format chip
+| Hub | Orb | Label | Isi angka |
+|---|---|---|---|
+| Performance | ring 72px | **Capaian {tahun}** | mean capaian Goal terukur |
+| Development | ring 72px | **Progress {tahun}** | mean status-rollup Area |
 
-`{activeCount}/{parentCount} {parentStatLabel} aktif`
+## Kenapa bentuknya TIDAK dibedakan
 
-- Performance: `2/2 Goal aktif`
-- Development: `1/2 Area aktif`
-- Empty state (`parentCount === 0`): `Belum ada Goal` / `Belum ada Area` — hindari `0/0` yang canggung.
+Sempat dirancang Development memakai bar (bukan orb) dengan alasan "tak punya capaian". Itu **salah menafsirkan** bug `c7627a6`. Bug aslinya sempit: orb yang menampilkan **KEPADATAN** (`activeCount/parentCount`) menyamar jadi capaian. Kepadatan-lah kebohongannya.
 
-Chip mewarisi identitas ruang (`kickerBg`/`kickerText` per space) — Performance biru `#e8f2ff`+`#145ebc`, Development teal `#e6fffb`+`#0f766e`. Token sudah lulus AA di kicker pill; tidak ada token warna baru dibuat (aturan wajib [[DESIGN]]).
+"Capaian vs Progress" bukan bug — itu justru yang **tree lakukan setiap hari**: `treeOrbLabel(kind, isMeasured)` mengembalikan `'Capaian'` untuk Goal/Strategi terukur dan `'Progress'` untuk sisanya, dengan **satu bentuk orb**. Development Area di dalam tree pun sudah dirender `<TreeOrbCell kind="development_area" …>` — orb, bukan bar. Membedakan bentuk di lobby malah membuat Development **inkonsisten dengan dirinya sendiri**: bar di lobby, orb begitu masuk.
 
-Chip statis (bukan interaksi), pakai `accessibilityRole="text"` + `accessibilityLabel="{activeCount} dari {parentCount} {parent} aktif"` biar screen reader terbaca natural (bukan "N garis miring M").
+## Kenapa Development selalu berlabel "Progress"
 
-## Kenapa bukan orb
+Lapis `measured` di badan RPC `workspace_card_progress` **hanya punya cabang Goal dan Strategy** (`goal_attainment` ∪ `strategy_attainment`). Development Area tidak pernah masuk ke sana, sehingga selalu `is_measured = false` dan jatuh ke *status-rollup*. Diverifikasi empiris 2026-08-02:
 
-Sebelum 2026-07-29 hub-card memakai `ProgressOrb size={72}` yang nilainya `round(activeCount / parentCount × 100)` — persen "kepadatan aktivitas", **BUKAN** capaian target. Sementara **orb per-card di dalam tree** ([[workspace-card-progress]]) memakai RPC `workspace_card_progress` yang benar-benar mengukur capaian children.
+```
+Sertifikasi Sistem ERP Finance | active | 0 | is_measured = f
+Pelatihan Negosiasi Tim Sales  | active | 0 | is_measured = f
+```
 
-Dua orb visual identik (bulat, angka besar, ring warna) di layar yang sama, semantik beda — konsisten menipu user. Kejadian nyata: user membaca orb hub bernilai 100 padahal semua Goal turunan capaiannya 0%.
+Rantai Development (Area → Problem Statement → Rencana Aksi → Tugas) tidak punya `target_numeric` di level mana pun. Jadi angkanya jujur disebut "Progress" (% pekerjaan selesai), bukan "Capaian".
 
-Diskusi opsi (keputusan owner):
+## Konvensi rollup (diikuti, bukan dikarang ulang)
 
-- **Opsi 1 (dipilih)** — ganti simbol: orb → chip. Lobby tidak butuh capaian granular; distribusi status cukup untuk memutuskan "masuk ruang mana".
-- Opsi 2 ditolak — patch label saja ("Aktif" ganti nama orb). Simbol bulat tetap terbaca progress, label tak menyelamatkan.
-- Opsi 3 ditolak — samakan semantik ke RPC `workspace_card_progress` di hub. Menambah query mahal untuk lobby yang harus ringan; juga mengekspor bug per-tenant orb tree ke lobby.
+`deriveSpaceProgress` di `workspace-hub-stats.ts` — **satu fungsi untuk kedua ruang** — menerapkan aturan cabang `goal_attainment` RPC **satu tingkat ke atas** (kartu lvl-1 → Ruang):
 
-## Batas ruang lingkup
+1. **Populasi hanya `active`/`done`** — draft dan archived dibuang.
+2. **Ada anak terukur** → mean anak **terukur saja**, label `Capaian`. Anak tak-terukur DIKELUARKAN (bukan dihitung 0), sama seperti guard `target_numeric > 0` di RPC — merata-ratakan capaian dengan status-rollup akan mencampur dua semantik.
+3. **Nol anak terukur** → mean **semua** anak (homogen status-rollup), label `Progress`. Ini jalur Development.
+4. **Mean tak tertimbang**; clamp 0..100 tidak diulang (RPC sudah clamp per kartu).
 
-- **Hanya hub-card lobby**. Orb per-card di dalam tree pane (Goal/Strategi/Inisiatif/Rencana Aksi/Tugas) **tidak diubah** — itu memang capaian benar via RPC. Lihat [[workspace-card-progress]].
-- Progress-line 3px di bawah hub-card (yang dulu ikut orb %) juga dihapus — tanpa orb, garis itu redundan.
+`null` **hanya** berarti tak ada data (kosong / gagal fetch / RLS) → UI render `—`. Mengikuti `TreeOrbCell`: kartu tak-terukur **tetap merender orb** berlabel "Progress"; `—` dicadangkan untuk `value == null` saja. (Rancangan sempat keliru menampilkan `—` saat nol kartu terukur — dikoreksi 2026-08-02.)
+
+Perhitungan di **klien**, bukan RPC baru: RPC sudah mengembalikan `progress` + `is_measured` per kartu, jadi agregasi tinggal mean. Menambah mode agregat di SQL akan menduplikasi aturan di dua tempat.
+
+## Scoping periode
+
+Lobby memakai hook yang **sama** dengan pane (`usePerformanceItems`/`useDevelopmentItems`), jadi ikut di-scope ke tahun fokus. Dua alasan:
+
+1. Capaian lintas-tahun tak bermakna — merata-ratakan Goal 2025 yang 100% dengan Goal 2026 yang 5% menghasilkan angka yang tak bisa ditindaklanjuti.
+2. Set ID identik dengan pane → `useCardProgress` berbagi queryKey React Query. Terverifikasi 2026-08-02: pada `/workspace/performance` yang me-mount HubView **dan** pane sekaligus, hanya **1** request `workspace_card_progress` terjadi (ter-dedupe).
+
+Konsekuensi yang disengaja: hitungan stat row kini per-tahun-fokus, bukan total lintas-waktu (membalik pilihan sebelumnya). Tahun ditulis eksplisit di caption orb (`Capaian 2026`) agar scope tidak ambigu.
+
+## Riwayat keputusan
+
+Elemen ini berubah tiga kali. Baca ketiganya sebelum mengubah lagi.
+
+1. **Sebelum 2026-07-29 — orb `activeCount/parentCount`.** Persen "kepadatan aktivitas" yang tampil identik dengan orb capaian di tree. Kejadian nyata: user membaca orb hub `100` padahal semua Goal capaiannya `0%`. Warnanya pun menyesatkan — mengikuti ambang capaian, jadi "2 dari 3 Goal aktif" tampil amber ("perlu perhatian") padahal bukan kondisi buruk.
+2. **2026-07-29 (`c7627a6`) — chip `N/M {parent} aktif`.** Jujur, tapi **redundan**: kedua angkanya sudah tampil persis di stat row tepat di bawahnya (`{parent}` dan `{parent} aktif`). Chip juga diam-diam berfungsi menambal label stat row kolom-3 yang ambigu ("Aktif" — aktif Goal atau aktif Strategi?).
+3. **2026-08-02 (sekarang) — orb ruang sungguhan.** Chip dihapus; label kolom-3 dieksplisitkan jadi `Goal aktif`/`Area aktif` (memperluas prinsip owner QA 2026-07-24 "label == value"); kedua ruang dapat orb dari RPC, dibedakan label `Capaian`/`Progress`.
+
+Opsi yang ditolak di putaran ini:
+
+- **Bentuk berbeda per ruang** (ring vs bar) — sempat diimplementasi lalu dibatalkan. Menyalahartikan bug (1) sebagai "capaian vs progress tak boleh sebentuk", padahal itu konvensi tree. Efeknya Development jadi inkonsisten dengan dirinya sendiri (bar di lobby, orb di tree).
+- **Hapus indikator sepenuhnya** — menghilangkan bobot visual lobby tanpa perlu; masalahnya redundansi, bukan keberadaan indikator.
+- **Stat row lintas-waktu + orb per-tahun** — dua angka beda scope dalam satu kartu, jenis ketidakcocokan halus yang memicu seluruh riwayat ini.
+- **Development tanpa RPC** — menyia-nyiakan cache-hit dan konsistensi; `useCardProgress(devIds)` berbagi queryKey dengan pane Development, jadi biayanya nol.
+
+## Catatan ekspektasi
+
+Angka capaian jujur **akan terlihat rendah** pada organisasi yang baru mulai (data uji lokal: `4%`), karena hanya menghitung nilai hasil yang **sudah disetujui** terhadap target numerik. Itu benar dan disengaja. Jangan "memperbaiki" rumus agar angkanya terlihat bagus — itu jalan kembali ke ambiguitas.
 
 ## Lokasi kode
 
-- `mobile/src/components/workspace-hub-card.tsx` — komponen hub-card.
-- `mobile/src/lib/workspace-hub-stats.ts` — `derivePerformanceHubStats` / `deriveDevelopmentHubStats` (field `orbPercent` di-retire; `parentCount`/`childCount`/`activeCount` dipertahankan).
-- `mobile/src/components/__tests__/workspace-hub-card.test.tsx` — regresi chip + a11y.
-- `mobile/src/app/(app)/(tabs)/__tests__/workspace.test.tsx` — `[UI-N-002·6]` empty state chip.
+- `mobile/src/components/workspace-hub-card.tsx` — hub-card + `HubProgressOrb` (dipakai kedua ruang).
+- `mobile/src/lib/workspace-hub-stats.ts` — `deriveSpaceProgress` (kedua ruang), `derive*HubStats`.
+- `mobile/src/screens/workspace-screen.tsx` — `HubView` (lobby) merangkai indikator + scoping periode.
+- `mobile/src/lib/__tests__/workspace-hub-stats.test.ts` — mengunci 4 prinsip konvensi rollup.
+- `mobile/src/components/__tests__/workspace-hub-card.test.tsx` — regresi chip-dihapus, `—` vs `0%`, bentuk beda per ruang.

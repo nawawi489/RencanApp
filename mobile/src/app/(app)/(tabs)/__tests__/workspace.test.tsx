@@ -1409,8 +1409,13 @@ describe('WorkspaceScreen', () => {
       await renderHub();
       // Kolom-3 semula "Notif" (WSA-12) tapi value = activeCount (jumlah card aktif),
       // dan notif per-ruang goal/kpi/strategy DEFER (FR-GOV-04) → label menyesatkan.
-      // Owner decision QA 2026-07-24: relabel ke "Aktif" agar label == value. Dua hub-card → dua match.
-      expect((await screen.findAllByText('Aktif')).length).toBe(2);
+      // Owner decision QA 2026-07-24: relabel ke "Aktif" agar label == value.
+      // 2026-08-02 — prinsip yang SAMA diperluas: "Aktif" telanjang masih ambigu (aktif Goal
+      // atau aktif Strategi?), dan chip yang dulu menambal ambiguitas itu sudah dihapus
+      // karena redundan. Label kini menyebut entitasnya eksplisit per ruang.
+      expect(await screen.findByText('Goal aktif')).toBeTruthy();
+      expect(screen.getByText('Area aktif')).toBeTruthy();
+      expect(screen.queryByText('Aktif')).toBeNull();
       expect(screen.queryByText('Notif')).toBeNull();
       expect(screen.getByText('Area')).toBeTruthy();
       expect(screen.getByText('Problem Statement')).toBeTruthy();
@@ -1484,11 +1489,14 @@ describe('WorkspaceScreen', () => {
       ).toBeTruthy();
     });
 
-    it('[UI-N-002·6] hub-card empty (0 Goal, 0 DevArea) → chip "Belum ada …" di ke-2 hub', async () => {
+    it('[UI-N-002·6] hub-card empty (0 Goal, 0 DevArea) → indikator "—" di ke-2 hub, bukan 0%', async () => {
       await renderHub();
-      // 2026-07-29: orb % ditarik dari lobby (chip status ganti orb ambigu).
-      expect(await screen.findByText('Belum ada Goal')).toBeTruthy();
-      expect(screen.getByText('Belum ada Area')).toBeTruthy();
+      // 2026-08-02: chip "Belum ada …" dihapus bersama chip redundan; empty state kini
+      // diwakili orb ruang yang merender '—'. Tanpa kartu sama sekali, tak ada nilai
+      // terukur MAUPUN status-rollup → kedua ruang jatuh ke label "Progress".
+      // Yang WAJIB dijaga: tidak pernah render 0% saat tak ada data.
+      expect((await screen.findAllByLabelText(/Progress .* belum tersedia/)).length).toBe(2);
+      expect(screen.queryByLabelText(/0 persen/)).toBeNull();
     });
 
     // WSA-05 — Help modal `?` di hub card: buka konten spec §5; TIDAK menavigasi (onEnter).

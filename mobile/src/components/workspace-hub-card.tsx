@@ -1,12 +1,17 @@
 // UI-N-002 Stage 2 — Hub-card lobby di tab Workspace. 2 instance (Performance + Development).
-// Komposisi: `?` help + chip status aktif + 3-stat row + "Masuk →" button. Tap card area ATAU
-// button → onEnter(). Lobby TIDAK menampilkan capaian numerik — chip cuma menghitung distribusi
-// Goal/Area berstatus `active`. Capaian nyata live di orb per-card di tree pane (RPC
-// `workspace_card_progress`). Lihat wiki/concepts/workspace-hub-orb.md.
-import { useState } from 'react';
+// Komposisi: `?` help + `indicator` slot + 3-stat row + "Masuk →" button.
+//
+// `indicator` sengaja SLOT (bukan angka yang dihitung di sini): tiap ruang punya metrik
+// aslinya sendiri — Performance = capaian % (ring, RPC `workspace_card_progress` lapis
+// `measured`), Development = "N/M selesai" (bar, status). Memaksa keduanya ke satu simbol
+// bulat adalah bug `c7627a6` (dua lingkaran identik, semantik beda). Chip "N/M aktif" yang
+// dulu ada di sini DIHAPUS: angkanya duplikat persis dua sel stat row di bawahnya.
+// Lihat wiki/concepts/workspace-hub-orb.md.
+import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { useThemePreference } from '@/providers/theme-provider';
+import { ProgressOrb } from '@/components/ui';
 import { WorkspaceHelpModal, type WorkspaceHelpContent } from '@/components/workspace-help-modal';
 import type { HubStats } from '@/lib/workspace-hub-stats';
 
@@ -20,6 +25,7 @@ export function WorkspaceHubCard({
   parentStatLabel,
   childStatLabel,
   activeStatLabel,
+  indicator,
   onEnter,
   help,
   helpAccessibilityLabel,
@@ -35,6 +41,8 @@ export function WorkspaceHubCard({
   parentStatLabel: string;
   childStatLabel: string;
   activeStatLabel: string;
+  /** Metrik ruang (kanan-atas). Performance: ring capaian; Development: bar selesai. */
+  indicator?: ReactNode;
   onEnter: () => void;
   /** WSA-05 — konten help modal `?`; bila ada, render tombol `?` (tak menavigasi). */
   help?: WorkspaceHelpContent;
@@ -59,17 +67,6 @@ export function WorkspaceHubCard({
       : { border: '#0f766e', cta: '#0f766e', bg: '#f7fffd', kickerBg: '#e6fffb', kickerText: '#0f766e' };
   const surfaceBg = isDark ? '#0a0a0a' : identity.bg;
   const neutralBorder = isDark ? '#262626' : '#e5e7eb';
-  // Chip status: tampilkan berapa induk (Goal/Area) berstatus aktif dari total, BUKAN persen
-  // capaian. Konvensi orb bulat = progress dipakai untuk orb per-card tree (RPC benar-benar
-  // capaian). Chip di sini menghindari user salah baca angka besar sbg capaian.
-  const chipText =
-    stats.parentCount === 0
-      ? `Belum ada ${parentStatLabel}`
-      : `${stats.activeCount}/${stats.parentCount} ${parentStatLabel} aktif`;
-  const chipA11y =
-    stats.parentCount === 0
-      ? `Belum ada ${parentStatLabel}`
-      : `${stats.activeCount} dari ${stats.parentCount} ${parentStatLabel} aktif`;
 
   return (
     // Kartu = View (bukan Pressable) agar `?` dan `Masuk` tidak jadi button-di-dalam-button
@@ -116,14 +113,7 @@ export function WorkspaceHubCard({
             {meta}
           </Text>
         </View>
-        <View
-          accessibilityRole="text"
-          accessibilityLabel={chipA11y}
-          style={{ alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: identity.kickerBg }}>
-          <Text style={{ color: identity.kickerText, fontSize: 12, fontWeight: '800' }}>
-            {chipText}
-          </Text>
-        </View>
+        {indicator ? <View style={{ alignSelf: 'flex-start' }}>{indicator}</View> : null}
       </View>
 
       <View className="flex-row gap-2">
@@ -145,6 +135,49 @@ export function WorkspaceHubCard({
       {help ? (
         <WorkspaceHelpModal visible={helpOpen} content={help} onClose={() => setHelpOpen(false)} />
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * Orb ruang untuk hub-card lobby — dipakai KEDUA ruang (Performance & Development).
+ *
+ * Satu bentuk orb, label yang membedakan makna — persis pola `TreeOrbCell`/`treeOrbLabel`
+ * di tree: "Capaian" bila ada kartu terukur (capaian vs target), "Progress" bila tidak
+ * (status-rollup). Development selalu "Progress" karena lapis `measured` RPC hanya punya
+ * cabang Goal & Strategy.
+ *
+ * Bentuk TIDAK dibedakan antar-ruang: bug `c7627a6` adalah orb KEPADATAN
+ * (`activeCount/parentCount`) menyamar jadi capaian — bukan "capaian vs progress",
+ * yang justru sudah jadi konvensi tree. Membedakan bentuk di lobby malah membuat
+ * Development inkonsisten: bar di lobby tapi orb di dalam tree.
+ *
+ * `value` null → '—' (kosong / gagal fetch / RLS), BUKAN 0% — sama seperti `TreeOrbCell`.
+ */
+export function HubProgressOrb({
+  value,
+  label,
+  periodLabel,
+}: {
+  value: number | null;
+  label: 'Capaian' | 'Progress';
+  periodLabel?: string;
+}) {
+  const caption = periodLabel ? `${label} ${periodLabel}` : label;
+  return (
+    <View style={{ width: 72 }} className="items-center gap-1">
+      {value == null ? (
+        <View style={{ height: 72 }} className="items-center justify-center">
+          <Text
+            className="text-xl font-bold text-neutral-400 dark:text-neutral-500"
+            accessibilityLabel={`${caption} belum tersedia`}>
+            —
+          </Text>
+        </View>
+      ) : (
+        <ProgressOrb value={value} size={72} label={caption} />
+      )}
+      <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">{caption}</Text>
     </View>
   );
 }
