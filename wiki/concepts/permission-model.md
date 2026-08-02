@@ -1,7 +1,7 @@
 ---
 type: concept
 tags: [permission, rls, delegation, governance, decision]
-updated: 2026-06-22
+updated: 2026-08-02
 sources: 1
 ---
 
@@ -50,6 +50,25 @@ Bukan system rule: boleh membuat tiap jenis card; lihat seluruh Workspace; kelol
 | **C-Level** | Sesuai area authority; buat card jika jadi PIC induknya; lihat turunan miliknya. |
 | **Management / Manager / Head** | Buat Strategy/Initiative/Task jika PIC induk; tentukan PIC/Reviewer turunannya. |
 | **Staff** | Lihat & kerjakan card yang dia PIC/Reviewer; submit Bukti & Nilai Hasil; comment. **Tidak** boleh buat card, lihat seluruh Workspace, kelola card orang lain, ubah Settings. |
+
+> [!warning] Key `create_kpi_area` sengaja BUKAN default management/c_level (K4, migration 0010)
+> Membuat KPI Area (tabel DB `strategies`) butuh permission `create_kpi_area` **ATAU** jadi
+> PIC Goal induk (`is_goal_pic`) — beda dari `create_strategy`/`create_initiative`/`create_action_plan`
+> yang **memang** default melekat pada `management`/`c_level`. Keputusan ini mengikat sejak Fase 4:
+> *"create_goal/create_kpi_area = CEO/grant (TIDAK di default c_level/management); create_strategy
+> tetap default."*
+>
+> UI `workspace-screen.tsx` (GoalRow, tombol "+ Strategi" level Goal) sempat memakai proxy
+> `can('create_strategy')` untuk menggerbang tombol ini — key yang salah, ditemukan & diperbaiki
+> 2026-08-02. Efeknya dua arah: (a) manager yang **jadi PIC Goal** — yang server izinkan via
+> `is_goal_pic` — tidak melihat tombol; (b) drift risiko bila `MGR_DEFAULT_KEYS` klien berubah.
+> Fix: `can('create_kpi_area') || goal.pic_id === profile.id`, mirror policy DB persis. Lihat
+> `mobile/src/lib/permission-defaults.ts` (`MGR_DEFAULT_KEYS`) untuk daftar key yang **benar**
+> default management/c_level.
+>
+> **Pelajaran:** kalau UI menggerbang aksi via `can(key)`, `key`-nya harus dicocokkan ke policy
+> RLS/RPC yang sebenarnya menegakkan aksi itu — bukan diasumsikan dari nama yang "mirip" atau
+> dari key lain di level sama dalam hierarki card.
 
 ## Konsekuensi teknis
 
