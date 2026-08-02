@@ -821,7 +821,7 @@ const GoalRow = memo(function GoalRow({
   isMeasured?: boolean;
 }) {
   const router = useRouter();
-  const { can } = useProfile();
+  const { can, profile } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // UI-S-W07: destrukturisasi state fetch penuh — expand tanpa skeleton/empty/error
@@ -836,7 +836,13 @@ const GoalRow = memo(function GoalRow({
 
   const count = kpiCountOf(goal);
   const past = isAddLocked(goal, focus, now);
-  const canAddKpi = can('create_strategy');
+  // WSA-13 — key presisi (bukan proxy create_strategy) + jalur PIC-Goal, mirror policy
+  // strategies_insert (0010): has_permission('create_kpi_area') OR is_goal_pic(goal_id).
+  // K4 (0010): create_kpi_area BUKAN default management/c_level. Proxy create_strategy sebelumnya
+  // salah dua arah: (a) manager tanpa grant sempat lihat tombol lalu server tolak (drift bisa
+  // muncul kalau MGR_DEFAULT_KEYS berubah), dan (b) manager yang JADI PIC Goal — server izinkan —
+  // TIDAK melihat tombol.
+  const canAddKpi = can('create_kpi_area') || (profile?.id != null && goal.pic_id === profile.id);
   const rowActions = useTreeRowActions('goal', goal.id, goal.name);
   const periodLabel = treePeriodPillLabel(goal, focus);
   const metaLines = WS_TREE_COMPACT_COPY.goalMeta({

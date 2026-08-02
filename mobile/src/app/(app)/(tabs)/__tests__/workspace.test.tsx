@@ -1004,6 +1004,30 @@ describe('WorkspaceScreen', () => {
       expect(await screen.findByLabelText('Aksi: Akuisisi Lewat Meta Ads')).toBeTruthy();
     });
 
+    // WSA-13·0 — "+ Strategi" (level Goal) digate key presisi `create_kpi_area` (mirror policy
+    // strategies_insert 0010: has_permission('create_kpi_area') OR is_goal_pic). Proxy
+    // create_strategy sebelumnya salah dua arah (lihat komentar di workspace-screen.tsx §GoalRow).
+    it('[WSA-13·0·A] "+ Strategi" digate create_kpi_area: create_strategy true tapi create_kpi_area false & bukan PIC Goal → tombol sembunyi', async () => {
+      mockCan.mockImplementation((key: string) => key === 'create_strategy'); // false untuk create_kpi_area
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ ...GOAL_NOW, pic_id: 'other-user' }] }));
+      await renderScreen();
+      expect(screen.queryByLabelText('Tambah Strategi ke Goal Aktif')).toBeNull();
+    });
+
+    it('[WSA-13·0·B] "+ Strategi" tampil saat create_kpi_area true (bukan PIC Goal, create_strategy false)', async () => {
+      mockCan.mockImplementation((key: string) => key === 'create_kpi_area');
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ ...GOAL_NOW, pic_id: 'other-user' }] }));
+      await renderScreen();
+      expect(screen.getByLabelText('Tambah Strategi ke Goal Aktif')).toBeTruthy();
+    });
+
+    it('[WSA-13·0·C] "+ Strategi" tampil untuk PIC Goal walau tanpa create_kpi_area (jalur is_goal_pic K4)', async () => {
+      mockCan.mockReturnValue(false); // tak ada permission apa pun
+      mockUseGoals.mockReturnValue(goalsResult({ goals: [{ ...GOAL_NOW, pic_id: 'u1' }] })); // u1 = mock useProfile id
+      await renderScreen();
+      expect(screen.getByLabelText('Tambah Strategi ke Goal Aktif')).toBeTruthy();
+    });
+
     // WSA-13 — "+ Inisiatif" digate key presisi `create_initiative` (bukan proxy `create_strategy`).
     it('[WSA-13·1] "+ Inisiatif" digate create_initiative: create_strategy true tapi create_initiative false → tombol sembunyi', async () => {
       mockCan.mockImplementation((key: string) => key !== 'create_initiative');
