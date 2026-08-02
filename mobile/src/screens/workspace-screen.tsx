@@ -77,7 +77,7 @@ import {
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { useThemePreference } from '@/providers/theme-provider';
 import { RowActionsMenu } from '@/components/row-actions-menu';
-import { WorkspaceHubCard } from '@/components/workspace-hub-card';
+import { WorkspaceHubCard, HubProgressOrb } from '@/components/workspace-hub-card';
 import {
   TREE_LEVEL_INDENT,
   WORKSPACE_KIND_BORDER,
@@ -87,6 +87,7 @@ import {
 import {
   derivePerformanceHubStats,
   deriveDevelopmentHubStats,
+  deriveSpaceProgress,
 } from '@/lib/workspace-hub-stats';
 import { WS_COPY, WS_DEV_COPY, WS_HELP_COPY, WS_HUB_COPY, WS_TREE_COMPACT_COPY } from '@/lib/workspace-copy';
 
@@ -1466,13 +1467,23 @@ function PaneSectionHeader({
 }
 
 /**
- * UI-N-002 Stage 2 — HubView (lobby). 2 hub-card derive stats dari `useGoals`/`useDevelopmentAreas`
- * (zero query baru). Tap hub → masuk pane dgn back button.
+ * UI-N-002 Stage 2 — HubView (lobby). Tap hub → masuk pane dgn back button.
+ *
+ * Scoping: lobby memakai `usePerformanceItems`/`useDevelopmentItems` — hook YANG SAMA
+ * dengan pane, jadi di-scope ke tahun fokus. Dua alasan (keputusan owner 2026-08-02,
+ * membalik pilihan "ringkasan lintas-waktu" sebelumnya):
+ *   1. Capaian lintas-tahun tak bermakna — merata-ratakan Goal 2025 yang 100% dengan
+ *      Goal 2026 yang 5% menghasilkan angka yang tak bisa ditindaklanjuti.
+ *   2. Set ID identik dengan pane → `useCardProgress` berbagi queryKey React Query,
+ *      jadi transisi lobby→pane cache-hit (nol query tambahan).
+ * Konsekuensi yang disengaja: hitungan stat row kini per-tahun-fokus, bukan total
+ * lintas-waktu. Tahun ditulis eksplisit di caption orb agar scope tak ambigu.
  */
 function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') => void }) {
   const router = useRouter();
-  const goalsQ = useGoals();
-  const devQ = useDevelopmentAreas();
+  const goalsQ = usePerformanceItems();
+  const devQ = useDevelopmentItems();
+  const { focus } = usePeriodFocus();
 
   useFocusEffect(
     useCallback(() => {
@@ -1482,8 +1493,18 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
     }, []),
   );
 
-  const perfStats = derivePerformanceHubStats(goalsQ.goals);
-  const devStats = deriveDevelopmentHubStats(devQ.developmentAreas);
+  const perfStats = derivePerformanceHubStats(goalsQ.items);
+  const devStats = deriveDevelopmentHubStats(devQ.items);
+  // Orb ruang: satu RPC batch per ruang atas kartu lvl-1 tahun-fokus. queryKey sama
+  // dengan pane masing-masing → transisi lobby→pane cache-hit (nol query tambahan).
+  const goalIds = useMemo(() => goalsQ.items.map((g) => g.id), [goalsQ.items]);
+  const devIds = useMemo(() => devQ.items.map((d) => d.id), [devQ.items]);
+  const perf = useCardProgress(goalIds);
+  const dev = useCardProgress(devIds);
+  // Satu fungsi utk kedua ruang; `label` yang membedakan ("Capaian" vs "Progress"),
+  // persis pola treeOrbLabel. Development selalu "Progress" (is_measured=false).
+  const perfProgress = deriveSpaceProgress(goalsQ.items, perf.progressOf, perf.measuredOf);
+  const devProgress = deriveSpaceProgress(devQ.items, dev.progressOf, dev.measuredOf);
   const loading = goalsQ.isLoading || devQ.isLoading;
 
   return (
@@ -1520,7 +1541,16 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
               enterAccessibilityLabel={WS_HUB_COPY.perf.enterA11y}
               parentStatLabel="Goal"
               childStatLabel="Strategi"
-              activeStatLabel="Aktif"
+              /* "Aktif" telanjang ambigu (aktif Goal atau aktif Strategi?) — dulu ditambal
+                 chip "N/M Goal aktif" yang justru menduplikasi dua sel stat row ini. */
+              activeStatLabel="Goal aktif"
+              indicator={
+                <HubProgressOrb
+                  value={perfProgress.value}
+                  label={perfProgress.label}
+                  periodLabel={String(focus.year)}
+                />
+              }
               help={WS_HELP_COPY.performance}
               helpAccessibilityLabel="Bantuan Performance"
               space="performance"
@@ -1535,7 +1565,14 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
               enterAccessibilityLabel={WS_HUB_COPY.dev.enterA11y}
               parentStatLabel="Area"
               childStatLabel="Problem Statement"
-              activeStatLabel="Aktif"
+              activeStatLabel="Area aktif"
+              indicator={
+                <HubProgressOrb
+                  value={devProgress.value}
+                  label={devProgress.label}
+                  periodLabel={String(focus.year)}
+                />
+              }
               help={WS_HELP_COPY.development}
               helpAccessibilityLabel="Bantuan Development"
               space="development"
