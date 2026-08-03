@@ -19,8 +19,6 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "staging",
-        "EXPO_PUBLIC_SUPABASE_URL": "",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
@@ -28,9 +26,7 @@
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://REPLACE-prod-project-ref.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "REPLACE_PROD_ANON_KEY"
+        "EXPO_PUBLIC_APP_ENV": "production"
       }
     }
   },
