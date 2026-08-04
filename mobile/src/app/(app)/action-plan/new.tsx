@@ -34,7 +34,7 @@ function TeamChipSelector({
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-black dark:text-white">
-        Tim<Text className="text-red-500"> *</Text>
+        Tim<Text className="text-red-700 dark:text-red-400"> * (wajib)</Text>
       </Text>
       {teamsQ.isLoading ? (
         <Text className="text-xs text-neutral-400">Memuat daftar tim…</Text>

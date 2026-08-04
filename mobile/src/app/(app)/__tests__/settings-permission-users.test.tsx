@@ -139,7 +139,7 @@ describe('SettingsPermissionUsersScreen', () => {
       fireEvent.press(screen.getByLabelText('Lihat Semua Workspace'));
     });
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Alasan'), 'butuh akses lintas tim');
+      fireEvent.changeText(screen.getByLabelText('Alasan wajib'), 'butuh akses lintas tim');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Konfirmasi'));
@@ -159,7 +159,7 @@ describe('SettingsPermissionUsersScreen', () => {
     });
     expect(screen.getByText('Cabut Hak Akses')).toBeTruthy();
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Alasan'), 'tidak lagi relevan');
+      fireEvent.changeText(screen.getByLabelText('Alasan wajib'), 'tidak lagi relevan');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Cabut'));
@@ -187,7 +187,7 @@ describe('SettingsPermissionUsersScreen', () => {
       fireEvent.press(screen.getByLabelText('Lihat Semua Workspace'));
     });
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText('Alasan'), 'coba');
+      fireEvent.changeText(screen.getByLabelText('Alasan wajib'), 'coba');
     });
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Konfirmasi'));

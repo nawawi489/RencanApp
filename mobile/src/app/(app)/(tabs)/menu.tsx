@@ -223,7 +223,7 @@ function MenuGrid({ items, onPress }: { items: MenuItem[]; onPress: (item: MenuI
 /** Heading kategori seragam (spec §7/§11): 14px / weight 900 / navy #26364f, kanan muted. */
 function CategoryHeading({ title, right }: { title: string; right?: string }) {
   return (
-    <View className="min-h-[42px] flex-row items-center justify-between px-0.5">
+    <View className="min-h-[44px] flex-row items-center justify-between px-0.5">
       <Text className="text-sm font-black text-[#26364f] dark:text-neutral-100">{title}</Text>
       {right ? <Text className="text-xs font-extrabold text-neutral-400">{right}</Text> : null}
     </View>
@@ -241,7 +241,7 @@ function MenuAccordion({ title, items, onPress }: { title: string; items: MenuIt
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ expanded: open }}
-        className="min-h-[42px] flex-row items-center justify-between px-0.5 active:opacity-70"
+        className="min-h-[44px] flex-row items-center justify-between px-0.5 active:opacity-70"
         onPress={() => setOpen((v) => !v)}>
         <Text className="text-sm font-black text-[#26364f] dark:text-neutral-100">{title}</Text>
         <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={16} color={chevronColor} />

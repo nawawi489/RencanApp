@@ -88,7 +88,7 @@ export function TimeField({
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-black dark:text-white">
           {label}
-          {required ? <Text className="text-red-500"> *</Text> : null}
+          {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
         </Text>
         <input
           type="time"
@@ -125,7 +125,7 @@ export function TimeField({
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-black dark:text-white">
           {label}
-          {required ? <Text className="text-red-500"> *</Text> : null}
+          {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
         </Text>
         <TextInput
           accessibilityLabel={fieldLabel}
@@ -144,7 +144,7 @@ export function TimeField({
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-black dark:text-white">
         {label}
-        {required ? <Text className="text-red-500"> *</Text> : null}
+        {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
       </Text>
       <Pressable
         accessibilityRole="button"

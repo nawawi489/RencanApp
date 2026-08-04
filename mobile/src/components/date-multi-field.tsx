@@ -39,7 +39,7 @@ export function DateMultiField({ label, values, onChange, required }: Props) {
     <View className="gap-2">
       <Text className="text-sm font-medium text-black dark:text-white">
         {label}
-        {required ? <Text className="text-red-500"> *</Text> : null}
+        {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
       </Text>
       {values.length > 0 ? (
         <View className="flex-row flex-wrap gap-2" accessibilityLabel={`${fieldLabel} — ${values.length} tanggal terpilih`}>

@@ -32,7 +32,7 @@ function ImpactSelector({
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-black dark:text-white">
-        Dampak<Text className="text-red-500"> *</Text>
+        Dampak<Text className="text-red-700 dark:text-red-400"> * (wajib)</Text>
       </Text>
       <View className="flex-row flex-wrap gap-2">
         {IMPACTS.map((i) => {
