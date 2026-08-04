@@ -131,7 +131,7 @@ export function DateField({
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-black dark:text-white">
           {label}
-          {required ? <Text className="text-red-500"> *</Text> : null}
+          {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
         </Text>
         {chips}
         <input
@@ -169,7 +169,7 @@ export function DateField({
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-black dark:text-white">
           {label}
-          {required ? <Text className="text-red-500"> *</Text> : null}
+          {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
         </Text>
         {chips}
         <TextInput
@@ -189,7 +189,7 @@ export function DateField({
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-black dark:text-white">
         {label}
-        {required ? <Text className="text-red-500"> *</Text> : null}
+        {required ? <Text className="text-red-700 dark:text-red-400"> *</Text> : null}
       </Text>
       {chips}
       <Pressable

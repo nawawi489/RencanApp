@@ -464,14 +464,16 @@ describe('WorkspaceScreen', () => {
 
     const moreButton = await screen.findByLabelText('Aksi lain Tumbuhkan Revenue');
     const addButton = screen.getByLabelText('Tambah Strategi ke Tumbuhkan Revenue');
-    const moreStyle = flattenStyle(moreButton.props.style) as { width?: number; height?: number };
+    const moreStyle = flattenStyle(moreButton.props.style) as { minWidth?: number; minHeight?: number };
     const addStyle = flattenStyle(addButton.props.style) as {
       minHeight?: number;
       paddingHorizontal?: number;
     };
 
-    expect(moreStyle.width).toBe(34);
-    expect(moreStyle.height).toBe(34);
+    // §4.5 — tombol "⋯" pakai min-width/min-height (bukan fixed) supaya glyph tak terpotong
+    // saat Dynamic Type membesar; visual compact 34 tetap default (sejajar tombol "+ Strategi").
+    expect(moreStyle.minWidth).toBe(34);
+    expect(moreStyle.minHeight).toBe(34);
     expect(addStyle.minHeight).toBe(34);
     expect(addStyle.paddingHorizontal).toBe(12);
   });

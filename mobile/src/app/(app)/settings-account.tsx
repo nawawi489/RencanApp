@@ -11,12 +11,17 @@ import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui
 import { exportMyData, requestAccountDeletion } from '@/lib/account';
 import { showAlert } from '@/lib/alert';
 import { alertFriendlyError } from '@/lib/errors';
+import { useThemedIcon } from '@/providers/theme-provider';
 
 export default function SettingsAccountScreen() {
   const [reason, setReason] = useState('');
   const [exporting, setExporting] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
+  // §10: warna ikon prop non-className via hook, bukan hex statik (regresi S5 di
+  // kartu dark:bg-black — ikon tak ikut tema). Pasangan `brand-dark` + `danger`.
+  const infoIconColor = useThemedIcon('#1564b3', '#93c5fd');
+  const dangerIconColor = useThemedIcon('#b91c1c', '#fca5a5');
 
   async function handleExport() {
     setExporting(true);
@@ -85,7 +90,7 @@ export default function SettingsAccountScreen() {
         <SectionCard>
           <View className="gap-2">
             <View className="flex-row items-center gap-2">
-              <Ionicons name="download-outline" size={20} color="#1564b3" />
+              <Ionicons name="download-outline" size={20} color={infoIconColor} />
               <Text className="text-lg font-semibold text-black dark:text-white">Ekspor Data Saya</Text>
             </View>
             <Text className="text-sm text-neutral-600 dark:text-neutral-300">
@@ -103,7 +108,7 @@ export default function SettingsAccountScreen() {
         <SectionCard>
           <View className="gap-2">
             <View className="flex-row items-center gap-2">
-              <Ionicons name="trash-outline" size={20} color="#b42318" />
+              <Ionicons name="trash-outline" size={20} color={dangerIconColor} />
               <Text className="text-lg font-semibold text-black dark:text-white">Ajukan Penghapusan Akun</Text>
             </View>
             <Text className="text-sm text-neutral-600 dark:text-neutral-300">

@@ -435,11 +435,11 @@ export default function SettingsPermissionUsersScreen() {
             </Text>
             <View className="gap-1.5">
               <Text className="text-sm font-medium text-black dark:text-white">
-                Alasan <Text className="text-red-500">*</Text>
+                Alasan <Text className="text-red-700 dark:text-red-400">*</Text>
               </Text>
               <TextInput
                 className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-                accessibilityLabel="Alasan"
+                accessibilityLabel="Alasan wajib"
                 placeholder="mis. dibutuhkan untuk koordinasi lintas tim"
                 placeholderTextColor={placeholderColor}
                 value={reason}

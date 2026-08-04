@@ -39,6 +39,7 @@ import {
 } from '@/lib/home';
 import { HOME_QUERY_PREFIX } from '@/lib/home-queries';
 import { INSTANCE_STATUS_LABEL, INSTANCE_STATUS_TONE } from '@/lib/repeat';
+import { useBreakpoint } from '@/lib/responsive';
 
 const ONBOARDING_DAYS = 7;
 const MAX_TASK_ROWS = 5;
@@ -52,7 +53,12 @@ const HOME_STALE_MS = 30_000;
 function TypeBadge({ repeat }: { repeat: boolean }) {
   return (
     <View
-      className={`h-9 w-9 items-center justify-center rounded-xl ${repeat ? 'bg-green-700' : 'bg-brand-dark'}`}
+      // §4.5 — min-h/min-w (bukan tinggi fixed) supaya glyph "RT"/"T" tak terpotong saat
+      // Dynamic Type membesarkan teks. Badge dekoratif → disembunyikan dari a11y tree di
+      // KEDUA platform: Android `no-hide-descendants` + iOS `accessibilityElementsHidden`
+      // (pola berpasangan `ui.tsx`), supaya VoiceOver tak membaca glyph "RT"/"T".
+      className={`min-h-[36px] min-w-[36px] items-center justify-center rounded-xl p-1.5 ${repeat ? 'bg-green-700' : 'bg-brand-dark'}`}
+      accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">
       <Text className="text-xs font-bold text-white">{repeat ? 'RT' : 'T'}</Text>
     </View>
@@ -99,6 +105,10 @@ function TaskRow({ item, onPress }: { item: TaskWithPeople; onPress: () => void 
           </View>
           <ProgressBar value={progress} showLabel tone={progress >= 100 ? 'success' : 'brand'} />
           <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
+            {/* Sinyal repeat non-warna untuk pembaca layar: TypeBadge kini disembunyikan dari
+                a11y tree (lihat TypeBadge), jadi "Repeat" harus hadir sebagai teks — pola sama
+                dengan HomeItemRow. */}
+            {repeat ? <MetaChip icon="repeat">Repeat</MetaChip> : null}
             {item.deadline ? (
               <MetaChip icon="time-outline">Deadline {item.deadline}</MetaChip>
             ) : null}
@@ -268,6 +278,7 @@ export default function LiveHomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const { session } = useAuth();
+  const { isCompact } = useBreakpoint();
   const uid = session?.user?.id ?? '';
   const openTask = (id: string) => router.push(`/task/${id}` as Href);
   const openHomeItem = (item: HomeItem) =>
@@ -426,7 +437,10 @@ export default function LiveHomeScreen() {
 
         <View className="gap-3">
           <SectionHeading title="Prioritas" />
-          <View className="flex-row gap-3">
+          {/* §4.5 — di lebar compact (ponsel) 3 kartu sejajar menyempit ke ~85pt @320pt dan
+              memotong subtitle. Susun bertumpuk (drop `flex-row` → kolom) sehingga tiap kartu
+              full-width; `flex-1` internal kartu jadi no-op vertikal. ≥medium tetap sejajar. */}
+          <View className={isCompact ? 'gap-3' : 'flex-row gap-3'}>
             <PriorityCard
               icon="!"
               title="Terlewat"

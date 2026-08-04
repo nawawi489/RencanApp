@@ -109,7 +109,7 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
         </View>
       </View>
       <Pressable
-        style={{ height: 36, borderRadius: 999, backgroundColor: pillTheme.changeBg, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
+        style={{ minHeight: 36, paddingVertical: 7, borderRadius: 999, backgroundColor: pillTheme.changeBg, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
         // Sprint 6 S6-5 — visual 36px, touch efektif 48px lewat hitSlop 6 (DESIGN §4).
         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         className="active:opacity-70"

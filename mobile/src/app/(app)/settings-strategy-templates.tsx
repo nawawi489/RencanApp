@@ -488,7 +488,7 @@ function GoalTemplatePicker({
             <Text
               className={`text-sm font-semibold ${
                 selected === gt.id
-                  ? 'text-brand dark:text-brand-light'
+                  ? 'text-brand-dark dark:text-brand-light'
                   : 'text-neutral-600 dark:text-neutral-300'
               }`}>
               {gt.name}

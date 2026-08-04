@@ -428,7 +428,7 @@ function CompactActionRow({
       </Pressable>
       <Pressable
         hitSlop={ACTION_HIT_SLOP}
-        style={{ width: 34, height: 34, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
+        style={{ minWidth: 34, minHeight: 34, paddingVertical: 4, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
         accessibilityRole="button"
         accessibilityLabel={`Aksi lain ${cardLabel}`}
         onPress={onMore}>
@@ -1450,7 +1450,10 @@ function PaneSectionHeader({
           // menaikkan touch area efektif ke 44px (DESIGN §4 rule 1). Pola sama = card-help-trigger.
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           style={{
-            height: 32,
+            // DESIGN §4.5 — minHeight (bukan height fixed) supaya label tak terpotong saat
+            // Dynamic Type membesarkan teks; visual compact 32 tetap default. hitSlop dipertahankan.
+            minHeight: 32,
+            paddingVertical: 6,
             borderRadius: 12,
             backgroundColor: '#1564b3',
             paddingHorizontal: 12,

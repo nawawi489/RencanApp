@@ -515,7 +515,7 @@ export function ErrorState({
       accessibilityRole="alert"
       accessibilityLabel={`${title}. ${description}`}>
       <Text className="text-center text-base font-semibold text-red-700 dark:text-red-300">{title}</Text>
-      <Text className="text-center text-sm text-red-600 dark:text-red-400">{description}</Text>
+      <Text className="text-center text-sm text-red-700 dark:text-red-400">{description}</Text>
       {onRetry ? (
         <View className="mt-2">
           <Button label="Coba lagi" onPress={onRetry} variant="secondary" />
@@ -723,7 +723,7 @@ export function ScoreBadge({ score }: { score: number }) {
 const LEGEND_DOT: Record<ScoreBand, string> = {
   'on-track': 'bg-green-600',
   stable: 'bg-neutral-400',
-  attention: 'bg-amber-600',
+  attention: 'bg-amber-700',
 };
 
 /** Legenda skala skor untuk header daftar People. */
@@ -1006,7 +1006,9 @@ export function TreeProgressOrb({
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   const size = compact ? TREE_PROGRESS_ORB_COMPACT_SIZE : TREE_PROGRESS_ORB_SIZE;
   const stroke = compact ? 4 : 6;
-  const numberSize = compact ? 9 : 12;
+  // UI-S-W09: number compact minimal 11px (DESIGN §4.5 — floor legibilitas 11pt). Sebelumnya 9px
+  // di bawah floor bahkan pada ukuran default; label sudah dinaikkan 8→10, number terlewat.
+  const numberSize = compact ? 11 : 12;
   // UI-S-W09: label compact minimal 10px (DESIGN §4.5 — readable di mobile). Sebelumnya 8px
   // menyulitkan identifikasi status ring (Capaian/Progress) di Dynamic Type & dark mode.
   const labelSize = compact ? 10 : 11;

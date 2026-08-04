@@ -212,7 +212,7 @@ function RequestRow({
           <View className="gap-1.5">
             <Text className="text-sm font-semibold text-black dark:text-white">Alasan review (wajib bila Tolak / Minta Revisi)</Text>
             <TextInput
-              className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white h-24"
+              className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white min-h-[96px]"
               accessibilityLabel={`Alasan review untuk ${r.id}`}
               placeholder="Jelaskan alasan penolakan atau permintaan revisi"
               placeholderTextColor={placeholderColor}
@@ -239,7 +239,7 @@ function RequestRow({
               accessibilityRole="button"
               accessibilityLabel={`Minta revisi permintaan ${r.id}`}
               accessibilityState={{ disabled: isPending, busy: isPending }}
-              className={`min-h-[44px] flex-1 items-center justify-center rounded-xl bg-amber-600 active:opacity-70 ${isPending ? 'opacity-40' : ''}`}
+              className={`min-h-[44px] flex-1 items-center justify-center rounded-xl bg-amber-700 active:opacity-70 ${isPending ? 'opacity-40' : ''}`}
               disabled={isPending}
               onPress={() => doReview('revision_requested')}>
               <Text className="text-base font-semibold text-white">Minta Revisi</Text>
@@ -269,7 +269,7 @@ function RequestRow({
           <View className="gap-1.5">
             <Text className="text-sm font-semibold text-black dark:text-white">Alasan (revisi)</Text>
             <TextInput
-              className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white h-24"
+              className="rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white min-h-[96px]"
               accessibilityLabel={`Alasan revisi terbaru untuk ${r.id}`}
               placeholder="Perbarui alasan sesuai catatan reviewer"
               placeholderTextColor={placeholderColor}

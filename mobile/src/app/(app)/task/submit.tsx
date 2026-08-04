@@ -367,7 +367,7 @@ export function LiveTaskSubmitScreen() {
         {/* Bukti */}
         <View className="gap-3">
           <Text className="text-base font-bold text-black dark:text-white">
-            Bukti{ap.evidence_required ? <Text className="text-red-500"> *</Text> : null}
+            Bukti{ap.evidence_required ? <Text className="text-red-700 dark:text-red-400"> * (wajib)</Text> : null}
           </Text>
 
           {/* File upload (AP5) — hanya untuk mode task (instance mode pakai jalur lama). */}
@@ -438,7 +438,7 @@ export function LiveTaskSubmitScreen() {
         {showResultSection ? (
           <View className="gap-3">
             <Text className="text-base font-bold text-black dark:text-white">
-              Nilai Hasil{ap.result_value_required ? <Text className="text-red-500"> *</Text> : null}
+              Nilai Hasil{ap.result_value_required ? <Text className="text-red-700 dark:text-red-400"> * (wajib)</Text> : null}
             </Text>
             {results.map((row, i) => (
               <KpiResultRow
