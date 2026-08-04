@@ -112,6 +112,8 @@ export function FinalizePeriodModal({
   // brandIconColor di notifications.tsx). Amber-600/400 agar kontras di kedua latar.
   const { effective } = useThemePreference();
   const warningIconColor = effective === 'dark' ? '#fbbf24' : '#b45309';
+  // AckCheckbox: ikon state pilihan pakai pasangan `brand-dark` §10 (checkmark-circle/ellipse-outline).
+  const ackIconColor = effective === 'dark' ? '#93c5fd' : '#1564b3';
 
   // State efektif diturunkan saat render. Begitu `phase` terisi, ia menang atas preview —
   // itulah yang mencegah modal "mundur" ke step1 saat query di-invalidate pasca-close.
@@ -273,20 +275,24 @@ export function FinalizePeriodModal({
                 dibekukan dan periode ditutup. Setelah dikunci, periode ini tidak dapat dibuka
                 kembali dari aplikasi dan Manual Override tidak bisa lagi diubah.
               </Text>
-              {/* AckCheckbox (DESIGN §7): pernyataan-paham terpisah dari aksi. Glyph ✓/○ =
-                  sinyal non-warna wajib (§4 rule 2); teks boleh wrap karena untuk dibaca.
-                  SENGAJA TANPA border/latar kotak — dengan bingkai penuh ia terbaca sebagai
-                  "tombol ketiga" di antara Finalisasi & Batal. Bentuknya baris pilihan:
-                  glyph + teks, area tap tetap ≥44px lewat min-h + py. */}
+              {/* AckCheckbox (DESIGN §7): pernyataan-paham terpisah dari aksi. Ikon Ionicons
+                  checkmark-circle/ellipse-outline = sinyal non-warna wajib (§4 rule 2, resolusi
+                  §10); teks boleh wrap karena untuk dibaca. SENGAJA TANPA border/latar kotak —
+                  dengan bingkai penuh ia terbaca sebagai "tombol ketiga" di antara Finalisasi &
+                  Batal. Bentuknya baris pilihan: ikon + teks, area tap tetap ≥44px lewat min-h + py. */}
               <Pressable
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: acknowledged }}
                 accessibilityLabel={ACK_LABEL}
                 onPress={() => setAcknowledged((v) => !v)}
                 className="min-h-[44px] flex-row items-start gap-3 py-2">
-                <Text className="text-base font-semibold text-brand-dark dark:text-blue-300">
-                  {acknowledged ? '✓' : '○'}
-                </Text>
+                <Ionicons
+                  name={acknowledged ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={22}
+                  color={ackIconColor}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                />
                 <Text className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
                   {ACK_LABEL}
                 </Text>

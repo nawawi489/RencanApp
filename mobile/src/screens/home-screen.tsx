@@ -1,9 +1,11 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { GreetingHero } from '@/components/greeting-hero';
+import { useThemedIcon } from '@/providers/theme-provider';
 import {
   Badge,
   EmptyState,
@@ -57,6 +59,30 @@ function TypeBadge({ repeat }: { repeat: boolean }) {
   );
 }
 
+// Baris meta kecil (deadline / PIC / repeat) — ikon Ionicons dekoratif (§10) + teks muted.
+// Teks tetap pembawa makna (§4); ikon disembunyikan dari a11y tree.
+function MetaChip({
+  icon,
+  children,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  children: ReactNode;
+}) {
+  const color = useThemedIcon('#6b7280', '#a3a3a3');
+  return (
+    <View className="flex-row items-center gap-1">
+      <Ionicons
+        name={icon}
+        size={12}
+        color={color}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
+      <Text className="text-xs text-neutral-500 dark:text-neutral-400">{children}</Text>
+    </View>
+  );
+}
+
 function TaskRow({ item, onPress }: { item: TaskWithPeople; onPress: () => void }) {
   const repeat = item.repeat_setting === 'repeat';
   const progress = computeTaskProgress({ status: item.status, repeat, compliancePercent: null });
@@ -74,12 +100,10 @@ function TaskRow({ item, onPress }: { item: TaskWithPeople; onPress: () => void 
           <ProgressBar value={progress} showLabel tone={progress >= 100 ? 'success' : 'brand'} />
           <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
             {item.deadline ? (
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">⏰ Deadline {item.deadline}</Text>
+              <MetaChip icon="time-outline">Deadline {item.deadline}</MetaChip>
             ) : null}
             {item.pic ? (
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                👤 {item.pic.full_name ?? item.pic.email}
-              </Text>
+              <MetaChip icon="person-outline">{item.pic.full_name ?? item.pic.email}</MetaChip>
             ) : null}
           </View>
         </View>
@@ -105,12 +129,8 @@ function HomeItemRow({ item, onPress }: { item: HomeItem; onPress: () => void })
             />
           </View>
           <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
-            {item.due ? (
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">⏰ {item.due}</Text>
-            ) : null}
-            {repeat ? (
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">🔁 Repeat</Text>
-            ) : null}
+            {item.due ? <MetaChip icon="time-outline">{item.due}</MetaChip> : null}
+            {repeat ? <MetaChip icon="repeat">Repeat</MetaChip> : null}
           </View>
         </View>
       </View>
@@ -230,9 +250,7 @@ function FokusCard({ fokus, onPress }: { fokus: FokusItem; onPress: () => void }
             </Text>
             <View className="flex-row items-center gap-2">
               <Badge label={fokus.statusLabel} tone={fokus.statusTone} />
-              {fokus.due ? (
-                <Text className="text-xs text-neutral-500 dark:text-neutral-400">⏰ {fokus.due}</Text>
-              ) : null}
+              {fokus.due ? <MetaChip icon="time-outline">{fokus.due}</MetaChip> : null}
             </View>
           </View>
         </View>

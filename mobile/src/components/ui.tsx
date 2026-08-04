@@ -7,7 +7,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { avatarColor, initials } from '@/lib/avatar-color';
 import { columnBasis, metaGridColumns, useBreakpoint } from '@/lib/responsive';
-import { useThemePreference } from '@/providers/theme-provider';
+import { useThemePreference, useThemedIcon } from '@/providers/theme-provider';
 import { SCORE_DESC, SCORE_LABEL, SCORE_RANGE, scoreBand, type ScoreBand } from '@/lib/score';
 
 // ---------------------------------------------------------------- Button
@@ -562,8 +562,9 @@ export function WarningCallout({ message }: { message: string }) {
  * Sprint 7 supaya dipakai ulang oleh S7-6 (apply-KPI, activate-formula) tanpa duplikat.
  *
  * Tanpa bingkai/border kotak: dgn frame penuh terbaca sebagai "tombol ketiga" — bentuknya
- * baris pilihan. Glyph ✓ / ○ adalah sinyal non-warna (§4 rule 2) — SATU-satunya penanda
- * state karena bingkai dihapus, jadi tidak boleh diganti perbedaan warna saja.
+ * baris pilihan. Ikon Ionicons `checkmark-circle` / `ellipse-outline` adalah sinyal non-warna
+ * (§4 rule 2, resolusi §10) — perbedaan BENTUK jadi satu-satunya penanda state karena bingkai
+ * dihapus, jadi tidak boleh diganti perbedaan warna saja. Warna pakai pasangan `brand-dark` §10.
  *
  * Kontrak pemakai: tombol aksi destruktif WAJIB `disabled` sampai `checked=true`. State
  * di-reset saat dialog ditutup supaya tidak "lengket" saat dibuka ulang.
@@ -577,6 +578,7 @@ export function AckCheckbox({
   checked: boolean;
   onToggle: () => void;
 }) {
+  const iconColor = useThemedIcon('#1564b3', '#93c5fd');
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -584,9 +586,13 @@ export function AckCheckbox({
       accessibilityLabel={label}
       onPress={onToggle}
       className="min-h-[44px] flex-row items-start gap-3 py-2">
-      <Text className="text-base font-semibold text-brand-dark dark:text-blue-300">
-        {checked ? '✓' : '○'}
-      </Text>
+      <Ionicons
+        name={checked ? 'checkmark-circle' : 'ellipse-outline'}
+        size={22}
+        color={iconColor}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
       <Text className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
         {label}
       </Text>
@@ -1233,7 +1239,11 @@ export function ProgressPill({ state }: { state: UploadState }) {
   );
 }
 
-const KIND_ICON: Record<string, string> = { photo: '🖼', pdf: '📕', file: '📄' };
+const KIND_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  photo: 'image-outline',
+  pdf: 'document-text-outline',
+  file: 'document-outline',
+};
 
 /** UI-S-AP5 (AttachmentRow DA-AP5-2). Filename + size + chip kind + remove + progress. */
 export function AttachmentRow({
@@ -1254,9 +1264,16 @@ export function AttachmentRow({
   onRetry?: () => void;
 }) {
   const sizeStr = formatBytes(sizeBytes);
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <View className="flex-row items-center gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
-      <Text className="text-xl">{KIND_ICON[kind] ?? '📄'}</Text>
+      <Ionicons
+        name={KIND_ICON[kind] ?? 'document-outline'}
+        size={22}
+        color={mutedIcon}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
       <View className="flex-1 gap-0.5">
         <Text className="text-sm font-semibold text-black dark:text-white" numberOfLines={1}>
           {fileName}
@@ -1284,7 +1301,7 @@ export function AttachmentRow({
           accessibilityLabel={`Hapus ${fileName}`}
           hitSlop={8}
           className="active:opacity-70">
-          <Text className="text-base text-neutral-500">✕</Text>
+          <Ionicons name="close" size={18} color={mutedIcon} />
         </Pressable>
       ) : null}
     </View>
@@ -1369,14 +1386,24 @@ export function ImpactApprovalCard({
   kpiName: string;
   proposed: number | string | null;
 }) {
+  const warnIcon = useThemedIcon('#b45309', '#fbbf24');
   return (
     <View
       className="gap-1 rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40"
       accessible
       accessibilityLabel={IMPACT_APPROVAL_COPY.body(kpiName, proposed)}>
-      <Text className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-300">
-        ⚠ {IMPACT_APPROVAL_COPY.heading}
-      </Text>
+      <View className="flex-row items-center gap-1.5">
+        <Ionicons
+          name="warning-outline"
+          size={14}
+          color={warnIcon}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+        <Text className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-300">
+          {IMPACT_APPROVAL_COPY.heading}
+        </Text>
+      </View>
       <Text className="text-sm text-amber-900 dark:text-amber-200">
         {IMPACT_APPROVAL_COPY.body(kpiName, proposed)}
       </Text>

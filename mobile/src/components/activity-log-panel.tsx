@@ -1,5 +1,6 @@
 // UI-G-002 — Panel "Log Aktivitas" sistemik (collapsible) di setiap layar detail.
 // Membaca `activity_logs` per (entity_type, entity_id) — RLS sudah append-only & org-scoped.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native-css/components';
 
@@ -8,6 +9,7 @@ import { useEntityActivityLog } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
 import { personLabel } from '@/lib/cards';
 import { formatDateTimeIdMedium } from '@/lib/format-datetime';
+import { useThemedIcon } from '@/providers/theme-provider';
 
 /** Label aksi human-readable (cocok dgn ENUM action di DB). */
 const ACTION_LABEL: Record<string, string> = {
@@ -47,6 +49,7 @@ export function ActivityLogPanel({
   const { logs, isLoading, isError } = useEntityActivityLog(entityType, entityId, expanded);
   const { profile } = useProfile();
   const tz = profile?.org_timezone ?? null;
+  const brandIcon = useThemedIcon('#1564b3', '#93c5fd');
 
   if (!entityId) return null;
   const shown = logs.slice(0, 10);
@@ -61,7 +64,10 @@ export function ActivityLogPanel({
         onPress={() => setExpanded((v) => !v)}
         className="min-h-[44px] flex-row items-center justify-between gap-2 active:opacity-70">
         <Text className="text-base font-semibold text-black dark:text-white">Log Aktivitas</Text>
-        <Text className="text-sm text-brand-dark">{expanded ? 'Tutup ▾' : 'Buka ▸'}</Text>
+        <View className="flex-row items-center gap-1">
+          <Text className="text-sm text-brand-dark">{expanded ? 'Tutup' : 'Buka'}</Text>
+          <Ionicons name={expanded ? 'chevron-down' : 'chevron-forward'} size={16} color={brandIcon} />
+        </View>
       </Pressable>
 
       {expanded ? (

@@ -1,8 +1,10 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { BottomSheet } from '@/components/bottom-sheet';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
 
 type Person = NonNullable<PersonRef>;
@@ -25,6 +27,7 @@ export function UserPicker({
   excludeIds?: ReadonlySet<string>;
 }) {
   const [open, setOpen] = useState(false);
+  const caretIcon = useThemedIcon('#6b7280', '#a3a3a3');
   const { data, isLoading } = useQuery({ queryKey: ['org-profiles'], queryFn: () => listOrgProfiles() });
   const options = (data ?? []).filter((p) => p.id !== excludeId && !excludeIds?.has(p.id));
   // A11y: `*` merah tak terdengar → sisipkan " wajib" di label field (DESIGN §4 rule 2/4).
@@ -44,7 +47,7 @@ export function UserPicker({
         <Text className={value ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
           {value ? personLabel(value) : 'Pilih orang…'}
         </Text>
-        <Text className="text-neutral-400">▾</Text>
+        <Ionicons name="chevron-down" size={18} color={caretIcon} />
       </Pressable>
 
       <BottomSheet

@@ -1,9 +1,11 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native-css/components';
 
 import { ActivityLogPanel } from '@/components/activity-log-panel';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { alertFriendlyError } from '@/lib/errors';
 import { Badge, Button, EmptyState, Field, MetaGrid, ProgressOrb, SectionCard, SectionHeading, SkeletonList } from '@/components/ui';
 import { ReviewSubmissionPanel } from '@/components/review-submission-panel';
@@ -92,7 +94,7 @@ function GuidanceChecklist({
               accessible
               accessibilityLabel={it.checked ? 'Selesai' : 'Belum selesai'}>
               {it.checked ? (
-                <Text className="text-[10px] font-bold text-white">✓</Text>
+                <Ionicons name="checkmark" size={12} color="#ffffff" />
               ) : null}
             </View>
             <View className="flex-1 gap-0.5">
@@ -241,6 +243,7 @@ function InstanceRow({
 }) {
   const actions = useInstanceActions(inst, profileId);
   const time = (inst.instance_time ?? '').slice(0, 5);
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   // Reviewer perlu jalan masuk ke detail untuk approve/reject (review tidak inline di sini).
   const needsReview = actions.canReview && inst.status === 'submitted';
   return (
@@ -269,7 +272,10 @@ function InstanceRow({
         </Text>
       ) : null}
       {actions.canSubmit ? null : (
-        <Text className="text-xs text-neutral-400">Lihat detail & riwayat ›</Text>
+        <View className="flex-row items-center gap-1">
+          <Text className="text-xs text-neutral-400">Lihat detail & riwayat</Text>
+          <Ionicons name="chevron-forward" size={12} color={mutedIcon} />
+        </View>
       )}
     </SectionCard>
   );
@@ -342,6 +348,7 @@ export function LiveTaskDetailScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { profile } = useProfile();
+  const successIcon = useThemedIcon('#15803d', '#86efac');
 
   const apQ = useQuery({ queryKey: ['action-plan', id], queryFn: () => getTask(id) });
   const subsQ = useQuery({ queryKey: ['submissions', id], queryFn: () => listSubmissions(id) });
@@ -581,9 +588,16 @@ export function LiveTaskDetailScreen() {
             ) : null}
 
             {ap.status === 'done' ? (
-              <View className="rounded-2xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/40">
+              <View className="flex-row items-center gap-2 rounded-2xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/40">
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={successIcon}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                />
                 <Text className="text-sm font-semibold text-green-700 dark:text-green-300">
-                  ✓ Selesai & disetujui reviewer.
+                  Selesai & disetujui reviewer.
                 </Text>
               </View>
             ) : null}

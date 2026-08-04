@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo } from 'react';
@@ -10,6 +11,7 @@ import { Avatar, Badge, Button, EmptyState, ErrorState, MetaGrid, ProgressOrb, S
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useCardProgress } from '@/hooks/use-workspace';
 import { alertFriendlyError } from '@/lib/errors';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { childrenSublabel, ratioDoneOfChildren, treeOrbLabel } from '@/lib/progress';
 import {
   ACTION_PLAN_STATUS_LABEL,
@@ -168,6 +170,7 @@ function RosterCard({ entries }: { entries: RosterEntry[] }) {
 }
 
 function TaskRow({ item, onPress }: { item: TaskWithPeople; onPress: () => void }) {
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <SectionCard onPress={onPress}>
       <View className="flex-row items-start justify-between gap-3">
@@ -185,7 +188,16 @@ function TaskRow({ item, onPress }: { item: TaskWithPeople; onPress: () => void 
           Reviewer: {item.reviewer ? personLabel(item.reviewer) : '—'}
         </Text>
         {item.deadline ? (
-          <Text className="text-xs text-neutral-500 dark:text-neutral-400">⏰ {item.deadline}</Text>
+          <View className="flex-row items-center gap-1">
+            <Ionicons
+              name="time-outline"
+              size={12}
+              color={mutedIcon}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+            <Text className="text-xs text-neutral-500 dark:text-neutral-400">{item.deadline}</Text>
+          </View>
         ) : null}
         {item.priority ? (
           <Text className="text-xs text-neutral-500 dark:text-neutral-400">

@@ -2,12 +2,14 @@
 // UPSERT: pre-fill bila evaluation sudah ada. Prompt hanya saat status 'done'/'active'.
 // UI-S-EV1: tambah checklist "Perlu jadi SOP?" + "Perlu rollout?" (loop balik ke Development) + catatan rollout.
 // BL-05: "Faktor berhasil" + "Faktor gagal" (PRD §26 field 3-4) — text[] diisi satu faktor per baris.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, LabeledInput, SectionCard } from '@/components/ui';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { EVALUATION_TARGET_LABEL } from '@/lib/governance-admin';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useEvaluation, useEvaluationActions } from '@/hooks/use-governance-admin';
@@ -42,6 +44,7 @@ function CheckboxRow({
   checked: boolean;
   onToggle: () => void;
 }) {
+  const checkIcon = useThemedIcon('#1564b3', '#93c5fd');
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -49,12 +52,14 @@ function CheckboxRow({
       accessibilityLabel={label}
       onPress={onToggle}
       className="min-h-[44px] flex-row items-start gap-3 rounded-xl border border-neutral-200 px-3 py-2 active:opacity-70 dark:border-neutral-800">
-      <View
-        className={`mt-0.5 h-5 w-5 items-center justify-center rounded border-2 ${
-          checked ? 'border-brand-dark bg-brand-dark' : 'border-neutral-400 dark:border-neutral-500'
-        }`}>
-        {checked ? <Text className="text-xs font-bold text-white">✓</Text> : null}
-      </View>
+      <Ionicons
+        name={checked ? 'checkmark-circle' : 'ellipse-outline'}
+        size={22}
+        color={checkIcon}
+        style={{ marginTop: 2 }}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
       <View className="flex-1">
         <Text className="text-sm font-medium text-black dark:text-white">{label}</Text>
         {description ? (
