@@ -64,10 +64,10 @@ export function AppHeader({ kicker }: { kicker?: string }) {
         <View className="flex-row items-center gap-1">
           {showBack ? (
             <Pressable
-              hitSlop={8}
               onPress={handleBack}
               accessibilityRole="button"
               accessibilityLabel="Kembali ke Workspace"
+              // Kotak sentuh nyata via min-h/min-w-44 (bukan hitSlop — no-op di react-native-web).
               className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70">
               <Ionicons name="chevron-back" size={22} color={backIconColor} />
             </Pressable>

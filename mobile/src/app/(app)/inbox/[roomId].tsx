@@ -633,7 +633,9 @@ function AttachmentPreviewRow({
             </Text>
             <Pressable
               onPress={() => onRemove(i)}
-              hitSlop={8}
+              // Kotak sentuh nyata 44×44 (DESIGN §4); chip tetap padat lewat margin negatif.
+              // hitSlop dihindari — no-op di react-native-web.
+              className="-m-2 min-h-[44px] min-w-[44px] items-center justify-center"
               accessibilityRole="button"
               accessibilityLabel={`Hapus ${f.name}`}>
               <Ionicons name="close-circle" size={18} color="#ef4444" />

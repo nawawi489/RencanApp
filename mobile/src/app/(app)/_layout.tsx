@@ -1,15 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Stack, router } from 'expo-router';
-import { Pressable } from 'react-native-css/components';
+import { Platform } from 'react-native';
+import { Pressable, Text } from 'react-native-css/components';
 
 import { usePushHandler } from '@/hooks/use-push-notifications';
 import { contentWidthStyle } from '@/lib/responsive';
 import { useAuth } from '@/providers/auth-provider';
 import { useThemedIcon } from '@/providers/theme-provider';
 
-// RN Web quirk: default Stack header omits back button when navigated via direct URL.
-// Force render sebuah custom back Pressable yang panggil router.back() jika bisa,
-// atau router.replace('/') sebagai fallback. Ukuran 44×44 patuh DESIGN.md §4 touch target.
+// RN Web quirk: default Stack header menghilangkan tombol back saat dinavigasi via URL langsung.
+// Hanya di WEB kita paksa custom back Pressable ini; `router.replace('/')` adalah fallback KHUSUS
+// web (tak ada history saat direct-URL). harden-2: di NATIVE headerLeft global TIDAK di-set
+// (lihat screenOptions) sehingga native-stack merender tombol back SISTEM — mengembalikan
+// back-title iOS + long-press back-stack — dan workaround replace('/') tak bocor ke native.
+// Ukuran 44×44 patuh DESIGN.md §4 touch target.
 function HeaderBack() {
   // Chevron: brand-dark di terang (5.99:1 pada putih), brand-light di gelap (11.79:1 pada hitam).
   // Hardcoded `#1564b3` sebelum ini gagal AA di dark mode (3.51:1 pada latar hitam header).
@@ -33,6 +37,38 @@ function HeaderBack() {
   );
 }
 
+// Layar modal (presentation: 'modal') memakai metafora "Batal", bukan chevron back — mengikuti
+// pola iOS (Batal kiri / Selesai kanan). Dismiss lewat router.back() saat ada history; kalau tidak
+// (web direct-URL) fallback ke '/'. Disetel per-layar via MODAL_OPTIONS di kedua platform.
+function CancelButton() {
+  const color = useThemedIcon('#1564b3', '#93c5fd');
+  return (
+    <Pressable
+      onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+      accessibilityRole="button"
+      accessibilityLabel="Batal"
+      style={({ pressed }) => ({
+        minHeight: 44,
+        minWidth: 44,
+        marginLeft: 8,
+        paddingHorizontal: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <Text style={{ color, fontSize: 16, fontWeight: '600' }}>Batal</Text>
+    </Pressable>
+  );
+}
+
+// Opsi bersama 12 layar modal: presentation modal + headerLeft "Batal" (menang atas headerLeft
+// global). headerLeft di-set di KEDUA platform supaya modal tak pernah menampilkan back-chevron.
+const MODAL_OPTIONS = {
+  presentation: 'modal' as const,
+  headerLeft: () => <CancelButton />,
+};
+
 export default function AppLayout() {
   const { session } = useAuth();
   // Wajib sebelum early-return — Rules of Hooks; hook menangani session null secara internal.
@@ -48,7 +84,10 @@ export default function AppLayout() {
         headerShown: false,
         // Force back button visible di semua Stack.Screen dgn headerShown: true.
         headerBackVisible: true,
-        headerLeft: () => <HeaderBack />,
+        // harden-2: headerLeft custom HANYA di web (workaround quirk RNW direct-URL). Di native
+        // dibiarkan undefined → native-stack merender tombol back SISTEM (back-title + long-press
+        // back-stack). Layar modal menimpa ini dengan CancelButton via MODAL_OPTIONS.
+        headerLeft: Platform.OS === 'web' ? () => <HeaderBack /> : undefined,
         // P1 adapt item 1: batasi + tengahkan kolom konten setiap layar stack (detail/form/
         // settings). Di ponsel (<720pt) `maxWidth` no-op → layout tak berubah; di web/tablet
         // konten berhenti melar penuh (~1400pt) jadi kolom terbaca ~720pt di tengah. Header
@@ -70,25 +109,25 @@ export default function AppLayout() {
             task/        → Tugas (level 4, dulu Action Plan) */}
       <Stack.Screen
         name="goal-wizard"
-        options={{ headerShown: true, title: 'Goal Wizard', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Goal Wizard', ...MODAL_OPTIONS }}
       />
-      <Stack.Screen name="goal/new" options={{ headerShown: true, title: 'Goal Baru', presentation: 'modal' }} />
+      <Stack.Screen name="goal/new" options={{ headerShown: true, title: 'Goal Baru', ...MODAL_OPTIONS }} />
       <Stack.Screen name="goal/[id]" options={{ headerShown: true, title: 'Goal' }} />
       <Stack.Screen name="goal/edit/[id]" options={{ headerShown: true, title: 'Ubah Goal' }} />
       <Stack.Screen
         name="strategy/new"
-        options={{ headerShown: true, title: 'Strategi Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Strategi Baru', ...MODAL_OPTIONS }}
       />
       <Stack.Screen name="strategy/[id]" options={{ headerShown: true, title: 'Strategi' }} />
       <Stack.Screen
         name="initiative/new"
-        options={{ headerShown: true, title: 'Inisiatif Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Inisiatif Baru', ...MODAL_OPTIONS }}
       />
       <Stack.Screen name="initiative/[id]" options={{ headerShown: true, title: 'Inisiatif' }} />
       <Stack.Screen name="initiative/edit/[id]" options={{ headerShown: true, title: 'Ubah Inisiatif' }} />
       <Stack.Screen
         name="action-plan/new"
-        options={{ headerShown: true, title: 'Rencana Aksi Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Rencana Aksi Baru', ...MODAL_OPTIONS }}
       />
       <Stack.Screen name="action-plan/[id]" options={{ headerShown: true, title: 'Rencana Aksi' }} />
       <Stack.Screen
@@ -97,7 +136,7 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="task/new"
-        options={{ headerShown: true, title: 'Tugas Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Tugas Baru', ...MODAL_OPTIONS }}
       />
       <Stack.Screen name="task/[id]" options={{ headerShown: true, title: 'Tugas' }} />
       <Stack.Screen name="task/edit/[id]" options={{ headerShown: true, title: 'Ubah Tugas' }} />
@@ -111,13 +150,13 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="task/submit"
-        options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Submit Bukti & Nilai Hasil', ...MODAL_OPTIONS }}
       />
 
       {/* Fase 6 — Development Workspace */}
       <Stack.Screen
         name="development-area/new"
-        options={{ headerShown: true, title: 'Development Area Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Development Area Baru', ...MODAL_OPTIONS }}
       />
       <Stack.Screen
         name="development-area/[id]"
@@ -129,7 +168,7 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="problem-statement/new"
-        options={{ headerShown: true, title: 'Problem Statement Baru', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Problem Statement Baru', ...MODAL_OPTIONS }}
       />
       <Stack.Screen
         name="problem-statement/[id]"
@@ -197,15 +236,15 @@ export default function AppLayout() {
       <Stack.Screen name="people-profile/[id]" options={{ headerShown: true, title: 'Profil' }} />
       <Stack.Screen
         name="manual-score-override"
-        options={{ headerShown: true, title: 'Override Skor', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Override Skor', ...MODAL_OPTIONS }}
       />
       <Stack.Screen
         name="deadline-change-request"
-        options={{ headerShown: true, title: 'Perubahan Deadline', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Perubahan Deadline', ...MODAL_OPTIONS }}
       />
       <Stack.Screen
         name="evaluation"
-        options={{ headerShown: true, title: 'Evaluasi', presentation: 'modal' }}
+        options={{ headerShown: true, title: 'Evaluasi', ...MODAL_OPTIONS }}
       />
     </Stack>
   );

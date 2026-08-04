@@ -109,14 +109,18 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
         </View>
       </View>
       <Pressable
-        style={{ minHeight: 36, paddingVertical: 7, borderRadius: 999, backgroundColor: pillTheme.changeBg, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}
-        // Sprint 6 S6-5 — visual 36px, touch efektif 48px lewat hitSlop 6 (DESIGN §4).
-        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        // Kotak sentuh NYATA 44px (DESIGN §4); pill visual 36 tetap di inner View, footprint
+        // dijaga via margin negatif. hitSlop dihindari — no-op di react-native-web.
+        style={{ minHeight: 44, marginVertical: -4, alignItems: 'center', justifyContent: 'center' }}
         className="active:opacity-70"
         accessibilityRole="button"
         accessibilityLabel="Ubah periode"
         onPress={() => setOpen(true)}>
-        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Ubah</Text>
+        <View
+          pointerEvents="none"
+          style={{ minHeight: 36, paddingVertical: 7, borderRadius: 999, backgroundColor: pillTheme.changeBg, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>Ubah</Text>
+        </View>
       </Pressable>
     </View>
 

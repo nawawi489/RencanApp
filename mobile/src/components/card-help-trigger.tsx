@@ -3,7 +3,7 @@
 // Anti-flash (AC-7): saat loading, TIDAK tampilkan glossary title/body — tombol netral saja.
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from 'react-native';
-import { Pressable, Text } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
 
 import { getGuidance, type CardTypeGuided } from '@/lib/card-rules';
 import { glossaryFor, type GlossaryTopic } from '@/lib/glossary';
@@ -42,9 +42,13 @@ export function CardHelpTrigger({
       accessibilityRole="button"
       accessibilityLabel={a11yLabel}
       onPress={() => Alert.alert(entry.title, entry.body)}
-      hitSlop={12}
-      className="h-6 w-6 items-center justify-center rounded-full border border-neutral-300 active:opacity-70 dark:border-neutral-700">
-      <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300">?</Text>
+      // Kotak sentuh nyata 44×44 (DESIGN §4). Footprint inline tetap 24 (di samping judul
+      // section) lewat margin negatif -10px; chrome visual dipindah ke inner View. hitSlop
+      // dihindari — no-op di react-native-web, target sentuh yang "diperbesar" tak pernah nyata.
+      className="-m-2.5 min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70">
+      <View className="h-6 w-6 items-center justify-center rounded-full border border-neutral-300 dark:border-neutral-700">
+        <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300">?</Text>
+      </View>
     </Pressable>
   );
 }

@@ -64,8 +64,7 @@ export function OptionPicker({
                 className="min-h-[44px] justify-center px-2 active:opacity-60"
                 onPress={() => setOpen(false)}
                 accessibilityRole="button"
-                accessibilityLabel="Tutup pemilih"
-                hitSlop={8}>
+                accessibilityLabel="Tutup pemilih">
                 <Text className="text-base font-semibold text-brand-dark dark:text-brand">Tutup</Text>
               </Pressable>
             </View>

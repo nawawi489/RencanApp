@@ -396,7 +396,6 @@ export function LabeledInput({
           <Pressable
             className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-60"
             onPress={() => setReveal((s) => !s)}
-            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={reveal ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
             accessibilityState={{ selected: reveal }}>
@@ -1291,8 +1290,9 @@ export function AttachmentRow({
           onPress={onRetry}
           accessibilityRole="button"
           accessibilityLabel={`Coba lagi unggah ${fileName}`}
-          hitSlop={8}
-          className="active:opacity-70">
+          // Kotak sentuh nyata ≥44px (DESIGN §4); footprint baris tetap padat lewat margin
+          // negatif vertikal. hitSlop dihindari — no-op di react-native-web.
+          className="-my-2 min-h-[44px] justify-center active:opacity-70">
           <Text className="text-xs font-semibold text-brand-dark">Coba lagi</Text>
         </Pressable>
       ) : null}
@@ -1301,8 +1301,9 @@ export function AttachmentRow({
           onPress={onRemove}
           accessibilityRole="button"
           accessibilityLabel={`Hapus ${fileName}`}
-          hitSlop={8}
-          className="active:opacity-70">
+          // Kotak sentuh nyata 44×44 (DESIGN §4); footprint padat lewat margin negatif.
+          // hitSlop dihindari — no-op di react-native-web.
+          className="-m-2 min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70">
           <Ionicons name="close" size={18} color={mutedIcon} />
         </Pressable>
       ) : null}
