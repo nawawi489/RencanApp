@@ -4,7 +4,8 @@
 // Password sementara diketik admin & dibagikan manual — tanpa dependensi email/SMTP.
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { AccessDenied } from '@/components/access-denied';
 import { OptionPicker } from '@/components/option-picker';
@@ -122,7 +123,7 @@ export default function SettingsUserNewScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Tambah User' }} />
       <View className="gap-4 p-5">
         <GuidanceNote
@@ -246,6 +247,6 @@ export default function SettingsUserNewScreen() {
 
         <Button label="Buat User" onPress={submit} loading={isPending} disabled={isPending} />
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

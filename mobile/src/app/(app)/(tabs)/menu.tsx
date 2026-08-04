@@ -13,6 +13,7 @@ import { Avatar, Badge, IconTile, ScoreBadge, SkeletonCard, type IconTileTone } 
 import { useProfile } from '@/hooks/use-profile';
 import { useMyScore } from '@/hooks/use-people-score';
 import { effectiveScore } from '@/lib/people-score';
+import { columnBasis, menuGridColumns, useBreakpoint } from '@/lib/responsive';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 import { useThemePreference, type ThemeMode } from '@/providers/theme-provider';
@@ -158,8 +159,19 @@ async function fetchProfile(uid: string): Promise<ProfileRow | null> {
   return data as unknown as ProfileRow;
 }
 
-/** Kartu fitur Menu (grid 2 kolom). Non-pressable + dim bila permission tak terpenuhi (spec §18). */
-function MenuCard({ item, onPress }: { item: MenuItem; onPress: (item: MenuItem) => void }) {
+/** Kartu fitur Menu (grid width-derived: 2 kolom compact → 3 kolom ≥medium). `basis` =
+ *  flexBasis persen dari breakpoint (P1 adapt item 2), menggantikan `basis-[48%]` tetap yang
+ *  memberi 2 kolom identik di 320pt maupun 1440pt. Non-pressable + dim bila permission tak
+ *  terpenuhi (spec §18). */
+function MenuCard({
+  item,
+  onPress,
+  basis,
+}: {
+  item: MenuItem;
+  onPress: (item: MenuItem) => void;
+  basis: ReturnType<typeof columnBasis>;
+}) {
   const { can } = useProfile();
   const permitted =
     (!item.permission || can(item.permission)) &&
@@ -185,9 +197,9 @@ function MenuCard({ item, onPress }: { item: MenuItem; onPress: (item: MenuItem)
       </View>
     </View>
   );
-  if (!active) return <View className="basis-[48%]">{body}</View>;
+  if (!active) return <View style={{ flexBasis: basis }}>{body}</View>;
   return (
-    <View className="basis-[48%]">
+    <View style={{ flexBasis: basis }}>
       <Pressable accessibilityRole="button" accessibilityLabel={item.label} className="active:opacity-70" onPress={() => onPress(item)}>
         {body}
       </Pressable>
@@ -196,10 +208,13 @@ function MenuCard({ item, onPress }: { item: MenuItem; onPress: (item: MenuItem)
 }
 
 function MenuGrid({ items, onPress }: { items: MenuItem[]; onPress: (item: MenuItem) => void }) {
+  // Kolom diturunkan dari lebar jendela (P1 adapt item 2): 2 di compact, 3 di ≥medium.
+  const { breakpoint } = useBreakpoint();
+  const basis = columnBasis(menuGridColumns(breakpoint));
   return (
     <View className="flex-row flex-wrap gap-2.5">
       {items.map((it) => (
-        <MenuCard key={it.label} item={it} onPress={onPress} />
+        <MenuCard key={it.label} item={it} onPress={onPress} basis={basis} />
       ))}
     </View>
   );

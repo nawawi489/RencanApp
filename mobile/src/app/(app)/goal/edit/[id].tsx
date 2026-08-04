@@ -12,7 +12,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { UserPicker } from '@/components/user-picker';
 import { YearField } from '@/components/year-field';
@@ -124,7 +125,7 @@ export function LiveEditGoalScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Ubah Goal' }} />
       <View className="gap-4 p-5">
         {goalQ.isLoading ? (
@@ -207,7 +208,7 @@ export function LiveEditGoalScreen() {
           </>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

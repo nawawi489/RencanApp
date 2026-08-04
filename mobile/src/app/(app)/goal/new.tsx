@@ -1,6 +1,7 @@
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
@@ -74,7 +75,7 @@ export function LiveNewGoalScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal — Sasaran strategis"
@@ -119,7 +120,7 @@ export function LiveNewGoalScreen() {
         ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={isPending} />
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -4,7 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import {
   AttachmentRow,
@@ -348,7 +349,7 @@ export function LiveTaskSubmitScreen() {
   const showResultSection = !instanceId && candidates.length > 0; // OD-1 fallback: hide saat 0
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-5 p-5">
         <GuidanceNote
           title="Submit = Bukti + Nilai Hasil"
@@ -477,7 +478,7 @@ export function LiveTaskSubmitScreen() {
           loading={isSubmitting}
         />
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

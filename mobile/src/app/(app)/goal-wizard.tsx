@@ -3,7 +3,8 @@
 // Meniru pola action_plan/new.tsx: onError → Alert, validasi tanggal DATE_RE.
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { DateRangeField } from '@/components/date-range-field';
 import { Button, ErrorState, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
@@ -92,7 +93,7 @@ export default function GoalWizardScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal Wizard — Instansiasi dari template"
@@ -180,8 +181,8 @@ export default function GoalWizardScreen() {
             )}
 
             <View className="flex-row gap-3">
-              <Button label="Kembali" variant="secondary" onPress={back} />
-              <Button label="Lanjut" onPress={next} />
+              <Button grow label="Kembali" variant="secondary" onPress={back} />
+              <Button grow label="Lanjut" onPress={next} />
             </View>
           </SectionCard>
         ) : null}
@@ -203,12 +204,12 @@ export default function GoalWizardScreen() {
               </Text>
             ) : null}
             <View className="flex-row gap-3">
-              <Button label="Kembali" variant="secondary" onPress={back} />
-              <Button label="Buat Goal" onPress={generate} loading={isPending} />
+              <Button grow label="Kembali" variant="secondary" onPress={back} />
+              <Button grow label="Buat Goal" onPress={generate} loading={isPending} />
             </View>
           </SectionCard>
         ) : null}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

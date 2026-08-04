@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { DateRangeField } from '@/components/date-range-field';
@@ -141,7 +142,7 @@ export default function NewProblemStatementScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         {parentQ.data ? (
           <View
@@ -207,6 +208,6 @@ export default function NewProblemStatementScreen() {
         ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={isPending} />
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

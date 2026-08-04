@@ -4,7 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
@@ -102,7 +103,7 @@ export function LiveEditDevelopmentAreaScreen() {
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       className="flex-1 bg-neutral-50 dark:bg-black"
       keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Ubah Development Area' }} />
@@ -173,7 +174,7 @@ export function LiveEditDevelopmentAreaScreen() {
           </>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

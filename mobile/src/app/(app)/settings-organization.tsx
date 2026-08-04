@@ -7,7 +7,8 @@
 // peringatannya di dekat field, bukan di dokumentasi.
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native-css/components';
+import { Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { AccessDenied } from '@/components/access-denied';
 import { OptionPicker } from '@/components/option-picker';
@@ -57,7 +58,7 @@ export default function SettingsOrganizationScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Profil Organisasi' }} />
       <View className="gap-4 p-5">
         <View className="gap-1">
@@ -103,6 +104,6 @@ export default function SettingsOrganizationScreen() {
           </>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

@@ -340,8 +340,9 @@ export default function SettingsStrategyTemplatesScreen() {
             </ScrollView>
 
             <View className="flex-row gap-2">
-              <Button label="Batal" variant="secondary" onPress={closeModal} />
+              <Button grow label="Batal" variant="secondary" onPress={closeModal} />
               <Button
+                grow
                 label={editing ? 'Simpan' : 'Buat'}
                 onPress={handleSave}
                 loading={isPending}

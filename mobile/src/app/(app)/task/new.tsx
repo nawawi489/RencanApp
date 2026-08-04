@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Switch } from 'react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
@@ -321,7 +322,7 @@ export function LiveNewTaskScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
       <View className="gap-4 p-5">
         {parentActionPlanQ.data ? (
           <View
@@ -506,7 +507,7 @@ export function LiveNewTaskScreen() {
         ) : null}
         <Button label="Simpan sebagai Draft" onPress={submit} loading={mutation.isPending} />
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

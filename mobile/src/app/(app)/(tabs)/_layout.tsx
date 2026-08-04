@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 
 import { AppHeader } from '@/components/app-header';
 import { useInboxRooms } from '@/hooks/use-inbox';
+import { contentWidthStyle, useBreakpoint } from '@/lib/responsive';
 import { useThemePreference } from '@/providers/theme-provider';
 
 export default function TabsLayout() {
@@ -15,6 +16,13 @@ export default function TabsLayout() {
   const { rooms } = useInboxRooms();
   const totalUnread = rooms.reduce((sum, r) => sum + (r.unread_count > 0 ? r.unread_count : 0), 0);
   const inboxBadge = totalUnread > 0 ? (totalUnread > 99 ? '99+' : totalUnread) : undefined;
+
+  // P1 adapt item 3: di lebar expanded (≥840pt: tablet lanskap / web desktop) pindahkan tab
+  // bar jadi navigation rail kiri (Material) alih-alih bottom bar 5-ikon yang terdampar
+  // melintasi ~1400pt. Di ponsel/tablet-potret tetap bottom bar. Deep-link & varian ikon
+  // `focused` outline↔filled tak berubah — hanya posisi/varian tab bar yang di-gate lebar.
+  const { useNavRail } = useBreakpoint();
+
   // Sprint 6 S6-6 — warna ≠ satu-satunya sinyal (DESIGN §4 rule 2): tab aktif juga ganti
   // varian ikon `-outline` → filled. `focused` disediakan Expo Router tabBarIcon.
   return (
@@ -22,6 +30,11 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: activeTint,
         header: () => <AppHeader />,
+        tabBarPosition: useNavRail ? 'left' : 'bottom',
+        tabBarVariant: useNavRail ? 'material' : 'uikit',
+        // P1 adapt item 1: batasi + tengahkan konten tiap tab (di atas bottom bar / di samping
+        // rail). Bottom bar & rail sendiri tetap penuh — `sceneStyle` hanya menata scene konten.
+        sceneStyle: contentWidthStyle,
       }}>
       <Tabs.Screen
         name="index"
