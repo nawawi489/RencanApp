@@ -3,7 +3,7 @@
 // Gating: manage_teams (sama dengan tab Tim di /settings-org-structure).
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -11,6 +11,7 @@ import { Button, EmptyState, LabeledInput, SectionCard, SkeletonList } from '@/c
 import { UserPicker } from '@/components/user-picker';
 import { useOrgActions, useTeamMembers, useTeams } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
+import { showAlert } from '@/lib/alert';
 import { personLabel, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 
@@ -42,7 +43,7 @@ export default function SettingsTeamMembersScreen() {
   }
 
   function confirmRemove(profileId: string, name: string) {
-    Alert.alert('Lepas anggota?', `${name} akan dikeluarkan dari Tim ini. Bisa ditambahkan lagi nanti.`, [
+    showAlert('Lepas anggota?', `${name} akan dikeluarkan dari Tim ini. Bisa ditambahkan lagi nanti.`, [
       { text: 'Batal', style: 'cancel' },
       {
         text: 'Lepas',

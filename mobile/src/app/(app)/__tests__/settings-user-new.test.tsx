@@ -173,7 +173,9 @@ describe('SettingsUserNewScreen', () => {
       roleLevel: 'staff',
       roleTemplateId: null,
     });
-    expect(alertSpy).toHaveBeenCalledWith('User dibuat', expect.stringContaining('rina@n.id'));
+    // showAlert (seam) meneruskan ke Alert.alert(title, message, buttons) di native — arg
+    // ketiga `undefined` karena info alert tanpa tombol (lihat lib/__tests__/alert.test.ts).
+    expect(alertSpy).toHaveBeenCalledWith('User dibuat', expect.stringContaining('rina@n.id'), undefined);
     expect(mockBack).toHaveBeenCalled();
   });
 
@@ -190,7 +192,11 @@ describe('SettingsUserNewScreen', () => {
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Buat User'));
     });
-    expect(alertSpy).toHaveBeenCalledWith('User dibuat — perlu diperiksa', expect.stringContaining('rina@n.id'));
+    expect(alertSpy).toHaveBeenCalledWith(
+      'User dibuat — perlu diperiksa',
+      expect.stringContaining('rina@n.id'),
+      undefined,
+    );
     expect(alertSpy).not.toHaveBeenCalledWith('User dibuat', expect.any(String));
     expect(
       await screen.findByText(

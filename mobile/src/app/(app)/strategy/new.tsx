@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
+import { BottomSheet } from '@/components/bottom-sheet';
 import { Button, EmptyState, Field, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
@@ -68,12 +68,11 @@ function StrategyTemplatePicker({
         <Text className="text-sm font-semibold text-brand-dark">Pakai Template</Text>
       </Pressable>
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View className="flex-1 justify-end bg-black/40">
-          <View
-            className="max-h-[80%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityViewIsModal
-            accessibilityLabel="Pemilih Strategi Template">
+      <BottomSheet
+        visible={open}
+        onRequestClose={() => setOpen(false)}
+        sheetClassName="max-h-[80%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900"
+        accessibilityLabel="Pemilih Strategi Template">
             <View className="flex-row items-center justify-between">
               <Text className="text-base font-semibold text-black dark:text-white">
                 Pilih Template Strategi
@@ -123,9 +122,7 @@ function StrategyTemplatePicker({
                 </View>
               </ScrollView>
             )}
-          </View>
-        </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }

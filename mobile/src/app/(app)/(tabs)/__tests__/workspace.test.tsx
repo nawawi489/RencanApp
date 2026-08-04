@@ -298,6 +298,8 @@ describe('WorkspaceScreen', () => {
       expect(alertSpy).toHaveBeenCalledWith(
         'Periode ini sudah menjadi Archive',
         'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
+        // showAlert (seam) meneruskan buttons=undefined ke Alert.alert di native (arg ke-3).
+        undefined,
       );
       expect(mockPush).not.toHaveBeenCalledWith('/goal-wizard');
       alertSpy.mockRestore();
@@ -343,6 +345,8 @@ describe('WorkspaceScreen', () => {
       expect(alertSpy).toHaveBeenCalledWith(
         'Periode ini sudah menjadi Archive',
         'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
+        // showAlert (seam) meneruskan buttons=undefined ke Alert.alert di native (arg ke-3).
+        undefined,
       );
       expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/strategy/new'));
       alertSpy.mockRestore();
@@ -785,6 +789,8 @@ describe('WorkspaceScreen', () => {
     expect(alertSpy).toHaveBeenCalledWith(
       'Periode ini sudah menjadi Archive',
       'Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.',
+      // showAlert (seam) meneruskan buttons=undefined ke Alert.alert di native (arg ke-3).
+      undefined,
     );
     expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/strategy/new'));
     alertSpy.mockRestore();
@@ -1162,6 +1168,7 @@ describe('WorkspaceScreen', () => {
       expect(alertSpy).toHaveBeenCalledWith(
         'Kelengkapan Perencanaan',
         expect.stringContaining('baru tombol + Rencana Aksi aktif'),
+        undefined,
       );
       expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining('/action-plan/new'));
       alertSpy.mockRestore();
@@ -1362,6 +1369,7 @@ describe('WorkspaceScreen', () => {
         expect(alertSpy).toHaveBeenCalledWith(
           'Kelengkapan Perencanaan',
           expect.stringContaining('1 dari 3'),
+          undefined,
         );
         expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining(route));
         alertSpy.mockRestore();

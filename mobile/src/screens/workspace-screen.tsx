@@ -15,7 +15,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import {
@@ -43,6 +42,7 @@ import { taskTreeProgress, treeOrbLabel } from '@/lib/progress';
 import { useProfile } from '@/hooks/use-profile';
 import { useMbrCompliance } from '@/hooks/use-mbr';
 import { useArchiveActions } from '@/hooks/use-governance-admin';
+import { showAlert } from '@/lib/alert';
 import { mbrBreakdownGuardMessage } from '@/lib/activation-check';
 import { isMbrCascadeBlocked } from '@/lib/mbr-cascade';
 import { CARD_TYPE_LABEL, type CardType, type MbrCompliance } from '@/lib/settings-mbr';
@@ -491,7 +491,7 @@ function useTreeRowActions(
         label: 'Arsipkan',
         destructive: true,
         onPress: () =>
-          Alert.alert(
+          showAlert(
             'Arsipkan card?',
             `Arsipkan "${cardLabel}"? Card lama tetap bisa dibuka lewat Detail, tapi tidak bisa dibuat turunan baru.`,
             [
@@ -582,7 +582,7 @@ const InitiativeSubRow = memo(function InitiativeSubRow({
         parentCompliance,
         'Rencana Aksi',
       );
-      Alert.alert(title, message);
+      showAlert(title, message);
       return;
     }
     if (past) {
@@ -727,7 +727,7 @@ const StrategySubRow = memo(function StrategySubRow({
         parentCompliance,
         'Inisiatif',
       );
-      Alert.alert(title, message);
+      showAlert(title, message);
       return;
     }
     if (past) {
@@ -1064,7 +1064,7 @@ const ActionPlanSubRow = memo(function ActionPlanSubRow({
         parentCompliance,
         'Plan',
       );
-      Alert.alert(title, message);
+      showAlert(title, message);
       return;
     }
     if (past) {
@@ -1199,7 +1199,7 @@ const ProblemStatementSubRow = memo(function ProblemStatementSubRow({
         parentCompliance,
         'Rencana Aksi',
       );
-      Alert.alert(title, message);
+      showAlert(title, message);
       return;
     }
     if (past) {

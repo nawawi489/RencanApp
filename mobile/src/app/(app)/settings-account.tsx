@@ -4,11 +4,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Share } from 'react-native';
+import { Share } from 'react-native';
 import { ScrollView, Text, View } from 'react-native-css/components';
 
 import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
 import { exportMyData, requestAccountDeletion } from '@/lib/account';
+import { showAlert } from '@/lib/alert';
 import { alertFriendlyError } from '@/lib/errors';
 
 export default function SettingsAccountScreen() {
@@ -41,7 +42,7 @@ export default function SettingsAccountScreen() {
     // Konfirmasi eksplisit — request penghapusan sulit dibatalkan begitu
     // admin memproses (baris skor jadi permanen ter-anonim). Alert modal
     // yang blok bukan yg auto-dismiss.
-    Alert.alert(
+    showAlert(
       'Ajukan penghapusan akun?',
       'Admin organisasi Anda akan diberi tahu. Data kinerja historis akan dianonimkan (tidak dihapus penuh) karena diperlukan untuk audit. Anda akan kehilangan akses login setelah diproses.',
       [
@@ -55,7 +56,7 @@ export default function SettingsAccountScreen() {
               await requestAccountDeletion(reason.trim() || undefined);
               setRequested(true);
               setReason('');
-              Alert.alert(
+              showAlert(
                 'Permintaan diajukan',
                 'Admin akan memproses permintaan Anda. Anda tetap bisa login sampai anonimisasi selesai.',
               );

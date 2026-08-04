@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -20,6 +20,7 @@ import {
   useTeams,
 } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
+import { showAlert } from '@/lib/alert';
 import { listOrgProfiles, personLabel, type PersonRef } from '@/lib/cards';
 import { alertFriendlyError } from '@/lib/errors';
 
@@ -219,7 +220,7 @@ function DepartmentTab() {
     const linked =
       positions.filter((p) => p.department_id === dept.id).length +
       teams.filter((t) => t.department_id === dept.id).length;
-    Alert.alert(
+    showAlert(
       `Nonaktifkan ${dept.name}?`,
       linked > 0
         ? `${linked} Posisi/Tim masih tertaut dan TIDAK akan diputus — riwayatnya dipertahankan. Departemen ini hanya berhenti muncul sebagai pilihan untuk yang baru.`

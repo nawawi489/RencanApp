@@ -6,9 +6,9 @@
 //
 // Touch target ≥44px, dark:* variants, brand-dark utk solid+teks putih (DESIGN.md §4/§7).
 import { useMemo, useState } from 'react';
-import { Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
+import { BottomSheet } from '@/components/bottom-sheet';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { useThemePreference } from '@/providers/theme-provider';
 import {
@@ -120,12 +120,11 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
       </Pressable>
     </View>
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View className="flex-1 justify-end bg-black/40">
-          <View
-            className="max-h-[75%] gap-4 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityLabel="Pilih periode fokus"
-            accessibilityViewIsModal>
+      <BottomSheet
+        visible={open}
+        onRequestClose={() => setOpen(false)}
+        sheetClassName="max-h-[75%] gap-4 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+        accessibilityLabel="Pilih periode fokus">
             <View className="flex-row items-center justify-between">
               <Text className="text-xl font-bold text-black dark:text-white">Pilih Periode</Text>
               <Pressable
@@ -196,9 +195,7 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
                 })}
               </View>
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </BottomSheet>
     </>
   );
 }

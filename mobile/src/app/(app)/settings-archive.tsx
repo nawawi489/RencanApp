@@ -3,11 +3,11 @@
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert } from 'react-native';
 import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { Button, EmptyState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useSearchCards } from '@/hooks/use-search';
+import { showAlert } from '@/lib/alert';
 import { getArchiveMetadata } from '@/lib/activity-governance';
 import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
 import { alertFriendlyError } from '@/lib/errors';
@@ -40,7 +40,7 @@ export default function SettingsArchiveScreen() {
       // BL-09(c): key harus cocok dgn useSearchCards (['cards_search', ...]). ['search'] tidak
       // dipakai query mana pun → invalidate no-op, list tetap menampilkan card yang sudah dipulihkan.
       qc.invalidateQueries({ queryKey: ['cards_search'] });
-      Alert.alert('Dipulihkan', 'Card kembali ke status Draft. Verifikasi lalu Aktifkan kembali.');
+      showAlert('Dipulihkan', 'Card kembali ke status Draft. Verifikasi lalu Aktifkan kembali.');
     },
     onError: (e) => alertFriendlyError('Gagal pulihkan', e, 'Kesalahan.'),
   });
@@ -117,7 +117,7 @@ export default function SettingsArchiveScreen() {
                   variant="secondary"
                   loading={restoreM.isPending}
                   onPress={() =>
-                    Alert.alert(
+                    showAlert(
                       'Pulihkan card?',
                       `Mengembalikan "${r.name}" ke status Draft. Anda perlu verifikasi & Aktifkan ulang.`,
                       [

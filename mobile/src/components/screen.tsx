@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ScreenProps = PropsWithChildren<{
   title: string;
@@ -12,11 +13,22 @@ type ScreenProps = PropsWithChildren<{
   scrollable?: boolean;
 }>;
 
-/** Wrapper standar tiap surface: judul + subjudul + konten yang bisa di-scroll. */
+/** Wrapper standar tiap surface: judul + subjudul + konten yang bisa di-scroll.
+ *
+ * Kontrak safe-area: sisi ATAS dimiliki header navigasi (Tabs `header`=AppHeader /
+ * native Stack header), jadi Screen TIDAK menambah inset atas (hindari double-pad).
+ * Screen memiliki:
+ *   - inset KIRI/KANAN → konten tak tenggelam di balik notch saat landscape;
+ *   - inset BAWAH (varian scroll) → item terakhir lolos dari home indicator.
+ * Varian non-scroll menyerahkan inset bawah ke anak (mis. komposer chat) yang
+ * mengelola bottom-nya sendiri. */
 export function Screen({ title, subtitle, scrollable = true, children }: ScreenProps) {
+  const insets = useSafeAreaInsets();
   if (!scrollable) {
     return (
-      <View className="flex-1 bg-white dark:bg-black">
+      <View
+        className="flex-1 bg-white dark:bg-black"
+        style={{ paddingLeft: insets.left, paddingRight: insets.right }}>
         <View className="gap-1 p-5 pb-3">
           <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
             {title}
@@ -30,7 +42,13 @@ export function Screen({ title, subtitle, scrollable = true, children }: ScreenP
     );
   }
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-black">
+    <ScrollView
+      className="flex-1 bg-white dark:bg-black"
+      contentContainerStyle={{
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+        paddingBottom: insets.bottom,
+      }}>
       <View className="gap-5 p-5">
         <View className="gap-1">
           <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">

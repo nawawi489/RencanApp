@@ -9,6 +9,28 @@ jest.mock('@react-native-community/netinfo', () =>
   require('@react-native-community/netinfo/jest/netinfo-mock'),
 );
 
+// Safe-area (P0-1): banyak surface memakai `useSafeAreaInsets` (Screen, AppHeader,
+// BottomSheet, picker sheets, komposer chat). Hook resmi MELEMPAR bila tak ada
+// `SafeAreaProvider` di tree — test kolokasi me-render komponen tanpa provider. Mock
+// global memberi insets nol + provider/consumer passthrough (pola sama async-storage/
+// netinfo). Test yang butuh nilai inset spesifik dapat override per-file.
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const inset = { top: 0, right: 0, bottom: 0, left: 0 };
+  const frame = { x: 0, y: 0, width: 390, height: 844 };
+  return {
+    __esModule: true,
+    SafeAreaProvider: ({ children }) => children,
+    SafeAreaConsumer: ({ children }) => children(inset),
+    SafeAreaView: ({ children }) => children,
+    SafeAreaInsetsContext: React.createContext(inset),
+    SafeAreaFrameContext: React.createContext(frame),
+    useSafeAreaInsets: () => inset,
+    useSafeAreaFrame: () => frame,
+    initialWindowMetrics: { insets: inset, frame },
+  };
+});
+
 // S7-2: `useDirtyGuard` memakai `usePreventRemove` + `useNavigation` dari re-export
 // `expo-router/react-navigation`. Kedua hook resmi butuh NavigationContainer di parent
 // tree; test kolokasi kita me-render layar tanpa Stack Navigator (mocking `expo-router`
