@@ -3,7 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
@@ -157,7 +158,7 @@ export function LiveEditProblemStatementScreen() {
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       className="flex-1 bg-neutral-50 dark:bg-black"
       keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Ubah Problem Statement' }} />
@@ -236,7 +237,7 @@ export function LiveEditProblemStatementScreen() {
           </>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -11,7 +11,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+import { Pressable, Text, View } from 'react-native-css/components';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { DateMultiField } from '@/components/date-multi-field';
 import { DateRangeField } from '@/components/date-range-field';
@@ -169,7 +170,7 @@ export function LiveEditRepeatRuleScreen() {
   const anyError = taskQ.isError || ruleQ.isError || instancesQ.isError;
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       className="flex-1 bg-neutral-50 dark:bg-black"
       keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Ubah Jadwal Repeat' }} />
@@ -332,7 +333,7 @@ export function LiveEditRepeatRuleScreen() {
           </>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

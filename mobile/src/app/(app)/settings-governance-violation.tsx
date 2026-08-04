@@ -192,11 +192,13 @@ export default function SettingsGovernanceViolationScreen() {
             </ScrollView>
             <View className="flex-row gap-2">
               <Button
+                grow
                 label="Batal"
                 variant="secondary"
                 onPress={() => setResolveTarget(null)}
               />
               <Button
+                grow
                 label="Diabaikan"
                 variant="secondary"
                 loading={resolveM.isPending}
@@ -206,6 +208,7 @@ export default function SettingsGovernanceViolationScreen() {
                 }
               />
               <Button
+                grow
                 label="Tandai Selesai"
                 loading={resolveM.isPending}
                 disabled={note.trim().length < 8 || resolveM.isPending}

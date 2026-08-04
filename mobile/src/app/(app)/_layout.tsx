@@ -3,6 +3,7 @@ import { Redirect, Stack, router } from 'expo-router';
 import { Pressable } from 'react-native-css/components';
 
 import { usePushHandler } from '@/hooks/use-push-notifications';
+import { contentWidthStyle } from '@/lib/responsive';
 import { useAuth } from '@/providers/auth-provider';
 import { useThemedIcon } from '@/providers/theme-provider';
 
@@ -48,9 +49,16 @@ export default function AppLayout() {
         // Force back button visible di semua Stack.Screen dgn headerShown: true.
         headerBackVisible: true,
         headerLeft: () => <HeaderBack />,
+        // P1 adapt item 1: batasi + tengahkan kolom konten setiap layar stack (detail/form/
+        // settings). Di ponsel (<720pt) `maxWidth` no-op → layout tak berubah; di web/tablet
+        // konten berhenti melar penuh (~1400pt) jadi kolom terbaca ~720pt di tengah. Header
+        // native tetap penuh (di luar frame konten). Sumber: `contentWidthStyle`.
+        contentStyle: contentWidthStyle,
       }}
     >
-      <Stack.Screen name="(tabs)" />
+      {/* (tabs) mengelola cap kontennya sendiri via `sceneStyle` (agar tab bar/rail tetap
+          penuh), jadi kontainer tab harus penuh — timpa `contentStyle` warisan. */}
+      <Stack.Screen name="(tabs)" options={{ contentStyle: { width: '100%' } }} />
       <Stack.Screen name="inbox/[roomId]" options={{ headerShown: true, title: 'Diskusi Rencana Aksi' }} />
 
       {/* Fase 4 — Performance Workspace V1.8.3:

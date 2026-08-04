@@ -5,6 +5,7 @@ import { Animated } from 'react-native';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 import Svg, { Circle } from 'react-native-svg';
 import { avatarColor, initials } from '@/lib/avatar-color';
+import { columnBasis, metaGridColumns, useBreakpoint } from '@/lib/responsive';
 import { useThemePreference } from '@/providers/theme-provider';
 import { SCORE_DESC, SCORE_LABEL, SCORE_RANGE, scoreBand, type ScoreBand } from '@/lib/score';
 
@@ -37,6 +38,7 @@ export function Button({
   disabled,
   variant = 'primary',
   accessibilityLabel,
+  grow,
 }: {
   label: string;
   onPress: () => void;
@@ -46,12 +48,20 @@ export function Button({
   // Opsional: a11y label eksplisit (mis. menyebut nama entitas) bila teks tombol saja tak cukup.
   // Default = `label` → backward-compatible dengan seluruh call-site existing.
   accessibilityLabel?: string;
+  // P1 adapt item 5: pakai `grow` pada tombol di dalam baris `flex-row` multi-tombol agar tiap
+  // tombol berbagi lebar merata (`flex-1`) alih-alih melebar sesuai teks & mendorong tombol
+  // primer keluar layar di 320pt. JANGAN pakai di kolom (flex-1 akan menarik tinggi). Default
+  // (tanpa `grow`) tak berubah dari sebelumnya, plus `shrink` bawaan sbg jaring pengaman.
+  grow?: boolean;
 }) {
   const inactive = disabled || loading;
   return (
     <Pressable
       // min-h-[44px]: touch target minimum (a11y) — chip/tombol kecil tetap nyaman ditekan.
-      className={`min-h-[44px] items-center justify-center rounded-xl px-4 py-3 ${BUTTON_CLASS[variant]} ${inactive ? 'opacity-40' : ''}`}
+      // `shrink`: RN/Yoga default flexShrink=0 → di baris multi-tombol tombol tak menyusut &
+      // meng-clip sibling; `shrink` biar menyusut mengikuti ruang (cegah overflow) tanpa
+      // mengubah tata letak tombol tunggal (kolom align-stretch). `grow` → `flex-1` opt-in.
+      className={`min-h-[44px] shrink items-center justify-center rounded-xl px-4 py-3 ${grow ? 'flex-1' : ''} ${BUTTON_CLASS[variant]} ${inactive ? 'opacity-40' : ''}`}
       disabled={inactive}
       onPress={onPress}
       accessibilityRole="button"
@@ -1011,17 +1021,23 @@ export function TreeProgressOrb({
 
 // ---------------------------------------------------------------- MetaGrid
 
-/** Grid 2 kolom metadata (PIC/Reviewer/Deadline/Mode) untuk layar detail. */
+/** Grid metadata (PIC/Reviewer/Deadline/Mode) untuk layar detail — width-derived: 2 kolom
+ *  compact → 4 kolom ≥medium (P1 adapt item 2), menggantikan `min-w-[45%]` tetap yang selalu
+ *  2 kolom di 320pt maupun 1440pt. */
 export function MetaGrid({ items }: { items: { label: string; value: string }[] }) {
   // Sprint 6 S6-7 — sebelumnya `numberOfLines={1}` memotong "Revisi Diperlukan" saat font
   // sistem diperbesar (Dynamic Type). Beri 2 baris + ellipsis: cukup untuk label status
   // terpanjang dalam bahasa Indonesia, tanpa membiarkan sel meledak menampilkan paragraf.
+  const { breakpoint } = useBreakpoint();
+  const basis = columnBasis(metaGridColumns(breakpoint));
   return (
     <View className="flex-row flex-wrap gap-3">
       {items.map((it, i) => (
         <View
           key={i}
-          className="min-w-[45%] flex-1 gap-0.5 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+          // `flex-1` (grow) mengisi sisa baris; `flexBasis` inline menentukan jumlah kolom.
+          style={{ flexBasis: basis }}
+          className="flex-1 gap-0.5 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
           <Text className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">{it.label}</Text>
           <Text
             className="text-base font-semibold text-black dark:text-white"

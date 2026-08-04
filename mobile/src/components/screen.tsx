@@ -2,6 +2,8 @@ import type { PropsWithChildren } from 'react';
 import { ScrollView, Text, View } from 'react-native-css/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { contentWidthStyle } from '@/lib/responsive';
+
 type ScreenProps = PropsWithChildren<{
   title: string;
   subtitle?: string;
@@ -29,7 +31,7 @@ export function Screen({ title, subtitle, scrollable = true, children }: ScreenP
       <View
         className="flex-1 bg-white dark:bg-black"
         style={{ paddingLeft: insets.left, paddingRight: insets.right }}>
-        <View className="gap-1 p-5 pb-3">
+        <View className="gap-1 p-5 pb-3" style={contentWidthStyle}>
           <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
             {title}
           </Text>
@@ -37,7 +39,9 @@ export function Screen({ title, subtitle, scrollable = true, children }: ScreenP
             <Text className="text-base text-neutral-500 dark:text-neutral-400">{subtitle}</Text>
           ) : null}
         </View>
-        <View className="flex-1">{children}</View>
+        <View className="flex-1" style={contentWidthStyle}>
+          {children}
+        </View>
       </View>
     );
   }
@@ -49,7 +53,7 @@ export function Screen({ title, subtitle, scrollable = true, children }: ScreenP
         paddingRight: insets.right,
         paddingBottom: insets.bottom,
       }}>
-      <View className="gap-5 p-5">
+      <View className="gap-5 p-5" style={contentWidthStyle}>
         <View className="gap-1">
           <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">
             {title}
