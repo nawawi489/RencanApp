@@ -218,7 +218,8 @@ export function LiveActionPlanDetailScreen() {
       actionPlanQ.refetch();
       plansQ.refetch();
       refetchCompliance(); // indikator Kelengkapan ikut segar setelah tambah/arsip Tugas
-    }, [actionPlanQ, plansQ, refetchCompliance]),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
   );
 
   const activateM = useMutation({

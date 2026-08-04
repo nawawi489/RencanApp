@@ -25,7 +25,7 @@ export function UserPicker({
   excludeIds?: ReadonlySet<string>;
 }) {
   const [open, setOpen] = useState(false);
-  const { data, isLoading } = useQuery({ queryKey: ['org-profiles'], queryFn: listOrgProfiles });
+  const { data, isLoading } = useQuery({ queryKey: ['org-profiles'], queryFn: () => listOrgProfiles() });
   const options = (data ?? []).filter((p) => p.id !== excludeId && !excludeIds?.has(p.id));
   // A11y: `*` merah tak terdengar → sisipkan " wajib" di label field (DESIGN §4 rule 2/4).
   const fieldLabel = required ? `${label} wajib` : label;

@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
-import { createContext, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 
 import { env } from '@/lib/env';
 import { reportError } from '@/lib/errors';
@@ -126,29 +126,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        session,
-        initializing,
-        isRecovering,
-        signOut: async () => {
-          const pushToken = getCurrentPushToken();
-          if (pushToken) {
-            await unregisterPushToken(pushToken).catch((err) =>
-              reportError('Push unregister on signOut', err, 'Gagal menonaktifkan notifikasi push.'),
-            );
-            setCurrentPushToken(null);
-          }
-          await supabase.auth.signOut();
-          // Bersihkan cache React Query agar data org akun lama tidak tersisa di memori
-          // (privacy + hindari stale flash saat akun lain login di device yang sama).
-          queryClient.clear();
-        },
-      }}>
-      {children}
-    </AuthContext.Provider>
+  const signOut = useCallback(async () => {
+    const pushToken = getCurrentPushToken();
+    if (pushToken) {
+      await unregisterPushToken(pushToken).catch((err) =>
+        reportError('Push unregister on signOut', err, 'Gagal menonaktifkan notifikasi push.'),
+      );
+      setCurrentPushToken(null);
+    }
+    await supabase.auth.signOut();
+    // Bersihkan cache React Query agar data org akun lama tidak tersisa di memori
+    // (privacy + hindari stale flash saat akun lain login di device yang sama).
+    queryClient.clear();
+  }, [queryClient]);
+
+  // Identitas value stabil → consumer app-wide (mis. AuthLayout) tak re-render
+  // tiap render provider, hanya saat session/flag benar-benar berubah.
+  const value = useMemo<AuthContextValue>(
+    () => ({ session, initializing, isRecovering, signOut }),
+    [session, initializing, isRecovering, signOut],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

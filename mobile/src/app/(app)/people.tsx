@@ -65,7 +65,7 @@ export function LivePeopleScreen() {
   const [search, setSearch] = useState('');
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['org-profiles-with-roles'],
-    queryFn: listOrgProfilesWithRoles,
+    queryFn: () => listOrgProfilesWithRoles(),
   });
   const { period: latestClosed } = useLatestClosedPeriod();
   const { ranking } = useRanking(latestClosed?.id ?? '');

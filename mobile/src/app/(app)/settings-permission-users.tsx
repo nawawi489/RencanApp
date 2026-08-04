@@ -8,8 +8,8 @@
 // tersendiri dan konsumennya identik.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -119,7 +119,7 @@ export default function SettingsPermissionUsersScreen() {
 
   const { data: profiles, isLoading: membersLoading, isError: membersError, refetch } = useQuery({
     queryKey: ['org-profiles-admin'],
-    queryFn: listOrgProfilesAdmin,
+    queryFn: () => listOrgProfilesAdmin(),
   });
   const { rows, isLoading: permsLoading, isError: permsError, refetch: refetchPerms } = useUserPermissionsAdmin(selectedId ?? '');
   const { scopes } = useUserPermissionScopes(selectedId ?? '');
@@ -155,6 +155,48 @@ export default function SettingsPermissionUsersScreen() {
     onError: (e) => alertFriendlyError('Gagal', e, 'Perubahan role gagal.'),
   });
 
+  // Daftar org bisa sepanjang headcount — memo supaya filter tak jalan ulang tiap
+  // render dan identitas array stabil untuk FlatList (UI #35 dulu .map() unvirtualized).
+  const members = useMemo(
+    () => ((profiles ?? []) as Person[]).filter((p) => p.id !== profile?.id),
+    [profiles, profile?.id],
+  );
+
+  // renderItem stabil (setSelectedId setter identitasnya tetap) → baris tak remount tiap render.
+  const renderMember = useCallback(
+    ({ item: p }: { item: Person }) => (
+      <Pressable
+        className={`flex-row items-center gap-3 rounded-2xl border p-4 active:opacity-70 ${p.is_active ? 'border-neutral-200 dark:border-neutral-800' : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950'}`}
+        accessibilityRole="button"
+        accessibilityLabel={`Atur hak akses ${personLabel(p)}${p.is_active ? '' : ' (nonaktif)'}`}
+        onPress={() => setSelectedId(p.id)}>
+        <Avatar name={personLabel(p)} seed={p.id} />
+        <View className="flex-1 gap-0.5">
+          <View className="flex-row items-center gap-2">
+            <Text
+              className={`flex-1 text-base font-bold ${p.is_active ? 'text-black dark:text-white' : 'text-neutral-500 dark:text-neutral-500'}`}
+              numberOfLines={1}>
+              {personLabel(p)}
+            </Text>
+            {p.is_active ? null : <Badge label="Nonaktif" tone="warn" />}
+          </View>
+          {p.email ? (
+            <Text className="text-xs text-neutral-400" numberOfLines={1}>
+              {p.email}
+            </Text>
+          ) : null}
+          {p.role_name ? (
+            <Text className="text-xs text-neutral-500 dark:text-neutral-500" numberOfLines={1}>
+              {p.role_name}
+            </Text>
+          ) : null}
+        </View>
+        <Text className="text-lg text-neutral-400">›</Text>
+      </Pressable>
+    ),
+    [],
+  );
+
   if (profileLoading) {
     return (
       <View className="flex-1 bg-white p-5 dark:bg-black">
@@ -173,8 +215,26 @@ export default function SettingsPermissionUsersScreen() {
     );
   }
 
-  const members = ((profiles ?? []) as Person[]).filter((p) => p.id !== profile?.id);
   const selected = members.find((p) => p.id === selectedId) ?? null;
+
+  // Header daftar anggota — dipakai sebagai ListHeaderComponent FlatList maupun di
+  // atas state loading/error (agar tombol Tambah User selalu terjangkau).
+  const listHeader = (
+    <View className="gap-5">
+      <View className="gap-1">
+        <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Pengguna & Hak Akses</Text>
+        <Text className="text-base text-neutral-500 dark:text-neutral-400">
+          Pilih anggota untuk mengatur hak akses. Perubahan tercatat di Activity Log.
+        </Text>
+      </View>
+      {/* PRD §39: akun dibuat admin (invite-only) — entry point pembuatan akun baru. */}
+      <Button
+        label="Tambah User"
+        accessibilityLabel="Tambah User baru"
+        onPress={() => router.push('/settings-user-new' as Href)}
+      />
+    </View>
+  );
 
   function openConfirm(row: AdminPermissionRow) {
     setReason('');
@@ -210,25 +270,20 @@ export default function SettingsPermissionUsersScreen() {
       className="flex-1 bg-white dark:bg-black"
       keyboardVerticalOffset={0}>
       <Stack.Screen options={{ title: 'Pengguna & Hak Akses' }} />
-      <ScrollView
-        contentContainerStyle={{ padding: 20, gap: 20 }}
-        keyboardShouldPersistTaps="handled">
-        {!selected ? (
-          // ----- Daftar anggota
-          <View className="gap-5">
-            <View className="gap-1">
-              <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Pengguna & Hak Akses</Text>
-              <Text className="text-base text-neutral-500 dark:text-neutral-400">
-                Pilih anggota untuk mengatur hak akses. Perubahan tercatat di Activity Log.
-              </Text>
-            </View>
-            {/* PRD §39: akun dibuat admin (invite-only) — entry point pembuatan akun baru. */}
-            <Button
-              label="Tambah User"
-              accessibilityLabel="Tambah User baru"
-              onPress={() => router.push('/settings-user-new' as Href)}
-            />
-            {membersLoading ? (
+      {!selected ? (
+        // ----- Daftar anggota. Satu FlatList = scroll container (F3: virtualisasi +
+        // hindari VirtualizedList-di-dalam-ScrollView). Header (judul + Tambah User)
+        // tetap ter-mount lintas transisi loading→loaded — kalau loading & loaded
+        // dipisah jadi dua pohon, node tombol ter-unmount di tengah dan handle
+        // yang sudah dipegang test/press jadi basi.
+        <FlatList<Person>
+          data={membersLoading || membersError ? [] : members}
+          keyExtractor={(p) => p.id}
+          contentContainerStyle={{ padding: 20, gap: 20 }}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            membersLoading ? (
               <SkeletonList count={5} />
             ) : membersError ? (
               <ErrorState
@@ -236,48 +291,21 @@ export default function SettingsPermissionUsersScreen() {
                 description="Tidak bisa mengambil daftar anggota organisasi."
                 onRetry={() => refetch()}
               />
-            ) : members.length === 0 ? (
+            ) : (
               <EmptyState
                 icon={<Text className="text-2xl">👥</Text>}
                 title="Belum ada pengguna lain untuk dikelola"
                 description="Anggota organisasi selain Anda akan muncul di sini."
               />
-            ) : (
-              members.map((p) => (
-                <Pressable
-                  key={p.id}
-                  className={`flex-row items-center gap-3 rounded-2xl border p-4 active:opacity-70 ${p.is_active ? 'border-neutral-200 dark:border-neutral-800' : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950'}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Atur hak akses ${personLabel(p)}${p.is_active ? '' : ' (nonaktif)'}`}
-                  onPress={() => setSelectedId(p.id)}>
-                  <Avatar name={personLabel(p)} seed={p.id} />
-                  <View className="flex-1 gap-0.5">
-                    <View className="flex-row items-center gap-2">
-                      <Text
-                        className={`flex-1 text-base font-bold ${p.is_active ? 'text-black dark:text-white' : 'text-neutral-500 dark:text-neutral-500'}`}
-                        numberOfLines={1}>
-                        {personLabel(p)}
-                      </Text>
-                      {p.is_active ? null : <Badge label="Nonaktif" tone="warn" />}
-                    </View>
-                    {p.email ? (
-                      <Text className="text-xs text-neutral-400" numberOfLines={1}>
-                        {p.email}
-                      </Text>
-                    ) : null}
-                    {p.role_name ? (
-                      <Text className="text-xs text-neutral-500 dark:text-neutral-500" numberOfLines={1}>
-                        {p.role_name}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Text className="text-lg text-neutral-400">›</Text>
-                </Pressable>
-              ))
-            )}
-          </View>
-        ) : (
-          // ----- Editor hak akses per user
+            )
+          }
+          renderItem={renderMember}
+        />
+      ) : (
+        // ----- Editor hak akses per user
+        <ScrollView
+          contentContainerStyle={{ padding: 20, gap: 20 }}
+          keyboardShouldPersistTaps="handled">
           <View className="gap-5">
             <Pressable
               className="min-h-[44px] flex-row items-center gap-2 active:opacity-70"
@@ -384,8 +412,8 @@ export default function SettingsPermissionUsersScreen() {
               </View>
             )}
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {/* ----- Modal konfirmasi (in-tree) reason wajib; revoke = danger ----- */}
       {pending ? (
