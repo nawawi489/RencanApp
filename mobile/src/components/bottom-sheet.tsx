@@ -14,6 +14,8 @@ import { Modal } from 'react-native';
 import { View } from 'react-native-css/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
+
 type BottomSheetProps = PropsWithChildren<{
   visible: boolean;
   onRequestClose: () => void;
@@ -34,8 +36,16 @@ export function BottomSheet({
   children,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
+  // Reduce Motion → no transition at all (DESIGN.md §9): the sheet appears instantly
+  // instead of sliding up. Centralized here so every adopter of this primitive inherits
+  // the switch in one place.
+  const reduceMotion = useReduceMotion();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onRequestClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reduceMotion ? 'none' : 'slide'}
+      onRequestClose={onRequestClose}>
       <View className="flex-1 justify-end bg-black/40">
         <View
           className={sheetClassName ?? DEFAULT_SHEET_CLASS}

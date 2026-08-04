@@ -3,6 +3,8 @@
 import { Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
+
 export type WorkspaceHelpContent = {
   kind: string;
   title: string;
@@ -20,8 +22,13 @@ export function WorkspaceHelpModal({
   content: WorkspaceHelpContent;
   onClose: () => void;
 }) {
+  const reduceMotion = useReduceMotion();
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType={reduceMotion ? 'none' : 'fade'}
+      transparent
+      onRequestClose={onClose}>
       <View className="flex-1 justify-center bg-black/40 p-6">
         <View
           className="gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"

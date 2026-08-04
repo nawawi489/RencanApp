@@ -28,6 +28,7 @@ import {
   useScoreFormulaVersions,
 } from '@/hooks/use-people-score';
 import { useProfile } from '@/hooks/use-profile';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { reportError } from '@/lib/errors';
 import {
   FORMULA_STATUS_LABEL,
@@ -331,6 +332,7 @@ function FormulaTemplateSection({
   );
   const [error, setError] = useState<string | null>(null);
   const [createReason, setCreateReason] = useState('');
+  const reduceMotion = useReduceMotion();
   // S7-6: konfirmasi ireversibel. Mengaktifkan formula mengubah AchievementScore semua
   // pengguna di level ini — satu tap tanpa peringatan sebelum sprint 7. Simpan versionId
   // yang menunggu konfirmasi + Ack; keduanya di-reset saat modal ditutup supaya tidak
@@ -474,7 +476,7 @@ function FormulaTemplateSection({
         <Modal
           transparent
           visible
-          animationType="fade"
+          animationType={reduceMotion ? 'none' : 'fade'}
           onRequestClose={dismissActivateConfirm}>
           <View className="flex-1 justify-center bg-black/40 p-6">
             <View

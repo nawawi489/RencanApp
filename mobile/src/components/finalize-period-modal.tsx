@@ -32,6 +32,7 @@ import {
   useClosePeriod,
   usePreviewFinalization,
 } from '@/hooks/use-people-score';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useThemePreference } from '@/providers/theme-provider';
 
 import { Button } from './ui';
@@ -101,6 +102,7 @@ export function FinalizePeriodModal({
   const preview = usePreviewFinalization(visible ? period?.id : undefined);
   const calc = useCalculatePeriodScores();
   const close = useClosePeriod();
+  const reduceMotion = useReduceMotion();
   // Hanya fase pasca-konfirmasi yang disimpan. `null` = user belum menekan tombol konfirmasi,
   // sehingga tampilan mengikuti status query preview.
   const [phase, setPhase] = useState<Phase | null>(null);
@@ -191,7 +193,7 @@ export function FinalizePeriodModal({
       testID="finalize-modal"
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={handleDismiss}>
       <View className="flex-1 justify-center bg-black/40 p-6">
         <View

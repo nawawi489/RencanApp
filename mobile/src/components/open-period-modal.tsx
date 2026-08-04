@@ -24,6 +24,7 @@ import { Text, View } from 'react-native-css/components';
 
 import { DateRangeField } from '@/components/date-range-field';
 import { useOpenPeriod } from '@/hooks/use-people-score';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { DATE_RE } from '@/lib/date';
 
 import { Button, LabeledInput } from './ui';
@@ -60,6 +61,7 @@ export function OpenPeriodModal({
   onClose: () => void;
 }) {
   const { openPeriod, isPending } = useOpenPeriod();
+  const reduceMotion = useReduceMotion();
   const [name, setName] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -95,7 +97,7 @@ export function OpenPeriodModal({
       testID="open-period-modal"
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={handleDismiss}>
       <View className="flex-1 justify-center bg-black/40 p-6">
         <View
