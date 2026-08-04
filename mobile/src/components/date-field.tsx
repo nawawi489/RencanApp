@@ -9,6 +9,7 @@ import { Pressable, Text, TextInput, View } from 'react-native-css/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePlaceholderColor } from '@/components/ui';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useThemePreference } from '@/providers/theme-provider';
 import {
   DATE_HINT,
@@ -83,6 +84,7 @@ export function DateField({
   const placeholderColor = usePlaceholderColor();
   const insets = useSafeAreaInsets();
   const { effective } = useThemePreference();
+  const reduceMotion = useReduceMotion();
   const a11yLabel = accessibilityLabel ?? label;
   // A11y: `*` merah tak terdengar pembaca layar → sisipkan " wajib" di label field.
   // Web memakai aria-required (semantik native), jadi hanya jalur RN yang menambah teks.
@@ -201,7 +203,10 @@ export function DateField({
       </Pressable>
 
       {show && Platform.OS === 'ios' ? (
-        <Modal transparent animationType="slide" onRequestClose={() => setShow(false)}>
+        <Modal
+          transparent
+          animationType={reduceMotion ? 'fade' : 'slide'}
+          onRequestClose={() => setShow(false)}>
           <Pressable
             className="flex-1 bg-black/50"
             accessibilityRole="button"

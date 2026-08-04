@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatAttachmentFlow } from '@/hooks/use-chat-attachment-flow';
 import { useIdempotencyKey } from '@/hooks/use-idempotency-key';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import {
   useChatActions,
   useChatMessages,
@@ -435,8 +436,13 @@ function ReadsModal({
   onClose: () => void;
 }) {
   const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
+  const reduceMotion = useReduceMotion();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reduceMotion ? 'none' : 'fade'}
+      onRequestClose={onClose}>
       <View className="flex-1 justify-end" accessibilityViewIsModal>
         {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
         <Pressable
@@ -490,8 +496,13 @@ function MembersModal({
   onClose: () => void;
 }) {
   const closeIcon = useThemedIcon('#6b7280', '#a3a3a3');
+  const reduceMotion = useReduceMotion();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reduceMotion ? 'none' : 'fade'}
+      onRequestClose={onClose}>
       <View className="flex-1 justify-end" accessibilityViewIsModal>
         {/* Backdrop — absolutely positioned so sheet View renders on top and intercepts touches */}
         <Pressable
@@ -636,6 +647,7 @@ const CHAT_URL_GC_MS = CHAT_SIGNED_URL_TTL_SEC * 1000;
 function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment }) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReduceMotion();
   const thumbKey = ['chat-attachment-signed-url', attachment.path, 'thumb'] as const;
   const fullKey = ['chat-attachment-signed-url', attachment.path, 'full'] as const;
   const { data: thumbUrl } = useQuery({
@@ -677,7 +689,7 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
       <Modal
         visible={previewOpen}
         transparent
-        animationType="fade"
+        animationType={reduceMotion ? 'none' : 'fade'}
         onRequestClose={() => setPreviewOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }} accessibilityViewIsModal>
           {/* Backdrop: full-area tap-to-close, no button role → no nested <button> on web */}

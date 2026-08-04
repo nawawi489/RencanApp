@@ -17,6 +17,7 @@ import {
 } from '@/lib/activity-governance';
 import { useGovernanceViolations } from '@/hooks/use-activity-governance';
 import { useProfile } from '@/hooks/use-profile';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { alertFriendlyError } from '@/lib/errors';
 import { resolveGovernanceViolation, type CardEntityType } from '@/lib/governance-admin';
 import { ENTITY_ROUTE_SEGMENT } from '@/lib/entity-routes';
@@ -41,6 +42,7 @@ export default function SettingsGovernanceViolationScreen() {
   const { can } = useProfile();
   const { violations, isLoading, isError, refetch } = useGovernanceViolations();
   const allowed = can('view_governance_violation');
+  const reduceMotion = useReduceMotion();
 
   const [statusChip, setStatusChip] = useState<'semua' | 'open' | 'resolved' | 'dismissed'>('open');
   const [resolveTarget, setResolveTarget] = useState<string | null>(null);
@@ -160,7 +162,7 @@ export default function SettingsGovernanceViolationScreen() {
       {/* Resolution modal */}
       <Modal
         visible={resolveTarget !== null}
-        animationType="slide"
+        animationType={reduceMotion ? 'fade' : 'slide'}
         transparent
         onRequestClose={() => setResolveTarget(null)}>
         {/* KAV lives INSIDE the Modal: RN renders a Modal into its own native window,

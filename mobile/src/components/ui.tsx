@@ -4,6 +4,7 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { Animated } from 'react-native';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 import Svg, { Circle } from 'react-native-svg';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { avatarColor, initials } from '@/lib/avatar-color';
 import { columnBasis, metaGridColumns, useBreakpoint } from '@/lib/responsive';
 import { useThemePreference } from '@/providers/theme-provider';
@@ -606,11 +607,14 @@ export function Skeleton({
   radius?: number;
 }) {
   const { effective } = useThemePreference();
+  const reduceMotion = useReduceMotion();
   const base = effective === 'dark' ? '#27272a' : '#e2e8f0';
   const [opacity] = useState(() => new Animated.Value(0.5));
+  // Reduce Motion → skip the pulse entirely (DESIGN.md §9). Loop is decorative, so also
+  // skipped in test to avoid flooding jest's timers with an infinite animation.
+  const animate = !reduceMotion && process.env.NODE_ENV !== 'test';
   useEffect(() => {
-    // Loop tak terbatas membanjiri timer di jest → lewati di test (animasi murni dekoratif).
-    if (process.env.NODE_ENV === 'test') return;
+    if (!animate) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }),
@@ -619,10 +623,18 @@ export function Skeleton({
     );
     loop.start();
     return () => loop.stop();
-  }, [opacity]);
+  }, [opacity, animate]);
   return (
     <Animated.View
-      style={{ width, height, borderRadius: radius, backgroundColor: base, opacity }}
+      style={{
+        width,
+        height,
+        borderRadius: radius,
+        backgroundColor: base,
+        // Static mid-opacity block when motion is reduced — still legible as "loading",
+        // just not pulsing. Otherwise the animated (or test-frozen) 0.5→1 value drives it.
+        opacity: reduceMotion ? 0.7 : opacity,
+      }}
     />
   );
 }

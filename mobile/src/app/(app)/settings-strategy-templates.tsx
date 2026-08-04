@@ -18,6 +18,7 @@ import {
   usePlaceholderColor,
 } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { showAlert } from '@/lib/alert';
 import {
   createStrategyTemplate,
@@ -56,6 +57,7 @@ export default function SettingsStrategyTemplatesScreen() {
   const placeholderColor = usePlaceholderColor();
   const [q, setQ] = useState('');
   const qc = useQueryClient();
+  const reduceMotion = useReduceMotion();
 
   // ------ data
   const tplQ = useQuery({
@@ -262,7 +264,7 @@ export default function SettingsStrategyTemplatesScreen() {
       {/* Create / Edit modal */}
       <Modal
         visible={creating}
-        animationType="slide"
+        animationType={reduceMotion ? 'fade' : 'slide'}
         transparent
         onRequestClose={closeModal}>
         {/* KAV lives INSIDE the Modal: RN renders a Modal into its own native window,
