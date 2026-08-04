@@ -226,7 +226,7 @@ Progress orb tree (§10): good `#0f6b46`, risk `#b76b00`, bad `#c93434`, line bo
 - Hemat animasi: app utilitas — gerakan untuk feedback & hierarki, bukan dekorasi.
 - **Hormati Reduce Motion (OS a11y):** hook [`useReduceMotion()`](mobile/src/hooks/use-reduce-motion.ts) membungkus `AccessibilityInfo.isReduceMotionEnabled()` + listener `reduceMotionChanged`. Saat aktif:
   - `Skeleton` (`ui.tsx`) melewati pulse dan merender blok statis opacity `0.7` (tetap terbaca "memuat").
-  - `<Modal>` tangan (bukan native-stack): turunkan satu tingkat gerakan — `slide → fade`, `fade → none`. Untuk sheet-bawah, pusatkan di primitif [`BottomSheet`](mobile/src/components/bottom-sheet.tsx) (`slide → fade`) supaya semua adopter ikut otomatis.
+  - `<Modal>` tangan (bukan native-stack): `animationType="none"` — muncul seketika tanpa transisi (termasuk sheet-bawah). Pusatkan di primitif [`BottomSheet`](mobile/src/components/bottom-sheet.tsx) supaya semua adopter ikut otomatis; sisanya di-set per-modal.
   - Transisi layar native-stack Expo Router sudah mematuhi setelan OS — tak perlu diutak-atik.
 
 ---

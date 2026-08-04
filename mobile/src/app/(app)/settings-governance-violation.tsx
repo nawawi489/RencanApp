@@ -162,7 +162,7 @@ export default function SettingsGovernanceViolationScreen() {
       {/* Resolution modal */}
       <Modal
         visible={resolveTarget !== null}
-        animationType={reduceMotion ? 'fade' : 'slide'}
+        animationType={reduceMotion ? 'none' : 'slide'}
         transparent
         onRequestClose={() => setResolveTarget(null)}>
         {/* KAV lives INSIDE the Modal: RN renders a Modal into its own native window,

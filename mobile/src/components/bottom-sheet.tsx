@@ -36,15 +36,15 @@ export function BottomSheet({
   children,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
-  // Reduce Motion → crossfade instead of the bottom slide (DESIGN.md §9). Centralized here
-  // so every adopter of this primitive inherits the switch in one place. `fade` is the
-  // gentler alternative HIG/Material accept over `none`.
+  // Reduce Motion → no transition at all (DESIGN.md §9): the sheet appears instantly
+  // instead of sliding up. Centralized here so every adopter of this primitive inherits
+  // the switch in one place.
   const reduceMotion = useReduceMotion();
   return (
     <Modal
       visible={visible}
       transparent
-      animationType={reduceMotion ? 'fade' : 'slide'}
+      animationType={reduceMotion ? 'none' : 'slide'}
       onRequestClose={onRequestClose}>
       <View className="flex-1 justify-end bg-black/40">
         <View

@@ -264,7 +264,7 @@ export default function SettingsStrategyTemplatesScreen() {
       {/* Create / Edit modal */}
       <Modal
         visible={creating}
-        animationType={reduceMotion ? 'fade' : 'slide'}
+        animationType={reduceMotion ? 'none' : 'slide'}
         transparent
         onRequestClose={closeModal}>
         {/* KAV lives INSIDE the Modal: RN renders a Modal into its own native window,

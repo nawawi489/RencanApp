@@ -205,7 +205,7 @@ export function DateField({
       {show && Platform.OS === 'ios' ? (
         <Modal
           transparent
-          animationType={reduceMotion ? 'fade' : 'slide'}
+          animationType={reduceMotion ? 'none' : 'slide'}
           onRequestClose={() => setShow(false)}>
           <Pressable
             className="flex-1 bg-black/50"
