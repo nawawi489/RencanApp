@@ -1,5 +1,6 @@
 // DateMultiField — pilih banyak tanggal (chip list + tombol "+ Tambah tanggal").
 // Menggantikan TextInput "YYYY-MM-DD, YYYY-MM-DD" yang rawan typo untuk Custom Repeat Dates.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native-css/components';
 
@@ -50,7 +51,7 @@ export function DateMultiField({ label, values, onChange, required }: Props) {
               accessibilityLabel={`Hapus tanggal ${d}`}
               className="min-h-[36px] flex-row items-center gap-2 rounded-full border border-brand-dark bg-brand-dark px-3 py-1.5 active:opacity-70">
               <Text className="text-xs font-semibold text-white">{d}</Text>
-              <Text className="text-xs font-bold text-white">✕</Text>
+              <Ionicons name="close" size={14} color="#ffffff" />
             </Pressable>
           ))}
         </View>

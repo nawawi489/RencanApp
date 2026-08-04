@@ -280,14 +280,15 @@ describe('FinalizePeriodModal — Fase 3 TDD plan', () => {
     );
   });
 
-  it('[T-M-20] glyph checkbox = sinyal non-warna (DESIGN §4): ○ saat unchecked, ✓ saat checked', async () => {
+  it('[T-M-20] checkbox = sinyal non-warna (DESIGN §4/§10): accessibilityState.checked flip unchecked→checked (ikon ellipse-outline→checkmark-circle)', async () => {
     await render(<FinalizePeriodModal visible={true} period={activePeriod} onClose={jest.fn()} />);
-    expect(await screen.findByText('○')).toBeTruthy();
+    const box = await screen.findByLabelText(ACK_LABEL);
+    // Non-warna: state a11y (dibaca screen reader) + bentuk ikon Ionicons berbeda per state.
+    expect(box.props.accessibilityState?.checked).toBe(false);
     await act(async () => {
-      fireEvent.press(await screen.findByLabelText(ACK_LABEL));
+      fireEvent.press(box);
     });
-    expect(await screen.findByText('✓')).toBeTruthy();
-    expect(screen.queryByText('○')).toBeNull();
+    expect((await screen.findByLabelText(ACK_LABEL)).props.accessibilityState?.checked).toBe(true);
   });
 
   it('[T-M-12] label calculating pakai accessibilityLiveRegion="polite"', async () => {

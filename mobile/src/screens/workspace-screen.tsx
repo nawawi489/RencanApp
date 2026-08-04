@@ -75,7 +75,7 @@ import {
   showPastPeriodAlert,
 } from '@/lib/period-focus';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
-import { useThemePreference } from '@/providers/theme-provider';
+import { useThemePreference, useThemedIcon } from '@/providers/theme-provider';
 import { RowActionsMenu } from '@/components/row-actions-menu';
 import { WorkspaceHubCard, HubProgressOrb } from '@/components/workspace-hub-card';
 import {
@@ -1484,6 +1484,7 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
   const goalsQ = usePerformanceItems();
   const devQ = useDevelopmentItems();
   const { focus } = usePeriodFocus();
+  const searchIcon = useThemedIcon('#6b7280', '#a3a3a3');
 
   useFocusEffect(
     useCallback(() => {
@@ -1523,7 +1524,13 @@ function HubView({ onSelect }: { onSelect: (t: 'performance' | 'development') =>
           accessibilityLabel="Cari Workspace"
           onPress={() => router.push('/search')}
           className="min-h-[44px] flex-row items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 active:opacity-70 dark:border-neutral-800 dark:bg-neutral-950">
-          <Text className="text-base text-neutral-400 dark:text-neutral-500">⌕</Text>
+          <Ionicons
+            name="search-outline"
+            size={16}
+            color={searchIcon}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
           <Text className="text-sm text-neutral-400 dark:text-neutral-500">
             Cari Goal, Strategi, Rencana Aksi, Tugas
           </Text>

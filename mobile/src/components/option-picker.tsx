@@ -1,7 +1,9 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { BottomSheet } from '@/components/bottom-sheet';
+import { useThemedIcon } from '@/providers/theme-provider';
 
 export type PickerOption = { value: string; label: string; hint?: string | null };
 
@@ -30,6 +32,7 @@ export function OptionPicker({
   emptyText?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const caretIcon = useThemedIcon('#6b7280', '#a3a3a3');
   const selected = options.find((o) => o.value === value) ?? null;
   // A11y: `*` merah tak terdengar → sisipkan " wajib" di label field (DESIGN §4 rule 2/4).
   const fieldLabel = required ? `${label} wajib` : label;
@@ -48,7 +51,7 @@ export function OptionPicker({
         <Text className={selected ? 'text-base text-black dark:text-white' : 'text-base text-neutral-400'}>
           {selected ? selected.label : placeholder}
         </Text>
-        <Text className="text-neutral-400">▾</Text>
+        <Ionicons name="chevron-down" size={18} color={caretIcon} />
       </Pressable>
 
       <BottomSheet

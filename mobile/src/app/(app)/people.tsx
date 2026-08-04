@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -19,6 +20,7 @@ import {
   usePlaceholderColor,
 } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { listOrgProfilesWithRoles, personLabel, type OrgProfileWithRole } from '@/lib/cards';
 import { useLatestClosedPeriod, useRanking } from '@/hooks/use-people-score';
 
@@ -61,6 +63,7 @@ export function LivePeopleScreen() {
   const router = useRouter();
   const placeholderColor = usePlaceholderColor();
   const { can } = useProfile();
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   const [activeTab, setActiveTab] = useState<PeopleTabKey>('monthly');
   const [search, setSearch] = useState('');
   const { data, isLoading, isError, refetch } = useQuery({
@@ -143,16 +146,17 @@ export function LivePeopleScreen() {
               {personSubhead(p)}
             </Text>
           </View>
-          <Text
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={mutedIcon}
             accessibilityElementsHidden
-            importantForAccessibility="no"
-            className="text-xl text-neutral-400">
-            ›
-          </Text>
+            importantForAccessibility="no-hide-descendants"
+          />
         </Pressable>
       );
     },
-    [rankByUser, latestClosed, router],
+    [rankByUser, latestClosed, router, mutedIcon],
   );
 
   if (isLoading) {
@@ -179,7 +183,7 @@ export function LivePeopleScreen() {
     return (
       <Screen title="Anggota" subtitle="Anggota organisasi.">
         <EmptyState
-          icon={<Text className="text-2xl">👥</Text>}
+          icon={<Ionicons name="people-outline" size={28} color={mutedIcon} />}
           title="Belum ada anggota"
           description="Anggota organisasi yang diundang admin akan muncul di sini."
         />
@@ -251,7 +255,7 @@ export function LivePeopleScreen() {
         ListEmptyComponent={
           search.trim() ? (
             <EmptyState
-              icon={<Text className="text-2xl">🔍</Text>}
+              icon={<Ionicons name="search-outline" size={28} color={mutedIcon} />}
               title="Tidak ditemukan"
               description={`Tidak ada anggota cocok untuk "${search.trim()}".`}
             />

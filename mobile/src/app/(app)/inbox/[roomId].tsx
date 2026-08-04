@@ -62,12 +62,19 @@ function formatTime(iso: string): string {
 }
 
 function GovernanceBanner({ onClose }: { onClose: () => void }) {
+  const infoIcon = useThemedIcon('#1d4ed8', '#93c5fd');
   return (
     <View
       className="mb-2 flex-row items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/40"
       accessible
       accessibilityLabel={GOVERNANCE_BANNER}>
-      <Text className="text-base">ℹ</Text>
+      <Ionicons
+        name="information-circle-outline"
+        size={18}
+        color={infoIcon}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
       <Text className="flex-1 text-sm text-blue-800 dark:text-blue-200">{GOVERNANCE_BANNER}</Text>
       <Pressable
         onPress={onClose}
@@ -159,6 +166,8 @@ function ReactionPill({
         className={`ml-1 text-sm font-semibold ${reactedByMe ? 'text-brand-dark' : 'text-neutral-600 dark:text-neutral-300'}`}>
         {count}
       </Text>
+      {/* emoji-guard-allow: glyph ✓ = sinyal non-warna WAJIB pada pill reaksi (DESIGN §7 ReactionPill,
+          mengikat test UI-16); bukan ikon dekoratif, jadi tetap glyph teks bukan Ionicons. */}
       {reactedByMe ? <Text className="ml-0.5 text-xs font-bold text-brand-dark">✓</Text> : null}
     </Pressable>
   );
@@ -209,6 +218,7 @@ function ContextBanner({
   entityId: string;
   onNavigate: (id: string) => void;
 }) {
+  const infoIcon = useThemedIcon('#1d4ed8', '#93c5fd');
   return (
     <Pressable
       onPress={() => onNavigate(entityId)}
@@ -216,12 +226,12 @@ function ContextBanner({
       accessibilityLabel={`Buka Tugas ${label}`}
       style={{ minHeight: 44 }}
       className="mb-1 flex-row items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-950/40">
-      <Text className="text-sm text-blue-700 dark:text-blue-300">🔗</Text>
+      <Ionicons name="link-outline" size={16} color={infoIcon} />
       <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Konteks Tugas</Text>
       <Text className="flex-1 text-xs text-blue-800 dark:text-blue-200" numberOfLines={1}>
         {label}
       </Text>
-      <Text className="text-sm text-blue-700 dark:text-blue-300">›</Text>
+      <Ionicons name="chevron-forward" size={16} color={infoIcon} />
     </Pressable>
   );
 }
@@ -734,6 +744,7 @@ export default function ChatRoomScreen() {
   const { roomId } = useLocalSearchParams<{ roomId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   const { session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
@@ -1061,7 +1072,7 @@ export default function ChatRoomScreen() {
         ) : messages.length === 0 ? (
           <View className="flex-1 px-5 pt-3">
             <EmptyState
-              icon={<Text className="text-2xl">💬</Text>}
+              icon={<Ionicons name="chatbubbles-outline" size={28} color={mutedIcon} />}
               title="Belum ada pesan"
               description="Mulai percakapan dengan mengirim pesan pertama."
             />

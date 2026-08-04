@@ -1,6 +1,7 @@
 // PRD V1.83 §19 — Strategy Template Library CRUD.
 // Admin dapat membuat, mengedit, menonaktifkan, dan menghapus template.
 // Update template tidak otomatis mengubah Strategy aktif.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { showAlert } from '@/lib/alert';
 import {
   createStrategyTemplate,
@@ -372,6 +374,10 @@ function TemplateRow({
   onDelete: () => void;
 }) {
   const isActive = tpl.is_active !== false;
+  const successIcon = useThemedIcon('#15803d', '#86efac');
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
+  const neutralIcon = useThemedIcon('#1f2937', '#d1d5db');
+  const dangerIcon = useThemedIcon('#b91c1c', '#fca5a5');
   return (
     <SectionCard>
       <View className="flex-row items-center gap-2">
@@ -394,21 +400,25 @@ function TemplateRow({
           accessibilityLabel={isActive ? `Nonaktifkan ${tpl.name}` : `Aktifkan ${tpl.name}`}
           className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
           onPress={onToggle}>
-          <Text className="text-lg">{isActive ? '✅' : '⏸️'}</Text>
+          <Ionicons
+            name={isActive ? 'checkmark-circle' : 'pause'}
+            size={22}
+            color={isActive ? successIcon : mutedIcon}
+          />
         </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Edit ${tpl.name}`}
           className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
           onPress={onEdit}>
-          <Text className="text-lg">✏️</Text>
+          <Ionicons name="pencil" size={20} color={neutralIcon} />
         </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Hapus ${tpl.name}`}
           className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-70"
           onPress={onDelete}>
-          <Text className="text-lg">🗑️</Text>
+          <Ionicons name="trash-outline" size={20} color={dangerIcon} />
         </Pressable>
       </View>
     </SectionCard>

@@ -2,6 +2,7 @@
 // Browse read-only template blueprint Fase 4 (data layer sudah ada: goal_templates / strategy_templates).
 // CTA "Buat Goal dari Template" → goal-wizard (yang menjalankan apply_goal_template). Hanya tampil
 // bila create_goal. Lazy: Strategi template di-fetch saat baris template di-expand.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { FlatList } from 'react-native';
@@ -10,6 +11,7 @@ import { Pressable, Text, View } from 'react-native-css/components';
 import { Badge, Button, EmptyState, ErrorState, SkeletonList } from '@/components/ui';
 import { useGoalTemplates, useStrategyTemplates } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
+import { useThemedIcon } from '@/providers/theme-provider';
 import type { GoalTemplate } from '@/lib/goals';
 
 const LIST_CONTENT_STYLE = { gap: 12, padding: 20 };
@@ -82,6 +84,7 @@ export default function SettingsGoalTemplatesScreen() {
   const { can } = useProfile();
   const { templates, isLoading, isError } = useGoalTemplates();
   const canCreate = can('create_goal');
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
 
   if (isLoading) {
     return (
@@ -120,7 +123,7 @@ export default function SettingsGoalTemplatesScreen() {
         ListHeaderComponent={header}
         ListEmptyComponent={
           <EmptyState
-            icon={<Text className="text-2xl">📋</Text>}
+            icon={<Ionicons name="clipboard-outline" size={28} color={mutedIcon} />}
             title="Belum ada template"
             description="Template Goal akan muncul di sini saat tersedia untuk organisasi Anda."
           />

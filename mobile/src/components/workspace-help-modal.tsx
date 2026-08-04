@@ -1,9 +1,11 @@
 // WSA-05 / spec §5 — Workspace Help Modal. Dibuka dari tombol `?` di hub card; berisi
 // kind/title/question/description + 3 checks. Copy terkunci di WS_HELP_COPY.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { useThemedIcon } from '@/providers/theme-provider';
 
 export type WorkspaceHelpContent = {
   kind: string;
@@ -23,6 +25,7 @@ export function WorkspaceHelpModal({
   onClose: () => void;
 }) {
   const reduceMotion = useReduceMotion();
+  const successIcon = useThemedIcon('#15803d', '#86efac');
   return (
     <Modal
       visible={visible}
@@ -45,8 +48,15 @@ export function WorkspaceHelpModal({
           <ScrollView className="grow-0">
             <View className="gap-2">
               {content.checks.map((check) => (
-                <View key={check} className="flex-row gap-2">
-                  <Text className="text-sm text-green-700 dark:text-green-400">✓</Text>
+                <View key={check} className="flex-row items-start gap-2">
+                  <Ionicons
+                    name="checkmark"
+                    size={16}
+                    color={successIcon}
+                    style={{ marginTop: 2 }}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  />
                   <Text className="flex-1 text-sm text-black dark:text-white">{check}</Text>
                 </View>
               ))}

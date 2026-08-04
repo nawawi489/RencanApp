@@ -7,6 +7,7 @@
 // bulat adalah bug `c7627a6` (dua lingkaran identik, semantik beda). Chip "N/M aktif" yang
 // dulu ada di sini DIHAPUS: angkanya duplikat persis dua sel stat row di bawahnya.
 // Lihat wiki/concepts/workspace-hub-orb.md.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native-css/components';
 
@@ -129,7 +130,7 @@ export function WorkspaceHubCard({
         style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: 999, backgroundColor: identity.cta, paddingHorizontal: 16, paddingVertical: 8 }}
         className="active:opacity-70">
         <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '900' }}>{enterLabel}</Text>
-        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '900' }}>›</Text>
+        <Ionicons name="chevron-forward" size={16} color="#ffffff" />
       </Pressable>
 
       {help ? (

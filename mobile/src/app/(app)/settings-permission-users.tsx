@@ -6,6 +6,7 @@
 // S4-4 (nonaktifkan pengguna) + S4-5 (penugasan ulang role) menempel di panel
 // detail pengguna yang sama — dua kapabilitas operator ini tak butuh layar
 // tersendiri dan konsumennya identik.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -21,6 +22,7 @@ import {
   useUserPermissionsAdmin,
 } from '@/hooks/use-permissions-admin';
 import { useProfile } from '@/hooks/use-profile';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { useRoleTemplates } from '@/hooks/use-org-structure';
 import { listOrgProfilesAdmin, personLabel, type OrgProfileAdminRow } from '@/lib/cards';
 import { alertFriendlyError, surfaceServerError } from '@/lib/errors';
@@ -116,6 +118,8 @@ export default function SettingsPermissionUsersScreen() {
   const [reason, setReason] = useState('');
   const placeholderColor = usePlaceholderColor();
   const [modalError, setModalError] = useState<string | null>(null);
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
+  const brandIcon = useThemedIcon('#1564b3', '#93c5fd');
 
   const { data: profiles, isLoading: membersLoading, isError: membersError, refetch } = useQuery({
     queryKey: ['org-profiles-admin'],
@@ -191,10 +195,10 @@ export default function SettingsPermissionUsersScreen() {
             </Text>
           ) : null}
         </View>
-        <Text className="text-lg text-neutral-400">›</Text>
+        <Ionicons name="chevron-forward" size={18} color={mutedIcon} />
       </Pressable>
     ),
-    [],
+    [mutedIcon],
   );
 
   if (profileLoading) {
@@ -293,7 +297,7 @@ export default function SettingsPermissionUsersScreen() {
               />
             ) : (
               <EmptyState
-                icon={<Text className="text-2xl">👥</Text>}
+                icon={<Ionicons name="people-outline" size={28} color={mutedIcon} />}
                 title="Belum ada pengguna lain untuk dikelola"
                 description="Anggota organisasi selain Anda akan muncul di sini."
               />
@@ -312,7 +316,8 @@ export default function SettingsPermissionUsersScreen() {
               accessibilityRole="button"
               accessibilityLabel="Kembali ke daftar anggota"
               onPress={() => setSelectedId(null)}>
-              <Text className="text-base text-brand-dark">‹ Daftar anggota</Text>
+              <Ionicons name="chevron-back" size={18} color={brandIcon} />
+              <Text className="text-base text-brand-dark">Daftar anggota</Text>
             </Pressable>
 
             <View className="flex-row items-center gap-3">
@@ -548,7 +553,7 @@ export default function SettingsPermissionUsersScreen() {
                         </Text>
                       </View>
                       {active ? (
-                        <Text className="text-lg text-brand-dark">✓</Text>
+                        <Ionicons name="checkmark-circle" size={20} color={brandIcon} />
                       ) : null}
                     </Pressable>
                   );

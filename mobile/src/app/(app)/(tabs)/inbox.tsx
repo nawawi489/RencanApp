@@ -8,6 +8,7 @@
 // Deep-link tap → /inbox/{roomId}?highlight={messageId} (AC-17).
 // Banner degrade saat RPC belum di-apply (PGRST202) atau error network (Coba lagi).
 // Hit pesan read-only — TIDAK ada tombol approve/reject/mark-evidence (AC-19).
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList } from 'react-native';
@@ -27,6 +28,7 @@ import {
 } from '@/components/ui';
 import { useInboxRooms } from '@/hooks/use-inbox';
 import { useSearchMessages } from '@/hooks/use-search-messages';
+import { useThemedIcon } from '@/providers/theme-provider';
 import type { ChatMessageHit, ChatRoom } from '@/lib/inbox';
 
 type Filter = 'all' | 'unread';
@@ -211,6 +213,7 @@ function groupHitsByRoom(
 export function LiveInboxScreen() {
   const router = useRouter();
   const { rooms, isLoading, isError, refetch } = useInboxRooms();
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [showAllHits, setShowAllHits] = useState(false);
@@ -374,7 +377,7 @@ export function LiveInboxScreen() {
 
             {showPesanEmpty ? (
               <EmptyState
-                icon={<Text className="text-2xl">💬</Text>}
+                icon={<Ionicons name="chatbubbles-outline" size={28} color={mutedIcon} />}
                 title={emptyTitle}
                 description={COPY.emptyPesan}
                 action={{ label: COPY.clearSearch, onPress: () => handleQueryChange('') }}
@@ -385,7 +388,7 @@ export function LiveInboxScreen() {
         ListEmptyComponent={
           isSearching || isHint || showPesanEmpty ? null : (
             <EmptyState
-              icon={<Text className="text-2xl">💬</Text>}
+              icon={<Ionicons name="chatbubbles-outline" size={28} color={mutedIcon} />}
               title={emptyTitle}
               description={emptyDescription}
             />

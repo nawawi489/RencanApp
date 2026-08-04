@@ -2,6 +2,7 @@
 // Wave 4.5: writer sekarang target tabel dedicated `card_completion_rules` via
 // upsertCompletionRule (bukan legacy `settings` key store). Locked base ditampilkan
 // terpisah sebagai chip disabled (F1 critic).
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -9,6 +10,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
 import { Button, SectionCard } from '@/components/ui';
+import { useThemedIcon } from '@/providers/theme-provider';
 import {
   getCompletionRule,
   upsertCompletionRule,
@@ -59,6 +61,7 @@ export default function SettingsCardCompletionRuleScreen() {
   const [cardType, setCardType] = useState<CardTypeGated>('goal');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const checkIcon = useThemedIcon('#1564b3', '#93c5fd');
 
   const ruleQ = useQuery({
     queryKey: ['card-rules', 'completion', orgId, cardType],
@@ -167,9 +170,13 @@ export default function SettingsCardCompletionRuleScreen() {
                       <Text className="text-base text-black dark:text-white">
                         {FIELD_LABEL[f] ?? f}
                       </Text>
-                      <Text className="text-base font-semibold text-brand-dark">
-                        {checked ? '✓' : ''}
-                      </Text>
+                      <Ionicons
+                        name={checked ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={22}
+                        color={checkIcon}
+                        accessibilityElementsHidden
+                        importantForAccessibility="no-hide-descendants"
+                      />
                     </Pressable>
                   );
                 })

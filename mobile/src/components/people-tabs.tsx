@@ -1,10 +1,12 @@
 // PPL-02 tab structure — dipisah dari `app/(app)/people.tsx` (Fase E refactor pasca-hijau).
 // Kontrak a11y & routing tetap sama; test PPL-02-1..8 mengunci behavior.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, type Href } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native-css/components';
 
 import { GuidanceNote } from '@/components/ui';
+import { useThemedIcon } from '@/providers/theme-provider';
 import { PEOPLE_TAB_COPY } from '@/lib/people-score';
 
 export type PeopleTabKey = 'monthly' | 'quarterly' | 'admin';
@@ -32,6 +34,7 @@ export function PeopleTabs({ activeTab, onChange, canAdmin }: PeopleTabsProps) {
     { key: 'quarterly', label: PEOPLE_TAB_COPY.quarterly },
   ];
   const adminSelected = activeTab === 'admin';
+  const brandIcon = useThemedIcon('#1564b3', '#93c5fd');
   return (
     <View className="flex-row items-center gap-2 pb-3">
       {timeTabs.map((t) => {
@@ -67,17 +70,24 @@ export function PeopleTabs({ activeTab, onChange, canAdmin }: PeopleTabsProps) {
           accessibilityState={{ selected: adminSelected }}
           onPress={() => onChange('admin')}
           className={
-            'min-h-[44px] min-w-[44px] flex-row items-center justify-center rounded-xl border px-3 py-2 ' +
+            'min-h-[44px] min-w-[44px] flex-row items-center justify-center gap-1.5 rounded-xl border px-3 py-2 ' +
             (adminSelected
               ? 'border-brand-dark bg-brand-dark'
               : 'border-neutral-300 bg-white dark:border-neutral-700 dark:bg-black')
           }>
+          <Ionicons
+            name="settings-outline"
+            size={16}
+            color={adminSelected ? '#ffffff' : brandIcon}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
           <Text
             className={
               'text-sm font-semibold ' +
               (adminSelected ? 'text-white' : 'text-brand-dark dark:text-brand-light')
             }>
-            ⚙ {PEOPLE_TAB_COPY.admin}
+            {PEOPLE_TAB_COPY.admin}
           </Text>
         </Pressable>
       ) : null}
@@ -98,6 +108,7 @@ export function PeopleQuarterlyTab({ tablist }: { tablist: ReactNode }) {
 /** Tab Admin — daftar Pressable ke rute layar admin eksisting (OQ-9). */
 export function PeopleAdminTab({ tablist }: { tablist: ReactNode }) {
   const router = useRouter();
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   return (
     <View className="flex-1 gap-3 bg-white p-5 dark:bg-black">
       {tablist}
@@ -109,7 +120,7 @@ export function PeopleAdminTab({ tablist }: { tablist: ReactNode }) {
           accessibilityLabel={`Buka ${e.label}`}
           onPress={() => router.push(e.route)}>
           <Text className="text-base font-semibold text-black dark:text-white">{e.label}</Text>
-          <Text className="text-lg text-neutral-400">›</Text>
+          <Ionicons name="chevron-forward" size={18} color={mutedIcon} />
         </Pressable>
       ))}
     </View>

@@ -2,6 +2,7 @@
 // + breakdown metrik + tren (diri sendiri) + tombol override (berwenang, non-self, periode aktif).
 // Sumber skor: periode aktif (useUserScore, RLS-gated D1) → fallback ranking periode tertutup (D9).
 // null vs 0 dibedakan (AC-7.23): null → GuidanceNote "Skor menyusul"; 0 nyata → band attention.
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -31,6 +32,7 @@ import {
   type TaskWithPeople,
 } from '@/lib/cards';
 import { breakdownToMetrics, effectiveScore } from '@/lib/people-score';
+import { useThemedIcon } from '@/providers/theme-provider';
 import {
   useActivePeriod,
   useLatestClosedPeriod,
@@ -67,6 +69,8 @@ export function LivePeopleProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { profile, can } = useProfile();
+  const brandIcon = useThemedIcon('#1564b3', '#93c5fd');
+  const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
 
   // UI-S-PR1 — satu-satunya sumber identitas + rich chrome (nama, email, status, role, position,
   // join date). Header memakai query detail per-orang ini; tidak lagi memuat seluruh roster org.
@@ -318,7 +322,10 @@ export function LivePeopleProfileScreen() {
             onPress={() => setTasksOpen((v) => !v)}
             className="min-h-[44px] flex-row items-center justify-between gap-2 active:opacity-70">
             <Text className="text-base font-semibold text-black dark:text-white">Tugas aktif</Text>
-            <Text className="text-sm text-brand-dark">{tasksOpen ? 'Tutup ▾' : 'Buka ▸'}</Text>
+            <View className="flex-row items-center gap-1">
+              <Text className="text-sm text-brand-dark">{tasksOpen ? 'Tutup' : 'Buka'}</Text>
+              <Ionicons name={tasksOpen ? 'chevron-down' : 'chevron-forward'} size={16} color={brandIcon} />
+            </View>
           </Pressable>
           {tasksOpen ? (
             tasksQ.isLoading ? (
@@ -350,9 +357,18 @@ export function LivePeopleProfileScreen() {
                       />
                     </View>
                     {t.deadline ? (
-                      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                        ⏰ Deadline {t.deadline}
-                      </Text>
+                      <View className="flex-row items-center gap-1">
+                        <Ionicons
+                          name="time-outline"
+                          size={12}
+                          color={mutedIcon}
+                          accessibilityElementsHidden
+                          importantForAccessibility="no-hide-descendants"
+                        />
+                        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                          Deadline {t.deadline}
+                        </Text>
+                      </View>
                     ) : null}
                   </Pressable>
                 ))}
