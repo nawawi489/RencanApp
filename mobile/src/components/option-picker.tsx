@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Modal } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
+
+import { BottomSheet } from '@/components/bottom-sheet';
 
 export type PickerOption = { value: string; label: string; hint?: string | null };
 
@@ -50,11 +51,10 @@ export function OptionPicker({
         <Text className="text-neutral-400">▾</Text>
       </Pressable>
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View className="flex-1 justify-end bg-black/40">
-          <View
-            className="max-h-[70%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityViewIsModal>
+      <BottomSheet
+        visible={open}
+        onRequestClose={() => setOpen(false)}
+        sheetClassName="max-h-[70%] gap-3 rounded-t-2xl bg-white p-5 dark:bg-neutral-900">
             <View className="flex-row items-center justify-between">
               <Text className="text-lg font-bold text-black dark:text-white">{label}</Text>
               <Pressable
@@ -105,9 +105,7 @@ export function OptionPicker({
                 <Text className="py-4 text-center text-sm text-neutral-400">{emptyText}</Text>
               ) : null}
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }

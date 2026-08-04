@@ -56,7 +56,9 @@ export function AppHeader({ kicker }: { kicker?: string }) {
 
   return (
     <View
-      style={{ paddingTop: insets.top }}
+      // insets.left/right: di landscape pada perangkat ber-notch, konten header tak
+      // boleh tenggelam di balik takik / rounded corner.
+      style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }}
       className="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-black">
       <View className="flex-row items-center justify-between px-4 py-3">
         <View className="flex-row items-center gap-1">

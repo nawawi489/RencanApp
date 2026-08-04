@@ -7,8 +7,6 @@
 //
 // Popup copy PRD §7.4 GENERIC — tidak menyebut nama field spesifik.
 // missingRequiredFor tetap kembalikan label untuk telemetry/log saja.
-import { Alert } from 'react-native';
-
 import { getCompletionRule, type CardTypeGated } from './card-rules';
 import { createLogger } from './logger';
 import { CARD_TYPE_LABEL, type MbrCompliance } from './settings-mbr';
@@ -116,7 +114,15 @@ export async function guardActivationFields(
   const msg = 'Lengkapi data wajib terlebih dahulu sebelum Card bisa diaktifkan.';
   // detail.missing di log untuk telemetry (bukan ke user)
   log.info({ event: 'activation_blocked', cardType, missing });
-  (alertImpl ?? (Alert.alert as AlertFn))(title, msg);
+  if (alertImpl) {
+    alertImpl(title, msg);
+    return true;
+  }
+  // Lazy import default seam lintas-platform. JANGAN `react-native` `Alert.alert`
+  // langsung: no-op di web → popup guard aktivasi tak pernah tampil di 6 layar.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { showAlert } = require('./alert') as { showAlert: AlertFn };
+  showAlert(title, msg);
   return true;
 }
 

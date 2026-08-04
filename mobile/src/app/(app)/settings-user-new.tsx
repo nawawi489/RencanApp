@@ -4,7 +4,6 @@
 // Password sementara diketik admin & dibagikan manual — tanpa dependensi email/SMTP.
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -14,6 +13,7 @@ import { useSafeBack } from '@/hooks/use-safe-back';
 import { useRoleTemplates } from '@/hooks/use-org-structure';
 import { useProfile } from '@/hooks/use-profile';
 import { useCreateUserAdmin } from '@/hooks/use-users-admin';
+import { showAlert } from '@/lib/alert';
 import { surfaceServerError } from '@/lib/errors';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -105,13 +105,13 @@ export default function SettingsUserNewScreen() {
       // Alert ditutup.
       if (created.warning) {
         setError(created.warning.message);
-        Alert.alert(
+        showAlert(
           'User dibuat — perlu diperiksa',
           `Akun ${normalizedEmail} sudah bisa dipakai untuk login, tetapi penempatan organisasi/role-nya gagal. Periksa user ini di User & Permission sebelum membagikan password sementara.`,
         );
         return;
       }
-      Alert.alert(
+      showAlert(
         'User dibuat',
         `Akun ${normalizedEmail} siap digunakan. Bagikan password sementara secara aman dan sarankan menggantinya lewat Reset Password setelah login pertama.`,
       );

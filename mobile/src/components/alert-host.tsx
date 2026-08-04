@@ -41,8 +41,13 @@ export function AlertHost(): React.ReactElement | null {
     };
   }, []);
 
-  if (Platform.OS !== 'web' || queue.length === 0) return null;
+  // Native tak butuh host (Alert.alert sudah modal).
+  if (Platform.OS !== 'web') return null;
 
+  // Live-region wrapper HARUS selalu ter-mount, bukan hanya saat ada banner: screen
+  // reader mengumumkan `aria-live` region ketika ISI-nya berubah, dan region yang baru
+  // muncul bersamaan dengan isinya sering tak terumumkan. Jadi kontainer selalu render
+  // (transparan, `box-none` → tak menghalangi tap); hanya kartu banner yang kondisional.
   return (
     <View
       // pointerEvents box-none: klik di luar banner tetap sampai ke UI di bawah.

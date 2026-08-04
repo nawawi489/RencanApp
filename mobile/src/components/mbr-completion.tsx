@@ -1,10 +1,10 @@
 // Komponen bersama Fase 5 — indikator Kelengkapan Perencanaan + gating aktivasi (popup ramah).
 // Dipakai di Strategi / Inisiatif / Rencana Aksi detail. Server (RPC activate_*) tetap penegak akhir;
 // gating klien hanya pre-flight untuk mode 'blokir_aktivasi' agar UX jelas sebelum network call.
-import { Alert } from 'react-native';
 import { Text, View } from 'react-native-css/components';
 
 import { Badge } from './ui';
+import { showAlert } from '@/lib/alert';
 import { ENFORCEMENT_MODE_TONE, complianceLabel, type MbrCompliance } from '@/lib/settings-mbr';
 
 /** Kartu indikator rasio turunan vs minimum. Tidak render bila compliance belum tersedia atau nonaktif. */
@@ -38,7 +38,7 @@ export function guardMbrActivation(
     !compliance.is_compliant
   ) {
     const need = compliance.min_count - compliance.child_count;
-    Alert.alert(
+    showAlert(
       'Tidak Dapat Melanjutkan',
       `Baru ada ${compliance.child_count} dari ${compliance.min_count} ${opts.childLabel}. ` +
         `Tambahkan ${need} ${opts.childLabel} lagi agar bisa diaktifkan.`,

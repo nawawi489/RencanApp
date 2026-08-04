@@ -4,8 +4,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform } from 'react-native';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { Modal, Platform } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AccessDenied } from '@/components/access-denied';
 import {
@@ -17,6 +18,7 @@ import {
   usePlaceholderColor,
 } from '@/components/ui';
 import { useProfile } from '@/hooks/use-profile';
+import { showAlert } from '@/lib/alert';
 import {
   createStrategyTemplate,
   deleteStrategyTemplate,
@@ -50,6 +52,7 @@ const EMPTY_FORM: FormData = {
 export default function SettingsStrategyTemplatesScreen() {
   const { can } = useProfile();
   const allowed = can('manage_kpi_area_templates') || can('manage_goal_templates');
+  const insets = useSafeAreaInsets();
   const placeholderColor = usePlaceholderColor();
   const [q, setQ] = useState('');
   const qc = useQueryClient();
@@ -160,7 +163,7 @@ export default function SettingsStrategyTemplatesScreen() {
   }
 
   function confirmDelete(tpl: StrategyTemplateWithParent) {
-    Alert.alert(
+    showAlert(
       'Hapus Template',
       `Hapus "${tpl.name}"? Template yang sudah dipakai Strategy aktif tidak terpengaruh.`,
       [
@@ -191,10 +194,7 @@ export default function SettingsStrategyTemplatesScreen() {
   const isPending = createM.isPending || updateM.isPending;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1"
-      keyboardVerticalOffset={0}>
+    <>
       <ScrollView
         className="flex-1 bg-neutral-50 dark:bg-black"
         keyboardShouldPersistTaps="handled">
@@ -257,6 +257,7 @@ export default function SettingsStrategyTemplatesScreen() {
           </>
         )}
       </View>
+      </ScrollView>
 
       {/* Create / Edit modal */}
       <Modal
@@ -264,68 +265,79 @@ export default function SettingsStrategyTemplatesScreen() {
         animationType="slide"
         transparent
         onRequestClose={closeModal}>
-        <View className="flex-1 justify-end bg-black/40">
+        {/* KAV lives INSIDE the Modal: RN renders a Modal into its own native window,
+            so a KAV that is only a React-tree ancestor pads the invisible screen behind
+            the sheet. max-h-[88%] + inner ScrollView keep Save reachable while typing. */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end bg-black/40"
+          keyboardVerticalOffset={0}>
           <View
-            className="gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+            className="max-h-[88%] gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+            style={{ paddingBottom: Math.max(insets.bottom, 16) }}
             accessibilityLabel={editing ? 'Modal edit template' : 'Modal buat template'}
             accessibilityViewIsModal>
             <Text className="text-lg font-bold text-black dark:text-white">
               {editing ? 'Edit Strategy Template' : 'Buat Strategy Template'}
             </Text>
 
-            {!editing && (
-              <GoalTemplatePicker
-                templates={goalTplQ.data ?? []}
-                selected={form.goal_template_id}
-                onChange={(id) => setForm((f) => ({ ...f, goal_template_id: id }))}
-              />
-            )}
+            <ScrollView className="grow-0" keyboardShouldPersistTaps="handled">
+              <View className="gap-3">
+                {!editing && (
+                  <GoalTemplatePicker
+                    templates={goalTplQ.data ?? []}
+                    selected={form.goal_template_id}
+                    onChange={(id) => setForm((f) => ({ ...f, goal_template_id: id }))}
+                  />
+                )}
 
-            <Field
-              label="Nama"
-              value={form.name}
-              onChange={(v) => setForm((f) => ({ ...f, name: v }))}
-              placeholder="mis. Sales Revenue"
-              placeholderColor={placeholderColor}
-            />
-            <View className="flex-row gap-2">
-              <View className="flex-1">
                 <Field
-                  label="Kode Divisi"
-                  value={form.division}
-                  onChange={(v) => setForm((f) => ({ ...f, division: v }))}
-                  placeholder="mis. sales"
+                  label="Nama"
+                  value={form.name}
+                  onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+                  placeholder="mis. Sales Revenue"
                   placeholderColor={placeholderColor}
                 />
-              </View>
-              <View className="flex-1">
+                <View className="flex-row gap-2">
+                  <View className="flex-1">
+                    <Field
+                      label="Kode Divisi"
+                      value={form.division}
+                      onChange={(v) => setForm((f) => ({ ...f, division: v }))}
+                      placeholder="mis. sales"
+                      placeholderColor={placeholderColor}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Field
+                      label="Label Divisi"
+                      value={form.division_label}
+                      onChange={(v) => setForm((f) => ({ ...f, division_label: v }))}
+                      placeholder="mis. Sales"
+                      placeholderColor={placeholderColor}
+                    />
+                  </View>
+                </View>
                 <Field
-                  label="Label Divisi"
-                  value={form.division_label}
-                  onChange={(v) => setForm((f) => ({ ...f, division_label: v }))}
-                  placeholder="mis. Sales"
+                  label="Hint Target (opsional)"
+                  value={form.target_hint}
+                  onChange={(v) => setForm((f) => ({ ...f, target_hint: v }))}
+                  placeholder="mis. Rp 500 juta/bulan"
                   placeholderColor={placeholderColor}
                 />
-              </View>
-            </View>
-            <Field
-              label="Hint Target (opsional)"
-              value={form.target_hint}
-              onChange={(v) => setForm((f) => ({ ...f, target_hint: v }))}
-              placeholder="mis. Rp 500 juta/bulan"
-              placeholderColor={placeholderColor}
-            />
-            <Field
-              label="Hint Outcome (opsional)"
-              value={form.expected_outcome_hint}
-              onChange={(v) => setForm((f) => ({ ...f, expected_outcome_hint: v }))}
-              placeholder="mis. Peningkatan penjualan 20%"
-              placeholderColor={placeholderColor}
-            />
+                <Field
+                  label="Hint Outcome (opsional)"
+                  value={form.expected_outcome_hint}
+                  onChange={(v) => setForm((f) => ({ ...f, expected_outcome_hint: v }))}
+                  placeholder="mis. Peningkatan penjualan 20%"
+                  placeholderColor={placeholderColor}
+                />
 
-            {formError && (
-              <Text className="text-sm text-red-600 dark:text-red-400">{formError}</Text>
-            )}
+                {formError && (
+                  <Text className="text-sm text-red-600 dark:text-red-400">{formError}</Text>
+                )}
+              </View>
+            </ScrollView>
 
             <View className="flex-row gap-2">
               <Button label="Batal" variant="secondary" onPress={closeModal} />
@@ -337,10 +349,9 @@ export default function SettingsStrategyTemplatesScreen() {
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </>
   );
 }
 

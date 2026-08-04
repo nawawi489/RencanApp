@@ -4,8 +4,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform } from 'react-native';
-import { ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { Modal, Platform } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AccessDenied } from '@/components/access-denied';
 import { Badge, Button, EmptyState, ErrorState, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
@@ -36,6 +37,7 @@ const STATUS_CHIPS: { key: 'semua' | 'open' | 'resolved' | 'dismissed'; label: s
 export default function SettingsGovernanceViolationScreen() {
   const router = useRouter();
   const qc = useQueryClient();
+  const insets = useSafeAreaInsets();
   const { can } = useProfile();
   const { violations, isLoading, isError, refetch } = useGovernanceViolations();
   const allowed = can('view_governance_violation');
@@ -63,10 +65,7 @@ export default function SettingsGovernanceViolationScreen() {
   }, [violations, statusChip]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1"
-      keyboardVerticalOffset={0}>
+    <>
       <ScrollView
         className="flex-1 bg-neutral-50 dark:bg-black"
         keyboardShouldPersistTaps="handled">
@@ -156,6 +155,7 @@ export default function SettingsGovernanceViolationScreen() {
           </>
         )}
       </View>
+      </ScrollView>
 
       {/* Resolution modal */}
       <Modal
@@ -163,24 +163,33 @@ export default function SettingsGovernanceViolationScreen() {
         animationType="slide"
         transparent
         onRequestClose={() => setResolveTarget(null)}>
-        <View className="flex-1 justify-end bg-black/40">
+        {/* KAV lives INSIDE the Modal: RN renders a Modal into its own native window,
+            so a KAV that is only a React-tree ancestor pads the invisible screen behind
+            the sheet. max-h-[88%] + inner ScrollView keep the actions reachable while typing. */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end bg-black/40"
+          keyboardVerticalOffset={0}>
           <View
-            className="gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+            className="max-h-[88%] gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+            style={{ paddingBottom: Math.max(insets.bottom, 16) }}
             accessibilityLabel="Modal selesaikan pelanggaran"
             accessibilityViewIsModal>
             <Text className="text-lg font-bold text-black dark:text-white">Selesaikan Pelanggaran</Text>
             <Text className="text-xs text-neutral-500 dark:text-neutral-400">
               Tulis catatan penyelesaian (≥ 8 karakter). Aksi ini tercatat di Activity Log.
             </Text>
-            <TextInput
-              accessibilityLabel="Catatan penyelesaian"
-              value={note}
-              onChangeText={setNote}
-              placeholder="mis. Sudah konfirmasi PIC + revisi target."
-              placeholderTextColor={placeholderColor}
-              multiline
-              className="min-h-[100px] rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-            />
+            <ScrollView className="grow-0" keyboardShouldPersistTaps="handled">
+              <TextInput
+                accessibilityLabel="Catatan penyelesaian"
+                value={note}
+                onChangeText={setNote}
+                placeholder="mis. Sudah konfirmasi PIC + revisi target."
+                placeholderTextColor={placeholderColor}
+                multiline
+                className="min-h-[100px] rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+              />
+            </ScrollView>
             <View className="flex-row gap-2">
               <Button
                 label="Batal"
@@ -207,9 +216,8 @@ export default function SettingsGovernanceViolationScreen() {
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </>
   );
 }

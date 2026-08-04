@@ -15,6 +15,7 @@ import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform } from 'react-native';
 import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, EmptyState, ErrorState, SkeletonList, usePlaceholderColor } from '@/components/ui';
 import { useChatAttachmentFlow } from '@/hooks/use-chat-attachment-flow';
@@ -634,6 +635,7 @@ const CHAT_URL_GC_MS = CHAT_SIGNED_URL_TTL_SEC * 1000;
 
 function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment }) {
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const thumbKey = ['chat-attachment-signed-url', attachment.path, 'thumb'] as const;
   const fullKey = ['chat-attachment-signed-url', attachment.path, 'full'] as const;
   const { data: thumbUrl } = useQuery({
@@ -698,7 +700,8 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
             accessibilityLabel="Tutup"
             style={{
               position: 'absolute',
-              top: 40,
+              // insets.top + 8: tombol tutup lolos dari status bar / notch (dulu top: 40 hardcoded).
+              top: insets.top + 8,
               right: 20,
               width: 44,
               height: 44,
@@ -718,6 +721,7 @@ function ChatAttachmentThumbnail({ attachment }: { attachment: ChatAttachment })
 export default function ChatRoomScreen() {
   const { roomId } = useLocalSearchParams<{ roomId?: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
   const safeRoomId = roomId ?? '';
@@ -1087,7 +1091,10 @@ export default function ChatRoomScreen() {
         )}
 
         {isMember ? (
-          <View className="gap-2 border-t border-neutral-200 px-5 pb-3 pt-2 dark:border-neutral-800">
+          <View
+            className="gap-2 border-t border-neutral-200 px-5 pt-2 dark:border-neutral-800"
+            // pb-3 (12px) + insets.bottom: komposer lolos dari home indicator (dulu pb-3 saja).
+            style={{ paddingBottom: insets.bottom + 12 }}>
             <MentionSuggestions members={mentionSuggestions} onPick={handlePickMention} />
             <AttachmentPreviewRow
               files={pendingFiles}

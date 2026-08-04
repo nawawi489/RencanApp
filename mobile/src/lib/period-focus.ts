@@ -239,7 +239,9 @@ export function enumerateQuarters(year: number, now: Date): PeriodOption[] {
  * Tampilkan Alert Archive (spec §12.4 / PRD §7.7) saat user menekan "+" tambah turunan
  * pada card yang periode-nya past relatif fokus.
  *
- * `alertImpl` injectable agar pure di test — default `react-native` Alert.alert.
+ * `alertImpl` injectable agar pure di test — default `showAlert` (seam lintas-platform).
+ * Jangan pakai `react-native` `Alert.alert` langsung: di web ia no-op sehingga alert
+ * "periode arsip" tak pernah tampil.
  */
 type AlertFn = (title: string, message?: string) => void;
 
@@ -252,9 +254,9 @@ export function showPastPeriodAlert(alertImpl?: AlertFn): void {
     return;
   }
   // Lazy import agar pure-helper test (yang tidak butuh Alert) tetap bebas react-native.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { Alert } = require('react-native') as { Alert: { alert: AlertFn } };
-  Alert.alert(title, msg);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { showAlert } = require('./alert') as { showAlert: AlertFn };
+  showAlert(title, msg);
 }
 
 /** Validate persisted JSON shape. Kembalikan null jika invalid → caller fallback ke default. */

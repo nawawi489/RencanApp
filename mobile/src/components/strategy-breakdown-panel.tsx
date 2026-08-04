@@ -10,9 +10,9 @@
 //   - Field "Alasan perubahan" wajib ≥ 8 char.
 //   - Save disabled bila Σ tidak valid atau reason kurang.
 import { useMemo, useState } from 'react';
-import { Modal } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
+import { BottomSheet } from '@/components/bottom-sheet';
 import { Button, ProgressBar, SectionCard, SkeletonList, TabBar, usePlaceholderColor } from '@/components/ui';
 import { useStrategyBreakdown, useStrategyBreakdownActions } from '@/hooks/use-workspace';
 import { useProfile } from '@/hooks/use-profile';
@@ -304,12 +304,11 @@ function BreakdownEditorModal({
   }
 
   return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/40">
-        <View
-          className="max-h-[88%] gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
-          accessibilityLabel="Editor Pecahan Target"
-          accessibilityViewIsModal>
+    <BottomSheet
+      visible={open}
+      onRequestClose={onClose}
+      sheetClassName="max-h-[88%] gap-3 rounded-t-3xl bg-white p-5 dark:bg-neutral-900"
+      accessibilityLabel="Editor Pecahan Target">
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-black dark:text-white">Ubah Pecahan Target</Text>
             <Pressable
@@ -428,8 +427,6 @@ function BreakdownEditorModal({
             disabled={!canSave}
             loading={isPending}
           />
-        </View>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }

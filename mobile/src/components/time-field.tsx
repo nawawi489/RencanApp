@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import { Pressable, Text, TextInput, View } from 'react-native-css/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePlaceholderColor } from '@/components/ui';
 import { useThemePreference } from '@/providers/theme-provider';
@@ -66,6 +67,7 @@ export function TimeField({
 }: Props) {
   const [show, setShow] = useState(false);
   const placeholderColor = usePlaceholderColor();
+  const insets = useSafeAreaInsets();
   const { effective } = useThemePreference();
   const a11yLabel = accessibilityLabel ?? label;
   // A11y: `*` merah tak terdengar pembaca layar → sisipkan " wajib" di label field.
@@ -162,7 +164,14 @@ export function TimeField({
           />
           <View
             className="bg-white p-4 dark:bg-neutral-900"
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+            // paddingBottom aman home-indicator: tombol "Selesai" tak tenggelam.
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              paddingBottom: Math.max(insets.bottom, 16),
+            }}
             accessibilityViewIsModal>
             <Picker
               value={current}
