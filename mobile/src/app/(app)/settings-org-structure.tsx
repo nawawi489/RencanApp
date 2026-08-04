@@ -2,8 +2,8 @@
 // Gating: create_department / manage_positions / manage_teams / manage_settings (per tab).
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
-import { useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform } from 'react-native';
+import { useCallback, useState, type ReactNode } from 'react';
+import { FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -54,50 +54,61 @@ export default function SettingsOrgStructureScreen() {
   const allowed = can(TAB_PERMISSION[tab]);
   // Setiap tab punya akses level masing-masing; jika tidak allowed → AccessDenied per-tab.
 
+  // Chrome bersama (judul + TabBar). Dipakai langsung di ScrollView untuk tab
+  // biasa, atau sebagai ListHeaderComponent FlatList di tab Atasan (yang bisa
+  // sepanjang headcount dan harus jadi scroll container sendiri, bukan nested).
+  const chrome = (
+    <View className="gap-4">
+      <View className="gap-1">
+        <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Organisasi</Text>
+        <Text className="text-base text-neutral-500 dark:text-neutral-400">
+          Departemen, posisi, tim, dan role template.
+        </Text>
+      </View>
+      <TabBar<Tab>
+        tabs={[
+          { key: 'department', label: 'Departemen' },
+          { key: 'position', label: 'Posisi' },
+          { key: 'team', label: 'Tim' },
+          { key: 'role', label: 'Role' },
+          { key: 'reporting', label: 'Atasan' },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1"
       keyboardVerticalOffset={0}>
-      <ScrollView
-        className="flex-1 bg-neutral-50 dark:bg-black"
-        keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: 'Organisasi' }} />
-      <View className="gap-4 p-5">
-        <View className="gap-1">
-          <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Organisasi</Text>
-          <Text className="text-base text-neutral-500 dark:text-neutral-400">
-            Departemen, posisi, tim, dan role template.
-          </Text>
-        </View>
-        <TabBar<Tab>
-          tabs={[
-            { key: 'department', label: 'Departemen' },
-            { key: 'position', label: 'Posisi' },
-            { key: 'team', label: 'Tim' },
-            { key: 'role', label: 'Role' },
-            { key: 'reporting', label: 'Atasan' },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
-        {!allowed ? (
-          <AccessDenied
-            message={`Tab ini memerlukan izin "${TAB_PERMISSION[tab]}". Hubungi administrator bila perlu akses.`}
-          />
-        ) : tab === 'department' ? (
-          <DepartmentTab />
-        ) : tab === 'position' ? (
-          <PositionTab />
-        ) : tab === 'team' ? (
-          <TeamTab />
-        ) : tab === 'reporting' ? (
-          <ReportingTab />
-        ) : (
-          <RoleTab />
-        )}
-      </View>
-      </ScrollView>
+      {allowed && tab === 'reporting' ? (
+        <ReportingTab listHeader={chrome} />
+      ) : (
+        <ScrollView
+          className="flex-1 bg-neutral-50 dark:bg-black"
+          keyboardShouldPersistTaps="handled">
+          <View className="gap-4 p-5">
+            {chrome}
+            {!allowed ? (
+              <AccessDenied
+                message={`Tab ini memerlukan izin "${TAB_PERMISSION[tab]}". Hubungi administrator bila perlu akses.`}
+              />
+            ) : tab === 'department' ? (
+              <DepartmentTab />
+            ) : tab === 'position' ? (
+              <PositionTab />
+            ) : tab === 'team' ? (
+              <TeamTab />
+            ) : (
+              <RoleTab />
+            )}
+          </View>
+        </ScrollView>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -326,7 +337,7 @@ function TeamTab() {
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [lead, setLead] = useState<NonNullable<PersonRef> | null>(null);
   // Key sama dengan UserPicker → satu cache profiles untuk picker dan label daftar.
-  const { data: profiles } = useQuery({ queryKey: ['org-profiles'], queryFn: listOrgProfiles });
+  const { data: profiles } = useQuery({ queryKey: ['org-profiles'], queryFn: () => listOrgProfiles() });
 
   function leadNameOf(id: string | null): string | null {
     if (!id) return null;
@@ -382,56 +393,92 @@ function TeamTab() {
  * tidak memberi atasan itu akses apa pun atas data bawahannya. Itu dinyatakan di UI supaya
  * admin tidak menyangka sedang mengatur hak akses — lihat komentar migrasi 0094.
  */
-function ReportingTab() {
+type ReportingPerson = ReturnType<typeof useReportingLines>['people'][number];
+
+function ReportingTab({ listHeader }: { listHeader: ReactNode }) {
   const { people, isLoading } = useReportingLines();
   const { setReportingLine, isPending } = useReportingLineActions();
 
-  async function change(userId: string, manager: NonNullable<PersonRef> | null) {
-    try {
-      await setReportingLine({ userId, managerId: manager?.id ?? null });
-    } catch (e) {
-      // Penolakan server (siklus, lintas-org, atasan nonaktif) muncul apa adanya —
-      // pesannya sudah copy Indonesia terkurasi dan menjelaskan sebabnya.
-      alertFriendlyError('Gagal', e, 'Kesalahan.');
-    }
-  }
+  const change = useCallback(
+    async (userId: string, manager: NonNullable<PersonRef> | null) => {
+      try {
+        await setReportingLine({ userId, managerId: manager?.id ?? null });
+      } catch (e) {
+        // Penolakan server (siklus, lintas-org, atasan nonaktif) muncul apa adanya —
+        // pesannya sudah copy Indonesia terkurasi dan menjelaskan sebabnya.
+        alertFriendlyError('Gagal', e, 'Kesalahan.');
+      }
+    },
+    [setReportingLine],
+  );
 
-  if (isLoading) return <SkeletonList count={4} />;
-  return (
-    <View className="gap-3">
+  // Header: chrome bersama + copy deskriptif (BUKAN otorisasi). Selalu ter-render
+  // sebagai ListHeaderComponent walau list kosong. Padding horizontal ada di sini
+  // dan di tiap baris (contentContainerStyle hanya urus gap + bottom).
+  const header = (
+    <View className="gap-4 px-5 pt-5">
+      {listHeader}
       <Text className="text-sm text-neutral-500 dark:text-neutral-400">
         Siapa melapor kepada siapa. Ini catatan struktur — mengatur atasan TIDAK memberi
         akses ke data bawahan; hak akses tetap diatur di User & Permission.
       </Text>
-      {people.length === 0 ? (
-        <EmptyState title="Belum ada anggota" description="Tambahkan user lebih dulu." />
-      ) : (
-        people.map((p) => {
-          const label = personLabel(p);
-          return (
-            <SectionCard
-              key={p.id}
-              actions={
-                <UserPicker
-                  label={`Atasan ${label}`}
-                  value={p.manager}
-                  onChange={(m) => void change(p.id, m)}
-                  // Diri sendiri disingkirkan dari pilihan: server menolaknya, dan
-                  // menawarkan opsi yang pasti gagal itu jebakan.
-                  excludeId={p.id}
-                />
-              }>
-              <Text className="text-base font-semibold text-black dark:text-white">{label}</Text>
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                {p.manager ? `Atasan: ${personLabel(p.manager)}` : 'Belum ada atasan'}
-              </Text>
-            </SectionCard>
-          );
-        })
-      )}
-      {isPending ? (
-        <Text className="text-xs text-neutral-400">Menyimpan…</Text>
-      ) : null}
+    </View>
+  );
+
+  const renderItem = useCallback(
+    ({ item: p }: { item: ReportingPerson }) => {
+      const label = personLabel(p);
+      return (
+        <View className="px-5">
+          <SectionCard
+            actions={
+              <UserPicker
+                label={`Atasan ${label}`}
+                value={p.manager}
+                onChange={(m) => void change(p.id, m)}
+                // Diri sendiri disingkirkan dari pilihan: server menolaknya, dan
+                // menawarkan opsi yang pasti gagal itu jebakan.
+                excludeId={p.id}
+              />
+            }>
+            <Text className="text-base font-semibold text-black dark:text-white">{label}</Text>
+            <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+              {p.manager ? `Atasan: ${personLabel(p.manager)}` : 'Belum ada atasan'}
+            </Text>
+          </SectionCard>
+        </View>
+      );
+    },
+    [change],
+  );
+
+  // Satu FlatList = scroll container (F3: virtualisasi + hindari VirtualizedList-di-
+  // ScrollView). Header tetap ter-mount lintas loading→loaded (data []→people) supaya
+  // TabBar di header tak ter-unmount di tengah interaksi.
+  return (
+    <View className="flex-1 bg-neutral-50 dark:bg-black">
+      <FlatList<ReportingPerson>
+        data={isLoading ? [] : people}
+        keyExtractor={(p) => p.id}
+        contentContainerStyle={{ gap: 12, paddingBottom: 20 }}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          <View className="px-5 pt-4">
+            {isLoading ? (
+              <SkeletonList count={4} />
+            ) : (
+              <EmptyState title="Belum ada anggota" description="Tambahkan user lebih dulu." />
+            )}
+          </View>
+        }
+        renderItem={renderItem}
+        ListFooterComponent={
+          isPending ? (
+            <Text className="px-5 pt-3 text-xs text-neutral-400">Menyimpan…</Text>
+          ) : null
+        }
+      />
     </View>
   );
 }

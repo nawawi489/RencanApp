@@ -182,13 +182,31 @@ export async function getPersonRef(id: string | null | undefined): Promise<Perso
   return data as PersonRef;
 }
 
+/**
+ * Bound default untuk daftar profil org — hindari fetch tak terbatas saat headcount
+ * tumbuh (F3). Selaras dengan default `max-rows` PostgREST; caller yang butuh halaman
+ * lain lewatkan `{ offset }`. `.range()` membuat batas eksplisit, bukan implisit.
+ */
+export const ORG_PROFILES_PAGE_SIZE = 1000;
+export type OrgProfilesPage = { limit?: number; offset?: number };
+
+function pageRange(page: OrgProfilesPage): [number, number] {
+  const limit = page.limit ?? ORG_PROFILES_PAGE_SIZE;
+  const offset = page.offset ?? 0;
+  return [offset, offset + limit - 1];
+}
+
 /** Anggota org untuk picker PIC/Reviewer. */
-export async function listOrgProfiles(): Promise<NonNullable<PersonRef>[]> {
+export async function listOrgProfiles(
+  page: OrgProfilesPage = {},
+): Promise<NonNullable<PersonRef>[]> {
+  const [from, to] = pageRange(page);
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, email')
     .eq('is_active', true)
-    .order('full_name', { ascending: true });
+    .order('full_name', { ascending: true })
+    .range(from, to);
   if (error) throw error;
   return data as NonNullable<PersonRef>[];
 }
@@ -205,12 +223,16 @@ export type OrgProfileAdminRow = NonNullable<PersonRef> & {
   role_name: string | null;
 };
 
-export async function listOrgProfilesAdmin(): Promise<OrgProfileAdminRow[]> {
+export async function listOrgProfilesAdmin(
+  page: OrgProfilesPage = {},
+): Promise<OrgProfileAdminRow[]> {
+  const [from, to] = pageRange(page);
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, email, is_active, role_template_id, role_templates(name)')
     .order('is_active', { ascending: false })
-    .order('full_name', { ascending: true });
+    .order('full_name', { ascending: true })
+    .range(from, to);
   if (error) throw error;
   type Row = {
     id: string;
@@ -240,12 +262,16 @@ export type OrgProfileWithRole = NonNullable<PersonRef> & {
   role_level: string | null;
 };
 
-export async function listOrgProfilesWithRoles(): Promise<OrgProfileWithRole[]> {
+export async function listOrgProfilesWithRoles(
+  page: OrgProfilesPage = {},
+): Promise<OrgProfileWithRole[]> {
+  const [from, to] = pageRange(page);
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, email, position_title, role_templates(name, level)')
     .eq('is_active', true)
-    .order('full_name', { ascending: true });
+    .order('full_name', { ascending: true })
+    .range(from, to);
   if (error) throw error;
   type Row = {
     id: string;

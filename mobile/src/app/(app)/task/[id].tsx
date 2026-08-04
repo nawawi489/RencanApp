@@ -353,7 +353,8 @@ export function LiveTaskDetailScreen() {
     useCallback(() => {
       apQ.refetch();
       subsQ.refetch();
-    }, [apQ, subsQ]),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
   );
 
   function refresh() {

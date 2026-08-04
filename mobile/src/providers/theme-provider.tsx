@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
 
 import { createLogger } from '@/lib/logger';
@@ -75,20 +75,24 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     if (mode === 'system') apply('system');
   }, [system, mode]);
 
-  const setMode = (next: ThemeMode) => {
+  const setMode = useCallback((next: ThemeMode) => {
     setModeState(next);
     apply(next);
     AsyncStorage.setItem(STORAGE_KEY, next).catch((err) =>
       log.warn('gagal simpan AsyncStorage', err),
     );
-  };
+  }, []);
 
   const effective: 'light' | 'dark' =
     mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode;
 
-  return (
-    <ThemeContext.Provider value={{ mode, effective, setMode }}>{children}</ThemeContext.Provider>
+  // Identitas value stabil → consumer app-wide tak re-render tiap render provider.
+  const value = useMemo<ThemeContextValue>(
+    () => ({ mode, effective, setMode }),
+    [mode, effective, setMode],
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useThemePreference(): ThemeContextValue {
