@@ -11,6 +11,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { usePeriodFocus } from '@/providers/period-focus-provider';
 import { useThemePreference } from '@/providers/theme-provider';
+import { WORKSPACE_SPACE } from '@/lib/workspace-theme-tokens';
 import {
   enumerateMonths,
   enumerateQuarters,
@@ -78,10 +79,14 @@ export function PeriodSwitcher({ now, space }: { now?: Date; space?: WorkspaceSp
   //    (preseden workspace-hub-card, cegah "light island" di dark mode).
   //  - "Ubah" solid + teks putih: Performance #1877f2 (3.6:1) → brand-dark #1564b3 (5.99:1);
   //    Development #0f766e sudah 4.8:1 (lulus AA), dipertahankan.
-  const pillTheme =
-    space === 'development'
-      ? { bg: isDark ? '#171717' : '#eefaf8', border: isDark ? '#404040' : '#cceee8', changeBg: '#0f766e' }
-      : { bg: isDark ? '#171717' : '#eef4fb', border: isDark ? '#404040' : '#d9e3ef', changeBg: '#1564b3' };
+  // Tint pill light-only (bg/border) + CTA "Ubah" (changeBg) di WORKSPACE_SPACE (DESIGN §2).
+  // Surface/border dark netral one-off tersanksi (§4 rule 2): light dari token, dark → gelap.
+  const spaceToken = WORKSPACE_SPACE[space === 'development' ? 'development' : 'performance'];
+  const pillTheme = {
+    bg: isDark ? '#171717' : spaceToken.pillBgLight,
+    border: isDark ? '#404040' : spaceToken.pillBorderLight,
+    changeBg: spaceToken.cta,
+  };
 
   return (
     <>

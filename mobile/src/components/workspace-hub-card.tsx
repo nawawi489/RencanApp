@@ -15,6 +15,7 @@ import { useThemePreference } from '@/providers/theme-provider';
 import { ProgressOrb } from '@/components/ui';
 import { WorkspaceHelpModal, type WorkspaceHelpContent } from '@/components/workspace-help-modal';
 import type { HubStats } from '@/lib/workspace-hub-stats';
+import { WORKSPACE_SPACE } from '@/lib/workspace-theme-tokens';
 
 export function WorkspaceHubCard({
   kicker,
@@ -62,11 +63,11 @@ export function WorkspaceHubCard({
   // `border`/`kickerBg` = fill non-teks (border kiri, chip status) → boleh hue penuh.
   // `cta` = fill tombol solid + teks putih → WAJIB lulus AA (DESIGN §4 rule 3): Performance
   // #1877f2 (3.6:1) diganti brand-dark #1564b3 (5.99:1); Development #0f766e sudah 4.8:1.
-  const identity =
-    space === 'performance'
-      ? { border: '#1877f2', cta: '#1564b3', bg: '#f8fbff', kickerBg: '#e8f2ff', kickerText: '#145ebc' }
-      : { border: '#0f766e', cta: '#0f766e', bg: '#f7fffd', kickerBg: '#e6fffb', kickerText: '#0f766e' };
-  const surfaceBg = isDark ? '#0a0a0a' : identity.bg;
+  // Identitas ruang (border kiri, CTA solid, tint kicker/surface light-only) di WORKSPACE_SPACE
+  // (DESIGN §2). Surface & border netral theme-aware one-off tersanksi (§4 rule 2): tint light
+  // dari token, dark → gelap.
+  const identity = WORKSPACE_SPACE[space];
+  const surfaceBg = isDark ? '#0a0a0a' : identity.hubBgLight;
   const neutralBorder = isDark ? '#262626' : '#e5e7eb';
 
   return (
@@ -78,7 +79,7 @@ export function WorkspaceHubCard({
         minHeight: 172,
         borderRadius: 16,
         borderLeftWidth: 4,
-        borderLeftColor: identity.border,
+        borderLeftColor: identity.categoryBorder,
         borderTopWidth: 1,
         borderTopColor: neutralBorder,
         borderRightWidth: 1,
@@ -93,8 +94,8 @@ export function WorkspaceHubCard({
         <View className="flex-1 gap-1.5">
           <View className="flex-row items-center justify-between gap-2">
             {/* Kicker jadi pill (spec §4.2/§4.3). */}
-            <View style={{ alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: identity.kickerBg }}>
-              <Text style={{ color: identity.kickerText, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 }}>
+            <View style={{ alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: identity.hubKickerBgLight }}>
+              <Text style={{ color: identity.hubKickerText, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 }}>
                 {kicker.toUpperCase()}
               </Text>
             </View>
@@ -103,6 +104,8 @@ export function WorkspaceHubCard({
                 accessibilityRole="button"
                 accessibilityLabel={helpAccessibilityLabel ?? `Bantuan ${help.kind}`}
                 onPress={() => setHelpOpen(true)}
+                // Pil "?" aksen Goal-blue: border `#cce2ff` + teks `#145ebc` terdaftar DESIGN §2
+                // (Workspace category, level Goal); bg translucent one-off tersanksi.
                 style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: '#cce2ff', backgroundColor: 'rgba(238,246,255,0.94)', alignItems: 'center', justifyContent: 'center' }}
                 className="active:opacity-70">
                 <Text style={{ color: '#145ebc', fontSize: 13, fontWeight: '900' }}>?</Text>

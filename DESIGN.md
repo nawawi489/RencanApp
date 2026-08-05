@@ -75,6 +75,32 @@ Progress orb tree (§10): good `#0f6b46`, risk `#b76b00`, bad `#c93434`, line bo
 
 > **Perubahan Sprint 6 (2026-07-28)**: hex teks & border-kiri card Action Plan bergeser `#14845c` → `#0f6b46` agar lulus AA pada pill kecil (`text-xs` / `fontSize:11`). `#14845c` pada `#e7f7ef` = 4.23:1 — gagal AA untuk teks di bawah 18px; `#0f6b46` pada `#e7f7ef` = 6.02:1 ✓. Ring SVG progress orb "good" **tetap** `#14845c` — komponen non-teks WCAG hanya butuh 3:1 (kontras vs latar kartu `bg-white`: 4.63:1 ✓).
 
+### Workspace controls (theme-aware inline — tree, hub-card, period-switcher)
+
+Kontrol Workspace memakai warna theme-aware di **inline `style`** (bukan className) karena
+`react-native-css` tak mengkonsumsi utility `@theme`/NativeWind di prop `style`. Family yang
+**dipakai ulang** diangkat ke token bernama di [`workspace-theme-tokens.ts`](mobile/src/lib/workspace-theme-tokens.ts)
+(preseden `WORKSPACE_KIND_BORDER`), sehingga perubahan token cukup di satu tempat. Nilai di bawah
+diekstrak persis dari inline lama — **refactor visual-identik**, bukan restyle.
+
+| Token (JS) | Peran | Light | Dark |
+|---|---|---|---|
+| `TREE_ADD_BUTTON.border` | Tombol "+ turunan" (constructive teal) — border | `#99f6e4` | `#115e59` |
+| `TREE_ADD_BUTTON.background` | idem — fill | `#ccfbf1` | `#134e4a` |
+| `TREE_ADD_BUTTON.text` | idem — teks (teal-700 di teal-100 = 5.0:1 ✓ AA) | `#0f766e` | `#5eead4` |
+| `TREE_TOGGLE_EXPANDED.border` | Chevron toggle saat expanded — border | `#bfdbfe` | `#3b82f6` |
+| `TREE_TOGGLE_EXPANDED.background` | idem — fill | `#eff6ff` | `#172554` |
+| `TREE_TOGGLE_EXPANDED.icon` | idem — ikon (aksen non-teks, 3:1) | `#2563eb` | `#bfdbfe` |
+| `NEUTRAL_UTILITY.surface` | "⋯" + toggle collapsed — surface | `#f8fafc` | `#171717` |
+| `NEUTRAL_UTILITY.border` | "⋯" + "+" dimmed — border | `#e2e8f0` | `#404040` |
+| `WORKSPACE_SPACE.performance` | Identitas ruang Performance — `categoryBorder` `#1877f2`, `cta` `#1564b3` (brand-dark, §4 rule 1), tint light-only `hubBgLight` `#f8fbff` / `hubKickerBgLight` `#e8f2ff` / `hubKickerText` `#145ebc` / `pillBgLight` `#eef4fb` / `pillBorderLight` `#d9e3ef` | — | — |
+| `WORKSPACE_SPACE.development` | Identitas ruang Development — `categoryBorder` `#0f766e`, `cta` `#0f766e` (4.8:1), tint light-only `hubBgLight` `#f7fffd` / `hubKickerBgLight` `#e6fffb` / `hubKickerText` `#0f766e` / `pillBgLight` `#eefaf8` / `pillBorderLight` `#cceee8` | — | — |
+
+> Surface/border **netral gelap** (mis. `#0a0a0a`/`#262626` hub-card, `#171717`/`#404040` pill),
+> teks netral (`#0f172a`/`#94a3b8`/`#64748b`), fill dark-mode Detail `#1d4ed8`, dan connector
+> `#cfd8e5` tetap **inline one-off tersanksi** (dikomentari di sumber) — dipakai sekali per
+> kontrol dengan shade berbeda, jadi tokenisasi malah akan menyeragamkan warna yang berbeda.
+
 #### Rekonsiliasi a11y Workspace (owner 2026-07-03)
 
 §4 a11y **mengikat** untuk semua kontrol Workspace — termasuk saat prototype/referensi memakai nilai light-only yang gagal AA. Di titik konflik, §4 menang. Doktrin (preseden [`workspace-hub-card.tsx`](mobile/src/components/workspace-hub-card.tsx), berlaku untuk semua kontrol Workspace):

@@ -207,6 +207,34 @@ export async function getArchiveMetadata(
   return { archived_at: data.created_at, archived_by: data.actor_id ?? null };
 }
 
+/**
+ * UI-S-AR1 (perf) — versi batch dari {@link getArchiveMetadata}. Satu query untuk semua
+ * baris arsip yang tampil, alih-alih satu round-trip per baris (N+1). Filter `.in('entity_id')`
+ * lalu resolusi klien: kunci `entity_type:entity_id`, ambil entri TERBARU per kunci (baris sudah
+ * urut created_at desc). Peta kembali kosong bila `rows` kosong.
+ */
+export async function getArchiveMetadataBatch(
+  rows: { entityType: string; entityId: string }[],
+): Promise<Map<string, ArchiveMetadata>> {
+  const out = new Map<string, ArchiveMetadata>();
+  if (rows.length === 0) return out;
+  const ids = Array.from(new Set(rows.map((r) => r.entityId)));
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select('entity_type, entity_id, actor_id, created_at')
+    .eq('action', 'card_archived')
+    .in('entity_id', ids)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  for (const row of data ?? []) {
+    const key = `${row.entity_type}:${row.entity_id}`;
+    // Baris urut created_at desc → entri pertama per kunci adalah yang terbaru; abaikan sisanya.
+    if (out.has(key)) continue;
+    out.set(key, { archived_at: row.created_at, archived_by: row.actor_id ?? null });
+  }
+  return out;
+}
+
 /** UI-G-002 — activity log untuk satu entity (entity_type + entity_id). RLS aktif (org-scoped). */
 export async function listEntityActivityLog(
   entityType: string,

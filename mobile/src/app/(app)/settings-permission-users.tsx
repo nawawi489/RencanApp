@@ -10,7 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Modal, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { AccessDenied } from '@/components/access-denied';
@@ -22,6 +22,7 @@ import {
   useUserPermissionsAdmin,
 } from '@/hooks/use-permissions-admin';
 import { useProfile } from '@/hooks/use-profile';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useThemedIcon } from '@/providers/theme-provider';
 import { useRoleTemplates } from '@/hooks/use-org-structure';
 import { listOrgProfilesAdmin, personLabel, type OrgProfileAdminRow } from '@/lib/cards';
@@ -124,6 +125,7 @@ export default function SettingsPermissionUsersScreen() {
   const [modalError, setModalError] = useState<string | null>(null);
   const mutedIcon = useThemedIcon('#6b7280', '#a3a3a3');
   const brandIcon = useThemedIcon('#1564b3', '#93c5fd');
+  const reduceMotion = useReduceMotion();
 
   const { data: profiles, isLoading: membersLoading, isError: membersError, refetch } = useQuery({
     queryKey: ['org-profiles-admin'],
@@ -428,171 +430,198 @@ export default function SettingsPermissionUsersScreen() {
         </ScrollView>
       )}
 
-      {/* ----- Modal konfirmasi (in-tree) reason wajib; revoke = danger ----- */}
+      {/* ----- Modal konfirmasi reason wajib; revoke = danger. Real <Modal> (bukan
+          overlay <View absolute>) supaya react-native-web memberi focus trap +
+          containment a11y — `accessibilityViewIsModal` no-op di RNW View. ----- */}
       {pending ? (
-        <View className="absolute inset-0 items-center justify-center bg-black/40 p-6">
-          <View
-            className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityViewIsModal>
-            <Text className="text-lg font-bold text-black dark:text-white">
-              {pending.next ? 'Beri Hak Akses' : 'Cabut Hak Akses'}
-            </Text>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              {pending.next ? 'Memberikan' : 'Mencabut'} &ldquo;{pending.row.label}&rdquo; untuk{' '}
-              {selected ? personLabel(selected) : 'anggota ini'}.
-            </Text>
-            <View className="gap-1.5">
-              <Text className="text-sm font-medium text-black dark:text-white">
-                Alasan <Text className="text-red-700 dark:text-red-400">*</Text>
+        <Modal
+          transparent
+          visible
+          animationType={reduceMotion ? 'none' : 'fade'}
+          onRequestClose={() => {
+            setPending(null);
+            setReason('');
+            setModalError(null);
+          }}>
+          <View className="flex-1 items-center justify-center bg-black/40 p-6">
+            <View
+              className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
+              accessibilityViewIsModal>
+              <Text className="text-lg font-bold text-black dark:text-white">
+                {pending.next ? 'Beri Hak Akses' : 'Cabut Hak Akses'}
               </Text>
-              <TextInput
-                className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
-                accessibilityLabel="Alasan wajib"
-                placeholder="mis. dibutuhkan untuk koordinasi lintas tim"
-                placeholderTextColor={placeholderColor}
-                value={reason}
-                onChangeText={(t) => setReason(t.slice(0, REASON_MAX))}
-                multiline
-                textAlignVertical="top"
-              />
-              <Text className="self-end text-xs text-neutral-400">
-                {reason.length}/{REASON_MAX}
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+                {pending.next ? 'Memberikan' : 'Mencabut'} &ldquo;{pending.row.label}&rdquo; untuk{' '}
+                {selected ? personLabel(selected) : 'anggota ini'}.
               </Text>
-            </View>
-            {modalError ? (
-              <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
-                {modalError}
-              </Text>
-            ) : null}
-            <View className="gap-2">
-              <Button
-                label={pending.next ? 'Konfirmasi' : 'Cabut'}
-                variant={pending.next ? 'primary' : 'danger'}
-                loading={isPending}
-                disabled={isPending}
-                onPress={confirmChange}
-              />
-              <Button
-                label="Batal"
-                variant="secondary"
-                onPress={() => {
-                  setPending(null);
-                  setReason('');
-                  setModalError(null);
-                }}
-              />
+              <View className="gap-1.5">
+                <Text className="text-sm font-medium text-black dark:text-white">
+                  Alasan <Text className="text-red-700 dark:text-red-400">*</Text>
+                </Text>
+                <TextInput
+                  className="h-20 rounded-xl border border-neutral-300 px-4 py-3 text-base text-black dark:border-neutral-700 dark:text-white"
+                  accessibilityLabel="Alasan wajib"
+                  placeholder="mis. dibutuhkan untuk koordinasi lintas tim"
+                  placeholderTextColor={placeholderColor}
+                  value={reason}
+                  onChangeText={(t) => setReason(t.slice(0, REASON_MAX))}
+                  multiline
+                  textAlignVertical="top"
+                />
+                <Text className="self-end text-xs text-neutral-400">
+                  {reason.length}/{REASON_MAX}
+                </Text>
+              </View>
+              {modalError ? (
+                <Text accessibilityRole="alert" className="text-sm font-semibold text-red-700 dark:text-red-400">
+                  {modalError}
+                </Text>
+              ) : null}
+              <View className="gap-2">
+                <Button
+                  label={pending.next ? 'Konfirmasi' : 'Cabut'}
+                  variant={pending.next ? 'primary' : 'danger'}
+                  loading={isPending}
+                  disabled={isPending}
+                  onPress={confirmChange}
+                />
+                <Button
+                  label="Batal"
+                  variant="secondary"
+                  onPress={() => {
+                    setPending(null);
+                    setReason('');
+                    setModalError(null);
+                  }}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        </Modal>
       ) : null}
 
       {/* S4-4 — konfirmasi aktifkan/nonaktifkan akun. Tidak perlu reason (bukan perubahan
           hak akses, cuma flip is_active). Server tolak self-deactivate. */}
       {pendingActive && selected ? (
-        <View className="absolute inset-0 items-center justify-center bg-black/40 p-6">
-          <View
-            className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityViewIsModal>
-            <Text className="text-lg font-bold text-black dark:text-white">
-              {pendingActive.next ? 'Aktifkan akun' : 'Nonaktifkan akun'}
-            </Text>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              {pendingActive.next
-                ? `${personLabel(selected)} akan bisa login dan mengakses workspace lagi.`
-                : `${personLabel(selected)} tidak akan bisa login. Data card & log tetap terjaga (nonaktif ≠ hapus).`}
-            </Text>
-            <View className="gap-2">
-              <Button
-                label={pendingActive.next ? 'Aktifkan' : 'Nonaktifkan'}
-                variant={pendingActive.next ? 'primary' : 'danger'}
-                loading={activeM.isPending}
-                disabled={activeM.isPending}
-                onPress={() =>
-                  activeM.mutate({ targetId: selected.id, active: pendingActive.next })
-                }
-              />
-              <Button
-                label="Batal"
-                variant="secondary"
-                onPress={() => setPendingActive(null)}
-              />
+        <Modal
+          transparent
+          visible
+          animationType={reduceMotion ? 'none' : 'fade'}
+          onRequestClose={() => setPendingActive(null)}>
+          <View className="flex-1 items-center justify-center bg-black/40 p-6">
+            <View
+              className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
+              accessibilityViewIsModal>
+              <Text className="text-lg font-bold text-black dark:text-white">
+                {pendingActive.next ? 'Aktifkan akun' : 'Nonaktifkan akun'}
+              </Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+                {pendingActive.next
+                  ? `${personLabel(selected)} akan bisa login dan mengakses workspace lagi.`
+                  : `${personLabel(selected)} tidak akan bisa login. Data card & log tetap terjaga (nonaktif ≠ hapus).`}
+              </Text>
+              <View className="gap-2">
+                <Button
+                  label={pendingActive.next ? 'Aktifkan' : 'Nonaktifkan'}
+                  variant={pendingActive.next ? 'primary' : 'danger'}
+                  loading={activeM.isPending}
+                  disabled={activeM.isPending}
+                  onPress={() =>
+                    activeM.mutate({ targetId: selected.id, active: pendingActive.next })
+                  }
+                />
+                <Button
+                  label="Batal"
+                  variant="secondary"
+                  onPress={() => setPendingActive(null)}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        </Modal>
       ) : null}
 
       {/* S4-5 — pilih role baru. Server tolak self-promote + role dari org lain. */}
       {rolePickerOpen && selected ? (
-        <View className="absolute inset-0 items-center justify-center bg-black/40 p-6">
-          <View
-            className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
-            accessibilityViewIsModal>
-            <Text className="text-lg font-bold text-black dark:text-white">Ubah Role</Text>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-              Pilih role baru untuk {personLabel(selected)}. Permission bawaan role
-              akan langsung berlaku; permission kustom (non-bawaan) tetap.
-            </Text>
-            <View className="gap-1.5">
-              {roleTemplates.length === 0 ? (
-                <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Belum ada role di organisasi ini. Buat lewat Governance dulu.
-                </Text>
-              ) : (
-                roleTemplates.map((rt) => {
-                  const active = pendingRoleId === rt.id;
-                  return (
-                    <Pressable
-                      key={rt.id}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={`Role ${rt.name}`}
-                      onPress={() => setPendingRoleId(rt.id)}
-                      className={`min-h-[44px] flex-row items-center justify-between gap-3 rounded-xl border px-4 py-3 active:opacity-70 ${
-                        active
-                          ? 'border-brand-dark bg-brand-dark/10 dark:bg-brand-dark/20'
-                          : 'border-neutral-300 dark:border-neutral-700'
-                      }`}>
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-black dark:text-white">
-                          {rt.name}
-                        </Text>
-                        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                          {rt.level}
-                        </Text>
-                      </View>
-                      {active ? (
-                        <Ionicons name="checkmark-circle" size={20} color={brandIcon} />
-                      ) : null}
-                    </Pressable>
-                  );
-                })
-              )}
-            </View>
-            <View className="gap-2">
-              <Button
-                label="Simpan role"
-                loading={roleM.isPending}
-                disabled={
-                  roleM.isPending ||
-                  !pendingRoleId ||
-                  pendingRoleId === selected.role_template_id
-                }
-                onPress={() =>
-                  pendingRoleId &&
-                  roleM.mutate({ targetId: selected.id, roleTemplateId: pendingRoleId })
-                }
-              />
-              <Button
-                label="Batal"
-                variant="secondary"
-                onPress={() => {
-                  setRolePickerOpen(false);
-                  setPendingRoleId(null);
-                }}
-              />
+        <Modal
+          transparent
+          visible
+          animationType={reduceMotion ? 'none' : 'fade'}
+          onRequestClose={() => {
+            setRolePickerOpen(false);
+            setPendingRoleId(null);
+          }}>
+          <View className="flex-1 items-center justify-center bg-black/40 p-6">
+            <View
+              className="w-full gap-3 rounded-2xl bg-white p-5 dark:bg-neutral-900"
+              accessibilityViewIsModal>
+              <Text className="text-lg font-bold text-black dark:text-white">Ubah Role</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+                Pilih role baru untuk {personLabel(selected)}. Permission bawaan role
+                akan langsung berlaku; permission kustom (non-bawaan) tetap.
+              </Text>
+              <View className="gap-1.5">
+                {roleTemplates.length === 0 ? (
+                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Belum ada role di organisasi ini. Buat lewat Governance dulu.
+                  </Text>
+                ) : (
+                  roleTemplates.map((rt) => {
+                    const active = pendingRoleId === rt.id;
+                    return (
+                      <Pressable
+                        key={rt.id}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={`Role ${rt.name}`}
+                        onPress={() => setPendingRoleId(rt.id)}
+                        className={`min-h-[44px] flex-row items-center justify-between gap-3 rounded-xl border px-4 py-3 active:opacity-70 ${
+                          active
+                            ? 'border-brand-dark bg-brand-dark/10 dark:bg-brand-dark/20'
+                            : 'border-neutral-300 dark:border-neutral-700'
+                        }`}>
+                        <View className="flex-1">
+                          <Text className="text-sm font-semibold text-black dark:text-white">
+                            {rt.name}
+                          </Text>
+                          <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {rt.level}
+                          </Text>
+                        </View>
+                        {active ? (
+                          <Ionicons name="checkmark-circle" size={20} color={brandIcon} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })
+                )}
+              </View>
+              <View className="gap-2">
+                <Button
+                  label="Simpan role"
+                  loading={roleM.isPending}
+                  disabled={
+                    roleM.isPending ||
+                    !pendingRoleId ||
+                    pendingRoleId === selected.role_template_id
+                  }
+                  onPress={() =>
+                    pendingRoleId &&
+                    roleM.mutate({ targetId: selected.id, roleTemplateId: pendingRoleId })
+                  }
+                />
+                <Button
+                  label="Batal"
+                  variant="secondary"
+                  onPress={() => {
+                    setRolePickerOpen(false);
+                    setPendingRoleId(null);
+                  }}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        </Modal>
       ) : null}
     </KeyboardAvoidingView>
   );
