@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native-css/components';
 
 import { DateField } from '@/components/date-field';
-import { Badge, Button, LabeledInput, SectionCard, usePlaceholderColor } from '@/components/ui';
+import { Badge, Button, HeaderDoneButton, LabeledInput, SectionCard, usePlaceholderColor } from '@/components/ui';
 import { DATE_RE } from '@/lib/date';
 import { reportError } from '@/lib/errors';
 import { DCR_STATUS_LABEL, type DeadlineChangeRequest } from '@/lib/governance-admin';
@@ -82,7 +82,15 @@ export default function DeadlineChangeRequestScreen() {
       <ScrollView
         className="flex-1 bg-neutral-50 dark:bg-black"
         keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ title: 'Perubahan Deadline' }} />
+      {/* headerRight "Selesai" → handler pengajuan yang sama dgn CTA "Kirim Permintaan" (headerLeft
+          "Batal" dari MODAL_OPTIONS). Layar ini tak berpindah setelah submit (menampilkan riwayat
+          permintaan), jadi Done mengirim permintaan lalu tetap di layar — persis perilaku CTA-nya. */}
+      <Stack.Screen
+        options={{
+          title: 'Perubahan Deadline',
+          headerRight: () => <HeaderDoneButton onPress={handleSubmit} loading={isPending} />,
+        }}
+      />
       <View className="gap-4 p-5">
         <SectionCard>
           <Text className="text-sm text-neutral-500 dark:text-neutral-400">

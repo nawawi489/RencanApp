@@ -2,10 +2,42 @@
 // Render RN pertama (cold transform react-native-css) bisa lambat → longgarkan timeout.
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native-css/components';
-import { Avatar, Banner, Button, EmptyState, ErrorState, IconTile, LabeledInput, PriorityCard, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SectionCard, SectionHeading, SkeletonList, orbToneFor } from '../ui';
+import { Avatar, Banner, Button, EmptyState, ErrorState, HeaderDoneButton, IconTile, LabeledInput, PriorityCard, ProgressOrb, ScoreBadge, ScoreBreakdown, ScoreSparkline, SectionCard, SectionHeading, SkeletonList, orbToneFor } from '../ui';
 import { StatTile } from '../stat-tile';
 
 jest.setTimeout(30000);
+
+describe('HeaderDoneButton — "Selesai" modal (metafora iOS Batal/Selesai)', () => {
+  it('[UI-HD-1] merender "Selesai" dan memicu onPress saat ditekan', async () => {
+    const onPress = jest.fn();
+    await render(<HeaderDoneButton onPress={onPress} />);
+    expect(screen.getByText('Selesai')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Selesai'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('[UI-HD-2] loading → spinner (teks tersembunyi) & non-aktif, press tak memicu onPress', async () => {
+    const onPress = jest.fn();
+    await render(<HeaderDoneButton onPress={onPress} loading />);
+    // Saat loading teks label diganti ActivityIndicator.
+    expect(screen.queryByText('Selesai')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Selesai'));
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('[UI-HD-3] disabled → non-aktif, press tak memicu onPress', async () => {
+    const onPress = jest.fn();
+    await render(<HeaderDoneButton onPress={onPress} disabled />);
+    fireEvent.press(screen.getByLabelText('Selesai'));
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('[UI-HD-4] label kustom dipakai untuk teks & a11y', async () => {
+    await render(<HeaderDoneButton onPress={() => {}} label="Kirim" />);
+    expect(screen.getByLabelText('Kirim')).toBeTruthy();
+    expect(screen.getByText('Kirim')).toBeTruthy();
+  });
+});
 
 describe('SectionHeading', () => {
   it('mengekspos judul dengan accessibilityRole="header" (navigasi-heading pembaca layar)', async () => {

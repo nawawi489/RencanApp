@@ -13,6 +13,8 @@ let mockParams: { id?: string; instanceId?: string } = { id: 'ap-1' };
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ back: mockBack }),
+  // Layar kini memasang headerRight "Selesai" via <Stack.Screen> inline; render null di test.
+  Stack: { Screen: () => null },
 }));
 
 const mockGetTask = jest.fn();

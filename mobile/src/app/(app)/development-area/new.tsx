@@ -1,9 +1,9 @@
-import { useRouter, type Href } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native-css/components';
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
-import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { Button, GuidanceNote, HeaderDoneButton, LabeledInput, SectionCard } from '@/components/ui';
 import { DateRangeField } from '@/components/date-range-field';
 import { UserPicker } from '@/components/user-picker';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
@@ -84,6 +84,8 @@ export default function NewDevelopmentAreaScreen() {
 
   return (
     <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+      {/* headerRight "Selesai" → handler submit yang sama dgn CTA (headerLeft "Batal" dari MODAL_OPTIONS). */}
+      <Stack.Screen options={{ headerRight: () => <HeaderDoneButton onPress={submit} loading={isPending} /> }} />
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Development Area — Area pengembangan apa yang sedang dibangun?"

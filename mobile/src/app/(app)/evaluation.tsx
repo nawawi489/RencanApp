@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, LabeledInput, SectionCard } from '@/components/ui';
+import { Button, HeaderDoneButton, LabeledInput, SectionCard } from '@/components/ui';
 import { useThemedIcon } from '@/providers/theme-provider';
 import { EVALUATION_TARGET_LABEL } from '@/lib/governance-admin';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
@@ -172,7 +172,15 @@ export function LiveEvaluationScreen() {
       <ScrollView
         className="flex-1 bg-neutral-50 dark:bg-black"
         keyboardShouldPersistTaps="handled">
-        <Stack.Screen options={{ title: 'Evaluasi' }} />
+        {/* headerRight "Selesai" → handler simpan yang sama dgn CTA "Simpan Evaluasi" (headerLeft
+            "Batal" dari MODAL_OPTIONS). disabled saat isSelf (PIC tak boleh evaluasi diri sendiri),
+            mirror `disabled` tombol di konten. Hanya di render utama (status done/active). */}
+        <Stack.Screen
+          options={{
+            title: 'Evaluasi',
+            headerRight: () => <HeaderDoneButton onPress={handleSave} loading={isPending} disabled={isSelf} />,
+          }}
+        />
         <View className="gap-4 p-5">
           <SectionCard>
             <Text className="text-sm text-neutral-600 dark:text-neutral-300">Pencapaian Target</Text>

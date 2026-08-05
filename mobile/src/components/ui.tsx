@@ -77,6 +77,58 @@ export function Button({
   );
 }
 
+// ---------------------------------------------------------------- HeaderDoneButton
+
+/**
+ * Tombol "Selesai" untuk headerRight layar modal — melengkapi metafora iOS (Batal kiri /
+ * Selesai kanan) yang headerLeft-nya (`CancelButton`) sudah dipasang lewat MODAL_OPTIONS di
+ * `(app)/_layout.tsx`. Dipakai per-layar via `<Stack.Screen options={{ headerRight }} />`
+ * yang menunjuk ke handler submit layar itu sendiri — TIDAK menduplikasi logika submit, hanya
+ * memicu CTA utama yang sama dari header.
+ *
+ * Warna & ukuran mirror `CancelButton`: brand-dark (#1564b3) di terang / brand-light (#93c5fd)
+ * di gelap (lulus AA di kedua mode), touch target ≥44px (DESIGN §4). Saat `loading`/`disabled`
+ * tombol non-aktif (opacity 0.4, `accessibilityState.busy`) supaya Done tak bisa ditekan ganda
+ * saat submit berjalan — sama seperti `Button loading`.
+ */
+export function HeaderDoneButton({
+  onPress,
+  loading,
+  disabled,
+  label = 'Selesai',
+}: {
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  label?: string;
+}) {
+  const color = useThemedIcon('#1564b3', '#93c5fd');
+  const inactive = disabled || loading;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={inactive}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!inactive, busy: !!loading }}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        minWidth: 44,
+        marginRight: 8,
+        paddingHorizontal: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: inactive ? 0.4 : pressed ? 0.6 : 1,
+      })}>
+      {loading ? (
+        <ActivityIndicator color={color} />
+      ) : (
+        <Text style={{ color, fontSize: 16, fontWeight: '600' }}>{label}</Text>
+      )}
+    </Pressable>
+  );
+}
+
 // ---------------------------------------------------------------- Badge
 
 export type Tone = 'neutral' | 'info' | 'warn' | 'success' | 'danger';
