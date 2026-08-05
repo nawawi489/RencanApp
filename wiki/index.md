@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-08-02
+updated: 2026-08-05
 ---
 
 # Rencanapp Wiki — Index
@@ -34,6 +34,7 @@ Master index of all wiki pages. Updated on every ingest.
 - [[fase6-tdd-plan]] — Rencana TDD red→green→refactor Fase 6 + addendum kritik (missing cases & concerns)
 - [[feature-gap-backlog]] — Backlog di bawah ambang P-slot (BL-01..BL-14): gap app vs PRD + inkonsistensi perilaku, tiap baris berbukti `file:line`; BL-02/08/09/11/12/13 DONE, BL-03 ditutup sebagai keputusan owner, BL-14 (org signup) satu-satunya utang terbuka yang butuh scoping
 - [[minimum-breakdown-rule]] — Jumlah minimal card turunan (label UI "Aturan Pecah Target"); V1.83 opsional 3 mode (Nonaktif/Peringatan/Blokir), angka konfigurabel admin
+- [[mobile-quality-audit]] — Audit kualitas teknis `mobile/` via `$impeccable` (a11y/perf/theming/conformance/adaptivity); skor 11→19/20 setelah 11 PR; kelas bug prop-inert react-native-web ditutup + dipagari guard; beda axis dari [[design-fidelity-audit]]
 - [[permission-model]] — Akses berbasis tanggung jawab (PIC/Reviewer/turunan), delegasi, RLS
 - [[prototype-prd-conformance]] — Prototype `design.html` vs PRD V1.82: 46/46 screen + 28 AC terpenuhi; penyimpangan kecil (header notif, tab People Q3)
 - [[score-open-period-ui]] — Tombol "Buka Periode" + modal konfirmasi dua langkah; menutup NG-2 (RPC `open_period_snapshot` sebelumnya nol caller UI); nol migrasi
