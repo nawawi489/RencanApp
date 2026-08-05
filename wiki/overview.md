@@ -1,7 +1,7 @@
 ---
 type: overview
 tags: [ems, mobile]
-updated: 2026-07-15
+updated: 2026-08-05
 sources: 4
 ---
 
@@ -48,7 +48,9 @@ Mobile app (iOS + Android) di atas **Expo (React Native) + TypeScript**, dengan 
 
 Implementasi berjalan (Fase 0–8 + Inbox/Score/Theme + rename V1.8.3 + push notif spec). **Sumber kebenaran = `PRD.md`** (root repo, V1.83, promoted 2026-07-15); breakdown per-topik di `prd/` (3 bagian) belum disinkronkan ke V1.83.
 
-Gap kode V1.82 → V1.83 (audit 2026-07-15, urut prioritas):
+**Kualitas teknis mobile (audit `$impeccable` 2026-08-05):** `mobile/` menjalani audit teknis 5-dimensi (a11y/perf/theming/platform-conformance/adaptivity) + remediasi penuh 11 PR — skor **11/20 → 19/20 (Excellent)**. Kelas bug prop-inert `react-native-web` (Alert/hitSlop/accessibilityViewIsModal/KAV) ditutup tuntas + dipagari guard test. Satu sisa terbuka: kunci orientasi iPad (keputusan produk owner, bukan defect). Detail: [[mobile-quality-audit]]. Ini axis kualitas-teknis, terpisah dari gap fungsional V1.82→V1.83 di bawah.
+
+Gap kode V1.82 → V1.83 (audit 2026-07-15, urut prioritas — snapshot; sebagian item sudah ditutup lewat sprint berikutnya, lihat [[log]]):
 
 - **Blocker: 19 template Strategy bawaan masih ter-seed** — `0010:472-501` insert "Menambah Jumlah Customer", "Control Budgeting", dst; `0045:62` cuma rename tabel. V1.83 §19 menuntut kosong.
 - **Tinggi: People belum di-de-scoring** — `people.tsx` row masih render `ScoreBadge` ("Score 87 · On track") + rank number; `ScoreLegend` ekspos formula; score detail di Profile **ungated** di klien.
