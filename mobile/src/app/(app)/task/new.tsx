@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Switch } from 'react-native';
 import { Pressable, Text, View } from 'react-native-css/components';
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
-import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { Button, GuidanceNote, HeaderDoneButton, LabeledInput, SectionCard } from '@/components/ui';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { DateField } from '@/components/date-field';
@@ -323,6 +323,8 @@ export function LiveNewTaskScreen() {
 
   return (
     <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+      {/* headerRight "Selesai" → handler submit yang sama dgn CTA (headerLeft "Batal" dari MODAL_OPTIONS). */}
+      <Stack.Screen options={{ headerRight: () => <HeaderDoneButton onPress={submit} loading={mutation.isPending} /> }} />
       <View className="gap-4 p-5">
         {parentActionPlanQ.data ? (
           <View

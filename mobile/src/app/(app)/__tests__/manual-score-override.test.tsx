@@ -34,11 +34,19 @@ const mockParams: { userId: string; userName?: string; periodId: string } = {
   userName: 'Rina Jaya',
   periodId: 'p1',
 };
+// Tangkap `options` terakhir yang dipasang layar lewat <Stack.Screen> (untuk menguji headerRight
+// "Selesai"). Tetap render null seperti sebelumnya → tes lain tak terpengaruh.
+const mockScreen: { options: any } = { options: null };
 jest.mock('expo-router', () => ({
   __esModule: true,
   useRouter: () => ({ back: mockBack }),
   useLocalSearchParams: () => mockParams,
-  Stack: { Screen: () => null },
+  Stack: {
+    Screen: (p: { options?: unknown }) => {
+      mockScreen.options = p.options ?? mockScreen.options;
+      return null;
+    },
+  },
 }));
 
 // eslint-disable-next-line import/first
@@ -63,6 +71,7 @@ beforeEach(() => {
   mockUseUserScore.mockReturnValue({ score: null, isLoading: false, isError: false });
   mockCan.mockReturnValue(true);
   mockOverride.mockResolvedValue('new-id');
+  mockScreen.options = null;
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
@@ -122,5 +131,28 @@ describe('ManualScoreOverrideScreen', () => {
       }),
     );
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it('[6] headerRight "Selesai" memicu jalur submit yang sama (override) dengan CTA konten', async () => {
+    await render(<ManualScoreOverrideScreen />, { wrapper: wrapper() });
+    await act(async () => {
+      fireEvent.changeText(await screen.findByLabelText('Skor manual (0–100) wajib'), '82');
+      fireEvent.changeText(screen.getByLabelText('Alasan override wajib'), 'koreksi via header');
+    });
+    // headerRight tertangkap dari <Stack.Screen> layar (Stack.Screen di-null-kan di test, jadi
+    // render tombolnya terpisah lalu tekan) — membuktikan Done memakai handler submit yang sama.
+    const headerRight = mockScreen.options?.headerRight;
+    expect(headerRight).toBeTruthy();
+    await render(headerRight());
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Selesai'));
+    });
+    await waitFor(() =>
+      expect(mockOverride).toHaveBeenCalledWith({
+        userId: 'u-rina',
+        manualScore: 82,
+        reason: 'koreksi via header',
+      }),
+    );
   });
 });
