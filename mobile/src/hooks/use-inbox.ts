@@ -198,15 +198,26 @@ export function useChatActions(roomId: string) {
     },
   });
 
-  return {
-    send: (body: string, mentions: string[] = [], optimistic?: ChatMessage, opts?: SendChatMessageOpts) =>
-      sendM.mutateAsync({ body, mentions, optimistic, opts }),
-    markRead: () => markReadM.mutateAsync(),
-    isSending: sendM.isPending,
-    toggleReaction: (messageId: string, emoji: string) =>
-      toggleReactionM.mutateAsync({ messageId, emoji }),
-    isTogglingReaction: toggleReactionM.isPending,
-  };
+  // Identitas objek stabil → `renderRow` di inbox/[roomId] tak berubah tiap render, jadi bubble
+  // pesan tidak re-render pada tiap ketikan composer. `mutateAsync` dari React Query stabil lintas
+  // render; alias ke lokal supaya deps eksplisit (bukan objek hasil useMutation yang identitasnya
+  // berganti tiap render dan akan mematikan memo).
+  const sendAsync = sendM.mutateAsync;
+  const markReadAsync = markReadM.mutateAsync;
+  const toggleReactionAsync = toggleReactionM.mutateAsync;
+  const isSending = sendM.isPending;
+  const isTogglingReaction = toggleReactionM.isPending;
+  return useMemo(
+    () => ({
+      send: (body: string, mentions: string[] = [], optimistic?: ChatMessage, opts?: SendChatMessageOpts) =>
+        sendAsync({ body, mentions, optimistic, opts }),
+      markRead: () => markReadAsync(),
+      isSending,
+      toggleReaction: (messageId: string, emoji: string) => toggleReactionAsync({ messageId, emoji }),
+      isTogglingReaction,
+    }),
+    [sendAsync, markReadAsync, toggleReactionAsync, isSending, isTogglingReaction],
+  );
 }
 
 /**
