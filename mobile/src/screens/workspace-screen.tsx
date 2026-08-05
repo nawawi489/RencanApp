@@ -100,9 +100,37 @@ const TREE_STATUS_LABEL: Record<string, string> = {
   ...ACTION_PLAN_STATUS_LABEL,
 };
 
-// UI-S-W09 — hitSlop dinaikkan ke 10/8 agar touch target efektif ≥ 44px (DESIGN §4 a11y).
-// Tombol visual 32–34px + hitSlop ini → 48–54px target sentuh, setara panduan iOS/Material.
-const ACTION_HIT_SLOP = { top: 10, bottom: 10, left: 8, right: 8 };
+// UI-S-W09 / harden-2 — kotak sentuh NYATA ≥44px (DESIGN §4 a11y). `hitSlop` TIDAK dipakai:
+// no-op di react-native-web (Pressable RNW hanya menangani onPress), jadi target sentuh yang
+// "diperbesar" via hitSlop tak pernah nyata di web. Sebagai gantinya kotak sentuh dinaikkan ke
+// 44 lewat komponen touchable transparan (chrome visual compact tetap di inner View), dan
+// footprint tree yang padat dijaga lewat margin negatif — hit area nyata tanpa membesarkan chrome.
+//
+// `touchTarget(visualHeight[, visualWidth])` → style untuk Pressable pembungkus: min 44 + margin
+// negatif yang mengembalikan footprint ke ukuran visual asli. marginVertical selalu; marginHorizontal
+// hanya bila visualWidth diberikan (kontrol ikon sempit seperti "⋯").
+function touchTarget(
+  visualHeight: number,
+  visualWidth?: number,
+): {
+  minHeight: number;
+  marginVertical: number;
+  alignItems: 'center';
+  justifyContent: 'center';
+  minWidth?: number;
+  marginHorizontal?: number;
+} {
+  const style = {
+    minHeight: 44,
+    marginVertical: -(44 - visualHeight) / 2,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  };
+  if (visualWidth != null) {
+    return { ...style, minWidth: 44, marginHorizontal: -(44 - visualWidth) / 2 };
+  }
+  return style;
+}
 const EMPTY_IDS: string[] = [];
 
 type TreeCardDates = {
@@ -328,26 +356,30 @@ function TreeToggleButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ expanded }}
-      hitSlop={ACTION_HIT_SLOP}
       onPress={onPress}
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor,
-        backgroundColor,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
+      // Kotak sentuh 44×44; lingkaran visual 36 tetap di inner View, footprint dijaga 36 via margin negatif.
+      style={touchTarget(36, 36)}>
       <View
         pointerEvents="none"
         style={{
-          transform: [{ rotate: expanded ? '90deg' : '0deg' }],
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor,
+          backgroundColor,
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-        <Ionicons name="chevron-forward" size={18} color={iconColor} />
+        <View
+          pointerEvents="none"
+          style={{
+            transform: [{ rotate: expanded ? '90deg' : '0deg' }],
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Ionicons name="chevron-forward" size={18} color={iconColor} />
+        </View>
       </View>
     </Pressable>
   );
@@ -365,7 +397,8 @@ function ExpandChildCount({
   return (
     <Pressable
       onPress={onPress}
-      hitSlop={ACTION_HIT_SLOP}
+      // Kotak sentuh 44px tinggi; footprint teks compact dijaga via margin negatif vertikal.
+      style={touchTarget(20)}
       accessibilityRole="button"
       accessibilityLabel={`${label}, ketuk untuk ${expanded ? 'tutup' : 'buka'}`}>
       <Text className="text-xs leading-4.5 text-neutral-500 dark:text-neutral-400">
@@ -407,61 +440,72 @@ function CompactActionRow({
   addButtonLabel?: string;
 }) {
   // Spec §11 (amandemen a11y — DESIGN §4 mengikat menang atas lock; lihat lock §3/§11):
-  // row dibuat tetap compact: tombol visible 30px dengan hitSlop agar target sentuh tetap nyaman.
+  // pill visual sengaja compact 34px (kepadatan tree). Kotak sentuh NYATA ≥44px dicapai lewat
+  // Pressable pembungkus transparan (touchTarget) — pill visual pindah ke inner View. `hitSlop`
+  // TIDAK dipakai: no-op di react-native-web.
   const isDark = useThemePreference().effective === 'dark';
   return (
     <View className="flex-row items-center gap-2">
       <Pressable
-        hitSlop={ACTION_HIT_SLOP}
-        style={{
-          minHeight: 34,
-          borderRadius: 999,
-          paddingHorizontal: 12,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: isDark ? '#1d4ed8' : '#1564b3',
-        }}
+        style={touchTarget(34)}
         accessibilityRole="button"
         accessibilityLabel={detailLabel}
         onPress={onDetail}>
-        <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '900' }}>Detail</Text>
-      </Pressable>
-      <Pressable
-        hitSlop={ACTION_HIT_SLOP}
-        style={{ minWidth: 34, minHeight: 34, paddingVertical: 4, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}
-        accessibilityRole="button"
-        accessibilityLabel={`Aksi lain ${cardLabel}`}
-        onPress={onMore}>
-        <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
-      </Pressable>
-      {onAdd || onAddPress ? (
-        <Pressable
-          hitSlop={ACTION_HIT_SLOP}
+        <View
+          pointerEvents="none"
           style={{
             minHeight: 34,
             borderRadius: 999,
             paddingHorizontal: 12,
             alignItems: 'center',
             justifyContent: 'center',
-            // UI-S-W09 — tombol "+ Child" pakai family teal (konstruktif) agar tidak rancu
-            // dengan Detail (biru = primary nav) dan "⋯" (netral = utility).
-            borderWidth: 1,
-            borderColor: (addDimmed ?? past)
-              ? (isDark ? '#404040' : '#e2e8f0')
-              : (isDark ? '#115e59' : '#99f6e4'),
-            backgroundColor: (addDimmed ?? past)
-              ? (isDark ? '#262626' : '#f1f5f9')
-              : (isDark ? '#134e4a' : '#ccfbf1'),
-          }}
+            backgroundColor: isDark ? '#1d4ed8' : '#1564b3',
+          }}>
+          <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '900' }}>Detail</Text>
+        </View>
+      </Pressable>
+      <Pressable
+        style={touchTarget(34, 34)}
+        accessibilityRole="button"
+        accessibilityLabel={`Aksi lain ${cardLabel}`}
+        onPress={onMore}>
+        <View
+          pointerEvents="none"
+          style={{ minWidth: 34, minHeight: 34, paddingVertical: 4, paddingHorizontal: 4, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
+        </View>
+      </Pressable>
+      {onAdd || onAddPress ? (
+        <Pressable
+          style={touchTarget(34)}
           accessibilityRole="button"
           accessibilityLabel={addLabel ?? 'Tambah turunan'}
           accessibilityState={{ disabled: addDimmed ?? past }}
           onPress={() =>
             onAddPress ? onAddPress() : past ? showPastPeriodAlert() : onAdd?.()
           }>
-          <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : (isDark ? '#5eead4' : '#0f766e'), fontSize: 11, fontWeight: '900' }}>
-            {addButtonLabel ?? '+'}
-          </Text>
+          <View
+            pointerEvents="none"
+            style={{
+              minHeight: 34,
+              borderRadius: 999,
+              paddingHorizontal: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              // UI-S-W09 — tombol "+ Child" pakai family teal (konstruktif) agar tidak rancu
+              // dengan Detail (biru = primary nav) dan "⋯" (netral = utility).
+              borderWidth: 1,
+              borderColor: (addDimmed ?? past)
+                ? (isDark ? '#404040' : '#e2e8f0')
+                : (isDark ? '#115e59' : '#99f6e4'),
+              backgroundColor: (addDimmed ?? past)
+                ? (isDark ? '#262626' : '#f1f5f9')
+                : (isDark ? '#134e4a' : '#ccfbf1'),
+            }}>
+            <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : (isDark ? '#5eead4' : '#0f766e'), fontSize: 11, fontWeight: '900' }}>
+              {addButtonLabel ?? '+'}
+            </Text>
+          </View>
         </Pressable>
       ) : null}
     </View>
@@ -1446,23 +1490,26 @@ function PaneSectionHeader({
           }
           accessibilityState={{ disabled: !!pastLocked }}
           onPress={pastLocked ? () => showPastPeriodAlert() : onPrimary}
-          // Sprint 6 S6-5 — visual tinggi 32 tetap (compact prototype §6.3), tapi hitSlop 6
-          // menaikkan touch area efektif ke 44px (DESIGN §4 rule 1). Pola sama = card-help-trigger.
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          style={{
-            // DESIGN §4.5 — minHeight (bukan height fixed) supaya label tak terpotong saat
-            // Dynamic Type membesarkan teks; visual compact 32 tetap default. hitSlop dipertahankan.
-            minHeight: 32,
-            paddingVertical: 6,
-            borderRadius: 12,
-            backgroundColor: '#1564b3',
-            paddingHorizontal: 12,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: pastLocked ? 0.4 : 1,
-          }}
+          // Kotak sentuh NYATA 44px lewat touchTarget (bukan hitSlop — no-op di react-native-web).
+          // Pill visual compact 32px (prototype §6.3) dipindah ke inner View; footprint dijaga
+          // via margin negatif. DESIGN §4.5 — minHeight (bukan height) supaya label tak terpotong
+          // saat Dynamic Type membesar.
+          style={touchTarget(32)}
           className="active:opacity-70">
-          <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>{primaryLabel}</Text>
+          <View
+            pointerEvents="none"
+            style={{
+              minHeight: 32,
+              paddingVertical: 6,
+              borderRadius: 12,
+              backgroundColor: '#1564b3',
+              paddingHorizontal: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pastLocked ? 0.4 : 1,
+            }}>
+            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '900' }}>{primaryLabel}</Text>
+          </View>
         </Pressable>
       ) : null}
     </View>

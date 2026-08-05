@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native-css/components';
 
 import { BottomSheet } from '@/components/bottom-sheet';
-import { Button, EmptyState, Field, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { Button, EmptyState, Field, GuidanceNote, HeaderDoneButton, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
 import { useStrategyActions, usePerson } from '@/hooks/use-workspace';
@@ -291,6 +291,9 @@ export function LiveNewStrategyScreen() {
 
   return (
     <ScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+      {/* headerRight "Selesai" → handler submit yang sama dgn CTA di konten (headerLeft "Batal"
+          dari MODAL_OPTIONS). Periode-warisan tetap divalidasi di dalam submit. */}
+      <Stack.Screen options={{ headerRight: () => <HeaderDoneButton onPress={submit} loading={isPending} /> }} />
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Strategi — Area pengukuran"

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert, ScrollView, Text, View } from 'react-native-css/components';
 
-import { Button, GuidanceNote, LabeledInput, ScoreBadge, SectionCard } from '@/components/ui';
+import { Button, GuidanceNote, HeaderDoneButton, LabeledInput, ScoreBadge, SectionCard } from '@/components/ui';
 import { reportError } from '@/lib/errors';
 import { effectiveScore } from '@/lib/people-score';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
@@ -111,7 +111,15 @@ export default function ManualScoreOverrideScreen() {
       <ScrollView
         className="flex-1 bg-white dark:bg-black"
         keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ title: 'Override Skor' }} />
+      {/* headerRight "Selesai" → handler submit yang sama dgn CTA "Simpan Override" (headerLeft
+          "Batal" dari MODAL_OPTIONS). Hanya di render utama — layar guard (wewenang/param/anti-self)
+          tak punya Done karena tak ada yang bisa disimpan. */}
+      <Stack.Screen
+        options={{
+          title: 'Override Skor',
+          headerRight: () => <HeaderDoneButton onPress={submit} loading={isPending} disabled={isPending} />,
+        }}
+      />
       <View className="gap-5 p-5">
         <View className="gap-1">
           <Text accessibilityRole="header" className="text-2xl font-bold text-black dark:text-white">Override Skor</Text>

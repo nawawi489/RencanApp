@@ -464,18 +464,26 @@ describe('WorkspaceScreen', () => {
 
     const moreButton = await screen.findByLabelText('Aksi lain Tumbuhkan Revenue');
     const addButton = screen.getByLabelText('Tambah Strategi ke Tumbuhkan Revenue');
-    const moreStyle = flattenStyle(moreButton.props.style) as { minWidth?: number; minHeight?: number };
+    const moreStyle = flattenStyle(moreButton.props.style) as {
+      minWidth?: number;
+      minHeight?: number;
+      marginVertical?: number;
+      marginHorizontal?: number;
+    };
     const addStyle = flattenStyle(addButton.props.style) as {
       minHeight?: number;
-      paddingHorizontal?: number;
+      marginVertical?: number;
     };
 
-    // §4.5 — tombol "⋯" pakai min-width/min-height (bukan fixed) supaya glyph tak terpotong
-    // saat Dynamic Type membesar; visual compact 34 tetap default (sejajar tombol "+ Strategi").
-    expect(moreStyle.minWidth).toBe(34);
-    expect(moreStyle.minHeight).toBe(34);
-    expect(addStyle.minHeight).toBe(34);
-    expect(addStyle.paddingHorizontal).toBe(12);
+    // harden-2 — kotak sentuh Pressable pembungkus NYATA ≥44px (bukan hitSlop, yang no-op di
+    // react-native-web). Pill visual tetap compact 34px lewat margin negatif -5 yang
+    // mengembalikan footprint layout ke 34 (kepadatan tree tak berubah).
+    expect(moreStyle.minWidth).toBe(44);
+    expect(moreStyle.minHeight).toBe(44);
+    expect(moreStyle.marginVertical).toBe(-5);
+    expect(moreStyle.marginHorizontal).toBe(-5);
+    expect(addStyle.minHeight).toBe(44);
+    expect(addStyle.marginVertical).toBe(-5);
   });
 
   it('[compact-actions] Goal row menampilkan Detail, ..., dan + Strategi', async () => {

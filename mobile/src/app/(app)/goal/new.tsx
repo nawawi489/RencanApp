@@ -1,9 +1,9 @@
-import { useRouter, type Href } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native-css/components';
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
-import { Button, GuidanceNote, LabeledInput, SectionCard } from '@/components/ui';
+import { Button, GuidanceNote, HeaderDoneButton, LabeledInput, SectionCard } from '@/components/ui';
 import { UserPicker } from '@/components/user-picker';
 import { YearField } from '@/components/year-field';
 import { useDirtyGuard } from '@/hooks/use-dirty-guard';
@@ -76,6 +76,9 @@ export function LiveNewGoalScreen() {
 
   return (
     <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+      {/* headerRight "Selesai" (iOS modal metaphor) → memicu handler submit yang sama dgn CTA di
+          konten; disabled saat submit berjalan. headerLeft "Batal" datang dari MODAL_OPTIONS. */}
+      <Stack.Screen options={{ headerRight: () => <HeaderDoneButton onPress={submit} loading={isPending} /> }} />
       <View className="gap-4 p-5">
         <GuidanceNote
           title="Goal — Sasaran strategis"

@@ -2,7 +2,7 @@
 // 2-phase commit (createSubmissionDraft → upload parallel → submit_task) via useSubmissionFlow.
 // Mode instance (repeat) tetap pakai jalur lama submitInstance (OUT OF SCOPE OD-3).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native-css/components';
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
@@ -12,6 +12,7 @@ import {
   Button,
   DeltaArrow,
   GuidanceNote,
+  HeaderDoneButton,
   ImpactApprovalCard,
   KpiLinkageCard,
   LabeledInput,
@@ -350,6 +351,19 @@ export function LiveTaskSubmitScreen() {
 
   return (
     <KeyboardAwareScrollView className="flex-1 bg-neutral-50 dark:bg-black" keyboardShouldPersistTaps="handled">
+      {/* headerRight "Selesai" → handler submit yang sama dgn CTA "Submit untuk Review" (headerLeft
+          "Batal" dari MODAL_OPTIONS). Dipasang hanya di render utama (setelah guard data/loading)
+          agar Done baru muncul saat form siap; disabled selagi submit berjalan. */}
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <HeaderDoneButton
+              onPress={instanceId ? () => instanceMutation.mutate() : submitTaskFlow}
+              loading={isSubmitting}
+            />
+          ),
+        }}
+      />
       <View className="gap-5 p-5">
         <GuidanceNote
           title="Submit = Bukti + Nilai Hasil"

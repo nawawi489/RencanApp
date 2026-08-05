@@ -197,7 +197,6 @@ export default function LoginScreen() {
             <Pressable
               className="min-h-[44px] min-w-[44px] items-center justify-center active:opacity-60"
               onPress={() => setShowPassword((s) => !s)}
-              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>
               <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={eyeColor} />

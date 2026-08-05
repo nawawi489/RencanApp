@@ -66,11 +66,15 @@ function PermToggle({
           accessibilityLabel={row.label}
           disabled={locked}
           onPress={onToggle}
-          hitSlop={10}
-          className={`h-7 w-12 justify-center rounded-full px-0.5 ${
-            row.granted ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
-          } ${locked ? 'opacity-40' : 'active:opacity-70'}`}>
-          <View className={`h-6 w-6 rounded-full bg-white ${row.granted ? 'self-end' : 'self-start'}`} />
+          // Kotak sentuh nyata 44px (DESIGN §4); pill visual tetap 28px (h-7) lewat margin
+          // negatif -8 vertikal. hitSlop dihindari (no-op di react-native-web).
+          className={`-my-2 min-h-[44px] items-center justify-center ${locked ? '' : 'active:opacity-70'}`}>
+          <View
+            className={`h-7 w-12 justify-center rounded-full px-0.5 ${
+              row.granted ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
+            } ${locked ? 'opacity-40' : ''}`}>
+            <View className={`h-6 w-6 rounded-full bg-white ${row.granted ? 'self-end' : 'self-start'}`} />
+          </View>
         </Pressable>
       </View>
       {row.granted && !locked ? (
@@ -361,13 +365,17 @@ export default function SettingsPermissionUsersScreen() {
                   onPress={() =>
                     setPendingActive({ next: !selected.is_active })
                   }
-                  hitSlop={10}
-                  className={`h-7 w-12 justify-center rounded-full px-0.5 active:opacity-70 ${
-                    selected.is_active ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
-                  }`}>
+                  // Kotak sentuh nyata 44px (DESIGN §4); pill visual tetap 28px lewat margin
+                  // negatif -8 vertikal. hitSlop dihindari (no-op di react-native-web).
+                  className="-my-2 min-h-[44px] items-center justify-center active:opacity-70">
                   <View
-                    className={`h-6 w-6 rounded-full bg-white ${selected.is_active ? 'self-end' : 'self-start'}`}
-                  />
+                    className={`h-7 w-12 justify-center rounded-full px-0.5 ${
+                      selected.is_active ? 'bg-brand-dark' : 'bg-neutral-300 dark:bg-neutral-700'
+                    }`}>
+                    <View
+                      className={`h-6 w-6 rounded-full bg-white ${selected.is_active ? 'self-end' : 'self-start'}`}
+                    />
+                  </View>
                 </Pressable>
               </View>
               <View className="h-px bg-neutral-200 dark:bg-neutral-800" />

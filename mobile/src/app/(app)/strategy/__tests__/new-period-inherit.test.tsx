@@ -34,6 +34,8 @@ const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, push: jest.fn() }),
   useLocalSearchParams: () => ({ goalId: 'g1' }),
+  // Layar kini memasang headerRight "Selesai" via <Stack.Screen> inline; render null di test.
+  Stack: { Screen: () => null },
 }));
 
 // eslint-disable-next-line import/first
