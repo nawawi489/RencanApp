@@ -85,6 +85,12 @@ import {
   type WorkspaceKind,
 } from '@/components/workspace-kind-pill';
 import {
+  NEUTRAL_UTILITY,
+  TREE_ADD_BUTTON,
+  TREE_TOGGLE_EXPANDED,
+  pick,
+} from '@/lib/workspace-theme-tokens';
+import {
   derivePerformanceHubStats,
   deriveDevelopmentHubStats,
   deriveSpaceProgress,
@@ -156,7 +162,7 @@ function SiblingTreeLine({ offsetLeft }: { offsetLeft: number }) {
         top: 0,
         bottom: 0,
         width: 1.5,
-        backgroundColor: '#cfd8e5',
+        backgroundColor: '#cfd8e5', // Connector L-shape — terdaftar DESIGN §2 (Workspace category)
         borderRadius: 1,
       }}
     />
@@ -348,9 +354,21 @@ function TreeToggleButton({
   onPress: () => void;
 }) {
   const isDark = useThemePreference().effective === 'dark';
-  const borderColor = expanded ? (isDark ? '#3b82f6' : '#bfdbfe') : isDark ? '#404040' : '#d9e3ef';
-  const backgroundColor = expanded ? (isDark ? '#172554' : '#eff6ff') : isDark ? '#171717' : '#f8fafc';
-  const iconColor = expanded ? (isDark ? '#bfdbfe' : '#2563eb') : isDark ? '#e5e7eb' : '#64748b';
+  // Expanded = family biru TREE_TOGGLE_EXPANDED; collapsed = netral. Surface collapsed pakai
+  // NEUTRAL_UTILITY (dipakai bersama "⋯"); border/ikon collapsed one-off tersanksi (§4 rule 2).
+  const borderColor = expanded
+    ? pick(TREE_TOGGLE_EXPANDED.border, isDark)
+    : isDark
+      ? '#404040'
+      : '#d9e3ef'; // border collapsed — one-off tersanksi (light `#d9e3ef` ≠ NEUTRAL_UTILITY.border)
+  const backgroundColor = expanded
+    ? pick(TREE_TOGGLE_EXPANDED.background, isDark)
+    : pick(NEUTRAL_UTILITY.surface, isDark);
+  const iconColor = expanded
+    ? pick(TREE_TOGGLE_EXPANDED.icon, isDark)
+    : isDark
+      ? '#e5e7eb'
+      : '#64748b'; // ikon chevron collapsed — one-off tersanksi (muted slate)
   return (
     <Pressable
       accessibilityRole="button"
@@ -459,6 +477,8 @@ function CompactActionRow({
             paddingHorizontal: 12,
             alignItems: 'center',
             justifyContent: 'center',
+            // Detail = primary nav: fill solid + teks putih. Light `#1564b3` = brand-dark (§4
+            // rule 1, 5.99:1). Dark `#1d4ed8` = one-off tersanksi (fill biru primary dark-mode).
             backgroundColor: isDark ? '#1d4ed8' : '#1564b3',
           }}>
           <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '900' }}>Detail</Text>
@@ -471,7 +491,8 @@ function CompactActionRow({
         onPress={onMore}>
         <View
           pointerEvents="none"
-          style={{ minWidth: 34, minHeight: 34, paddingVertical: 4, paddingHorizontal: 4, borderRadius: 999, backgroundColor: isDark ? '#171717' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#404040' : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }}>
+          style={{ minWidth: 34, minHeight: 34, paddingVertical: 4, paddingHorizontal: 4, borderRadius: 999, backgroundColor: pick(NEUTRAL_UTILITY.surface, isDark), borderWidth: 1, borderColor: pick(NEUTRAL_UTILITY.border, isDark), alignItems: 'center', justifyContent: 'center' }}>
+          {/* Teks "⋯" one-off tersanksi (netral high-contrast). */}
           <Text style={{ color: isDark ? '#ffffff' : '#0f172a', fontSize: 14, fontWeight: '900' }}>⋯</Text>
         </View>
       </Pressable>
@@ -492,17 +513,18 @@ function CompactActionRow({
               paddingHorizontal: 12,
               alignItems: 'center',
               justifyContent: 'center',
-              // UI-S-W09 — tombol "+ Child" pakai family teal (konstruktif) agar tidak rancu
-              // dengan Detail (biru = primary nav) dan "⋯" (netral = utility).
+              // UI-S-W09 — tombol "+ Child" pakai family teal (konstruktif, TREE_ADD_BUTTON) agar
+              // tidak rancu dengan Detail (biru = primary nav) dan "⋯" (netral = utility). State
+              // dimmed = netral: border NEUTRAL_UTILITY; surface/teks dimmed one-off tersanksi.
               borderWidth: 1,
               borderColor: (addDimmed ?? past)
-                ? (isDark ? '#404040' : '#e2e8f0')
-                : (isDark ? '#115e59' : '#99f6e4'),
+                ? pick(NEUTRAL_UTILITY.border, isDark)
+                : pick(TREE_ADD_BUTTON.border, isDark),
               backgroundColor: (addDimmed ?? past)
                 ? (isDark ? '#262626' : '#f1f5f9')
-                : (isDark ? '#134e4a' : '#ccfbf1'),
+                : pick(TREE_ADD_BUTTON.background, isDark),
             }}>
-            <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : (isDark ? '#5eead4' : '#0f766e'), fontSize: 11, fontWeight: '900' }}>
+            <Text style={{ color: (addDimmed ?? past) ? (isDark ? '#6b7280' : '#94a3b8') : pick(TREE_ADD_BUTTON.text, isDark), fontSize: 11, fontWeight: '900' }}>
               {addButtonLabel ?? '+'}
             </Text>
           </View>
@@ -1502,7 +1524,7 @@ function PaneSectionHeader({
               minHeight: 32,
               paddingVertical: 6,
               borderRadius: 12,
-              backgroundColor: '#1564b3',
+              backgroundColor: '#1564b3', // brand-dark (DESIGN §2) — fill solid + teks putih (§4 rule 1)
               paddingHorizontal: 12,
               alignItems: 'center',
               justifyContent: 'center',
